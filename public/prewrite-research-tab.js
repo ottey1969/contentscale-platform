@@ -68,9 +68,11 @@
       var locList=document.createElement('datalist');locList.id='pwbLocationSuggestions';
       ['New Jersey, United States','New York, United States','California, United States','Florida, United States','Amsterdam, Netherlands','London, United Kingdom'].forEach(function(v){var op=document.createElement('option');op.value=v;locList.appendChild(op)});
       var locHelp=document.createElement('small');locHelp.style.cssText='display:block;color:#94a3b8;margin-top:5px';
-      locHelp.textContent='Used to localize Google customer-question discovery. The full Pre-Write competitor scan currently uses the country setting; do not treat this field as proof of a state-localized competitor SERP.';
+      locHelp.textContent='Used for both Google customer questions and the full Pre-Write competitor SERP. The saved brief shows the exact requested location and results. Location is a search setting, not proof of visibility throughout a whole state.';
       whereWrap.append(whereLabel,whereInput,locList,locHelp);
-      regionField.insertAdjacentElement('afterend',whereWrap);
+      var regionRow=regionField.closest('.pwb-col');
+      var locationTarget=regionRow&&regionRow.parentElement?regionRow.parentElement:regionField.closest('.cs-combo')||regionField;
+      locationTarget.insertAdjacentElement('afterend',whereWrap);
       // Save per keyword and country: NJ must never accidentally carry over to a different brief.
       var lastLocationKey='';
       function locationKey(){return 'cs:prewrite:location:'+val('pwbRegion').slice(0,2).toLowerCase()+':'+val('pwbKeyword').toLowerCase()}
