@@ -154,12 +154,12 @@ function message({url,query,publishedAt,link,gsc=null,leads=null,notes='',lang='
  const html=wrap('<p>'+t.hello+'</p><p>'+t.intro2+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+rationaleBlock(lang)+addedBlock(ctx,lang)+block(t.measured,numbers)+question+block(t.next,'<p>'+(need.length?t.nextAsk:t.nextDone)+'</p>')+block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.sign+'</p>');
  return {subject:t.subjResult(page(url),need.length>0),html};
 }
-function confirmationMessage({emails,url,publishedAt,notes='',gscAvailable,lang='en',ctx=null}){
+function confirmationMessage({emails,url,publishedAt,notes='',gscAvailable,lang='en',ctx=null,updated=false}){
  const t=tx(lang),due=dueAt(publishedAt),w=windowsOf(publishedAt),d=longDate(due,lang);
  const html=wrap('<p>'+t.hello+'</p><p>'+t.intro1+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+rationaleBlock(lang)+addedBlock(ctx,lang)+standingBlock(ctx,publishedAt,lang)+block(t.now,'<p>'+t.nowText+'</p>')+
   block(t.check(d),'<ul style="padding-left:20px"><li>'+t.checkGoogle(span(w,'before',lang),span(w,'after',lang))+(gscAvailable?t.readsItself:t.noAccessYet)+'</li><li>'+t.checkLeads(d)+'</li></ul>')+
   block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.why(emails.map(escH).join(', '))+'</p><p>'+t.sign+'</p>');
- return {subject:t.subjConfirm(d),html};
+ return {subject:updated?'Updated published content — '+t.subjConfirm(d):t.subjConfirm(d),html:updated?html.replace('<p>'+t.hello+'</p>','<p>'+t.hello+'</p><p><strong>This is a second confirmation because the recorded page content or publication was updated.</strong> The current changes and dates are listed below.</p>'):html};
 }
 // What Growth knows about a publication: search term, added sections (from the Growth proposal it came from) and the
 // best available current Google numbers for this page and term, in this order: the stored "before" period, the latest
@@ -245,11 +245,11 @@ function brevoSend({to,subject,html}){
 }
 // Confirmation right after the reminder is set or changed (owner 2026-11-02: "it does not work" — nothing arrived, so
 // nothing showed that it was set). It states the date and the addresses; it contains no owner link.
-async function sendConfirmation({emails,url,publishedAt,notes='',send=brevoSend,lang='en',model=undefined,ctx=null,
+async function sendConfirmation({emails,url,publishedAt,notes='',send=brevoSend,lang='en',model=undefined,ctx=null,updated=false,
  gscAvailable=!!(process.env.GSC_SERVICE_ACCOUNT_JSON||process.env.GSC_GROWTH_SERVICE_ACCOUNT_KEY_FILE||process.env.GSC_GROWTH_REFRESH_TOKEN)}){
  if(!emails.length)return {sent:false,reason:'NO_ADDRESSES'};
  if(send===brevoSend&&!process.env.BREVO_API_KEY)return {sent:false,reason:'EMAIL_NOT_CONFIGURED'};
- const m=await localize(confirmationMessage({emails,url,publishedAt,notes,gscAvailable,lang:T[lang]?lang:'en',ctx}),lang,{model:model===undefined?require('./growth-task-meaning.cjs').geminiModel():model});
+ const m=await localize(confirmationMessage({emails,url,publishedAt,notes,gscAvailable,lang:T[lang]?lang:'en',ctx,updated}),lang,{model:model===undefined?require('./growth-task-meaning.cjs').geminiModel():model});
  const ok=await send({to:emails,subject:m.subject,html:m.html}).catch(()=>false);
  return ok?{sent:true,language:m.language,...(m.translation?{translation:m.translation}:{})}:{sent:false,reason:'NOT_ACCEPTED'};
 }
