@@ -6,7 +6,7 @@
  const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const requestedMarket=String(new URLSearchParams(location.search).get('market')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={savedQuestionConfirmed:false,source:null,proposal:null,proposalState:'NOT_LOADED',exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
+ const safe={savedQuestionConfirmed:false,source:null,proposal:null,proposalState:'NOT_LOADED',verifiedLinkSuggestion:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
@@ -372,6 +372,11 @@
     $('growthReviewContent').hidden=false;$('growthSeoFields').hidden=false;
     $('heading').value=first.h2;$('copy').value=first.text;
     fillSeoFromSavedProposal(p);
+    if(safe.verifiedLinkSuggestion){
+     $('linkUrl').value=safe.verifiedLinkSuggestion.url;
+     $('linkText').value=safe.verifiedLinkSuggestion.label||'';
+     showVerifiedLink();
+    }
     $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
     p.sections.slice(1,5).forEach(function(x,i){addSection(x.h2,x.text,'Growth proposal section '+(i+2),x.placement)});
     if(!$('query').value&&p.focus_query)$('query').value=p.focus_query;
@@ -414,7 +419,7 @@
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
  function showVerifiedLink(){
-  var hasLink=!!$('linkUrl').value.trim();
+  var hasLink=safe.proposalState==='READY'&&!!$('linkUrl').value.trim();
   $('growthVerifiedLinkFields').hidden=!hasLink;
   if(!hasLink)$('linkText').value='';
  }
@@ -485,10 +490,13 @@
     topics.textContent='Topics observed in competitor pages (NOT verified page gaps): '+x.candidate_headings.slice(0,3).map(a=>a.text).join(' · ');
     target.appendChild(topics);
    }
-   if(x.internal_url&&safe.proposalState==='READY'){
-    // Filled in automatically for review (the editor approves the whole package; the fields stay editable).
-    if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
-    if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
+   if(x.internal_url){
+    // A link is a separately verified candidate, not a substitute for an approved content section.
+    safe.verifiedLinkSuggestion={url:x.internal_url,label:x.internal_label||''};
+    if(safe.proposalState==='READY'){
+     if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
+     if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
+    }
     showVerifiedLink();
     var sug=document.createElement('p');sug.textContent='Internal link filled in by Growth: '+x.internal_url+(x.internal_reason?'. '+x.internal_reason:'')+' Check it, change it or clear both fields.';target.appendChild(sug);
    }
@@ -509,7 +517,7 @@
  if(requestedQuestion)$('query').value=requestedQuestion;
  if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
- $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.seoOriginal=null;safe.exported=false;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
+ $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.verifiedLinkSuggestion=null;safe.seoOriginal=null;safe.exported=false;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
  $('query').addEventListener('change',function(){void recoverSavedQuestions()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
@@ -519,7 +527,7 @@
   if(!safe.savedQuestionConfirmed||!$('query').value.trim()){
     status('sourceStatus','Choose the exact saved customer question first. The tracked seed is not a substitute.',true);$('savedQuestionChooser').hidden=false;return;
    }
-   this.disabled=true;buttonProgress(this,true);safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';$('growthReviewContent').hidden=true;$('growthSeoFields').hidden=true;lockWhileLoading(true);
+   this.disabled=true;buttonProgress(this,true);safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.verifiedLinkSuggestion=null;$('growthReviewContent').hidden=true;$('growthSeoFields').hidden=true;lockWhileLoading(true);
   try{
    const response=await fetch(base+'/source?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
    const data=await response.json();
@@ -801,7 +809,7 @@
   }catch(e){wrap.hidden=false;choices.textContent='Could not look up previous Growth questions. Open the exact Growth research URL and use its CMS link.'}
   function choose(q){
    var question=String(q.question||'').trim(),market=String(q.market||'').trim();if(!question)return;
-   $('query').value=question;safe.savedQuestionConfirmed=true;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';$('approved').checked=false;
+   $('query').value=question;safe.savedQuestionConfirmed=true;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.verifiedLinkSuggestion=null;$('approved').checked=false;
    $('title').value='';$('meta').value='';$('existingTitle').textContent='';$('existingMeta').textContent='';$('existingMetadata').hidden=true;
    $('linkUrl').value='';$('linkText').value='';showVerifiedLink();
    $('evidence').value='needs_access';$('checkSource').disabled=false;$('checkSource').textContent='1. Check original Tracker page';
