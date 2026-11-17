@@ -6,6 +6,7 @@ const test = require('node:test'), assert = require('node:assert/strict'), fs = 
 let chromium = null; try { ({ chromium } = require('playwright')); } catch (e) {}
 const HTML = fs.readFileSync(path.join(__dirname, '../public/growth-cms-neutral-handoff.html'), 'utf8');
 const JS = fs.readFileSync(path.join(__dirname, '../public/growth-cms-neutral-handoff.js'), 'utf8');
+const REPORT_UI = fs.readFileSync(path.join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
 
 test('the page wiring: a hidden tick stays hidden, and a note says why there is nothing to confirm', () => {
   assert.match(HTML, /\.check\[hidden\]\{display:none\}/);
@@ -15,7 +16,7 @@ test('the page wiring: a hidden tick stays hidden, and a note says why there is 
   assert.match(JS, /safe\.aiDraftReadyForQuery===\$\('query'\)\.value\.trim\(\)/);
   assert.match(JS, /Generate the Advanced AI draft for this customer question before the CMS package/);
   assert.match(HTML, /Required before CMS download/);
-  assert.match(JS, /if\(selectedQuestion\)target\.searchParams\.set\('query',selectedQuestion\)/);
+  assert.match(REPORT_UI, /if\(selectedQuestion\)target\.searchParams\.set\('query',selectedQuestion\)/);
 });
 
 test('in a browser, the hidden "I checked all" tick is not displayed', { skip: !chromium && 'Playwright not installed' }, async () => {
