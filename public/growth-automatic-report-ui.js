@@ -156,7 +156,7 @@
     .then(function(r){return r.json()}).then(function(j){var ng=j&&j.ai_check&&j.ai_check.gap;
      if(ng&&ng.status!=='RUNNING'&&w.isConnected){var parent=w.parentNode,mark=w.nextSibling;parent.removeChild(w);var tmp=document.createElement('div');renderAiGap(tmp,ng);while(tmp.firstChild)parent.insertBefore(tmp.firstChild,mark);
       // The "Do it yourself" list in step 1 gets the facts and topics from the pages AI cites as well.
-      if(last&&last.ai_check){last.ai_check.gap=ng;var sb=document.getElementById('growthSelfDo');if(sb)selfRender(sb,selfItems(last));if(NOWC){NOWC.selfOpen=selfItems(last).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}return}
+      if(last&&last.ai_check){last.ai_check.gap=ng;renderAiWritingSuggestions(last);var sb=document.getElementById('growthSelfDo');if(sb)selfRender(sb,selfItems(last));if(NOWC){NOWC.selfOpen=selfItems(last).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}return}
      if(tries<24&&w.isConnected)setTimeout(tick,5000)}).catch(function(){if(tries<24&&w.isConnected)setTimeout(tick,5000)})};
    setTimeout(tick,5000);return}
   if(g.status==='FAILED'){node('p','The pages AI cites could not be compared this time. Paste an answer again to retry.',w);return}
@@ -220,7 +220,7 @@
   if(d.automatic_ai_status)node('small','Automatic Gemini check: '+String(d.automatic_ai_status).replace(/_/g,' ').toLowerCase()+'. This is not a Google AI Overview check.',details);
   renderAiGap(box,c.gap);
   // A newer AI check (automatic answer, a paste, the comparison finished) also updates "Do it yourself" in step 1.
-  if(d.gap_list){var sbx=document.getElementById('growthSelfDo');if(sbx){selfRender(sbx,selfItems(d));if(NOWC){NOWC.selfOpen=selfItems(d).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}}
+  if(d.gap_list){renderAiWritingSuggestions(d);var sbx=document.getElementById('growthSelfDo');if(sbx){selfRender(sbx,selfItems(d));if(NOWC){NOWC.selfOpen=selfItems(d).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}}
   if(!d.gap_list&&x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
    x.visibility_actions.forEach(function(v){node('strong',v.title,nx);node('p',v.why,nx);var ol=node('ol',null,nx);v.steps.forEach(function(t){node('li',t,ol)})})}
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' older Growth observation(s) are excluded from current citation checks. Writing answers remain preserved.',details);
@@ -444,6 +444,7 @@
     return post(writeUrl,{gap_list_id:gl.id,item_ids:ids,ai_check_choice:choice})}:null,
     rerunResearch:refreshChangedPageResearch})}catch(e){}
   }
+  if(d.gap_list)renderAiWritingSuggestions(d);
   // Everything below is the evidence behind steps 1–3: collapsed, so the page shows the decisions first.
   researchDetails=node('details',null,container);researchDetails.id='growthEvidence';
   node('summary','Research details — the evidence behind this (search results, competitors, next pages, technical data)',researchDetails);
@@ -1076,10 +1077,49 @@
  function selfKey(){return 'trackerGrowthSelfDone:'+token+':'+id}
  function selfDone(){try{return JSON.parse(localStorage.getItem(selfKey())||'{}')}catch(e){return {}}}
  function selfItems(d){var out=[],c=d.ai_check||{},g=c.gap,acts=(c.summary&&c.summary.visibility_actions)||[];
-  ((g&&g.missing_facts)||[]).forEach(function(f){out.push({id:'fact:'+f.key,title:'State on your page: '+f.label.toLowerCase(),why:'The pages AI cites state it ('+f.sites.join(', ')+'); your page does not. Only add it when it is true for your business.'+(f.example?' Example from '+f.example.site+': “'+f.example.excerpt+'”':'')})});
-  ((g&&g.missing_topics)||[]).forEach(function(t){out.push({id:'aitopic:'+t.topic,title:'Cover on your page: '+t.topic,why:'On the pages AI cites ('+t.sites.join(', ')+'), not on your page. Add it if it fits.'})});
+  ((g&&g.missing_facts)||[]).forEach(function(f){out.push({id:'fact:'+f.key,title:'Confirm business fact: '+f.label.toLowerCase(),why:'Only add if true for this business. AI-cited source sites: '+f.sites.join(', ')})});
+  // Content gaps belong to Growth's writing plan, never to manual completion tasks.
   acts.filter(function(a){return a.id!=='choose_ai_topics'&&a.id!=='compare_cited_pages'}).forEach(function(a){out.push({id:'act:'+a.id,title:a.title,why:a.why,steps:a.steps})});
-  return out}
+  return out;
+ }
+ function aiTopicWords(v){
+  return String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ').filter(w=>w.length>2&&!['your','with','from','page','what','does','roofing','roof','about','into','should','have','their','and','the','for'].includes(w));
+ }
+ function aiTopicMatch(topic,item){
+  var a=new Set(aiTopicWords(topic)),b=new Set(aiTopicWords(item.title));if(a.size<2||b.size<2)return false;
+  var intersection=[...a].filter(w=>b.has(w)).length;
+  return intersection>=2&&intersection/Math.max(a.size,b.size)>=.65;
+ }
+ function aiWritingSuggestions(d){
+  var topics=d.ai_check?.gap?.missing_topics||[],items=d.gap_list?.items||[];
+  var seen=new Set(),results=[];
+  topics.forEach(function(t){
+   if(!t||!t.topic||!['MISSING','PARTLY'].includes(t.coverage))return;
+   var match=items.find(function(x){return x&&x.writable&&['MISSING','PARTIAL'].includes(x.coverage)&&!x.relevance&&x.priority?.sources>=2&&aiTopicMatch(t.topic,x)});
+   if(match){if(seen.has(String(match.id)))return;seen.add(String(match.id))}
+   results.push({topic:t.topic,match:match||null});
+  });
+  return results;
+ }
+ function renderAiWritingSuggestions(d){
+  var choice=document.getElementById('growthGapChoice');if(!choice)return;
+  var box=document.getElementById('growthAiWritingSuggestions');
+  if(!box){box=node('section',null);box.id='growthAiWritingSuggestions';box.style.cssText='border:1px solid #93c5fd;border-radius:12px;padding:15px;background:#eff6ff;margin:16px 0';
+   if(choice.parentNode)choice.parentNode.insertBefore(box,choice.nextSibling)}
+  box.textContent='';var rows=aiWritingSuggestions(d);box.hidden=!rows.length;if(!rows.length)return;
+  node('h3','Growth handles AI content topics ('+rows.length+')',box);
+  node('p','AI content topics are routed to Growth automatically, not Do it yourself. A topic is preselected only when the current competitor comparison independently supports it. You still approve the writing; nothing publishes automatically.',box).className='info';
+  var ul=node('ul',null,box),matched=0;
+  rows.forEach(function(r){
+   var li=node('li',null,ul),checkbox=null;
+   if(r.match){checkbox=Array.from(choice.querySelectorAll('input[type=checkbox]')).find(x=>String(x.value)===String(r.match.id));
+    if(checkbox){matched++;if(!checkbox.checked){checkbox.checked=true;checkbox.dispatchEvent(new Event('change',{bubbles:true}))}}}
+   node('strong',r.topic+' — '+(checkbox?'Preselected for Growth writing':'More research required'),li);
+   node('small',checkbox?' Current competitor research supports this page gap. Check the suggested edit before requesting a draft.':' This AI topic is not independently supported by at least two readable ranking pages for the selected question, or it is not a distinct missing topic on this page.',li);
+  });
+  node('p',matched+' added to the Growth writing selection · '+(rows.length-matched)+' retained as evidence leads. No unverified claim was added to the draft.',box).className='info';
+ }
+
  function selfRender(box,list){
   box.textContent='';if(!list.length){box.hidden=true;return}box.hidden=false;
   var done=selfDone(),open=list.filter(x=>!done[x.id]),completed=list.filter(x=>done[x.id]);
@@ -1231,7 +1271,7 @@
    var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-answer/automatic?page_id='+encodeURIComponent(id)+runParams,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});
    var j=await r.json();if(!r.ok||!j.success)throw Error(j.code||'Automatic provider unavailable');
    d.automatic_ai_status=j.status;
-   if(j.ai_check){d.ai_check=j.ai_check;if(last&&last===d)last.ai_check=j.ai_check}
+   if(j.ai_check){d.ai_check=j.ai_check;if(last&&last===d)last.ai_check=j.ai_check;renderAiWritingSuggestions(d)}
   }catch(e){d.automatic_ai_status='PROVIDER_UNAVAILABLE'}
   finally{autoAiPending=false;var current=document.getElementById('growthAiCheck');if(current)renderAiCheck(current,d)}
  }
