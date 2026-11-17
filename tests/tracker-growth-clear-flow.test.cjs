@@ -65,3 +65,13 @@ test('Tracker Growth: do this now, three steps, do it yourself, evidence in tabs
   assert.deepEqual(errs,[]);
  }finally{await b.close();srv.close()}
 });
+
+test('selected writing topics and manual AI follow-ups have separate statuses and containers',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const ui=fs.readFileSync(path.join(__dirname,'../public/growth-automatic-report-ui.js'),'utf8');
+ assert.match(ui,/Separate manual follow-ups/);
+ assert.match(ui,/Selected Growth writing topics:/);
+ assert.match(ui,/Mark completed only after doing it:/);
+ assert.match(ui,/choice\.parentNode\.insertBefore\(selfBox,choice\.nextSibling\)/);
+ assert.match(ui,/Manual tasks completed:/);
+});
