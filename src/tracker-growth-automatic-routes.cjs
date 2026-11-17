@@ -102,8 +102,12 @@ async function trackerSitemapFallback(rows,pageUrl,trackedPages=[],fetchXml=null
     [...root.matchAll(/<(?:[\w.-]+:)?loc\s*>([\s\S]*?)<\/(?:[\w.-]+:)?loc>/gi)]
      .map(m=>m[1].trim().replace(/&amp;/gi,'&')).filter(u=>{try{const x=new URL(u);return x.protocol==='https:'&&x.hostname.toLowerCase()===host&&!x.username&&!x.password}catch(_){return false}}).slice(0,3)
     :[sitemapUrl];
-   for(const url of files){
-    const xml=url===sitemapUrl?root:await fetchOne(url);
+   // Fetch at most three children concurrently to avoid serial 4.5s timeout penalties.
+   const documents=await Promise.allSettled(files.map(u=>u===sitemapUrl?Promise.resolve(root):fetchOne(u)));
+   for(let i=0;i<files.length;i++){
+    const url=files[i],response=documents[i];
+    if(response.status!=='fulfilled')continue;
+    const xml=response.value;
     try{
      const data=importSitemap({name:'sitemap.xml',content_base64:Buffer.from(xml).toString('base64')},pageUrl);
      for(const value of data.urls){if(known.has(normUrl(value))||seen.has(normUrl(value)))continue;
