@@ -15,6 +15,7 @@ const {readRankingPages}=require('./growth-ranking-page-reader.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {buildGapList}=require('./growth-gap-list.cjs');
 const {checkNewPageOverlap}=require('./growth-new-page-overlap.cjs');
+const {briefFindingsForGrowth}=require('./prewrite-existing-page.cjs');
 const {deriveSearchLocale,validCountries,validLanguage,countryName,languageName}=require('./growth-search-locale.cjs');
 const {resolveMarketSetting}=require('./growth-market-store.cjs');
 const {writeForSelection,planBatch,remapSelection,MAX_ITEMS}=require('./growth-selected-writing.cjs');
@@ -87,6 +88,8 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
   try{
    const {home,pages}=await site(cid);
    const query=clip(b.keyword,160);
+   // Pre-Write findings are editorial leads, not newly verified Google evidence.
+   const prewriteFindings=briefFindingsForGrowth(b.brief_json||{});
    const {configured}=await marketFor(cid,b);
    const locale=deriveSearchLocale({html:'',url:home||'https://example.invalid/',configured});
    const discovery=await Promise.resolve().then(()=>searchLive({query,ownUrl:home,market:null,locale}))
@@ -98,6 +101,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
     .catch(()=>({status:'OVERVIEW_UNAVAILABLE'}));
    const report={generated_at:new Date().toISOString(),url:null,new_page:true,
     brief:{id:Number(b.id),keyword:b.keyword,working_title:b.working_title||null,region:b.region||null,language:b.language||null,created_at:b.created_at},
+    prewrite_findings:{...prewriteFindings,brief_id:Number(b.id),evidence_status:'EDITORIAL_LEADS_REQUIRE_FRESH_VERIFICATION'},
     search_discovery:{...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:query,search_locale:{...locale,
       ...(configured?.brief?{brief:configured.brief}:{})},competitor_fetch_log:reader.fetchLog,fetch_summary:reader.fetchSummary},
     competitor_overview:overview};
@@ -105,7 +109,9 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    const overlap=checkNewPageOverlap({keyword:query,sitePages:pages,items:gapList.items});
    gapList.recommended=gapList.items.filter(x=>x.recommended).map(x=>x.id);
    const planned=plannedUrl(home,b,pages);
-   gapList.research={...gapList.research,page_url:planned?.url||null,overlap:{status:overlap.status,exact:overlap.exact,possible:overlap.possible}};
+   gapList.research={...gapList.research,page_url:planned?.url||null,
+    prewrite_findings:report.prewrite_findings,
+    overlap:{status:overlap.status,exact:overlap.exact,possible:overlap.possible}};
    let ref=null;
    if(typeof recordGapList==='function')ref=await Promise.resolve(recordGapList({clientId:cid,prewriteBriefId:Number(b.id),targetUrl:planned?.url||'new-page:'+b.id,focusQuery:query,list:gapList})).catch(e=>{console.warn('[growth-new-page] gap list not saved',String(e?.code||'unknown'));return null});
    let carried=null;
@@ -206,7 +212,8 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
   const review={flagged:concepts.flatMap(c=>c.review?.flagged||[]),fact:[...new Set(concepts.flatMap(c=>c.review?.needs_fact_check||[]))],
    owner:[...new Set(concepts.flatMap(c=>c.review?.needs_owner_confirmation||[]))],safety:[...new Set(concepts.flatMap(c=>c.review?.needs_safety_review||[]))]};
   const pkg={kind:'NEW_PAGE_CONCEPT',keyword:first.keyword,title:last.title,planned_url:last.planned_url,prewrite_brief_id:Number(first.prewrite_brief_id),
-   overlap:list.research?.overlap||null,market:list.research?.market||null,sections:[...latest.values()],review,
+   overlap:list.research?.overlap||null,market:list.research?.market||null,
+    prewrite_findings:list.research?.prewrite_findings||null,sections:[...latest.values()],review,
    dossiers:concepts.map(c=>c.review?.dossier).filter(Boolean),published:false,
    next_steps:['Check every statement; rewrite or remove every flagged sentence.','Publish the page yourself at the planned URL (or another free URL).',
     'Link to it from related pages of the site.','Add the published URL to the Tracker: it then continues in the existing-page research and measurement.']};
