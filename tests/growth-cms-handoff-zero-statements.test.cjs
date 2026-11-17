@@ -40,9 +40,9 @@ test('single Growth proposal workflow has no Advanced alternative and still requ
  assert.match(JS,/if\(safe\.source===src&&\$\('query'\)\.value\.trim\(\)===exactQuestion\)review\.click\(\)/);
  assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&\$\('title'\)\.value\.trim\(\)/);
  assert.match(JS,/\$\('approved'\)\.checked&&manualReady&&factsChecked/);
- assert.match(JS,/function populateSeoStartingPoint\(\)/);
- assert.match(JS,/if\(!safe\.savedQuestionConfirmed\)return/);
- assert.match(JS,/if\(!\$\('title'\)\.value\.trim\(\)\)\$\('title'\)\.value=meta\.title/);
+ assert.match(JS,/function fillSeoFromSavedProposal\(proposal\)/);
+ assert.match(JS,/if\(!proposal\|\|!Array\.isArray\(proposal\.sections\)/);
+ assert.match(JS,/if\(!\$\('title'\)\.value\.trim\(\)\)\$\('title'\)\.value=h2\.slice/);
 });
 
 test('in a browser, the hidden "I checked all" tick is not displayed', { skip: !chromium && 'Playwright not installed' }, async () => {
@@ -87,4 +87,19 @@ test('CMS cannot silently load a different question or carry its old SEO metadat
  assert.match(JS,/Open Growth research for this exact question/);
  assert.match(HTML,/Existing page metadata — reference only/);
  assert.match(HTML,/Meta description draft for this customer question/);
+});
+
+test('missing same-query Growth proposal does not expose blank or fabricated CMS fields',()=>{
+ assert.match(HTML,/id="growthSeoFields" hidden/);
+ assert.match(HTML,/id="growthReviewContent" hidden/);
+ assert.match(JS,/safe\.proposalState==='READY'&&safe\.proposal/);
+ assert.match(JS,/Growth content proposal missing for this customer question/);
+ assert.match(JS,/No placeholder content has been created/);
+ assert.match(JS,/Return to Growth → Select improvements and write the proposal/);
+ assert.doesNotMatch(JS,/function seoStartingPoint\(question\)/);
+ assert.doesNotMatch(JS,/populateSeoStartingPoint\(\)/);
+ assert.match(JS,/safe\.proposalState='MISSING'/);
+ assert.match(JS,/if\(safe\.proposalState!=='READY'\|\|!safe\.proposal\)throw Error/);
+ assert.match(JS,/if\(safe\.proposalState==='READY'\)/);
+ assert.match(JS,/safe\.verifiedLinkSuggestion=/);
 });
