@@ -130,7 +130,17 @@ function registerGrowthCockpit(app,pool,deps={}){
    req.growth.gsc_connected_required_for_access=false;
    req.growth.can_edit=client.token===req.params.token;
    // The site's default target market (owner view of the Cockpit); optional, never blocks the Cockpit.
-   if(req.growth.can_edit)req.growth.site_markets=await getSiteMarkets(pool,{clientId:client.id}).catch(()=>null);
+   if(req.growth.can_edit){
+     req.growth.site_markets=await getSiteMarkets(pool,{clientId:client.id}).catch(()=>null);
+     // One batched read; an existing page override must not be silently replaced
+     // by a site's defaults when the editor changes just its target language.
+     req.growth.page_market_overrides={};
+     try{
+      const rr=await pool.query('SELECT page_id,countries,language FROM tracker_growth_page_markets WHERE tracker_client_id=$1',[client.id]);
+      for(const row of rr.rows||[])req.growth.page_market_overrides[String(row.page_id)]={
+       countries:validCountries(row.countries||[]),language:row.language||null};
+     }catch(e){if(e.code!=='42P01')console.warn('[growth] optional page market lookup unavailable',String(e.code||'unknown'))}
+    }
    // The Opportunity Finder (owner): the best search term × country × page from Search Console per country.
    if(req.growth.can_edit){
     const countryRows=await loadCountryRows(pool,{clientId:client.id}).catch(()=>[]);
@@ -393,7 +403,7 @@ function registerGrowthCockpit(app,pool,deps={}){
    '<p><strong>A page that does not exist yet:</strong> <a href="/track/'+tok+'/growth/new-page">New page from a Pre-Write brief</a></p></details>'+
    '<p class="info">Research, writing and CMS export never publish to your website. Case Study locks remain in force.</p></section>'+siteMarketBox;
   const simpleLauncher=g.can_edit?renderSimpleGrowthStart({
-   pages:g.pages,token:req.params.token,siteMarkets,regions:PREWRITE_REGIONS,languages:PREWRITE_LANGUAGES,
+   pages:g.pages,token:req.params.token,siteMarkets,pageMarketOverrides:g.page_market_overrides,regions:PREWRITE_REGIONS,languages:PREWRITE_LANGUAGES,
    countryName,languageName,escapeHtml
   }):'';
   const memorySection=`<h2>What the system remembers</h2><p>Every suggestion you start or skip, what the research concluded and what was measured afterwards is saved on the server, so the Cockpit does not suggest the same work twice and can show whether its advice paid off.</p><div class="stats"><section>Research started<strong>${tr.started||0}</strong><small>${tr.system_choices_started||0} chosen by the system</small></section><section>Improvement found<strong>${tr.improvement_found||0}</strong><small>${tr.no_change||0} researched with no change needed</small></section><section>Published<strong>${tr.published||0}</strong><small>${tr.skipped||0} skipped by you</small></section><section>System's choices measured<strong>${tr.system_choices_measured||0}</strong><small>${tr.system_choices_measured?(tr.system_choices_click_change>=0?'+':'')+tr.system_choices_click_change+' clicks, 28 days before vs after':'Needs 28 days after publication and before/after numbers'}</small></section></div>${(g.history||[]).length?`<table><thead><tr><th>Page / query</th><th>Chosen by</th><th>Started</th><th>What happened</th></tr></thead><tbody>${g.history.slice(0,25).map(h=>`<tr><td>${h.query?'<strong>'+escapeHtml(h.query)+'</strong>':''}<small><a href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(h.url)}</a></small></td><td>${h.system_choice?'System':'You'}</td><td>${escapeHtml(h.date)}${h.snapshot&&h.snapshot.impressions!=null?`<small>then: ${escapeHtml(h.snapshot.impressions)} impressions, ${escapeHtml(h.snapshot.clicks)} clicks${h.snapshot.position?', position '+escapeHtml(h.snapshot.position):''}</small>`:''}</td><td>${escapeHtml(h.outcome)}</td></tr>`).join('')}</tbody></table>`:'<p class="note">Nothing remembered yet. Start the suggested research above; the outcome is saved automatically.</p>'}`;
