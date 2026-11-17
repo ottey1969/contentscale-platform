@@ -325,7 +325,8 @@
   try{
    var exactQuestion=String($('query').value||'').trim();
    safe.proposalState='LOADING';ready();
-   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(exactQuestion),{cache:'no-store',credentials:'same-origin'});
+   var requestedId=new URLSearchParams(location.search).get('proposal_id');
+   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(exactQuestion)+(requestedId?'&proposal_id='+encodeURIComponent(requestedId):''),{cache:'no-store',credentials:'same-origin'});
    var d=await res.json();
    if(!res.ok||d.success!==true||safe.source!==src)return;
    if(!d.proposal||!(d.proposal.sections||[]).length){
@@ -517,7 +518,7 @@
  if(requestedQuestion)$('query').value=requestedQuestion;
  if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
- $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.verifiedLinkSuggestion=null;safe.seoOriginal=null;safe.exported=false;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
+ $('query').addEventListener('input',function(){if(new URLSearchParams(location.search).get('proposal_id')){var u=new URL(location.href);u.searchParams.delete('proposal_id');history.replaceState(null,'',u.pathname+u.search)}safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.verifiedLinkSuggestion=null;safe.seoOriginal=null;safe.exported=false;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
  $('query').addEventListener('change',function(){void recoverSavedQuestions()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
@@ -778,6 +779,37 @@
   if(!safe.exported)return;
   if(ev.target&&ev.target.matches('input,textarea,select')){safe.exported=false;ready()}
  });
+ // The proposal written by Growth binds the exact customer question and source
+ // research page. It is the authority, NOT the seed keyword or an old query URL.
+ async function recoverSelectedProposal(){
+  var proposalId=String(new URLSearchParams(location.search).get('proposal_id')||'').trim();
+  if(!/^[1-9][0-9]*$/.test(proposalId))return false;
+  try{
+   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&proposal_id='+encodeURIComponent(proposalId),
+    {credentials:'same-origin',cache:'no-store'});
+   var data=await res.json();
+   if(!res.ok||data.success!==true||!data.proposal||Number(data.proposal.id)!==Number(proposalId))throw Error('Saved proposal not available');
+   var p=data.proposal,question=String(p.focus_query||'').trim();
+   if(!question||!Array.isArray(p.sections)||!p.sections.length)throw Error('Saved writing has no reviewable content');
+   $('query').value=question;safe.savedQuestionConfirmed=true;
+   var url=new URL(location.href);url.searchParams.delete('proposal_id');url.searchParams.set('query',question);
+   history.replaceState(null,'',url.pathname+url.search);
+   var sourcePage=Number(p.research_page_id)||pageId;
+   $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(sourcePage)+'&query='+encodeURIComponent(question)+(requestedMarket?'&market='+encodeURIComponent(requestedMarket):'');
+   $('savedQuestionChooser').hidden=true;
+   $('checkSource').disabled=false;
+   ready();if(!$('checkSource').disabled)$('checkSource').click();
+   return true;
+  }catch(e){
+   var wrap=$('savedQuestionChooser');wrap.hidden=false;
+   var choices=$('savedQuestionChoices');choices.textContent='';
+   var p=document.createElement('p');
+   p.textContent='This saved Growth proposal ID could not be verified for this page. Return to the Growth writing result and open its CMS link; an older query will not be substituted.';
+   choices.appendChild(p);
+   $('query').value='';safe.savedQuestionConfirmed=false;ready();
+   return true;
+  }
+ }
  // Recover older links safely: show saved page/question pairs instead of inserting the seed.
  async function recoverSavedQuestions(){
   var wrap=$('savedQuestionChooser'),choices=$('savedQuestionChoices');if(!wrap||!choices)return;
@@ -826,6 +858,6 @@
  }
  // Direct from Growth: verify owner, source and research automatically; never approve or publish.
  if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(async()=>{
-  await recoverSavedQuestions();
+  if(!await recoverSelectedProposal())await recoverSavedQuestions();
  });
 })();
