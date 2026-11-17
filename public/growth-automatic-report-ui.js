@@ -1166,7 +1166,7 @@
   if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
   // 3. Step 2 and step 3 (static parts of the page).
   var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Step 2 · Write and prepare the CMS package';
-   var note=fin.querySelector('.growth-finish-note'),ho=document.getElementById('growthEditorHandoff'),checked=!!(d.cms_handoff&&d.cms_handoff.url);
+   var note=fin.querySelector('.growth-finish-note'),ho=document.getElementById('growthEditorHandoff'),checked=!!((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url);
    if(note)note.textContent=written||checked?'Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.':gl?'Nothing written yet: tick topics in step 1 and click “Write selected with AI”. The CMS package opens here once concepts are written.':'No content change is ready for a CMS package for this research.';
    if(ho&&ho.parentNode)ho.parentNode.hidden=!(written||checked)}
   var meas=document.querySelector('#growthNextAction > h2');if(meas)meas.textContent='Step 3 · Publish and measure';
@@ -1180,7 +1180,7 @@
    b.addEventListener('click',function(){trTab(t[0])})});
   if(panes.length)trTab(panes[0].getAttribute('data-tab'));
   // 5. The next action: live while ticking, and in a bar at the bottom when the card is out of view.
-  NOWC={published:false,written:written||(d.cms_handoff&&d.cms_handoff.url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
+  NOWC={published:false,written:written||((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
   trUpdate(trPicked());restorePublicationRecord();
   if(choice&&!choice.dataset.nowWired){choice.dataset.nowWired='1';choice.addEventListener('change',function(e){if(e.target&&e.target.type==='checkbox')trUpdate(trPicked())})}
@@ -1194,7 +1194,7 @@
   requestAnimationFrame(function(){el.scrollIntoView({block:'start'})})});
  // A checked edit proposal is stored for the page that should change (not this research page): the CMS package opens there.
  function pointHandoff(r){
-  var a=document.getElementById('growthEditorHandoff'),h=r&&r.cms_handoff;
+  var a=document.getElementById('growthEditorHandoff'),h=r&&(r.cms_handoff||(r.gap_list?.cms_url?{url:r.gap_list.cms_url,target_page_id:r.gap_list.target_page_id}:null));
   if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
   var target=new URL(h.url,location.origin);
   if(target.origin!==location.origin)return;
