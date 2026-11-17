@@ -52,6 +52,12 @@ function patch(source){
   "     note:'This is the location requested from Serper, not independent proof of rankings across an entire state.'};\n"+
   "    _pwbStage='persistence';\n    const _saveConn=await pool.connect();",
   'SAVED_SCOPE');
+ // Supporting primary-source searches are country-wide, but must use the actual
+ // output-language code, never the country code as hl (e.g. hl='us').
+ const wrongLanguage='hl:glParam,gl:glParam';
+ const count=s.split(wrongLanguage).length-1;
+ if(count!==4)throw Error('PREWRITE_LOCAL_SERP_SUPPORTING_LANGUAGE_'+count);
+ s=s.split(wrongLanguage).join('hl:_pwbSerpMarket.hl,gl:glParam');
  return s;
 }
 module.exports={patch};
