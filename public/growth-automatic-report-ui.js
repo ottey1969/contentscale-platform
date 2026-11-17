@@ -222,10 +222,10 @@
   renderAiGap(box,c.gap);
   // A newer AI check (automatic answer, a paste, the comparison finished) also updates "Do it yourself" in step 1.
   if(d.gap_list){renderAiContentTasks(d,document.getElementById('growthGapChoice'));var sbx=document.getElementById('growthSelfDo');if(sbx){selfRender(sbx,selfItems(d));if(NOWC){NOWC.selfOpen=selfItems(d).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}}
-  if(!d.gap_list&&x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
+  if(false&& !d.gap_list&&x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
    x.visibility_actions.forEach(function(v){node('strong',v.title,nx);node('p',v.why,nx);var ol=node('ol',null,nx);v.steps.forEach(function(t){node('li',t,ol)})})}
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' older Growth observation(s) are excluded from current citation checks. Writing answers remain preserved.',details);
-  var goStep=node('p',null,box),continueLink=node('a','Continue to choose page improvements →',goStep);continueLink.href='#growthGapChoice';
+  // Comparison instructions are already in the complete brief; no extra step.
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
   var existing=new Set(preItems.filter(function(item){return ['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(item.status)}).map(function(item){return item.engine}));
   (x.engines||[]).forEach(function(e){if(e.checked)existing.add(e.id)});
@@ -691,6 +691,38 @@
    });
    node('small','Only insert if the original section does not already answer this well. Review claims, accuracy, placement and duplicate content.',s);
    var save=node('button','Download editorial brief (.md)',s);save.type='button';
+   // An explicit editorial sign-off is not a publication or a measurement start.
+   if(main.getAttribute('data-owner-draft')==='true'){
+    var reviewBox=node('section',null,box);reviewBox.id='growthBriefCompletion';
+    reviewBox.style.cssText='margin-top:18px;padding:16px;border:1px solid #94a3b8;border-radius:10px;background:white';
+    node('h3','Finish Growth Brief',reviewBox);
+    node('p','Confirm that you have reviewed the research and unresolved claims. Your research snapshot is already saved. This action records editorial review, but does not publish or start the 28-day measurement.',reviewBox);
+    var completeButton=node('button','Mark brief complete & save review',reviewBox);completeButton.type='button';
+    var reviewStatus=node('p','',reviewBox);reviewStatus.setAttribute('role','status');
+    var nextLink=node('a','Continue to publish & measure →',reviewBox);nextLink.href='#growthNextAction';nextLink.className='growth-primary-finish';nextLink.hidden=true;
+    function displayReview(review){
+     if(!review||review.status!=='REVIEWED')return;
+     completeButton.hidden=true;
+     reviewStatus.textContent='✓ Reviewed and saved'+(review.reviewed_at?' on '+String(review.reviewed_at).slice(0,16).replace('T',' '):'')+'. Nothing has been published. The 28-day measurement begins when publication is confirmed.';
+     reviewStatus.style.color='#166534';nextLink.hidden=false;
+     var publish=document.getElementById('growthNextAction');if(publish)publish.hidden=false;
+     var finish=document.getElementById('growthFinalActions');if(finish)finish.hidden=false;
+    }
+    displayReview(d.brief_review);
+    completeButton.addEventListener('click',async function(){
+     completeButton.disabled=true;reviewStatus.textContent='Saving editorial sign-off…';
+     try{
+      var response=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/brief-reviewed?page_id='+encodeURIComponent(id)+runParams,{
+       method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({generated_at:d.generated_at})
+      });
+      var result=await response.json();
+      if(!response.ok||result.success!==true)throw Error(result.message||result.code||'Could not save the review');
+      d.brief_review=result.brief_review;
+      if(last&&last.generated_at===d.generated_at)last.brief_review=result.brief_review;
+      displayReview(result.brief_review);
+     }catch(e){reviewStatus.textContent='Review was not saved: '+String(e.message||e);completeButton.disabled=false}
+    });
+   }
    save.addEventListener('click',function(){
     var lines=['# ContentScale Growth · Editorial improvement (not published)','',
       'Original URL: '+String(d.url||''),'Working query: '+String(plan.focus_query||'Unknown'),
@@ -1129,9 +1161,8 @@
   var topics=aiContentTasks(d),box=document.getElementById('growthAiContentTasks');
   if(!box){box=document.createElement('section');box.id='growthAiContentTasks';box.className='tg-self';
    box.style.cssText='border:1px solid #93c5fd;background:#eff6ff;border-radius:12px;padding:16px;margin:16px 0';
-   var place=document.querySelector('.tg-found')||choice;
-   if(place&&place.parentNode)place.parentNode.insertBefore(box,place.nextSibling);
-   else container.appendChild(box)}
+   // The complete brief is the first visible result after the scan.
+   container.insertBefore(box,container.firstChild)}
   box.textContent='';box.hidden=!(d&&d.gap_list||d&&d.search_discovery||d&&d.ai_check);if(box.hidden)return;
   node('h3','Complete Growth AI Research & Writing Brief · '+topics.length+' AI-source topics',box);
   if(!topics.length)node('p','No AI-cited content gaps were identified or verified in this run. The complete research brief is still available, including Google research, current-page evidence, missing information, and the NO CHANGE option.',box).className='info';
@@ -1256,7 +1287,7 @@
   var evl=node('li',null,fl),eva=node('a','Open source evidence',evl);eva.href='#growthEvidenceAll';
   // The AI systems research is visible BEFORE topics, not buried under evidence tabs.
   // This matches the Free Growth flow; AI answers remain optional.
-  if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
+  if(aiBox){aiBox.classList.add('growth-ai-prominent');}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   renderAiContentTasks(d,choice);
   var currentBrief=document.getElementById('growthAiContentTasks');
@@ -1270,8 +1301,8 @@
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
   // Editorial proposals are included in the brief evidence, not shown as a separate step.
   // 3. Step 2 and step 3 (static parts of the page).
-  var publishPanel=document.getElementById('growthNextAction');if(publishPanel)publishPanel.hidden=false;
-  var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Optional CMS preparation';
+  var publishPanel=document.getElementById('growthNextAction');if(publishPanel)publishPanel.hidden=!(d.brief_review?.status==='REVIEWED');
+  var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=!(d.brief_review?.status==='REVIEWED');var fh=fin.querySelector('h2');if(fh)fh.textContent='Optional CMS preparation';
    var note=fin.querySelector('.growth-finish-note'),ho=document.getElementById('growthEditorHandoff'),checked=!!((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url);
    if(note)note.textContent=written||checked?'Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.':gl?'Nothing written yet: tick topics in step 1 and click “Write selected with AI”. The CMS package opens here once concepts are written.':'No content change is ready for a CMS package for this research.';
    if(ho&&ho.parentNode)ho.parentNode.hidden=!(written||checked)}
@@ -1287,7 +1318,7 @@
   if(panes.length)trTab(panes[0].getAttribute('data-tab'));
   // Keep research scope available once, inside the brief's technical appendix.
   found.hidden=false;all.appendChild(found);
-  var followups=selfItems(d);if(followups.length){var manual=document.createElement('section');manual.id='growthSelfDo';manual.className='tg-self';container.appendChild(manual);node('h3','Manual follow-ups — after reviewing the brief',manual);selfRender(manual,followups)}
+  // Manual follow-ups are included inside the writing brief, not separately listed.
   // 5. The next action: live while ticking, and in a bar at the bottom when the card is out of view.
   NOWC={published:false,written:written||((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
@@ -1372,7 +1403,7 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Research complete. Review the evidence and next action below.',false);runProgressText(false);moveToResearch('growthAiContentTasks');if(owner)triggerAutomaticAi(result);
+   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Research complete. The Growth Brief is displayed below; review and mark it complete when ready.',false);runProgressText(false);moveToResearch('growthAiContentTasks');if(owner)triggerAutomaticAi(result);
    return true;
   }catch(e){firstProgress('Growth research failed: '+String(e.message||e)+'. No completed report was saved.',false);runProgressText(false);moveToResearch('researchStatus');status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false;return false
