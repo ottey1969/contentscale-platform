@@ -27,10 +27,14 @@
  function removedSentences(){var local=[];try{var v=JSON.parse(localStorage.getItem(removalKey)||'[]');local=Array.isArray(v)?v:[]}catch(e){}
   return local.concat(serverRemoved.filter(function(x){return local.indexOf(x)<0}))}
  function saveRemoval(sentence,how){
-  try{var all=removedSentences();if(!all.includes(sentence)){all.push(sentence);localStorage.setItem(removalKey,JSON.stringify(all))}}catch(e){}
-  if(serverRemoved.indexOf(sentence)<0)serverRemoved.push(sentence);
+  // Do not claim persistence until the server actually acknowledges the decision.
   return fetch(base+'/removals',{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({page_id:pageId,sentence:sentence,how:how||'REMOVED_BY_BUTTON'})}).then(function(r){return r.ok}).catch(function(){return false});
+   body:JSON.stringify({page_id:pageId,sentence:sentence,how:how||'REMOVED_BY_BUTTON'})}).then(function(r){
+    if(!r.ok)return false;
+    if(serverRemoved.indexOf(sentence)<0)serverRemoved.push(sentence);
+    try{var all=removedSentences();if(!all.includes(sentence)){all.push(sentence);localStorage.setItem(removalKey,JSON.stringify(all))}}catch(e){}
+    return true;
+   }).catch(function(){return false});
  }
  function loadServerRemovals(){
   return fetch(base+'/removals?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json()})
@@ -170,8 +174,11 @@
  function flaggedRemoveAll(anchor){
   var old=document.getElementById('growthFlaggedRemoveAll');if(old){old.disabled=false;old.textContent='Remove all flagged sentences from draft';return}
   var all=document.createElement('button');all.type='button';all.id='growthFlaggedRemoveAll';all.textContent='Remove all flagged sentences from draft';
-  all.onclick=function(){var n=0;document.querySelectorAll('.growth-flagged-remove > .growth-flag-remove-btn').forEach(function(b){if(!b.disabled&&/Remove this flagged sentence/.test(b.textContent)&&!isKept(b.parentNode.getAttribute('data-sentence'))){b.click();n++}});
-   all.textContent=n?'Removed '+n+' flagged sentence(s)':'Nothing left to remove';all.disabled=true};
+  all.onclick=function(){var n=0;document.querySelectorAll('.growth-flagged-remove > .growth-flag-remove-btn').forEach(function(b){
+   if(!b.disabled&&(/Remove this flagged sentence|Dismiss obsolete warning/.test(b.textContent))&&!isKept(b.parentNode.getAttribute('data-sentence'))){b.click();n++}
+  });
+   all.textContent=n?'Processing '+n+' sentence decision(s) — check results below':'Nothing in the editable draft to remove; review any obsolete warnings below';
+   all.disabled=true};
   anchor.parentNode.insertBefore(all,anchor);
  }
  // A warning for text which is no longer in the editable package is not a
@@ -215,7 +222,7 @@
   var refresh=function(){
    if(inDraft(sentence)&&isKept(sentence)){action.hidden=true;keep.hidden=true;show.hidden=false;alt.hidden=true;undoKeep.hidden=false;undoKeep.disabled=false;result.textContent='✓ Kept — you confirmed it is true for your business; the package records it as confirmed by you.';row.classList.add('growth-flag-kept');ready();return}
    row.classList.remove('growth-flag-kept');action.hidden=false;undoKeep.hidden=true;
-   if(removedSentences().includes(sentence)&&!inDraft(sentence))return done('Removed earlier — remembered for this page.');
+   if(removedSentences().includes(sentence)&&!inDraft(sentence)){retireAbsentFlag(box,sentence);return done('Removed or dismissed earlier — remembered for this page.');}
    if(inDraft(sentence)){action.disabled=false;action.textContent='Remove this flagged sentence from draft';alt.hidden=true;show.hidden=false;keep.hidden=safety;keep.disabled=false;result.textContent='';return}
    var near=closestSentence(sentence);
    if(near){action.disabled=true;action.textContent='Not removed automatically';
@@ -334,6 +341,11 @@
   [main||{}].concat(safe.added.map(function(a){return a.review||{}})).forEach(function(r){
    keys.forEach(function(k){if(Array.isArray(r[k]))out[k]=(out[k]||[]).concat(r[k])});
    if(r.dossier&&!out.dossier)out.dossier=r.dossier});
+  // Persisted dismissals remain in the audit store; do not reproduce obsolete
+  // unsupported claims in a new CMS package's active review notes.
+  if(Array.isArray(out.flagged))out.flagged=out.flagged.filter(function(f){
+   return !f||!f.sentence||!removedSentences().includes(f.sentence)||inDraft(f.sentence);
+  });
   return out;
  }
  // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
