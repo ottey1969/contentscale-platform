@@ -65,3 +65,17 @@ test('Tracker Growth: do this now, three steps, do it yourself, evidence in tabs
   assert.deepEqual(errs,[]);
  }finally{await b.close();srv.close()}
 });
+
+test('AI content tasks go to external AI briefing, not manual Do it yourself completion',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const ui=fs.readFileSync(path.join(__dirname,'../public/growth-automatic-report-ui.js'),'utf8');
+ const manual=ui.slice(ui.indexOf('function selfItems(d)'),ui.indexOf('function aiContentTasks(d)'));
+ assert.doesNotMatch(manual,/missing_topics|aitopic:/);
+ assert.match(manual,/missing_facts/);
+ assert.match(ui,/function externalAiContentBrief\(d,topics\)/);
+ assert.match(ui,/function renderAiContentTasks\(d,choice\)/);
+ assert.match(ui,/Copy complete brief for external AI/);
+ assert.match(ui,/Do NOT invent company services/);
+ assert.match(ui,/Manual website \/ business actions/);
+ assert.match(ui,/renderAiContentTasks\(last,document\.getElementById\('growthGapChoice'\)\)/);
+});

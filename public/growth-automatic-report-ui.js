@@ -156,7 +156,7 @@
     .then(function(r){return r.json()}).then(function(j){var ng=j&&j.ai_check&&j.ai_check.gap;
      if(ng&&ng.status!=='RUNNING'&&w.isConnected){var parent=w.parentNode,mark=w.nextSibling;parent.removeChild(w);var tmp=document.createElement('div');renderAiGap(tmp,ng);while(tmp.firstChild)parent.insertBefore(tmp.firstChild,mark);
       // The "Do it yourself" list in step 1 gets the facts and topics from the pages AI cites as well.
-      if(last&&last.ai_check){last.ai_check.gap=ng;var sb=document.getElementById('growthSelfDo');if(sb)selfRender(sb,selfItems(last));if(NOWC){NOWC.selfOpen=selfItems(last).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}return}
+      if(last&&last.ai_check){last.ai_check.gap=ng;renderAiContentTasks(last,document.getElementById('growthGapChoice'));var sb=document.getElementById('growthSelfDo');if(sb)selfRender(sb,selfItems(last));if(NOWC){NOWC.selfOpen=selfItems(last).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}return}
      if(tries<24&&w.isConnected)setTimeout(tick,5000)}).catch(function(){if(tries<24&&w.isConnected)setTimeout(tick,5000)})};
    setTimeout(tick,5000);return}
   if(g.status==='FAILED'){node('p','The pages AI cites could not be compared this time. Paste an answer again to retry.',w);return}
@@ -220,7 +220,7 @@
   if(d.automatic_ai_status)node('small','Automatic Gemini check: '+String(d.automatic_ai_status).replace(/_/g,' ').toLowerCase()+'. This is not a Google AI Overview check.',details);
   renderAiGap(box,c.gap);
   // A newer AI check (automatic answer, a paste, the comparison finished) also updates "Do it yourself" in step 1.
-  if(d.gap_list){var sbx=document.getElementById('growthSelfDo');if(sbx){selfRender(sbx,selfItems(d));if(NOWC){NOWC.selfOpen=selfItems(d).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}}
+  if(d.gap_list){renderAiContentTasks(d,document.getElementById('growthGapChoice'));var sbx=document.getElementById('growthSelfDo');if(sbx){selfRender(sbx,selfItems(d));if(NOWC){NOWC.selfOpen=selfItems(d).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}}
   if(!d.gap_list&&x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
    x.visibility_actions.forEach(function(v){node('strong',v.title,nx);node('p',v.why,nx);var ol=node('ol',null,nx);v.steps.forEach(function(t){node('li',t,ol)})})}
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' older Growth observation(s) are excluded from current citation checks. Writing answers remain preserved.',details);
@@ -1101,12 +1101,62 @@
  function selfDone(){try{return JSON.parse(localStorage.getItem(selfKey())||'{}')}catch(e){return {}}}
  function selfItems(d){var out=[],c=d.ai_check||{},g=c.gap,acts=(c.summary&&c.summary.visibility_actions)||[];
   ((g&&g.missing_facts)||[]).forEach(function(f){out.push({id:'fact:'+f.key,title:'State on your page: '+f.label.toLowerCase(),why:'The pages AI cites state it ('+f.sites.join(', ')+'); your page does not. Only add it when it is true for your business.'+(f.example?' Example from '+f.example.site+': “'+f.example.excerpt+'”':'')})});
-  ((g&&g.missing_topics)||[]).forEach(function(t){out.push({id:'aitopic:'+t.topic,title:'Cover on your page: '+t.topic,why:'On the pages AI cites ('+t.sites.join(', ')+'), not on your page. Add it if it fits.'})});
+  // Content tasks go to Growth / external AI, never into the manual checklist.
   acts.filter(function(a){return a.id!=='choose_ai_topics'&&a.id!=='compare_cited_pages'}).forEach(function(a){out.push({id:'act:'+a.id,title:a.title,why:a.why,steps:a.steps})});
   return out}
+ function aiContentTasks(d){
+  return ((d.ai_check?.gap?.missing_topics)||[]).filter(t=>t&&t.topic).map(t=>({
+   topic:String(t.topic),coverage:String(t.coverage||'UNKNOWN'),
+   sites:Array.isArray(t.sites)?t.sites:[],examples:Array.isArray(t.examples)?t.examples:[]
+  }));
+ }
+ function externalAiContentBrief(d,topics){
+  var lines=['GROWTH — CONTENT RESEARCH AND WRITING BRIEF','',
+   'Customer question (do not change intent): '+String(d.ai_check?.search_term||d.editorial_decision_gate?.focus_query||runQuery||''),
+   'Existing page: '+String(d.url||''),
+   'Read the existing page and independently verify the following observed topics before writing.',
+   'Observed topics are NOT proven missing just because headings differ. Preserve already good content.',
+   'Draft only relevant sections and answers that serve this customer question.',
+   'Do NOT invent company services, 24/7 availability, response times, licences, insurance, prices, project examples or guarantees.',
+   'Flag all claims needing business-owner confirmation. Cite exact source URLs you actually opened.',
+   'Provide for every supported improvement: coverage assessment, proposed H2, ready-to-review paragraphs, suggested page placement, sources and factual checks.',
+   'Nothing is approved or published automatically.','',
+   'TOPICS REPORTED ON AI-CITED PAGES:'];
+  topics.forEach((t,i)=>{
+   lines.push((i+1)+'. '+t.topic+' (coverage assessment '+t.coverage+')');
+   if(t.sites.length)lines.push('  Observed domains: '+t.sites.join(', '));
+   t.examples.slice(0,3).forEach(ex=>{
+    if(ex.heading||ex.excerpt)lines.push('  Example lead: '+[ex.heading,ex.excerpt].filter(Boolean).join(' — ').slice(0,300))
+   })
+  });
+  return lines.join('\n');
+ }
+ function renderAiContentTasks(d,choice){
+  if(!choice)return;
+  var topics=aiContentTasks(d),box=document.getElementById('growthAiContentTasks');
+  if(!box){box=document.createElement('section');box.id='growthAiContentTasks';box.className='tg-self';
+   box.style.cssText='border:1px solid #93c5fd;background:#eff6ff;border-radius:12px;padding:16px;margin:16px 0';
+   choice.parentNode.insertBefore(box,choice.nextSibling)}
+  box.textContent='';box.hidden=!topics.length;if(!topics.length)return;
+  node('h3','For Growth / external AI · '+topics.length+' content research topics',box);
+  node('p','AI can research and draft these. They are not tasks you must write yourself. Check source relevance and actual page coverage; a missing topic is not a verified business fact.',box).className='info';
+  var ul=node('ul',null,box);
+  topics.forEach(t=>{var li=node('li',null,ul);node('strong',t.topic,li);
+   node('small','Reported coverage: '+t.coverage+' · source domains: '+(t.sites.join(', ')||'unknown'),li)});
+  var btn=node('button','Copy complete brief for external AI',box);btn.type='button';
+  btn.style.cssText='border:0;border-radius:8px;background:#1d4ed8;color:#fff;padding:10px 14px;cursor:pointer';
+  var status=node('small','',box);status.setAttribute('role','status');
+  btn.addEventListener('click',async()=>{
+   try{var draft=externalAiContentBrief(d,topics);
+    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(draft);
+    else{var input=document.createElement('textarea');input.value=draft;document.body.appendChild(input);input.select();if(!document.execCommand('copy'))throw Error('copy unavailable');input.remove()}
+    status.textContent='Copied. Give the brief to your external AI; review facts and sources before publishing.'
+   }catch(e){status.textContent='Browser blocked clipboard access. Copy the topics from this panel.'}
+  })
+ }
  function selfRender(box,list){box.textContent='';if(!list.length){box.hidden=true;return}box.hidden=false;var dn=selfDone();
   var open=list.filter(function(x){return !dn[x.id]}),fin=list.filter(function(x){return dn[x.id]});
-  node('h3','Do it yourself ('+open.length+' open)',box);node('p','From the AI answers: Growth does not write these. Tick one when it is done.',box).className='info';
+  node('h3','Manual website / business actions ('+open.length+' open)',box);node('p','Only tasks requiring external account access or confirmation of real business facts. AI writing tasks are in the separate Growth / external AI brief. Tick after actually completing a task.',box).className='info';
   var add=function(x,parent){var li=node('li',null,parent),lab=node('label',null,li),cb=node('input',null,lab);cb.type='checkbox';cb.checked=!!dn[x.id];
    node('strong',' '+x.title,lab);var det=node('details',null,li);node('summary','Why and how',det);node('small',x.why,det);if((x.steps||[]).length){var ol=node('ol',null,det);x.steps.forEach(function(t){node('li',t,ol)})}
    cb.addEventListener('change',function(){var d2=selfDone();if(cb.checked)d2[x.id]=1;else delete d2[x.id];try{localStorage.setItem(selfKey(),JSON.stringify(d2))}catch(e){}selfRender(box,list);if(NOWC){NOWC.selfOpen=list.filter(function(y){return !selfDone()[y.id]}).length;trUpdate(trPicked())}})};
@@ -1160,7 +1210,7 @@
   if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';
-   var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
+   renderAiContentTasks(d,choice);var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
   if(decision&&!keepDecision){var dh=decision.querySelector('h2');if(dh)dh.textContent='Growth’s analysis of this search'}
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
   if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
@@ -1221,7 +1271,7 @@
    var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-answer/automatic?page_id='+encodeURIComponent(id)+runParams,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});
    var j=await r.json();if(!r.ok||!j.success)throw Error(j.code||'Automatic provider unavailable');
    d.automatic_ai_status=j.status;
-   if(j.ai_check){d.ai_check=j.ai_check;if(last&&last===d)last.ai_check=j.ai_check}
+   if(j.ai_check){d.ai_check=j.ai_check;if(last&&last===d)last.ai_check=j.ai_check;renderAiContentTasks(d,document.getElementById('growthGapChoice'))}
   }catch(e){d.automatic_ai_status='PROVIDER_UNAVAILABLE'}
   finally{autoAiPending=false;var current=document.getElementById('growthAiCheck');if(current)renderAiCheck(current,d)}
  }
