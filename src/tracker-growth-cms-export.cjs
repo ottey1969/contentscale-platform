@@ -181,13 +181,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    const wanted=String(req.query?.query||v.page.keyword||'').trim().toLowerCase().replace(/\s+/g,' ');
    const all=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url});
    const aligned=all.filter(x=>sameIntent(x.focus_query,wanted));
-   const other=all.filter(x=>!sameIntent(x.focus_query,wanted));
-   const {latest:p,earlier}=combineProposals(aligned);
-   const mismatched=other.map(x=>({id:Number(x.id),focus_query:x.focus_query,created_at:x.created_at}));
+   const p=aligned[0]||null; // Only the newest matching current-intent proposal.
    const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,kind:x.kind||null,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
-   // earlier: the other proposals and written concepts for this page (last 30 days), with only the sections that a newer
-   // one does not already contain. The editor adds them to the same package; nothing is merged without that choice.
-   res.set('Cache-Control','private, no-store').json({success:true,working_query:wanted,proposal:p?shape(p):null,earlier:earlier.map(shape),other_query_proposals:mismatched,query_match_required:true});
+   res.set('Cache-Control','private, no-store').json({success:true,working_query:wanted,proposal:p?shape(p):null,query_match_required:true});
   }catch(e){console.warn('[growth-cms-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'GROWTH_PROPOSAL_UNAVAILABLE'})}
  });
  // AI proposal for the SEO title, meta description and internal link text (owner link only; filled in for review).
@@ -196,10 +192,12 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
    let linkUrl=null;try{const u=new URL(String(req.query?.link||''));if(u.protocol==='https:'&&u.origin===new URL(v.page.url).origin)linkUrl=u.href}catch{}
+   const requested=String(req.query?.query||v.page.keyword||'').trim();
    const rows=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url}).catch(()=>[]);
-   const concepts=[...new Set(rows.flatMap(r=>(r.sections||[]).map(x=>x.h2)).filter(Boolean))];
+   const current=rows.find(p=>sameIntent(p.focus_query,requested));
+   const concepts=[...new Set((current?.sections||[]).map(x=>x.h2).filter(Boolean))];
    const model=seoModel===undefined?require('./growth-task-meaning.cjs').geminiModel():seoModel;
-   const out=await require('./growth-seo-meta-proposal.cjs').proposeSeoMeta({model,query:String(rows[0]?.focus_query||v.page.keyword||''),html:v.page.html_content,concepts,linkUrl});
+   const out=await require('./growth-seo-meta-proposal.cjs').proposeSeoMeta({model,query:requested,html:v.page.html_content,concepts,linkUrl});
    res.set('Cache-Control','private, no-store').json({success:true,...out,link_url:linkUrl,published:false});
   }catch(e){console.warn('[growth-seo-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'SEO_PROPOSAL_UNAVAILABLE'})}
  });
@@ -264,19 +262,11 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
 
     growthProposal={id:Number(p.id),sections:p.sections};
    }
-   // Earlier concepts the editor added to this package: each must belong to this page and URL.
-   const added=Array.isArray(req.body?.added_growth_proposal_ids)?[...new Set(req.body.added_growth_proposal_ids.map(Number))].slice(0,10):[];
-   for(const id of added){
-    if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({success:false,code:'GROWTH_PROPOSAL_ID_INVALID'});
-    const p=await proposalById(pool,{clientId:v.client.id,id});
-    if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
-     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
-    if(!sameIntent(p.focus_query,req.body?.focus_query))
-     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'This optional previous concept addresses a different customer task; it must not be merged into the selected package.'});
-   }
+   if(Array.isArray(req.body?.added_growth_proposal_ids)&&req.body.added_growth_proposal_ids.length)
+    return res.status(409).json({success:false,code:'LEGACY_PROPOSAL_ADDITIONS_NOT_SUPPORTED'});
    // Sentences the owner kept ("it is true") come from the stored decisions for this page, never from the request.
    let decisions=[];try{decisions=await removals.loadRemovals(pool,{clientId:v.client.id,pageId:v.page.id})}catch(e){}
-   const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:removals.applyKept(req.body?.review_notes||null,decisions),addedProposalIds:added,
+   const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:removals.applyKept(req.body?.review_notes||null,decisions),addedProposalIds:[],
     canonicalUrl:v.page.url,originalHtml,sourceExpectedSha256:originalHash,
     caseStudyLocked:v.page.case_study_active,editorApproved:req.body?.editor_approved===true,
     cms:req.body?.cms||'generic',pageTitle:req.body?.seo_title,
