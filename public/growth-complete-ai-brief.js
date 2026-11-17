@@ -57,8 +57,8 @@
   list(plan.competitors?.side_by_side).forEach(x=>record(x.competitor_section||x.observed_heading||x.competitor_heading,'UNKNOWN','COMPETITOR_SIDE_BY_SIDE',x));
   // Existing headings are explicitly visible even if competitor extraction has no gap.
   var heads=d.page_content?.headings||gap.research?.source_headings||{};
-  ['h1','h2','h3'].forEach(level=>list(heads[level]).forEach(h=>record(h,ownReadable?'COMPLETE':'UNKNOWN','EXISTING_PAGE_HEADING',{level:level,heading:h,coverage_note:'Heading exists; completeness of its body still requires review'})));
-  list(gap.unique_content).forEach(x=>record(typeof x==='string'?x:x.heading||x.title||x.topic,ownReadable?'COMPLETE':'UNKNOWN','EXISTING_UNIQUE_CONTENT',x));
+  ['h1','h2','h3'].forEach(level=>list(heads[level]).forEach(h=>record(h,'UNKNOWN','EXISTING_PAGE_HEADING',{level:level,heading:h,coverage_note:'Heading exists but coverage completeness requires comparison with the actual section text'})));
+  list(gap.unique_content).forEach(x=>record(typeof x==='string'?x:x.heading||x.title||x.topic,'UNKNOWN','EXISTING_UNIQUE_CONTENT',x));
   return rows;
  }
  function build(d,opts){
