@@ -1223,11 +1223,18 @@
   if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   renderAiContentTasks(d,choice);
+  var currentBrief=document.getElementById('growthAiContentTasks');
+  if(aiBox&&currentBrief){
+   var aiDetails=document.createElement('details');aiDetails.id='growthAiObservations';
+   node('summary','AI systems observations and source details',aiDetails);
+   aiDetails.appendChild(aiBox);currentBrief.appendChild(aiDetails);
+  }
   if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';}
   if(decision&&!keepDecision){var dh=decision.querySelector('h2');if(dh)dh.textContent='Growth’s analysis of this search'}
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
-  if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
+  // Editorial proposals are included in the brief evidence, not shown as a separate step.
   // 3. Step 2 and step 3 (static parts of the page).
+  var publishPanel=document.getElementById('growthNextAction');if(publishPanel)publishPanel.hidden=false;
   var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Optional CMS preparation';
    var note=fin.querySelector('.growth-finish-note'),ho=document.getElementById('growthEditorHandoff'),checked=!!((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url);
    if(note)note.textContent=written||checked?'Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.':gl?'Nothing written yet: tick topics in step 1 and click “Write selected with AI”. The CMS package opens here once concepts are written.':'No content change is ready for a CMS package for this research.';
@@ -1237,7 +1244,7 @@
   var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';var brief=document.getElementById('growthAiContentTasks');if(brief)brief.appendChild(all);else container.appendChild(all);
   node('summary','What was checked — technical evidence (Growth analysis · Google research details)',all);
   var tabs=node('div',null,all);tabs.className='tg-tabs';var panes=[];
-  [['decision','Growth’s analysis',keepDecision?null:decision],['research','Research details',ev]].forEach(function(t){if(!t[2])return;
+  [['decision','Growth’s analysis',decision],['research','Research details',ev]].forEach(function(t){if(!t[2])return;
    var b=node('button',t[1],tabs);b.type='button';b.setAttribute('data-tab',t[0]);var pane=node('div',null,all);pane.className='tg-pane';pane.setAttribute('data-tab',t[0]);pane.appendChild(t[2]);panes.push(pane);
    if(t[0]==='research'&&t[2].tagName==='DETAILS')t[2].open=true;
    b.addEventListener('click',function(){trTab(t[0])})});
@@ -1338,6 +1345,7 @@
  document.getElementById('retryResearch').addEventListener('click',run);
  // The finish step says "your concepts are saved": only shown once there is a report (organize() decides what it says).
  var finishBox=document.getElementById('growthFinalActions');if(finishBox&&typeof document.querySelectorAll==='function')finishBox.hidden=true;
+ var publishOnLoad=document.getElementById('growthNextAction');if(publishOnLoad)publishOnLoad.hidden=true;
  async function restore(){
   var status=document.getElementById('researchStatus');
   // Never expose a stale download control if this viewer cannot load the owner report.
