@@ -28,14 +28,16 @@ function renderSimpleGrowthStart({pages=[],token='',siteMarkets=null,pageMarketO
   '</div>'+
   '<datalist id="growthSimpleRegions">'+regions.map(v=>'<option value="'+esc(v)+'">').join('')+'</datalist>'+
   '<datalist id="growthSimpleLanguages">'+languages.map(v=>'<option value="'+esc(v)+'">').join('')+'</datalist>'+
-  '<section id="growthSimpleAiSystems" aria-labelledby="growthSimpleAiTitle" class="growth-simple-ai-systems">'+
-  '<h3 id="growthSimpleAiTitle">AI systems · part of Growth research</h3>'+
-  '<p class="info">ChatGPT · Gemini · Perplexity · Claude · Copilot</p>'+
-  '<small id="growthSimpleAiStatus" role="status">Choose a page and run Growth to see saved AI answers, cited pages and verification for your customer question. AI answers are optional; no system has been checked by this start form.</small>'+
-  '</section>'+
   '<button type="submit" id="growthSimpleContinue" disabled>Choose a page first</button>'+
   '<small id="growthSimpleStatus" role="status">No Search Console connection required. Growth research produces the complete external AI Brief.</small>'+
   '</form>'+
+  '<section id="growthSimpleAiSystems" aria-labelledby="growthSimpleAiTitle" class="growth-simple-ai-systems">'+
+  '<p class="growth-step-guide">STEP 2 · OPTIONAL · AFTER GROWTH RESEARCH</p>'+
+  '<h3 id="growthSimpleAiTitle">AI systems · check how your page appears in AI answers</h3>'+
+  '<p><strong>ChatGPT · Gemini · Perplexity · Claude · Copilot</strong></p>'+
+  '<p><strong>What you do:</strong> First choose a page above and start Growth. On the research page, open <strong>AI answers</strong> to review available answers and their cited sources. You can also add or paste answers there if no automatic answer is available.</p>'+
+  '<small id="growthSimpleAiStatus" role="status">Optional: you may proceed without AI answers. No AI system is checked just by viewing this Cockpit. Available answers and actual citation verification are shown on the research page, not here.</small>'+
+  '</section>'+
   '<p class="growth-simple-new"><strong>Need a new page?</strong> <a href="'+path+'/growth/new-page">Use an existing Pre-Write brief</a> · <a href="'+path+'?prewrite=1">Create a Pre-Write brief</a></p>'+
   '<input type="hidden" id="growthSimpleOriginalCountries" value="'+esc(markets)+'">'+
   '<input type="hidden" id="growthSimpleOriginalLanguage" value="'+esc(language)+'">'+
