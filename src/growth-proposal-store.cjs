@@ -123,7 +123,7 @@ function combineProposals(rows){
  return {latest:out[0]||null,earlier:out.slice(1)};
 }
 async function proposalById(pool,{clientId,id}){
- try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,sections FROM tracker_growth_proposals WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
+ try{return (await pool.query('SELECT id,research_page_id,target_page_id,target_url,focus_query,decision,sections,review,evidence_label,intent_note,created_at FROM tracker_growth_proposals WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
  catch(e){if(e.code==='42P01')return null;throw e}
 }
 
