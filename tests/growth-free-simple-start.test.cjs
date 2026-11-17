@@ -18,6 +18,8 @@ test('Website Growth Check is page-first for existing, unknown URL with genuinel
  assert.match(routes,/<details class="free-simple-optional" id="freeExtraSources">/);
  assert.match(routes,/id="gscFile" name="gscFile"/);
  assert.match(routes,/id="freeSitemapUrl"/);
+ assert.match(routes,/id="freeSitemapFile" name="sitemapFile"/);
+ assert.match(routes,/sitemap_file:sf/);
  assert.match(routes,/id="freeSitemapOpen" disabled/);
  assert.match(routes,/\$\{aiStartBlock\(!!owner\.signedIn\|\|!!invite,t\)\}/);
  assert.match(routes,/gsc_file:gf/);
@@ -72,4 +74,13 @@ test('URL entry controls enablement, prefilled page handling and honest sitemap 
  callbacks['freeSitemapUrl:input']();
  callbacks['freeSitemapOpen:click']();
  assert.equal(opened.url,'https://example.com/custom-sitemap.xml');
+});
+
+test('Free Growth sitemap import is optional and is not added to Tracker Growth form',()=>{
+ assert.match(routes,/importSitemap\(b&&b\.sitemap_file,url\)/);
+ assert.match(routes,/sitemapUrls:job\.sitemap\?\.urls\|\|\[\]/);
+ for(const lang of ['en','nl','es']){
+  const t=FORM_TEXTS[lang];
+  assert.ok(t.simpleSitemapImport&&t.simpleSitemapUploadHelp&&t.sSitemapBig);
+ }
 });
