@@ -2,8 +2,16 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const {sameIntent,tokens}=require('../src/growth-cms-query-intent.cjs');
 test('chosen 24 hour emergency roof repair includes valid editorial shorter term',()=>{
- for(const q of ['24 hours emergency roof repair','24 hour emergency roof repair NJ','24/7 emergency roof repair','How urgent is roof repair?'])
+ for(const q of ['24 hours emergency roof repair','24 hour emergency roof repair NJ','24/7 emergency roof repair','Who offers 24-hour emergency roof repair in New Jersey?'])
   assert.equal(sameIntent('emergency roof repair',q),true,q);
+});
+test('informational urgency is not the same search intent as finding an emergency repair company',()=>{
+ const {intentClass}=require('../src/growth-cms-query-intent.cjs');
+ assert.equal(intentClass('How urgent is roof repair?'),'INFORMATIONAL');
+ assert.equal(intentClass('Who offers 24-hour emergency roof repair in New Jersey?'),'SERVICE');
+ assert.equal(sameIntent('emergency roof repair','How urgent is roof repair?'),false);
+ assert.equal(sameIntent('How urgent is roof repair?','emergency roof repair'),false);
+ assert.equal(sameIntent('emergency roof repair','Who offers 24-hour emergency roof repair in New Jersey?'),true);
 });
 test('a roof leak is related but not a replacement for emergency repair search',()=>{
  for(const q of ['roof leak','roof leak repair','fix roof leaks','roof replacement cost','preventative maintenance'])
