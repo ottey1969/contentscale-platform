@@ -8,6 +8,8 @@ const {sameIntent,intentClass}=require('../src/growth-cms-query-intent.cjs');
 test('saved Growth writing immediately exposes the exact-query CMS action',()=>{
  assert.match(report,/written&&written\.success===true&&written\.stored===true&&written\.cms_handoff\?\.url/);
  assert.match(report,/d\.cms_handoff=written\.cms_handoff/);
+ assert.match(report,/r\.gap_list\?\.cms_url/);
+ assert.match(report,/\|\|gl\?\.cms_url/);
  assert.match(report,/pointHandoff\(d\)/);
  assert.match(report,/handoff\.parentNode\.hidden=false/);
  assert.match(report,/The stored writing result is authoritative/);
