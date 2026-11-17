@@ -98,7 +98,7 @@
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
-  $('download').disabled=!!safe.exported||!(safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim()&&$('approved').checked&&manualReady&&factsChecked);
+  $('download').disabled=!!safe.exported||!(safe.savedQuestionConfirmed&&safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim()&&$('title').value.trim()&&$('meta').value.trim()&&$('approved').checked&&manualReady&&factsChecked);
   $('download').textContent=safe.exported?'4. CMS handoff ZIP downloaded':'4. Download reviewed CMS handoff ZIP';
   var hasCurrentDraft=!!safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim();
    var draftBtn=$('generateEditorialDraft');
@@ -435,7 +435,8 @@
    var saved=await res.json();
    if(saved.success!==true||saved.found!==true||!saved.report)throw Error('No saved research for this exact customer question');
    var d=saved.report,x=d.handoff_suggestions||{};
-   if(d.url!==src.canonical_url||x.safe!==true)throw Error('Saved report source identity did not match');
+   if(safe.source!==src||$('query').value.trim()!==exactQuery)throw Error('Research question changed while loading');
+    if(d.url!==src.canonical_url||x.safe!==true)throw Error('Saved report source identity did not match');
    if(d.competitor_overview&&typeof window.renderGrowthCompetitorOverview==='function'){var ov=$('growthCompetitorOverview');ov.textContent='';try{ov.hidden=!window.renderGrowthCompetitorOverview(d.competitor_overview,ov)}catch(e){ov.hidden=true}}
    showVerifiedLink(); // No fake link or inputs when no verified internal destination exists.
    // No arbitrary research hint can relabel a customer question or mark SEO metadata reviewed.
@@ -484,7 +485,7 @@
  if(requestedQuestion)$('query').value=requestedQuestion;
  if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
- $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
+ $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.seoOriginal=null;safe.exported=false;safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
  $('query').addEventListener('change',function(){void recoverSavedQuestions()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
