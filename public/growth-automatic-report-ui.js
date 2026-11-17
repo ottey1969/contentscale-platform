@@ -1080,14 +1080,30 @@
   ((g&&g.missing_topics)||[]).forEach(function(t){out.push({id:'aitopic:'+t.topic,title:'Cover on your page: '+t.topic,why:'On the pages AI cites ('+t.sites.join(', ')+'), not on your page. Add it if it fits.'})});
   acts.filter(function(a){return a.id!=='choose_ai_topics'&&a.id!=='compare_cited_pages'}).forEach(function(a){out.push({id:'act:'+a.id,title:a.title,why:a.why,steps:a.steps})});
   return out}
- function selfRender(box,list){box.textContent='';if(!list.length){box.hidden=true;return}box.hidden=false;var dn=selfDone();
-  var open=list.filter(function(x){return !dn[x.id]}),fin=list.filter(function(x){return dn[x.id]});
-  node('h3','Do it yourself ('+open.length+' open)',box);node('p','From the AI answers: Growth does not write these. Tick one when it is done.',box).className='info';
-  var add=function(x,parent){var li=node('li',null,parent),lab=node('label',null,li),cb=node('input',null,lab);cb.type='checkbox';cb.checked=!!dn[x.id];
-   node('strong',' '+x.title,lab);var det=node('details',null,li);node('summary','Why and how',det);node('small',x.why,det);if((x.steps||[]).length){var ol=node('ol',null,det);x.steps.forEach(function(t){node('li',t,ol)})}
-   cb.addEventListener('change',function(){var d2=selfDone();if(cb.checked)d2[x.id]=1;else delete d2[x.id];try{localStorage.setItem(selfKey(),JSON.stringify(d2))}catch(e){}selfRender(box,list);if(NOWC){NOWC.selfOpen=list.filter(function(y){return !selfDone()[y.id]}).length;trUpdate(trPicked())}})};
-  var ul=node('ul',null,box);ul.style.listStyle='none';ul.style.padding='0';open.forEach(function(x){add(x,ul)});
-  if(fin.length){var dd=node('details',null,box);node('summary','Done ('+fin.length+')',dd);var u2=node('ul',null,dd);u2.style.listStyle='none';fin.forEach(function(x){add(x,u2)})}}
+ function selfRender(box,list){
+  box.textContent='';if(!list.length){box.hidden=true;return}box.hidden=false;
+  var done=selfDone(),open=list.filter(x=>!done[x.id]),completed=list.filter(x=>done[x.id]);
+  node('h3','Separate manual follow-ups · '+open.length+' not completed',box);
+  node('p','These AI-research tasks are separate from the topics selected for Growth writing. Selecting a topic means include it in the draft; it does not mark this follow-up as completed.',box).className='info';
+  node('p','Selected Growth writing topics: '+trPicked()+' · Manual tasks completed: '+completed.length+'/'+list.length,box).className='info';
+  var add=function(x,parent){
+   var li=node('li',null,parent),lab=node('label',null,li),cb=node('input',null,lab);cb.type='checkbox';cb.checked=!!done[x.id];
+   node('strong',(cb.checked?' Completed: ':' Mark completed only after doing it: ')+x.title,lab);
+   var det=node('details',null,li);node('summary','What to check or do',det);node('small',x.why,det);
+   if((x.steps||[]).length){var ol=node('ol',null,det);x.steps.forEach(function(t){node('li',t,ol)})}
+   cb.addEventListener('change',function(){
+    var next=selfDone();if(cb.checked)next[x.id]=1;else delete next[x.id];
+    try{localStorage.setItem(selfKey(),JSON.stringify(next))}catch(e){}
+    selfRender(box,list);
+    if(NOWC){NOWC.selfOpen=list.filter(y=>!selfDone()[y.id]).length;trUpdate(trPicked())}
+   });
+  };
+  if(open.length){var ul=node('ul',null,box);ul.style.listStyle='none';ul.style.padding='0';open.forEach(x=>add(x,ul))}
+  else node('p','All manual follow-ups are marked completed. This is not confirmation that content has been published.',box);
+  if(completed.length){var history=node('details',null,box);node('summary','Completed manual tasks ('+completed.length+')',history);
+   var doneList=node('ul',null,history);doneList.style.listStyle='none';doneList.style.padding='0';completed.forEach(x=>add(x,doneList))}
+ }
+
  function improvementPanel(d){
   var gl=d.gap_list||{},items=Array.isArray(gl.items)?gl.items:[],recommended=items.filter(x=>x.writable&&x.recommended);
   var candidates=recommended.length?recommended:items.filter(x=>x.writable&&x.priority&&x.priority.sources>0);
@@ -1162,7 +1178,10 @@
   var summaryPanel=improvementPanel(d);container.insertBefore(summaryPanel,found.nextSibling);
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';
-   var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
+   var selfBox=document.createElement('section');selfBox.id='growthSelfDo';selfBox.className='tg-self';
+    selfBox.style.cssText='border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;padding:15px;margin:16px 0';
+    if(choice.parentNode)choice.parentNode.insertBefore(selfBox,choice.nextSibling);
+    selfRender(selfBox,selfItems(d))}
   if(decision&&!keepDecision){var dh=decision.querySelector('h2');if(dh)dh.textContent='Growth’s analysis of this search'}
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
   if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
@@ -1185,7 +1204,7 @@
   NOWC={published:false,written:written||(d.cms_handoff&&d.cms_handoff.url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
   trUpdate(trPicked());restorePublicationRecord();
-  if(choice&&!choice.dataset.nowWired){choice.dataset.nowWired='1';choice.addEventListener('change',function(e){if(e.target&&e.target.type==='checkbox')trUpdate(trPicked())})}
+  if(choice&&!choice.dataset.nowWired){choice.dataset.nowWired='1';choice.addEventListener('change',function(e){if(e.target&&e.target.type==='checkbox'){trUpdate(trPicked());var manual=document.getElementById('growthSelfDo');if(manual)selfRender(manual,selfItems(last||d))}})}
   if(window.IntersectionObserver){if(nowObs)nowObs.disconnect();nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''});nowObs.observe(top)}
  }
  function trTab(name){document.querySelectorAll('#growthEvidenceAll .tg-pane').forEach(function(p){p.hidden=p.getAttribute('data-tab')!==name});document.querySelectorAll('#growthEvidenceAll .tg-tabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===name))})}
