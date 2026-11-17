@@ -12,13 +12,10 @@ test('proposal is not inserted automatically into CMS copy fields',()=>{
  assert.match(section,/safe\.proposal=null;box\.hidden=true/);
  assert.match(section,/Review proposed text and claims/);
 });
-test('old concepts do not interrupt the primary path or imply missing topics',()=>{
- const section=js.slice(js.indexOf('function renderEarlier(list)'),js.indexOf('function mergedReview(main)'));
- assert.match(section,/var history=document\.createElement\('details'\)/);
- assert.match(section,/Advanced · Older saved concepts/);
- assert.match(section,/do not prove any current content gap/);
- assert.match(section,/history\.appendChild\(intro\);concepts\.forEach\(function\(p\)\{row\(p,history\)\}/);
- assert.doesNotMatch(section,/box\.appendChild\(intro\);concepts\.forEach\(function\(p\)\{row\(p,box\)\}/);
+test('legacy concept menu is removed instead of hidden behind Advanced',()=>{
+ assert.doesNotMatch(js,/function renderEarlier\(/);
+ assert.doesNotMatch(js,/Advanced · Older saved concepts|Also written for this page/);
+ assert.doesNotMatch(js,/added_growth_proposal_ids/);
 });
 test('no automatic approval or false guarantee about verified competitors and roofing safety',()=>{
  assert.match(js,/NOT independently verified/);
