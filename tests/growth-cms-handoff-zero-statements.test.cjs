@@ -95,11 +95,17 @@ test('missing same-query Growth proposal does not expose blank or fabricated CMS
  assert.match(JS,/safe\.proposalState==='READY'&&safe\.proposal/);
  assert.match(JS,/Growth content proposal missing for this customer question/);
  assert.match(JS,/No placeholder content has been created/);
- assert.match(JS,/Return to Growth → Select improvements and write the proposal/);
+ assert.match(JS,/Go to Growth writing → Select topics and prepare CMS/);
  assert.doesNotMatch(JS,/function seoStartingPoint\(question\)/);
  assert.doesNotMatch(JS,/populateSeoStartingPoint\(\)/);
  assert.match(JS,/safe\.proposalState='MISSING'/);
  assert.match(JS,/if\(safe\.proposalState!=='READY'\|\|!safe\.proposal\)throw Error/);
  assert.match(JS,/if\(safe\.proposalState==='READY'\)/);
  assert.match(JS,/safe\.verifiedLinkSuggestion=/);
+});
+
+test('Missing same-query proposal points to the actual Growth writing step, without extra draft generation',()=>{
+ assert.match(JS,/act\.href=\$\('researchReviewLink'\)\.href\+'#growthGapChoice'/);
+ assert.match(JS,/Write selected with AI \(concepts for review\)/);
+ assert.doesNotMatch(JS,/editor-draft/);
 });
