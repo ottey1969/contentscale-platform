@@ -37,5 +37,8 @@ test('research and CMS must use live resolution and refuse unverified links in e
  assert.match(cms,/const approvedForExport=/);
  assert.match(cms,/INTERNAL_LINK_NOT_DIRECT_200/);
  assert.match(cms,/changes:fixedChanges/);
+ assert.match(cms,/href=\(\["'\]\)\(\[\^"'\]\+\)/);
+ assert.match(cms,/new URL\(url,v\.page\.url\)/);
+ assert.match(cms,/if\(url\.startsWith\('#'\)\)continue/);
  assert.match(ui,/Redirect resolved: the proposed link now points straight to/);
 });
