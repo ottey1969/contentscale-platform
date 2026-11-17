@@ -866,7 +866,7 @@
     }
    // An explicit user-supplied question is never silently replaced, even when an older report exists.
    // Even one historical report must be chosen deliberately: it may be a different intent.
-   if(!current||questions.length){
+   if(true){
     wrap.hidden=false;
     var hadLegacy=!!(current&&matched);
     if(!hadLegacy)choices.textContent='';
@@ -877,7 +877,7 @@
     ready();
     if(current&&!matched){var note=document.createElement('p');note.textContent='This exact question has no saved completed research for the selected page and market. The suggestions below are older, different research questions; they cannot be substituted for it.';choices.appendChild(note);
      var go=document.createElement('a');go.textContent='Open Growth research for this exact question →';go.href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(current)+(market?'&market='+encodeURIComponent(market):'');go.style.cssText='display:inline-block;margin:8px 0;color:#1d4ed8;font-weight:700';choices.appendChild(go)}
-    if(!questions.length){var no=document.createElement('p');no.textContent='No previously saved customer question was found for this Tracker page. Open Growth research and save a run first.';choices.appendChild(no);return}
+    if(!questions.length){var no=document.createElement('p');no.textContent='There is no saved Growth research question or writing proposal for this destination page. Use the original Growth research link to select the intended question and save writing first.';choices.appendChild(no);return}
     questions.forEach(function(q){
      var btn=document.createElement('button');btn.type='button';btn.textContent=q.question+(q.market?' · '+q.market:'');
      btn.style.cssText='margin:5px 6px 5px 0;padding:9px 12px;background:#fff;color:#1e40af;border:1px solid #93c5fd;border-radius:8px;text-align:left';
