@@ -655,6 +655,17 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    return res.set('Cache-Control','private, no-store').json({success:true,found:true,report});
   }catch(e){return res.status(503).json({success:false,code:'SAVED_REPORT_UNAVAILABLE'})}
  });
+ // Explicit owner editorial sign-off: research is already saved, no content is published.
+ // The 28-day outcome window starts only from the separately confirmed publication date.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/brief-reviewed',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  if(req.growth?.can_edit!==true)return res.status(403).set('Cache-Control','private, no-store').json({success:false,code:'OWNER_ONLY_BRIEF_REVIEW'});
+  try{
+   const result=await storedResearch.markBriefReviewed(pool,v,req.body?.generated_at);
+   if(result.status!=='REVIEWED')return res.status(409).set('Cache-Control','private, no-store').json({success:false,code:result.status,message:'Research changed or is not yet saved. Reload the saved brief before marking it reviewed.'});
+   return res.set('Cache-Control','private, no-store').json({success:true,brief_review:result.review,measurement_starts:'AFTER_CONFIRMED_PUBLICATION',window_days:28});
+  }catch(e){return res.status(503).set('Cache-Control','private, no-store').json({success:false,code:'BRIEF_REVIEW_NOT_SAVED'})}
+ });
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Never serve a recently cached unlocked result after Case Study activation.
