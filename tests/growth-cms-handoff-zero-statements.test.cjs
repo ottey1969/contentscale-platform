@@ -65,3 +65,20 @@ test('a missing CMS query must never be replaced with the Tracker seed or an old
  assert.match(REPORT_UI, /r\.gap_list\?\.focus_query/);
  assert.match(REPORT_UI, /if\(runMarket\)target\.searchParams\.set\('market',runMarket\)/);
 });
+
+test('CMS cannot silently load a different question or carry its old SEO metadata',()=>{
+ assert.match(JS,/savedQuestionConfirmed:false/);
+ assert.match(JS,/if\(!safe\.savedQuestionConfirmed\|\|!\$\('query'\)\.value\.trim\(\)\)/);
+ assert.match(JS,/await recoverSavedQuestions\(\)/);
+ assert.doesNotMatch(JS,/\$\('query'\)\.value=data\.working_keyword/);
+ assert.doesNotMatch(JS,/if\(!\$\('title'\)\.value&&x\.title\)\$\('title'\)\.value=x\.title/);
+ assert.doesNotMatch(JS,/if\(!\$\('meta'\)\.value&&x\.meta\)\$\('meta'\)\.value=x\.meta/);
+ assert.match(JS,/\$\('title'\)\.value='';\$\('meta'\)\.value=''/);
+ assert.match(JS,/\$\('existingMetadata'\)\.hidden=false/);
+ assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&safe\.aiDraftReadyForQuery/);
+ assert.match(JS,/\$\('title'\)\.value\.trim\(\)&&\$\('meta'\)\.value\.trim\(\)/);
+ assert.match(JS,/Research question changed while loading/);
+ assert.match(JS,/Open Growth research for this exact question/);
+ assert.match(HTML,/Existing page metadata — reference only/);
+ assert.match(HTML,/Meta description proposed for this customer question/);
+});

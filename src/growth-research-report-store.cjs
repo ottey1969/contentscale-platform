@@ -15,6 +15,6 @@ async function listQuestions(pool,{clientId,pageId,pageUrl,limit=20}){
  FROM tracker_growth_research_reports
  WHERE tracker_client_id=$1 AND page_id=$2 AND page_url=$3
  ORDER BY saved_at DESC LIMIT $4`,[clientId,pageId,pageUrl,Math.max(1,Math.min(50,limit))]);
- return (r.rows||[]).map(x=>({question:String(x.original_question||x.focus_query||''),market:String(x.market||''),saved_at:x.saved_at})).filter(x=>x.question);
+ return (r.rows||[]).map(x=>({question:String(x.focus_query||''),research_focus:String(x.original_question||x.focus_query||''),market:String(x.market||''),saved_at:x.saved_at})).filter(x=>x.question);
 }
 module.exports={save,load,listQuestions};

@@ -54,8 +54,10 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 </div>
 <label for="query">Customer question for this Growth draft (exact research intent)</label>
 <p class="small">This must match the customer question from the original Growth research. A tracked seed is not a substitute.</p><input id="query" maxlength="300" autocomplete="off"><div id="savedQuestionChooser" class="note" hidden aria-live="polite"><strong>Select the saved Growth research question</strong><p class="small">This CMS link did not contain a question, or the exact saved report was not found. Choose the correct previous research below. No new scan or credits are used.</p><div id="savedQuestionChoices"></div></div>
-<label for="title">Reviewed SEO title</label><input id="title" maxlength="100" required>
-<label for="meta">Reviewed meta description</label><textarea id="meta" maxlength="220" rows="2" required></textarea>
+<div id="existingMetadata" class="note" hidden><strong>Existing page metadata — reference only, not approved for this research question</strong><p id="existingTitle" class="small"></p><p id="existingMeta" class="small"></p></div>
+<label for="title">SEO title proposed for this customer question · review required</label><input id="title" maxlength="100" required>
+<label for="meta">Meta description proposed for this customer question · verify every business claim</label>
+<p class="small">Do not reuse an older query’s title, or unconfirmed promises about 24-hour response, licensing, service area or phone numbers.</p><textarea id="meta" maxlength="220" rows="2" required></textarea>
 <label class="check"><input id="personalVoice" type="checkbox"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label>
 </fieldset>
 <fieldset><legend>3. Generate, review and approve content for the original page</legend>
