@@ -436,7 +436,7 @@
     var scope=document.createElement('p');scope.className='small';
     scope.textContent='Editorial concept only. Growth proposed this copy for the stated query, but its facts, competitors, safety instructions and originality are NOT independently verified. Do not publish without reviewing each claim against reliable evidence. Roofing work on wet or damaged roofs must be left to qualified professionals.';
     box.appendChild(intro);box.appendChild(scope);
-    if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent='Evidence: '+p.evidence_label;box.appendChild(ev)}
+    if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent=/^SELECTION_CONCEPT_FOR_REVIEW/.test(String(p.evidence_label))?'Status: previously selected writing concept — not independently verified':'Research status: '+String(p.evidence_label).toLowerCase().replace(/_/g,' ');box.appendChild(ev)}
     if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
     var r=p.review||{},groups=[['flagged_text','Flagged by Growth: rewrite or remove these sentences, or keep one you confirm is true for your business (the package is refused while an unconfirmed one is still in your text)'],['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
     r.flagged_text=(r.flagged||[]).map(function(f){return (f.sentence?'“'+f.sentence+'”':'Section “'+f.h2+'”')+' — '+f.reason});
