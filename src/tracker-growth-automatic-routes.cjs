@@ -118,6 +118,7 @@ async function trackerSitemapFallback(rows,pageUrl,trackedPages=[],fetchXml=null
     }catch(e){if(url===sitemapUrl)throw e}
     if(out.length>=300)break;
    }
+   if(indexFilesRead<files.length)limited=true;
    source='FETCHED_TRACKER_SITEMAP_XML';fetchStatus=files.length?'READ':'NO_SITEMAP_FILES';
   }catch(e){fetchStatus=String(e.code||e.message||'SITEMAP_UNAVAILABLE').slice(0,80)}
  }
