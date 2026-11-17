@@ -72,6 +72,24 @@ function registerGrowthExecution(app,pool,deps={}){
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS gsc_evidence TEXT;
     ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS growth_proposal_id BIGINT`);
+   // Never treat a second click as another publication. Editing an existing
+   // checkpoint uses /publication/:id; a genuine later live update is a new
+   // measurement event and must be explicitly chosen by its owner.
+   const prior=(await pool.query(
+    "SELECT id,published_at,notes FROM tracker_growth_publications WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND LOWER(TRIM(query))=LOWER(TRIM($3)) ORDER BY published_at DESC,id DESC LIMIT 1",
+    [c.id,pageId,query])).rows[0]||null;
+   if(prior){
+    const newer=Date.parse(publishedAt)>Date.parse(prior.published_at)+60000;
+    const distinct=notes.toLowerCase().replace(/\\s+/g,' ').trim()!==String(prior.notes||'').toLowerCase().replace(/\\s+/g,' ').trim();
+    if(req.body?.new_publication!==true||!newer||!distinct){
+     return res.status(409).json({success:false,code:'EXISTING_PUBLICATION',
+      error:!newer&&req.body?.new_publication===true?'The new publication must have a later actual live date than the previous update.':
+       !distinct&&req.body?.new_publication===true?'Describe the new changes, not the same earlier publication.':
+       'This page and question already have a recorded publication. Update the existing record, or explicitly confirm a different later live update.',
+      previous:{id:prior.id,published_at:prior.published_at,notes:prior.notes},
+      can_update:true,can_record_later_release:true});
+    }
+   }
    const gscEvidence=verified?'VERIFIED':'NEEDS_ACCESS';
    const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at,gsc_evidence,growth_proposal_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt,gscEvidence,proposalId]);
    // Baseline: if the 28 days before publication are already final in Search Console (a publication recorded a few days
