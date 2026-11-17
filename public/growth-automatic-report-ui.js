@@ -1062,12 +1062,20 @@
     :{t:'Download the editor brief for the '+n+' chosen topic(s)',why:'AI writing is not available here; hand the brief under the list to whoever writes your page.',b:'Go to the list',to:'growthGapChoice'})
    :{t:'Choose what to add to your page',why:'Tick the topics you want on your page. Growth writes only what you tick.',b:'Choose topics',to:'growthGapChoice'};
   return {stage:stage,now:now}}
- function trCockpit(c,n){var x=trNow(c,n),now=x.now;
-  return '<span class="tg-eyebrow">STEP '+x.stage+' OF 3 · DO THIS NOW</span><h2 id="trackerActionTitle">'+esc(now.t)+'</h2><p>'+esc(now.why)+'</p><p><a class="growth-primary-finish tg-go" href="#'+esc(now.to)+'">'+esc(now.b)+' →</a></p>'+
-   (c.selfOpen?'<p class="tg-sub">Also: <a href="#growthSelfDo">'+c.selfOpen+' thing(s) to do yourself</a> — Growth does not write these.</p>':'')+
-   '<div class="tg-flow">'+[['Choose','growthGapChoice'],['Write','growthFinalActions'],['Publish & measure','growthNextAction']].map(function(st,i){return '<a class="'+(i+1<x.stage?'done':i+1===x.stage?'active':'')+'" href="#'+st[1]+'">'+(i+1<x.stage?'✓ ':(i+1)+'. ')+esc(st[0])+'</a>'}).join('')+'</div>'}
- function trUpdate(n){if(!NOWC)return;var card=document.getElementById('trackerNextAction');if(card)card.innerHTML=trCockpit(NOWC,n);
-  var x=trNow(NOWC,n),bar=document.getElementById('trNowBar');if(bar)bar.innerHTML='<span><small>Step '+x.stage+' of 3 · do this now</small><strong>'+esc(x.now.t)+'</strong></span><a class="tg-go" href="#'+esc(x.now.to)+'">'+esc(x.now.b)+' →</a><a class="tg-top" href="#trackerNextAction">↑ Top</a>'}
+ // Research has already been completed before this report is rendered.
+ // The report itself is the next step; no second Choose / Write wizard.
+ function trCockpit(c,n){
+  return '<span class="tg-eyebrow">GROWTH RESEARCH REPORT</span>'+
+   '<h2 id="trackerActionTitle">Complete Growth Brief</h2>'+
+   '<p>Review the priorities and full content inventory below. Complete, partial, missing and unknown topics remain available to the editor.</p>'+
+   '<p><a class="growth-primary-finish tg-go" href="#growthAiContentTasks">Open complete writing brief →</a></p>'+
+   '<p class="tg-sub"><a href="#growthNextAction">Publish & measure</a></p>';
+ }
+ function trUpdate(n){
+  if(!NOWC)return;
+  var card=document.getElementById('trackerNextAction');if(card)card.innerHTML=trCockpit(NOWC,n);
+  var bar=document.getElementById('trNowBar');if(bar)bar.hidden=true;
+ }
  // The third step is deliberately simple: publish in the owner's CMS, confirm the
  // real publication timestamp once, then inspect the separately measured outcomes.
  // The same-page / same-question check prevents accidentally re-recording an older update.
@@ -1221,11 +1229,11 @@
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
   if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
   // 3. Step 2 and step 3 (static parts of the page).
-  var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Step 2 · Write and prepare the CMS package';
+  var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Optional CMS preparation';
    var note=fin.querySelector('.growth-finish-note'),ho=document.getElementById('growthEditorHandoff'),checked=!!((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url);
    if(note)note.textContent=written||checked?'Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.':gl?'Nothing written yet: tick topics in step 1 and click “Write selected with AI”. The CMS package opens here once concepts are written.':'No content change is ready for a CMS package for this research.';
    if(ho&&ho.parentNode)ho.parentNode.hidden=!(written||checked)}
-  var meas=document.querySelector('#growthNextAction > h2');if(meas)meas.textContent='Step 3 · Publish and measure';
+  var meas=document.querySelector('#growthNextAction > h2');if(meas)meas.textContent='Publish and measure';
   // 4. Evidence: one closed section with tabs.
   var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';container.appendChild(all);
   node('summary','What was checked — technical evidence (Growth analysis · Google research details)',all);
@@ -1240,7 +1248,7 @@
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
   trUpdate(trPicked());restorePublicationRecord();
   if(choice&&!choice.dataset.nowWired){choice.dataset.nowWired='1';choice.addEventListener('change',function(e){if(e.target&&e.target.type==='checkbox')trUpdate(trPicked())})}
-  if(window.IntersectionObserver){if(nowObs)nowObs.disconnect();nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''});nowObs.observe(top)}
+  // The duplicate sticky research wizard is intentionally retired.
  }
  function trTab(name){document.querySelectorAll('#growthEvidenceAll .tg-pane').forEach(function(p){p.hidden=p.getAttribute('data-tab')!==name});document.querySelectorAll('#growthEvidenceAll .tg-tabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===name))})}
  // Every in-page link opens what it points at (a closed evidence tab, a closed details) and scrolls to it.
