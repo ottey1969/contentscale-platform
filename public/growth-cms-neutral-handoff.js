@@ -240,7 +240,7 @@
     retireAbsentFlag(box,sentence);
     done('Removed from '+n+' draft text field(s) and saved for this page. Review the remaining paragraph.');
    }else if(!inDraft(sentence)&&!closestSentence(sentence)){
-    var savedAbsent=await saveRemoval(sentence,'NOT_IN_DRAFT');
+    var savedAbsent=await saveRemoval(sentence,'NOT_IN_TEXT_ANYMORE');
     if(!savedAbsent){action.disabled=false;result.textContent='Cannot save this dismissal yet; retry when the connection works.';return}
     retireAbsentFlag(box,sentence);
     done('Obsolete warning dismissed and saved. The sentence is not in the CMS package.','Dismissed — not in draft');
