@@ -3,6 +3,7 @@
  const $=id=>document.getElementById(id);
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
+ const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
  const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
@@ -260,11 +261,21 @@
   setTimeout(refresh,0);
  }
  // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
+ // A multi-sentence review string is not a single independently verified
+ // statement. Break it into readable checks; every sentence still needs review.
+ function reviewStatements(item){
+  var raw=String(item||'').replace(/\\\./g,'.').replace(/([.!?])(?=[A-Z][a-z])/g,'$1 ');
+  var units=(raw.match(/[^.!?]+(?:[.!?]+|$)/g)||[]).map(function(x){return x.trim()}).filter(Boolean);
+  return units.length>1?units:[String(item||'').trim()];
+ }
  function checkItem(box,item,flaggedSentence){
-  var l=document.createElement('label');l.className='check';
-  if(flaggedSentence){l.classList.add('growth-flag-fact');l.dataset.flaggedSentence=normS(flaggedSentence)}
-  var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
-  var sp=document.createElement('span');sp.textContent=item;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
+  var bits=flaggedSentence?[String(item||'').trim()]:reviewStatements(item);
+  bits.forEach(function(bit){
+   var l=document.createElement('label');l.className='check';
+   if(flaggedSentence){l.classList.add('growth-flag-fact');l.dataset.flaggedSentence=normS(flaggedSentence)}
+   var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
+   var sp=document.createElement('span');sp.textContent=bit;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
+  });
  }
  // Other proposals and written concepts stored for this page (for example improvements the owner chose on the research
  // page). Each one is added only when the editor clicks it; its checks come with it and the package records its id.
@@ -376,11 +387,21 @@
  // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
  async function loadProposal(src){
   try{
-   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
+   var exactQuestion=String($('query').value||requestedQuestion||src.working_keyword||'').trim();
+   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(exactQuestion),{cache:'no-store',credentials:'same-origin'});
    var d=await res.json();
-   if(!res.ok||d.success!==true||!d.proposal||!(d.proposal.sections||[]).length||safe.source!==src)return;
+   if(!res.ok||d.success!==true||safe.source!==src)return;
+   if(!d.proposal||!(d.proposal.sections||[]).length){
+    var no=$('growthProposal');if((d.other_query_proposals||[]).length&&no){
+     no.hidden=false;no.textContent='';
+     var warn=document.createElement('p');warn.textContent='No reviewed Growth proposal for this exact question: “'+exactQuestion+'”. Older concepts for '+(d.other_query_proposals||[]).map(function(p){return '“'+p.focus_query+'”'}).join(', ')+' are kept as history, but are not safe to reuse automatically. Run Growth for this question first.';
+     no.appendChild(warn);
+    }
+    return;
+   }
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
    var p=d.proposal,first=p.sections[0];
+   // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
    safe.proposal=p;
    $('heading').value=first.h2;$('copy').value=first.text;
    $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
@@ -391,7 +412,7 @@
    var intro=document.createElement('p');
    intro.textContent='This is the text Growth checked against the ranking pages'+(p.focus_query?' for “'+p.focus_query+'”':'')+'. You may still edit it; the package records whether you did. Nothing is published.';
    var scope=document.createElement('p');scope.className='small';
-   scope.textContent='Checked automatically: it teaches the missing reader task, does not repeat your page or copy competitors, and has no unsourced figures, named sources or promises. Not checked: whether the statements are true. That is your review below; this is not a fact-checked or publication-approved text.';
+   scope.textContent='Editorial concept only. Growth proposed this copy for the stated query, but its facts, competitors, safety instructions and originality are NOT independently verified. Do not publish without reviewing each claim against reliable evidence. Roofing work on wet or damaged roofs must be left to qualified professionals.';
    box.appendChild(intro);box.appendChild(scope);
    if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent='Evidence: '+p.evidence_label;box.appendChild(ev)}
    if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
@@ -487,6 +508,7 @@
   status('sourceStatus','A valid tracked page ID is required. Return to Growth and select a page.',true);
   $('checkSource').disabled=true;
  }
+ if(requestedQuestion)$('query').value=requestedQuestion;
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);

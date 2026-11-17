@@ -6,6 +6,7 @@ const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-
 const {normalizeGrowthResearchContext}=require('./growth-editorial-research-context.cjs');
 const {loadGrowthOptionalGsc}=require('./growth-optional-gsc-draft-evidence.cjs');
 const {recentProposals,combineProposals,proposalById}=require('./growth-proposal-store.cjs');
+const {sameIntent}=require('./growth-cms-query-intent.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
@@ -175,11 +176,18 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
   try{
    const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
-   const {latest:p,earlier}=combineProposals(await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url}));
+   // A concept for another question is historical input, not the current
+   // CMS proposal. Never silently relabel emergency repair as roof leak.
+   const wanted=String(req.query?.query||v.page.keyword||'').trim().toLowerCase().replace(/\s+/g,' ');
+   const all=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url});
+   const aligned=all.filter(x=>sameIntent(x.focus_query,wanted));
+   const other=all.filter(x=>!sameIntent(x.focus_query,wanted));
+   const {latest:p,earlier}=combineProposals(aligned);
+   const mismatched=other.map(x=>({id:Number(x.id),focus_query:x.focus_query,created_at:x.created_at}));
    const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,kind:x.kind||null,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
    // earlier: the other proposals and written concepts for this page (last 30 days), with only the sections that a newer
    // one does not already contain. The editor adds them to the same package; nothing is merged without that choice.
-   res.set('Cache-Control','private, no-store').json({success:true,proposal:p?shape(p):null,earlier:earlier.map(shape)});
+   res.set('Cache-Control','private, no-store').json({success:true,working_query:wanted,proposal:p?shape(p):null,earlier:earlier.map(shape),other_query_proposals:mismatched,query_match_required:true});
   }catch(e){console.warn('[growth-cms-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'GROWTH_PROPOSAL_UNAVAILABLE'})}
  });
  // AI proposal for the SEO title, meta description and internal link text (owner link only; filled in for review).
@@ -251,6 +259,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     const p=await proposalById(pool,{clientId:v.client.id,id:req.body.growth_proposal_id});
     if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
      return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
+    if(!sameIntent(p.focus_query,req.body?.focus_query))
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'The saved concept is for a different reader task. It cannot be put into this package without review for the selected customer question.'});
+
     growthProposal={id:Number(p.id),sections:p.sections};
    }
    // Earlier concepts the editor added to this package: each must belong to this page and URL.
@@ -260,6 +271,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     const p=await proposalById(pool,{clientId:v.client.id,id});
     if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
      return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
+    if(!sameIntent(p.focus_query,req.body?.focus_query))
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'This optional previous concept addresses a different customer task; it must not be merged into the selected package.'});
    }
    // Sentences the owner kept ("it is true") come from the stored decisions for this page, never from the request.
    let decisions=[];try{decisions=await removals.loadRemovals(pool,{clientId:v.client.id,pageId:v.page.id})}catch(e){}

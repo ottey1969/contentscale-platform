@@ -1218,7 +1218,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const base='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const allowHandoff=req.growth?.can_edit===true&&!v.page.case_study_active;
-  const handoff='/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(v.id);
+  const handoff='/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(v.id)+(String(req.query?.query||'').trim()?'&query='+encodeURIComponent(String(req.query.query).trim().slice(0,300)):'');
   const html=[
    '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
    '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">',
