@@ -1071,7 +1071,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
        try{
         const fallback=await trackerSitemapFallback([{sitemap_url:job.sitemap.sitemapUrl}],job.url,[],
          u=>fetchPublicGrowthHtml(u,{limit:1024*1024,timeout:4500,redirects:1,allowSitemapXml:true}));
-        job.sitemap={fileName:'Sitemap URL',urls:fallback.urls,totalFound:fallback.count,limited:fallback.count>=300,
+        job.sitemap={fileName:'Sitemap URL',urls:fallback.urls,totalFound:fallback.count,limited:fallback.limited||fallback.count>=300,
          source:'PUBLIC_SITEMAP_URL',status:fallback.fetch_status};
        }catch(e){job.sitemap={fileName:'Sitemap URL',urls:[],totalFound:0,limited:false,source:'PUBLIC_SITEMAP_URL',status:'SITEMAP_UNAVAILABLE'}}
       }
