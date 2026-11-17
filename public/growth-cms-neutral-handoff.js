@@ -27,10 +27,14 @@
  function removedSentences(){var local=[];try{var v=JSON.parse(localStorage.getItem(removalKey)||'[]');local=Array.isArray(v)?v:[]}catch(e){}
   return local.concat(serverRemoved.filter(function(x){return local.indexOf(x)<0}))}
  function saveRemoval(sentence,how){
-  try{var all=removedSentences();if(!all.includes(sentence)){all.push(sentence);localStorage.setItem(removalKey,JSON.stringify(all))}}catch(e){}
-  if(serverRemoved.indexOf(sentence)<0)serverRemoved.push(sentence);
+  // Do not claim persistence until the server actually acknowledges the decision.
   return fetch(base+'/removals',{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({page_id:pageId,sentence:sentence,how:how||'REMOVED_BY_BUTTON'})}).then(function(r){return r.ok}).catch(function(){return false});
+   body:JSON.stringify({page_id:pageId,sentence:sentence,how:how||'REMOVED_BY_BUTTON'})}).then(function(r){
+    if(!r.ok)return false;
+    if(serverRemoved.indexOf(sentence)<0)serverRemoved.push(sentence);
+    try{var all=removedSentences();if(!all.includes(sentence)){all.push(sentence);localStorage.setItem(removalKey,JSON.stringify(all))}}catch(e){}
+    return true;
+   }).catch(function(){return false});
  }
  function loadServerRemovals(){
   return fetch(base+'/removals?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json()})
@@ -170,9 +174,31 @@
  function flaggedRemoveAll(anchor){
   var old=document.getElementById('growthFlaggedRemoveAll');if(old){old.disabled=false;old.textContent='Remove all flagged sentences from draft';return}
   var all=document.createElement('button');all.type='button';all.id='growthFlaggedRemoveAll';all.textContent='Remove all flagged sentences from draft';
-  all.onclick=function(){var n=0;document.querySelectorAll('.growth-flagged-remove > .growth-flag-remove-btn').forEach(function(b){if(!b.disabled&&/Remove this flagged sentence/.test(b.textContent)&&!isKept(b.parentNode.getAttribute('data-sentence'))){b.click();n++}});
-   all.textContent=n?'Removed '+n+' flagged sentence(s)':'Nothing left to remove';all.disabled=true};
+  all.onclick=function(){var n=0;document.querySelectorAll('.growth-flagged-remove > .growth-flag-remove-btn').forEach(function(b){
+   if(!b.disabled&&(/Remove this flagged sentence|Dismiss obsolete warning/.test(b.textContent))&&!isKept(b.parentNode.getAttribute('data-sentence'))){b.click();n++}
+  });
+   all.textContent=n?'Processing '+n+' sentence decision(s) — check results below':'Nothing in the editable draft to remove; review any obsolete warnings below';
+   all.disabled=true};
   anchor.parentNode.insertBefore(all,anchor);
+ }
+ // A warning for text which is no longer in the editable package is not a
+ // statement the owner must mark true. Dismiss its obsolete check persistently.
+ function retireAbsentFlag(box,sentence){
+  var key=normS(sentence);
+  [...(box||document).querySelectorAll('.growth-flag-fact')].forEach(function(label){
+   if(label.dataset.flaggedSentence===key)label.remove();
+  });
+  ready();
+ }
+ function goToCmsDownload(){
+  var target=$('download'),reason=$('downloadWhy');
+  if(!target)return;
+  ready();
+  var el=target.disabled&&reason&&!reason.hidden?reason:target;
+  el.style.scrollMarginTop='110px';
+  el.scrollIntoView({block:'center',behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  if(target.disabled&&reason){reason.style.outline='2px solid #f59e0b';reason.style.padding='8px';reason.style.borderRadius='6px';reason.textContent='CMS package not ready: '+reason.textContent}
+  else target.focus();
  }
  function flaggedReviewAction(box,flag){
   var sentence=String(flag&&flag.sentence||'').trim();
@@ -196,7 +222,7 @@
   var refresh=function(){
    if(inDraft(sentence)&&isKept(sentence)){action.hidden=true;keep.hidden=true;show.hidden=false;alt.hidden=true;undoKeep.hidden=false;undoKeep.disabled=false;result.textContent='✓ Kept — you confirmed it is true for your business; the package records it as confirmed by you.';row.classList.add('growth-flag-kept');ready();return}
    row.classList.remove('growth-flag-kept');action.hidden=false;undoKeep.hidden=true;
-   if(removedSentences().includes(sentence)&&!inDraft(sentence))return done('Removed earlier — remembered for this page.');
+   if(removedSentences().includes(sentence)&&!inDraft(sentence)){retireAbsentFlag(box,sentence);return done('Removed or dismissed earlier — remembered for this page.');}
    if(inDraft(sentence)){action.disabled=false;action.textContent='Remove this flagged sentence from draft';alt.hidden=true;show.hidden=false;keep.hidden=safety;keep.disabled=false;result.textContent='';return}
    var near=closestSentence(sentence);
    if(near){action.disabled=true;action.textContent='Not removed automatically';
@@ -205,24 +231,38 @@
     alt.onclick=function(){var n=removeFlaggedSentence(near.text);if(n){saveRemoval(sentence,'REMOVED_BY_BUTTON');done('Changed version removed — remembered for this page.')}
      else result.textContent='Why not: the changed sentence could not be found as one piece (it may run across lines). Delete it by hand in the text field.'};
     return}
-   // Not in the text at all: nothing to remove, no click needed. Shown as resolved; only an owner's click is remembered,
-   // and the package itself still checks the final text.
-   done('Not in your text anymore — nothing to remove; the package checks the final text again.','Resolved — not in text');
+   // The old proposal warned about a sentence that is not in the actual
+   // editable text. Let the owner dismiss the stale warning instead of
+   // requiring a meaningless "it is true" checkbox.
+   action.hidden=false;action.disabled=false;action.textContent='Dismiss obsolete warning — sentence not in draft';
+   keep.hidden=true;show.hidden=true;alt.hidden=true;undoKeep.hidden=true;
+   result.textContent='This sentence is not in the editable CMS text. You can dismiss the obsolete warning; the final package still checks its content.';
   };
-  action.addEventListener('click',function(){
+  action.addEventListener('click',async function(){
+   action.disabled=true;
    var n=removeFlaggedSentence(sentence);
-   if(n){saveRemoval(sentence,'REMOVED_BY_BUTTON');done('Removed from '+n+' draft text field(s) — remembered for this page. Review the remaining paragraph before downloading.')}
-   else refresh();
+   if(n){
+    var saved=await saveRemoval(sentence,'REMOVED_BY_BUTTON');
+    if(!saved){result.textContent='Removed locally, but the decision could not be saved to this page. Check your connection before downloading.';action.disabled=false;return}
+    retireAbsentFlag(box,sentence);
+    done('Removed from '+n+' draft text field(s) and saved for this page. Review the remaining paragraph.');
+   }else if(!inDraft(sentence)&&!closestSentence(sentence)){
+    var savedAbsent=await saveRemoval(sentence,'NOT_IN_TEXT_ANYMORE');
+    if(!savedAbsent){action.disabled=false;result.textContent='Cannot save this dismissal yet; retry when the connection works.';return}
+    retireAbsentFlag(box,sentence);
+    done('Obsolete warning dismissed and saved. The sentence is not in the CMS package.','Dismissed — not in draft');
+   }else{action.disabled=false;refresh()}
   });
-  flagRows.push({refresh:refresh});
+  flagRows.push({refresh:function(){if(row.isConnected)refresh()}});
   box.appendChild(row);
   // The first flagged sentence brings the page-wide "Remove all" button with it (placed above that box).
   if(box.parentNode)flaggedRemoveAll(box);
   setTimeout(refresh,0);
  }
  // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
- function checkItem(box,item){
+ function checkItem(box,item,flaggedSentence){
   var l=document.createElement('label');l.className='check';
+  if(flaggedSentence){l.classList.add('growth-flag-fact');l.dataset.flaggedSentence=normS(flaggedSentence)}
   var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
   var sp=document.createElement('span');sp.textContent=item;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
  }
@@ -235,24 +275,72 @@
   // Concepts the owner had written for a selection are offered; earlier research runs of the same page are older wordings
   // of the same tasks and stay folded away (owner 2026-11-01: nine "other concepts" were mostly earlier versions).
   var concepts=list.filter(function(p){return p.kind!=='EARLIER_RESEARCH_VERSION'}),older=list.filter(function(p){return p.kind==='EARLIER_RESEARCH_VERSION'});
+  // Do not automatically reuse a saved concept about another state as if
+  // it were a current local service recommendation. The earlier version is
+  // preserved as history, but needs new same-market research first.
+  function unrelatedGeography(p){
+   var context=String((safe.source&&safe.source.canonical_url)||'')+' '+String($('query').value||'');
+   var content=(p.sections||[]).map(function(x){return String(x.text||'')}).join(' ')+' '+(p.review&&p.review.flagged||[]).map(function(x){return String(x.sentence||'')}).join(' ');
+   var nj=/(?:\bnew jersey\b|(?:^|[\/_-])nj(?:[\/_-]|$))/i.test(context);
+   var fl=/(?:\bflorida\b|(?:^|[\/_-])fl(?:[\/_-]|$))/i.test(context);
+   if(nj&&!fl&&/\bflorida\b/i.test(content))return 'Florida';
+   if(fl&&!nj&&/\bnew jersey\b/i.test(content))return 'New Jersey';
+   return '';
+  }
   var row=function(p,into){
    var r0=document.createElement('div');r0.className='earlier-concept';
    var t=document.createElement('p');
    t.textContent='#'+p.id+' · '+String(p.created_at||'').slice(0,10)+(p.focus_query?' · “'+p.focus_query+'”':'')+': '+p.sections.map(function(x){return '“'+x.h2+'”'}).join(', ');
    r0.appendChild(t);
+   var mismatchedRegion=unrelatedGeography(p);
+   if(mismatchedRegion){
+    var warning=document.createElement('p');warning.className='small';
+    warning.textContent='Different location: this earlier concept mentions '+mismatchedRegion+', but the selected page is for another market. This proposal is retained as history only. Run same-market research before using it.';
+    warning.style.cssText='border:1px solid #b45309;background:#fffbeb;padding:8px';
+    r0.appendChild(warning);
+   }
    var b=document.createElement('button');b.type='button';b.textContent='Add to this package';
+   // Older concepts are optional, not proof that the current search requires
+   // their content. Any addition must be reversible without hunting for fields.
+   var removeConcept=document.createElement('button');removeConcept.type='button';
+   removeConcept.textContent='Remove this concept from CMS package';removeConcept.hidden=true;
+   removeConcept.style.cssText='margin:8px;background:#b91c1c;color:white';
+   var currentChecks=document.createElement('div');currentChecks.className='growth-optional-concept-checks';
+   removeConcept.addEventListener('click',function(){
+    safe.added=safe.added.filter(function(a){return a.id!==p.id});
+    document.querySelectorAll('[data-proposal-id]').forEach(function(node){
+     if(node.dataset.proposalId===String(p.id))node.remove();
+    });
+    currentChecks.textContent='';
+    // The first warning may have inserted a page-wide removal control into this
+    // concept row. Remove that control together with the optional concept.
+    var orphanRemove=r0.querySelector('#growthFlaggedRemoveAll');if(orphanRemove)orphanRemove.remove();
+    b.disabled=false;b.textContent='Add to this package';
+    removeConcept.hidden=true;
+    $('approved').checked=false;ready();
+    status('downloadStatus','Old concept #'+p.id+' removed from this CMS package. Existing published content was not changed.',false);
+    goToCmsDownload();
+   });
    b.addEventListener('click',function(){
+    if(mismatchedRegion){status('downloadStatus','This older concept refers to '+mismatchedRegion+' and does not match this page. Re-run Growth research for the correct market before adding it.',true);return}
     if(safe.added.some(function(a){return a.id===p.id}))return;
     var r=p.review||{};safe.added.push({id:p.id,review:r});
     p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
     reapplyRemovals();
     var seen=new Set();
-    (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite, remove, or keep it if it is true: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason);flaggedReviewAction(r0,f)});
-    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(r0,'Check: '+item)})});
+    (r.flagged||[]).forEach(function(f){
+     checkItem(currentChecks,'Rewrite, remove, or keep it if it is true: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason,f.sentence);
+     flaggedReviewAction(currentChecks,f);
+    });
+    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){
+     (r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(currentChecks,'Check: '+item)});
+    });
+    removeConcept.hidden=false;
     b.disabled=true;b.textContent='Added — review the sections above';
     $('approved').checked=false;ready();
    });
-   r0.appendChild(b);into.appendChild(r0);
+   if(mismatchedRegion){b.disabled=true;b.textContent='Different market — new research required'}
+   r0.appendChild(b);r0.appendChild(removeConcept);r0.appendChild(currentChecks);into.appendChild(r0);
   };
   if(concepts.length){
    var h=document.createElement('strong');h.textContent='Also written for this page: '+concepts.length+' other concept'+(concepts.length===1?'':'s');box.appendChild(h);
@@ -260,6 +348,11 @@
    intro.textContent='Written in the last 30 days for improvements you chose, on topics not already in the text above. Add the ones you want; each still needs your review.';
    box.appendChild(intro);concepts.forEach(function(p){row(p,box)});
   }
+  // The download is at the end of the CMS form. Keep its route visible even
+  // when earlier-concept review and factual checks make the page very long.
+  var jump=document.createElement('button');jump.type='button';jump.textContent='Review requirements → Download CMS package ↓';
+  jump.className='growth-cms-download-jump';jump.style.cssText='display:block;margin:12px 0;background:#1d4ed8;color:white;padding:10px 14px';
+  jump.addEventListener('click',goToCmsDownload);box.appendChild(jump);
   if(older.length){
    var d=document.createElement('details');var sm=document.createElement('summary');
    sm.textContent='Earlier versions from previous research runs ('+older.length+') — usually not needed';d.appendChild(sm);
@@ -273,6 +366,11 @@
   [main||{}].concat(safe.added.map(function(a){return a.review||{}})).forEach(function(r){
    keys.forEach(function(k){if(Array.isArray(r[k]))out[k]=(out[k]||[]).concat(r[k])});
    if(r.dossier&&!out.dossier)out.dossier=r.dossier});
+  // Persisted dismissals remain in the audit store; do not reproduce obsolete
+  // unsupported claims in a new CMS package's active review notes.
+  if(Array.isArray(out.flagged))out.flagged=out.flagged.filter(function(f){
+   return !f||!f.sentence||!removedSentences().includes(f.sentence)||inDraft(f.sentence);
+  });
   return out;
  }
  // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
@@ -304,7 +402,7 @@
     // One tick per sentence, under the first (strictest-listed) check that names it.
     var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
     var t=document.createElement('p');t.textContent=g[1]+' (confirm them all at once at the end of step 3, or one by one):';box.appendChild(t);
-    items.forEach(function(item){checkItem(box,item)});
+    items.forEach(function(item){var match=g[0]==='flagged_text'?(r.flagged||[]).find(function(f){return f.sentence&&item.indexOf('“'+f.sentence+'”')>=0}):null;checkItem(box,item,match&&match.sentence)});
     if(g[0]==='flagged_text')(r.flagged||[]).forEach(function(f){flaggedReviewAction(box,f)});
    });
    if((r.competitor_sources||[]).length){
