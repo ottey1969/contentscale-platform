@@ -65,7 +65,18 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <section id="publicationWrap" class="note" hidden aria-label="Record actual publication">
 <h2>Finish · Record your published update</h2>
 <p>After you publish the approved changes in your own CMS, confirm the actual date below. Growth will measure eligible results later. It does not publish anything for you.</p>
-<form id="publicationForm" novalidate>
+<div id="existingPublicationChoice" class="note" hidden>
+ <strong>Publication already recorded for this page and question.</strong>
+ <p id="previousPublicationSummary">Choose whether you are correcting the existing record or reporting a different, newer change that is already live.</p>
+ <div class="actions">
+  <button type="button" id="editPreviousPublication">Edit existing publication</button>
+  <button type="button" id="newPublishedUpdate">Register a newer published change</button>
+ </div>
+ <p class="small">A correction updates the original measurement record. A different, later publication starts a separate measurement period and can send a new confirmation e-mail with the changed content.</p>
+ </div>
+ <p id="publicationVersionChoice" role="status" aria-live="polite"></p>
+ <label id="reusePublicationEmailLabel" class="check" hidden><input id="reusePublicationEmail" type="checkbox" checked><span>For this later publication, send an updated confirmation and reminder to previously opted-in reminder recipients (when available).</span></label>
+ <form id="publicationForm" novalidate>
 <label class="check"><input id="confirmPublished" type="checkbox" required><span>I confirm that the changes were actually published on the live website. Record the real publication date below.</span></label>
 <label for="publishedAt">Publication date and time</label><input id="publishedAt" type="datetime-local" required>
 <label for="publicationNotes">What was actually published?</label><textarea id="publicationNotes" rows="3" maxlength="3000" required></textarea>
