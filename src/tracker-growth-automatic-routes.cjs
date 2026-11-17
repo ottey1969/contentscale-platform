@@ -87,7 +87,7 @@ async function trackerSitemapFallback(rows,pageUrl,trackedPages=[],fetchXml=null
  }
  let sitemapUrl=null;
  try{const u=new URL(String(row?.sitemap_url||''));if(u.protocol==='https:'&&u.hostname.toLowerCase()===host&&!u.username&&!u.password)sitemapUrl=u.href}catch(_){}
- let source='SAVED_TRACKER_URL_LIST',fetchStatus='NOT_NEEDED';
+ let source='SAVED_TRACKER_URL_LIST',fetchStatus='NOT_NEEDED',indexFilesFound=0,indexFilesRead=0,limited=false;
  if(!out.length&&sitemapUrl&&typeof fetchXml==='function'){
   const {importSitemap}=require('./growth-free/sitemap-import.cjs');
   const fetchOne=async u=>{
@@ -98,27 +98,30 @@ async function trackerSitemapFallback(rows,pageUrl,trackedPages=[],fetchXml=null
   };
   try{
    const root=await fetchOne(sitemapUrl);
-   const files=/<(?:[\w.-]+:)?sitemapindex(?:\s|>)/i.test(root)?
+   const index=/<(?:[\w.-]+:)?sitemapindex(?:\s|>)/i.test(root);
+   const files=index?
     [...root.matchAll(/<(?:[\w.-]+:)?loc\s*>([\s\S]*?)<\/(?:[\w.-]+:)?loc>/gi)]
      .map(m=>m[1].trim().replace(/&amp;/gi,'&')).filter(u=>{try{const x=new URL(u);return x.protocol==='https:'&&x.hostname.toLowerCase()===host&&!x.username&&!x.password}catch(_){return false}}).slice(0,3)
     :[sitemapUrl];
+   if(index){indexFilesFound=[...root.matchAll(/<(?:[\w.-]+:)?loc\s*>([\s\S]*?)<\/(?:[\w.-]+:)?loc>/gi)].length;limited=indexFilesFound>files.length}
    // Fetch at most three children concurrently to avoid serial 4.5s timeout penalties.
    const documents=await Promise.allSettled(files.map(u=>u===sitemapUrl?Promise.resolve(root):fetchOne(u)));
    for(let i=0;i<files.length;i++){
     const url=files[i],response=documents[i];
     if(response.status!=='fulfilled')continue;
+    indexFilesRead++;
     const xml=response.value;
     try{
      const data=importSitemap({name:'sitemap.xml',content_base64:Buffer.from(xml).toString('base64')},pageUrl);
      for(const value of data.urls){if(known.has(normUrl(value))||seen.has(normUrl(value)))continue;
-      seen.add(normUrl(value));out.push(value);if(out.length>=300)break}
+      seen.add(normUrl(value));out.push(value);if(out.length>=300){limited=true;break}}
     }catch(e){if(url===sitemapUrl)throw e}
     if(out.length>=300)break;
    }
    source='FETCHED_TRACKER_SITEMAP_XML';fetchStatus=files.length?'READ':'NO_SITEMAP_FILES';
   }catch(e){fetchStatus=String(e.code||e.message||'SITEMAP_UNAVAILABLE').slice(0,80)}
  }
- return {status:out.length?'SAVED_URL_FALLBACK':'NO_SAVED_URL_LIST',source,fetch_status:fetchStatus,sitemap_url:sitemapUrl,urls:out,count:out.length,
+ return {status:out.length?'SAVED_URL_FALLBACK':'NO_SAVED_URL_LIST',source,fetch_status:fetchStatus,sitemap_url:sitemapUrl,urls:out,count:out.length,index_files_found:indexFilesFound,index_files_read:indexFilesRead,limited,
   evidence:'UNVERIFIED_URL_INVENTORY',note:'Saved sitemap URLs are research leads only, not fetched pages, verified canonicals or approved internal links.'};
 }
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,autoGroundedAnswer=groundedGeminiAnswer,questionModel=undefined,questionFetch=undefined,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null,aiGapModel=undefined,fetchAiCited=null}={}){
