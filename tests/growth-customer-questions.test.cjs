@@ -114,3 +114,36 @@ test('Tracker Growth AI check (owner 2026-11-12): the prompt asks the best real 
   const ui = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
   assert.match(ui, /Question asked: /);
 });
+
+test('emergency roofing research rejects generic PAA questions and selects a specific service buyer question', async () => {
+ const roofHtml='<html lang="en"><title>24 Hour Emergency Roof Repair NJ</title><h1>Emergency Roof Repair New Jersey</h1></html>';
+ const out=await discoverCustomerQuestions({url:'https://perfectroofingteam.com/24-hour-emergency-roof-repair/',html:roofHtml,
+  keyword:'24 hour emergency roof repair nj',gl:'us',hl:'en',key:'TEST',
+  fetchImpl:serper({peopleAlsoAsk:[
+   {question:'How urgent is roof repair?'},{question:'What is emergency roofing?'},
+   {question:'Can a roof be repaired in a day?'},{question:'Does NJ have a roof replacement program?'},
+   {question:'Who offers 24 hour emergency roof repair in New Jersey?'}]}),model:null});
+ assert.equal(out.best_question,'Who offers 24 hour emergency roof repair in New Jersey?');
+ assert.deepEqual(out.questions.map(x=>x.text),['Who offers 24 hour emergency roof repair in New Jersey?']);
+ assert.equal(out.selection_source,'OBSERVED_GOOGLE');
+});
+test('generic Google roof questions cannot become a best match for a 24-hour emergency service', async () => {
+ const roofHtml='<title>24 Hour Emergency Roof Repair NJ</title><h1>Emergency Roof Repair NJ</h1>';
+ const out=await discoverCustomerQuestions({url:'https://perfectroofingteam.com/24-hour-emergency-roof-repair/',html:roofHtml,
+  keyword:'24 hour emergency roof repair nj',gl:'us',hl:'en',key:'TEST',
+  fetchImpl:serper({peopleAlsoAsk:[
+   {question:'How urgent is roof repair?'},{question:'What is emergency roofing?'},
+   {question:'Can a roof be repaired in a day?'},{question:'Does NJ have a roof replacement program?'}]}),
+  model:{call:async()=>JSON.stringify({questions:['Who provides 24 hour emergency roof repair in NJ?','What is emergency roofing?']})}});
+ assert.equal(out.best_question,'Who provides 24 hour emergency roof repair in NJ?');
+ assert.equal(out.selection_source,'AI_SUGGESTION');
+ assert.deepEqual(out.questions.map(x=>x.text),['Who provides 24 hour emergency roof repair in NJ?']);
+ assert.equal(out.questions[0].priority,'AI_FALLBACK');
+});
+test('if emergency Google questions are generic and AI is unavailable, no misleading question is auto-chosen', async () => {
+ const out=await discoverCustomerQuestions({keyword:'24 hour emergency roof repair nj',key:'TEST',
+  fetchImpl:serper({peopleAlsoAsk:[{question:'How urgent is roof repair?'},{question:'What is emergency roofing?'}]}),model:null});
+ assert.equal(out.best_question,null);
+ assert.deepEqual(out.questions,[]);
+ assert.equal(out.selection_source,'NONE');
+});
