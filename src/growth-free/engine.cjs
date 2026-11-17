@@ -48,7 +48,7 @@ function readOnlySource(page,{gscRows=[],sitemapUrls=[]}={}){
   if(sql.includes('LEFT(html_content')&&/FROM tracker_pages\b/.test(sql))
    return {rows:[{id:FREE_PAGE_ID,tracker_client_id:FREE_CLIENT_ID,url:page.url,keyword:page.keyword,brief_content:null,saved_html:null}]};
   if(/FROM tracker_pages\\b/.test(sql)&&/id<>\\$2/.test(sql))
-   return {rows:sitemapUrls.filter(url=>url!==page.url).slice(0,300).map((url,i)=>({id:i+2,tracker_client_id:FREE_CLIENT_ID,url,keyword:''}))};
+   return {rows:sitemapUrls.filter(url=>url!==page.url).slice(0,300).map(url=>({id:null,tracker_client_id:FREE_CLIENT_ID,url,keyword:'',sitemap_candidate:true,source_status:'UNVERIFIED_URL_ONLY'}))};
   if(/FROM tracker_gsc_queries\b/.test(sql)&&/page_id=\$2/.test(sql)&&/evidence_scope='page_verified'/.test(sql)&&!/page_id<>/.test(sql))
    return {rows:gscRows.filter(r=>r&&r.source_page_url===page.url)};
   return {rows:[]};
