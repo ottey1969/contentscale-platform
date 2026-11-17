@@ -179,12 +179,24 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
    // A concept for another question is historical input, not the current
    // CMS proposal. Never silently relabel emergency repair as roof leak.
-   const wanted=String(req.query?.query||v.page.keyword||'').trim().toLowerCase().replace(/\s+/g,' ');
+   const wanted=String(req.query?.query||'').trim().toLowerCase().replace(/\s+/g,' ');
    const all=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url});
-   const aligned=all.filter(x=>sameIntent(x.focus_query,wanted));
-   const p=aligned[0]||null; // Only the newest matching current-intent proposal.
-   const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,kind:x.kind||null,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
-   res.set('Cache-Control','private, no-store').json({success:true,working_query:wanted,proposal:p?shape(p):null,query_match_required:true});
+   const selectedId=Number(req.query?.proposal_id);
+   const exact=Number.isSafeInteger(selectedId)&&selectedId>0?all.find(x=>Number(x.id)===selectedId):null;
+   // The stored proposal is the authority for the question. Never use a stale
+   // browser query or the page seed to relabel an already-written concept.
+   if(req.query?.proposal_id&&(!exact||!Array.isArray(exact.sections)||!exact.sections.length))
+    return res.status(409).json({success:false,code:'SELECTED_GROWTH_PROPOSAL_NOT_FOUND'});
+   const aligned=all.filter(x=>wanted&&sameIntent(x.focus_query,wanted));
+   const p=exact||aligned[0]||null;
+   const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,
+    research_page_id:x.research_page_id?Number(x.research_page_id):null,
+    kind:x.kind||null,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
+   const available=all.filter(x=>Array.isArray(x.sections)&&x.sections.some(y=>y&&y.h2))
+    .map(x=>({id:Number(x.id),focus_query:x.focus_query,created_at:x.created_at,
+     research_page_id:x.research_page_id?Number(x.research_page_id):null,sections_count:x.sections.length})).slice(0,15);
+   res.set('Cache-Control','private, no-store').json({success:true,working_query:p?.focus_query||wanted,
+    proposal:p?shape(p):null,proposal_id_matched:!!exact,available_proposals:available,query_match_required:true});
   }catch(e){console.warn('[growth-cms-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'GROWTH_PROPOSAL_UNAVAILABLE'})}
  });
  // AI proposal for the SEO title, meta description and internal link text (owner link only; filled in for review).
