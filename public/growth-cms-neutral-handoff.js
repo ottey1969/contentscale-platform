@@ -261,11 +261,21 @@
   setTimeout(refresh,0);
  }
  // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
+ // A multi-sentence review string is not a single independently verified
+ // statement. Break it into readable checks; every sentence still needs review.
+ function reviewStatements(item){
+  var raw=String(item||'').replace(/\\\./g,'.').replace(/([.!?])(?=[A-Z][a-z])/g,'$1 ');
+  var units=(raw.match(/[^.!?]+(?:[.!?]+|$)/g)||[]).map(function(x){return x.trim()}).filter(Boolean);
+  return units.length>1?units:[String(item||'').trim()];
+ }
  function checkItem(box,item,flaggedSentence){
-  var l=document.createElement('label');l.className='check';
-  if(flaggedSentence){l.classList.add('growth-flag-fact');l.dataset.flaggedSentence=normS(flaggedSentence)}
-  var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
-  var sp=document.createElement('span');sp.textContent=item;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
+  var bits=flaggedSentence?[String(item||'').trim()]:reviewStatements(item);
+  bits.forEach(function(bit){
+   var l=document.createElement('label');l.className='check';
+   if(flaggedSentence){l.classList.add('growth-flag-fact');l.dataset.flaggedSentence=normS(flaggedSentence)}
+   var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
+   var sp=document.createElement('span');sp.textContent=bit;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
+  });
  }
  // Other proposals and written concepts stored for this page (for example improvements the owner chose on the research
  // page). Each one is added only when the editor clicks it; its checks come with it and the package records its id.
@@ -402,7 +412,7 @@
    var intro=document.createElement('p');
    intro.textContent='This is the text Growth checked against the ranking pages'+(p.focus_query?' for “'+p.focus_query+'”':'')+'. You may still edit it; the package records whether you did. Nothing is published.';
    var scope=document.createElement('p');scope.className='small';
-   scope.textContent='Checked automatically: it teaches the missing reader task, does not repeat your page or copy competitors, and has no unsourced figures, named sources or promises. Not checked: whether the statements are true. That is your review below; this is not a fact-checked or publication-approved text.';
+   scope.textContent='Editorial concept only. Growth proposed this copy for the stated query, but its facts, competitors, safety instructions and originality are NOT independently verified. Do not publish without reviewing each claim against reliable evidence. Roofing work on wet or damaged roofs must be left to qualified professionals.';
    box.appendChild(intro);box.appendChild(scope);
    if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent='Evidence: '+p.evidence_label;box.appendChild(ev)}
    if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
