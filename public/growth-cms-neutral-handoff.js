@@ -484,7 +484,8 @@
  if(requestedQuestion)$('query').value=requestedQuestion;
  if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
- $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';ready()});
+ $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
+ $('query').addEventListener('change',function(){void recoverSavedQuestions()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);
@@ -818,7 +819,8 @@
    // Even one historical report must be chosen deliberately: it may be a different intent.
    if(!current||questions.length){
     wrap.hidden=false;choices.textContent='';
-    if(current){var note=document.createElement('p');note.textContent='The requested question is not saved under this page/market. Choose the correct previous run below, or return to Growth to research it.';choices.appendChild(note)}
+    if(current){var note=document.createElement('p');note.textContent='This exact question has no saved completed research for the selected page and market. The suggestions below are older, different research questions; they cannot be substituted for it.';choices.appendChild(note);
+     var go=document.createElement('a');go.textContent='Open Growth research for this exact question →';go.href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(current)+(market?'&market='+encodeURIComponent(market):'');go.style.cssText='display:inline-block;margin:8px 0;color:#1d4ed8;font-weight:700';choices.appendChild(go)}
     if(!questions.length){var no=document.createElement('p');no.textContent='No previously saved customer question was found for this Tracker page. Open Growth research and save a run first.';choices.appendChild(no);return}
     questions.forEach(function(q){
      var btn=document.createElement('button');btn.type='button';btn.textContent=q.question+(q.market?' · '+q.market:'');
