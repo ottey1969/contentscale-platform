@@ -1248,8 +1248,20 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<details id="growthTechnicalExport"><summary>Advanced · Technical report and research controls</summary><p class="info">JSON is for audits and troubleshooting, not required for publication.</p>',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button> ',
    '<button id="retryResearch" type="button" hidden style="background:#64748b">Run research again</button></details></section>',
-   '<details id="growthNextAction"><summary>Measurement after publication</summary>',
-   '<p><a id="growthMeasurementLink" href="'+base+'/measurement">Review publication measurement readiness</a> — GSC is optional for research and required only for verified Google measurements.</p></details>',
+   '<section id="growthNextAction"><h2>Step 3 · Publish and measure</h2>',
+   '<p class="info">After reviewing the CMS package, publish the approved changes in your own CMS. ContentScale does not publish automatically.</p>',
+   (req.growth?.can_edit!==true?'<p>Only the Tracker owner can confirm publication.</p>':
+    v.page.case_study_active?'<p class="error">This page has a protected Case Study. End it in Tracker before changing the page or recording a publication.</p>':
+    '<div id="growthPublishWizard"><p id="growthPublishState" role="status" aria-live="polite">Checking for an existing publication record…</p>'+
+    '<div id="growthPublishNotRecorded" hidden><p><strong>1. Publish the approved page changes.</strong> Check your CMS package above first, and do not confirm until your change is actually live.</p>'+
+    '<button type="button" id="growthPublishReveal">I published the update →</button>'+
+    '<form id="growthPublishForm" hidden><p><strong>2. Record when your update went live.</strong></p>'+
+    '<label for="growthPublishedAt">Actual publication date and time</label><input id="growthPublishedAt" name="published_at" type="datetime-local" required style="display:block;padding:9px;max-width:320px;width:100%;box-sizing:border-box">'+
+    '<label for="growthPublishedNotes">What did you change?</label><textarea id="growthPublishedNotes" name="notes" maxlength="3000" rows="3" required placeholder="For example: expanded emergency repair safety steps and reviewed calls to action." style="display:block;padding:9px;max-width:680px;width:100%;box-sizing:border-box"></textarea>'+
+    '<p><button id="growthPublishConfirm" type="submit">Confirm publication and start measurement →</button></p><small id="growthPublishFeedback" role="status" aria-live="polite"></small></form></div></div>'),
+   '<div id="growthPublishRecorded" hidden><p><strong>Publication recorded.</strong> Growth keeps your publication date and query. Comparisons need the correct before/after evidence; no click growth is promised.</p></div>',
+   '<p><a id="growthMeasurementLink" class="growth-primary-finish" href="'+base+'/measurement">View measurement status →</a></p>',
+   '<details id="growthMeasurementAdvanced"><summary>Advanced · Measurement requirements</summary><p class="info">A comparable Google click result requires real same-page, same-query Search Console data for the two eligible 28-day periods. GSC is optional for research. Enquiries can be entered from your own records on the measurement page.</p></details></section>',
    '</main></body></html>'
   ].join('');
   return res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex,nofollow')
