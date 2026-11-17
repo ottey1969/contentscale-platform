@@ -857,6 +857,11 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
  if(d.cached)h+='<p class="note"><strong>Result from earlier today.</strong> This page was checked for the same question and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString()):' in the last 24 hours')+', so that result is shown. A new check of this page is possible tomorrow.</p>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
+ if(d.sitemap_import){
+  var sm=d.sitemap_import,used=Number(sm.urls_used||0);
+  h+='<p class="note"><strong>Sitemap inventory:</strong> '+(used?used+' same-site URL candidate(s) imported':'No sitemap URLs imported')+
+   ' <small class="muted">· '+esc(sm.source||'optional sitemap')+' · sitemap URLs are not verified pages or confirmed internal links.</small></p>';
+ }
  // The customer question the check used: chosen automatically from Google, or typed. Other questions start a new check.
  var cq=d.customer_question,term=s.checked&&s.checked.search_term;
  if(cq&&cq.text)h+='<div class="card" id="customerQuestion"><strong>Customer question researched:</strong> “'+esc(cq.text)+'” <small class="muted">· chosen automatically · '+esc(cq.label||'')+'</small>'+
@@ -1440,6 +1445,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
+   sitemap_import:row.report?.sitemap_import||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
