@@ -15,8 +15,14 @@
   var out=[],seen=new Set();
   list(items).forEach(item=>{
    var v=typeof item==='string'?item:(item&&item.url)||'';
-   if(typeof v!=='string'||!/^https:\/\//i.test(v))return;
-   try{var u=new URL(v);if(u.username||u.password)return;var key=u.href;if(seen.has(key))return;seen.add(key);out.push(key)}catch(_){}
+   if(typeof v!=='string'||!/^https:\/\/[^\s/?#]+/i.test(v))return;
+   // Preserve exactly the URL observed in the research: no guessed replacement
+   // homepages or URL reconstruction. Reject credentials and malformed hosts.
+   var original=v.trim(),authority=(original.match(/^https:\/\/([^/?#]+)/i)||[])[1]||'';
+   if(!authority||/@/.test(authority)||/\s/.test(original))return;
+   try{if(typeof URL==='function'){var parsed=new URL(original);if(parsed.username||parsed.password||!parsed.hostname)return}}
+   catch(_){return}
+   if(seen.has(original))return;seen.add(original);out.push(original);
   });
   return out;
  };
