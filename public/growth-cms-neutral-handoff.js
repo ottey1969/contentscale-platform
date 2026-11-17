@@ -792,7 +792,7 @@
    var p=data.proposal,question=String(p.focus_query||'').trim();
    if(!question||!Array.isArray(p.sections)||!p.sections.length)throw Error('Saved writing has no reviewable content');
    $('query').value=question;safe.savedQuestionConfirmed=true;
-   var url=new URL(location.href);url.searchParams.delete('proposal_id');url.searchParams.set('query',question);
+   var url=new URL(location.href);url.searchParams.set('query',question);
    history.replaceState(null,'',url.pathname+url.search);
    var sourcePage=Number(p.research_page_id)||pageId;
    $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(sourcePage)+'&query='+encodeURIComponent(question)+(requestedMarket?'&market='+encodeURIComponent(requestedMarket):'');
@@ -818,6 +818,39 @@
     {cache:'no-store',credentials:'same-origin'});
    var data=await resp.json();if(!resp.ok||data.success!==true)throw Error('Saved question lookup unavailable');
    var questions=Array.isArray(data.questions)?data.questions:[];
+    // The CMS destination may differ from the research source page. Saved
+    // writing proposals are the authoritative selections for this destination.
+    var proposed=[];
+    try{
+     var pr=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
+     var pd=await pr.json();
+     if(pr.ok&&pd.success===true&&Array.isArray(pd.available_proposals))proposed=pd.available_proposals;
+    }catch(_){}
+    // Old links may carry an unrelated question. Never accept it as the
+    // current CMS writing task merely because an unrelated research row exists.
+    var oldRequested=String($('query').value||'').trim();
+    if(proposed.length){
+     wrap.hidden=false;choices.textContent='';
+     var intro=document.createElement('p');
+     intro.textContent=oldRequested?'This older CMS link says “'+oldRequested+'”. Select the actual saved Growth content proposal below instead; the old question is not automatically used.':'Choose the saved Growth writing proposal for this page.';
+     choices.appendChild(intro);
+     proposed.forEach(function(p){
+      var button=document.createElement('button');button.type='button';
+      button.textContent=String(p.focus_query||'Untitled Growth proposal')+' · '+p.sections_count+' section(s)';
+      button.style.cssText='margin:5px 6px 5px 0;padding:9px 12px;background:#eff6ff;color:#1e40af;border:1px solid #93c5fd;border-radius:8px;text-align:left';
+      button.addEventListener('click',function(){
+       var url=new URL(location.href);
+       url.searchParams.set('proposal_id',String(p.id));
+       url.searchParams.set('query',String(p.focus_query||''));
+       history.replaceState(null,'',url.pathname+url.search);
+       // Reuse the exact verified server proposal and its research source.
+       void recoverSelectedProposal();
+      });
+      choices.appendChild(button);
+     });
+     safe.savedQuestionConfirmed=false;$('query').value='';ready();
+     return;
+    }
    // Keep saved variations separate by market, but never repeat identical question/market combinations.
    var seen=new Set();
    questions=questions.filter(function(q){var key=String(q.question||'').trim().toLowerCase()+'|'+String(q.market||'').trim().toUpperCase();if(!q.question||seen.has(key))return false;seen.add(key);return true});
