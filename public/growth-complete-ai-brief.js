@@ -38,7 +38,7 @@
   var rows=[],index=new Map();
   function record(topic,coverage,source,data){
    topic=str(topic,500);if(!topic)return;
-   var key=topic.toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu,' ').trim();
+   var key=topic.toLocaleLowerCase().trim();
    var status=String(coverage||'UNKNOWN').toUpperCase().replace(/[ -]+/g,'_');
    if(['PRESENT','COVERED','ALREADY_PRESENT','FULL','COMPLETE'].includes(status))status='COMPLETE';
    else if(['PARTIAL','PARTIALLY_PRESENT','INCOMPLETE'].includes(status))status='PARTIAL';
@@ -103,16 +103,16 @@
    'Suggested review order: factual/research blockers; PARTIAL topics to deepen; MISSING intent-relevant topics; COMPLETE topics to preserve or clarify; UNKNOWN and conflicting classifications to inspect.',
    'No coverage category is automatically excluded from the external AI/editor brief. Relevance to the exact customer question controls the final editorial choice.',
    'GSC is optional; do not claim measured clicks, ranking impact or priority by traffic when GSC data is missing.'
-  ].join('\\n'));
+  ].join('\n'));
   add('1B. COMPLETE CONTENT COVERAGE INVENTORY — ALL USEFUL OBSERVATIONS',[
    'Preserve COMPLETE, PARTIAL, MISSING and UNKNOWN topics. Do not silently discard material simply because it is already on the page.',
    'COMPLETE means an existing section/topic was reported as covered, not that every factual claim is verified.',
    'PARTIAL means expand or clarify without duplicating existing content. MISSING means consider adding only when relevant. UNKNOWN means assess the original page first.',
    'Each observation retains its original coverage label and full stored evidence for the external editor; disagreements are shown as REVIEW_CONFLICT.',
-   bullet(inventory.map((x,i)=>(i+1)+'. '+x.topic+' | COVERAGE '+x.coverage+'\\n'+
-    x.observations.map(o=>'    SOURCE '+o.source+' | REPORTED '+o.reported_coverage+' | DETAILS '+safeJson(o.details)).join('\\n'))),
+   bullet(inventory.map((x,i)=>(i+1)+'. '+x.topic+' | COVERAGE '+x.coverage+'\n'+
+    x.observations.map(o=>'    SOURCE '+o.source+' | REPORTED '+o.reported_coverage+' | DETAILS '+safeJson(o.details)).join('\n'))),
    'Competitor sections and AI-cited topics are research leads, not permission to copy text or assert company-specific promises.'
-  ].join('\\n'));
+  ].join('\n'));
   add('2. WHAT IS ALREADY ON THE PAGE — PRESERVE / IMPROVE',[
    'Current H1 headings:',bullet(sourceHeads.h1||[]),
    'Current H2 headings:',bullet(sourceHeads.h2||[]),
