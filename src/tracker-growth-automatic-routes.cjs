@@ -14,6 +14,7 @@ const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
 const {briefFindingsForGrowth,sameUrl}=require('./prewrite-existing-page.cjs');
 const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestions.cjs');
+const {resolveGrowthInternalLink}=require('./growth-internal-link-resolver.cjs');
 const {discoverGrowthCompetitorsWithFallback}=require('./growth-public-search-discovery.cjs');
 const {queryFit}=require('./growth-one-action-decision.cjs');
 const {autonomouslyFindGrowthOpportunity}=require('./growth-autonomous-opportunity.cjs');
@@ -473,6 +474,21 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.summary.live_search_evidence_complete=!!(discovery.leads?.length);
   if(discovery.optional_google_failure_reason)report.evidence_warnings.push('SERPER_GOOGLE_'+discovery.optional_google_failure_reason);
   report.handoff_suggestions=proposeHandoffFromResearch(report,page.url);
+  // Research-suggested internal links are discovery candidates, never verified
+  // destinations. Point to the final 200 URL, or offer no link at all.
+  if(report.handoff_suggestions?.internal_url){
+   const check=await resolveGrowthInternalLink(report.handoff_suggestions.internal_url,page.url);
+   report.handoff_suggestions.internal_link_verification=check.status;
+   if(check.url){
+    report.handoff_suggestions.internal_url=check.url;
+    if(check.redirected)report.handoff_suggestions.internal_reason='The originally discovered URL redirected. Use this verified final destination directly, never the old redirect URL.';
+   }else{
+    report.handoff_suggestions.internal_url=null;
+    report.handoff_suggestions.internal_label='';
+    report.handoff_suggestions.internal_basis=null;
+    report.handoff_suggestions.internal_reason='No verified direct internal destination. Growth will not suggest a redirecting or unverified link.';
+   }
+  }
   // This object is always the research-only GET response, regardless of
   // the caller's actual owner permission. Do not misrepresent its access
   // metadata as an authorization decision or as a completed Growth report.
