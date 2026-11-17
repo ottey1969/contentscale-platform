@@ -85,6 +85,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.fill('#query', 'roof repair lodi nj');
     await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
     // A pasted AI answer on the form survives a refresh (with the same question), and Reset is not needed to keep it.
+    await p.locator('#freeExtraSources > summary').click();
     await p.locator('#aiStart > summary').click();
     await p.fill('textarea[data-engine="copilot"]', 'ANSWER:\nTEST pasted on the form.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
     await p.reload();

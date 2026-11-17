@@ -108,7 +108,7 @@ function page(title,body,cfg){
 main{max-width:860px;margin:0 auto;padding:24px 16px 60px}h1{font-size:30px;line-height:1.2;margin:.4em 0}h2{font-size:21px;margin:1.6em 0 .5em}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}.lead{font-size:18px;color:var(--muted)}
 label{display:block;margin:12px 0 4px;font-weight:600}input,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
-.check{display:flex;gap:8px;align-items:flex-start;font-weight:400}.check input{width:auto;margin-top:5px}
+.free-simple-start{border:2px solid #2563eb}.free-simple-start #freePrimaryRun:disabled{background:#cbd5e1;color:#475569;opacity:1;cursor:not-allowed}.free-simple-locale{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0 16px}.free-simple-optional{margin:18px 0;padding:12px 14px;border:1px solid var(--line);border-radius:10px}.free-simple-optional summary{cursor:pointer}.free-simple-optional summary small{display:inline-block;margin-left:6px}.free-sitemap-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}.free-sitemap-actions button{width:auto}.check{display:flex;gap:8px;align-items:flex-start;font-weight:400}.check input{width:auto;margin-top:5px}
 button,.btn{display:inline-block;background:var(--accent);color:var(--accent-ink);border:0;border-radius:9px;padding:12px 18px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none}
 button:disabled{opacity:.65;cursor:not-allowed}.cms-action-unavailable,.cms-action-unavailable:disabled{background:var(--bg)!important;border:1px solid var(--line)!important;color:var(--muted)!important;opacity:1!important;box-shadow:none!important;cursor:not-allowed!important;animation:none!important}.cms-action-ready{background:var(--accent)!important;border:1px solid var(--accent)!important;color:var(--accent-ink)!important}.cms-action-complete,.cms-action-complete:disabled{background:var(--done)!important;border:1px solid var(--done)!important;color:#fff!important;opacity:1!important;box-shadow:none!important;cursor:default!important}.cms-status{display:block;margin-top:8px;font-size:13px;color:var(--muted)}.cms-status.done{color:var(--done)}.cms-button-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}@media(prefers-reduced-motion:reduce){.cms-action-complete{animation:none!important}}button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.research-progress{height:5px;border-radius:99px;background:var(--line);overflow:hidden;margin:12px 0}.research-progress::after{content:'';display:block;width:35%;height:100%;background:var(--accent);border-radius:99px;animation:freeResearch 1.6s ease-in-out infinite alternate}@keyframes freeResearch{from{transform:translateX(-90%)}to{transform:translateX(280%)}}@media(prefers-reduced-motion:reduce){.research-progress::after{animation:none;width:100%}}.is-saving{pointer-events:none}.is-saving::after{content:'';display:inline-block;width:12px;height:12px;margin-left:8px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:freeSpin .8s linear infinite}.action-done{background:var(--done)!important;color:#fff!important;animation:freeDone .35s ease-out}.action-failed{background:var(--blocked)!important;color:#fff!important;animation:freeAlert .25s ease-out}@media(prefers-reduced-motion:reduce){.is-saving::after{animation:none;border-top-color:currentColor}}button{transition:background-color .18s ease,transform .18s ease,box-shadow .18s ease}button:not(:disabled):active{transform:scale(.98)}.is-working{position:relative;pointer-events:none}.is-working::before{content:'';display:inline-block;vertical-align:-2px;width:13px;height:13px;margin-right:9px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:freeSpin .8s linear infinite}.step-chip.done{animation:freeDone .35s ease-out}.step-chip.blocked{animation:freeAlert .25s ease-out}.action-green{animation:freeDone .35s ease-out}.action-red{animation:freeAlert .25s ease-out}@keyframes freeSpin{to{transform:rotate(360deg)}}@keyframes freeDone{0%{transform:translateY(3px);opacity:.7}100%{transform:translateY(0);opacity:1}}@keyframes freeAlert{0%,100%{transform:translateX(0)}30%{transform:translateX(-3px)}70%{transform:translateX(3px)}}@media(prefers-reduced-motion:reduce){button,.step-chip{transition:none!important;animation:none!important}.is-working::before{animation:none!important;border-right-color:currentColor}}.step-strip{display:grid;gap:8px;margin:16px 0}.step-chip{display:flex;gap:10px;align-items:center;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-weight:650;background:var(--card);color:var(--pending)}.step-chip.done{border-color:var(--done);color:var(--done)}.step-chip.current{border-color:var(--accent);color:var(--accent);box-shadow:inset 3px 0 var(--accent)}.step-chip.blocked{border-color:var(--blocked);color:var(--blocked)}.step-chip .symbol{font-size:18px}.action-blue{background:var(--accent);color:var(--accent-ink)}.action-green{background:var(--done);color:#fff}.action-muted{background:transparent;color:var(--muted);border:1px solid var(--line)}.action-red{background:var(--blocked);color:#fff}a.step-chip{text-decoration:none}#ownerBox>summary.owner-sum{list-style:none;cursor:pointer}#ownerBox>summary.owner-sum::-webkit-details-marker{display:none}.owner-btn{display:inline-block;padding:9px 16px;border:1px solid var(--accent);border-radius:10px;color:var(--accent);font-weight:700;margin-right:8px}#ownerBox[open] .owner-btn{background:var(--accent);color:var(--accent-ink)}.step-help{color:var(--muted);font-size:13px;margin:4px 0 16px}.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 small,.muted{color:var(--muted)}a{color:var(--accent);overflow-wrap:anywhere}.note{background:var(--warn);border:1px solid var(--warn-line);border-radius:10px;padding:12px 14px}
@@ -152,39 +152,74 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
  const t=FORM_TEXTS[lang]||FORM_TEXTS.en;
  return page(t.title,`
 <p class="kicker">${esc(t.kicker)}</p>
-<h1>${esc(t.h1)}</h1>
+<h1>${esc(t.h1)}</h1><p class="muted">${esc(t.simpleIntro)}</p>
 <p class="lead">${esc(t.lead)}</p>
 ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(t.inviteLeft.replace('§1',invite.left).replace('§2',invite.max).replace('§3',invite.expires))}${invite.email_hint?' '+esc(t.inviteEmail.replace('§',invite.email_hint)):''}</p>`:''}
-<form id="f" class="card" novalidate>
- <label for="url">${esc(t.url)}</label><input id="url" name="url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="${esc(t.urlPh)}" maxlength="500">
- <label for="query">${esc(t.query)}</label><textarea id="query" name="query" maxlength="300" rows="2" style="width:100%;resize:vertical" placeholder="${esc(t.queryPh)}"></textarea>
+<form id="f" class="card free-simple-start" novalidate><p class="kicker">${esc(t.simpleStart)}</p>
+ <label for="url"><strong>1. ${esc(t.url)}</strong></label><input id="url" name="url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="${esc(t.urlPh)}" maxlength="500"><small id="freeUrlStatus" role="status">${esc(t.simpleUrlStatus)}</small>
+ <label for="query"><strong>2. ${esc(t.query)}</strong></label><textarea id="query" name="query" maxlength="300" rows="2" style="width:100%;resize:vertical" placeholder="${esc(t.queryPh)}"></textarea>
  ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:''}
  <small>${esc(t.queryHelp)}</small>
  <input type="hidden" id="topic" name="topic"><input type="hidden" id="rt" name="rt"><p class="note" id="topicNote" hidden></p>
- <label for="market">${esc(t.market)}</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="${esc(t.marketPh)}">
+ <div class="free-simple-locale"><label for="market"><strong>3. ${esc(t.market)}</strong></label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="${esc(t.marketPh)}">
  <label for="language">${esc(t.language)}</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="${esc(t.languagePh)}">
- <small>${esc(t.marketHelp)}</small>
+ <small>${esc(t.marketHelp)}</small></div>
  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(regionLabel(x,lang))+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(languageLabel(x,lang))+'">').join('')}</datalist>
-${aiStartBlock(!!owner.signedIn||!!invite,t)}
+<details class="free-simple-optional" id="freeExtraSources"><summary><strong>${esc(t.simpleOptional)}</strong> <small class="muted">${esc(t.simpleOptionalHint)}</small></summary>
+ <p class="muted">${esc(t.simpleSitemapInfo)}</p>
+ <label for="freeSitemapUrl">${esc(t.simpleSitemap)}</label>
+ <input id="freeSitemapUrl" type="url" inputmode="url" maxlength="500" placeholder="https://www.example.com/sitemap.xml">
+ <div class="free-sitemap-actions"><button type="button" class="ghost" id="freeSitemapOpen" disabled>${esc(t.simpleSitemapOpen)}</button><small id="freeSitemapStatus" role="status"></small></div>
  <label for="gscFile">${esc(t.gsc)}</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>${esc(t.gscHelp)}</small>
+ ${aiStartBlock(!!owner.signedIn||!!invite,t)}
+ </details>
  <label for="email">${esc(t.email)}</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="${esc(t.emailPh)}"><small>${esc(t.emailHelp)}</small>
  <label class="check"><input type="checkbox" name="consent" required> <span>${esc(t.consent)}${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':' '+esc(t.perDay.replace('§',cfg.perEmail))}`}</span></label>
  <div id="tipsBox"><p class="muted" style="font-size:14px;margin:10px 0 2px">${esc(t.tips)}</p>
  <label class="check"><input type="checkbox" name="notips"> <span>${esc(t.noTips)}</span></label></div>
  ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
- <input type="hidden" name="lang" value="${esc(lang)}"><p><button type="submit">${owner.signedIn?'Run the check (owner)':esc(t.submit)}</button> <small id="s" role="status"></small></p>
+ <input type="hidden" name="lang" value="${esc(lang)}"><p><button type="submit" id="freePrimaryRun" disabled>${esc(t.simpleChooseUrl)}</button> <small id="s" role="status"></small></p>
 </form>
 ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p class="muted">Signed in with your admin key: no daily limit, and AI writes the chosen H2s in your checks${cfg.writing==='off'?' (AI writing is switched off on the server: GROWTH_FREE_WRITING=off)':''}. Visitors keep their normal limits.</p><p><button type="button" class="ghost" id="ownerOut">Sign out</button></p></div>`:owner.available?`<details class="card" id="ownerBox"><summary class="owner-sum"><span class="owner-btn">🔑 Owner? Sign in</span> <small class="muted">no daily limit, AI writing on</small></summary><form id="ownerIn" autocomplete="off"><label for="ownerKey">Admin key (GROWTH_FREE_ADMIN_KEY in Railway)</label><input id="ownerKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit">Sign in as owner</button> <small id="ownerSt" role="status"></small></p></form></details>`:''}
-<div class="card"><h2 style="margin-top:0">${esc(t.getTitle)}</h2><ul>
+<details class="card free-simple-details"><summary><strong>${esc(t.getTitle)}</strong></summary><ul>
 <li>${t.get1}</li>
 <li>${esc(t.get2)}</li>
 <li>${esc(t.get3)}</li>
 <li>${esc(t.get4)}</li></ul>
-<p class="muted">${esc(t.getNote)}</p></div>
+<p class="muted">${esc(t.getNote)}</p></details>
 <script>
 var FT=${js(t)};
 ${aiStartScript(t)}
+(function(){
+ var u=document.getElementById('url'),btn=document.getElementById('freePrimaryRun'),st=document.getElementById('freeUrlStatus'),
+  s=document.getElementById('freeSitemapUrl'),open=document.getElementById('freeSitemapOpen'),note=document.getElementById('freeSitemapStatus');
+ if(!u||!btn)return;
+ function normalized(){
+  try{var raw=u.value.trim(),p=new URL(raw.includes('://')?raw:'https://'+raw);
+   return /^https?:$/.test(p.protocol)&&p.hostname.includes('.')&&!p.username&&!p.password&&raw.indexOf(' ')<0?p:null;
+  }catch(e){return null}
+ }
+ function sync(){
+  var valid=!!normalized();btn.disabled=!valid;btn.textContent=valid?(typeof OWNER!=='undefined'&&OWNER?'Run the check (owner)':FT.submit):FT.simpleChooseUrl;
+  st.textContent=valid?FT.simpleUrlReady:FT.simpleUrlStatus;
+  if(open)open.disabled=!((s&&s.value.trim())||valid);
+ }
+ if(open)open.addEventListener('click',function(){
+  var target=null;
+  try{
+   if(s&&s.value.trim()){var u=new URL(s.value.trim());if(u.protocol==='https:'&&!u.username&&!u.password)target=u.href}
+   else{var p=normalized();if(p)target=p.origin+'/sitemap.xml'}
+  }catch(e){}
+  if(!target){note.textContent=FT.simpleSitemapInvalid;return}
+  note.textContent=FT.simpleSitemapUnverified;
+  window.open(target,'_blank','noopener,noreferrer');
+ });
+ if(s)s.addEventListener('input',sync);
+ u.addEventListener('input',sync);u.addEventListener('change',sync);
+ document.addEventListener('DOMContentLoaded',sync);
+ setTimeout(sync,0);sync();
+})();
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
 (function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
 // A market or language filled in from a link ("es — Spain", "Spanish") is shown in the visitor's language.
