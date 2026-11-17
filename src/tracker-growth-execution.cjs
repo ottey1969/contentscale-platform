@@ -106,7 +106,7 @@ function registerGrowthExecution(app,pool,deps={}){
    const reminder=recipientEmails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:recipientEmails,publishedAt}).catch(()=>null):null;
    const html=reminder?(await pool.query("SELECT to_jsonb(p)->>'html_content' AS html FROM tracker_pages p WHERE id=$1",[pageId]).catch(()=>({rows:[]}))).rows[0]?.html:null;
    const ctx=reminder?await reminders.publicationContext(pool,{clientId:c.id,publicationId:pubId}).catch(()=>null):null;
-   const confirmation=reminder?await reminders.sendConfirmation({emails:reminder.emails,url:pg.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx}):null;
+   const confirmation=reminder?await reminders.sendConfirmation({emails:reminder.emails,url:pg.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx,updated:!!prior}):null;
    res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,reminder:reminder?{emails:reminder.emails,due_at:reminder.due_at,confirmation}:mail.emails.length?{error:'NOT_SAVED'}:null,
     state:verified?'PUBLISHED_AWAITING_GSC_COMPARISON':'PUBLISHED_NEEDS_SEARCH_CONSOLE_FOR_MEASUREMENT',measured_improvement:false});
   }catch(e){console.error('[growth-publication]',e.message);res.status(503).json({success:false,error:'Publication record unavailable; no claims were made'})}
@@ -141,7 +141,7 @@ function registerGrowthExecution(app,pool,deps={}){
    const wantsMail=!!(reminder&&(modified||(req.body&&'reminder_emails' in req.body)));
    const html=wantsMail?(await pool.query("SELECT to_jsonb(p)->>'html_content' AS html FROM tracker_pages p JOIN tracker_growth_publications g ON g.tracker_page_id=p.id AND g.tracker_client_id=p.tracker_client_id WHERE g.id=$1",[id]).catch(()=>({rows:[]}))).rows[0]?.html:null;
    const ctx=wantsMail?await reminders.publicationContext(pool,{clientId:c.id,publicationId:id}).catch(()=>null):null;
-   const confirmation=wantsMail?await reminders.sendConfirmation({emails:reminder.emails,url:pub.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx}):null;
+   const confirmation=wantsMail?await reminders.sendConfirmation({emails:reminder.emails,url:pub.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx,updated:modified}):null;
    res.json({success:true,publication:row,updated_existing:true,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt),confirmation}:null,live_page_changed:false});
   }catch(e){console.error('[growth-publication-edit]',e.message);res.status(503).json({success:false,error:'Publication record unavailable'})}
  });
