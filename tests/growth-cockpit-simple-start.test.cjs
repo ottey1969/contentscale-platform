@@ -52,3 +52,14 @@ test('HTML-unsafe tracked keywords and urls are escaped',()=>{
  assert.match(html,/data-keyword="&quot; onmouseover=&quot;alert\(1\)"/);
  assert.match(html,/\?a=1&amp;b=2/);
 });
+
+test('switching pages uses that page’s saved market and language without silently replacing other page settings',()=>{
+ const html=renderSimpleGrowthStart({...opts,pageMarketOverrides:{'2290':{countries:['NL'],language:'nl'}}});
+ assert.match(html,/value="2290"[^>]*data-countries="nl — Netherlands"/);
+ assert.match(html,/value="2290"[^>]*data-language="Dutch"/);
+ assert.match(html,/value="2291"[^>]*data-countries="us — United States"/);
+ assert.match(js,/function applySelectedSettings\(\)/);
+ assert.match(js,/page\.addEventListener\('change',function\(\)\{applySelectedSettings\(\);sync\(\)\}\)/);
+ assert.match(js,/originalCountries=opt\?String\(opt\.dataset\.countries/);
+ assert.match(js,/if\(countries!==originalCountries\|\|language!==originalLanguage\)/);
+});
