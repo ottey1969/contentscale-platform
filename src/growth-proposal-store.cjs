@@ -97,7 +97,7 @@ async function latestProposal(pool,{clientId,targetPageId,targetUrl,maxDays=30})
 // had written for a chosen improvement are separate rows, and the CMS handoff lets the editor combine them.
 async function recentProposals(pool,{clientId,targetPageId,targetUrl,maxDays=30,limit=10}){
  try{
-  return (await pool.query(`SELECT id,target_page_id,target_url,focus_query,decision,sections,review,evidence_label,intent_note,created_at
+  return (await pool.query(`SELECT id,research_page_id,target_page_id,target_url,focus_query,decision,sections,review,evidence_label,intent_note,created_at
     FROM tracker_growth_proposals WHERE tracker_client_id=$1 AND target_page_id=$2 AND target_url=$3
     AND created_at>NOW()-make_interval(days=>$4) ORDER BY id DESC LIMIT $5`,[clientId,Number(targetPageId),targetUrl,maxDays,limit])).rows;
  }catch(e){if(e.code==='42P01')return [];throw e}
