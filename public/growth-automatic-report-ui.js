@@ -26,10 +26,7 @@
    if(!cleared.ok)throw Error('GSC import finished, but the old research cache could not be cleared');
    if(msg)msg.textContent='Imported '+Number(j.saved||0)+' Search Console term(s). Exact-page and exact-query coverage must be checked in a new Growth run; no metrics are assumed.';
    var again=document.getElementById('retryResearch');if(again){again.hidden=false;again.classList.add('tg-attention')}
-   if(display&&display!==gscSt){
-    var go=node('button','Run Growth using imported GSC data →',display.parentNode);go.type='button';go.className='growth-primary-finish';
-    go.addEventListener('click',function(){run()});
-   }
+   // Imported GSC data will be considered on the next user-started full research run.
    if(trigger)trigger.disabled=false;
    return true;
   }catch(e){
@@ -66,9 +63,9 @@
  if(questionBox){
   firstPanel=node('section',null);firstPanel.id='growthFirstResearchActions';
   firstPanel.style.cssText='margin:12px 0;padding:16px;border:1px solid #2563eb;border-radius:10px;background:#eff6ff;color:#172554';
-  node('h2','Growth research · start here',firstPanel);
-  node('p','Selecting a customer question is not a completed research run. Research your page and live competitors, then add real source-backed AI answers.',firstPanel);
-  firstBtn=node('button','Run Growth research now →',firstPanel);firstBtn.type='button';firstBtn.id='growthFirstStart';
+  node('h2','Research setup · review all inputs first',firstPanel);
+  node('p','Complete the customer question, target market, optional AI answers and Search Console inputs. Then start one complete Growth research run.',firstPanel);
+  firstBtn=node('button','Run Growth Research →',firstPanel);firstBtn.type='button';firstBtn.id='growthFirstStart';
   firstBtn.style.cssText='background:#1d4ed8;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;font-weight:700';
   firstState=node('p','No new Growth research started.',firstPanel);firstState.setAttribute('role','status');firstState.id='growthFirstResearchState';
   firstState.style.cssText='margin:10px 0 0;font-size:13px';
@@ -80,7 +77,11 @@
   // The owner first reviews/enters the five AI systems; market/language comes directly afterwards.
   // Move the existing settings form (do not clone it): its isolated save handler remains bound.
   var marketSettings=document.getElementById('marketSetting');
-  if(marketSettings)firstPanel.insertAdjacentElement('afterend',marketSettings);
+  if(marketSettings)questionBox.insertAdjacentElement('afterend',marketSettings);
+  var optionalInputs=document.getElementById('growthBeforeResearch');
+  if(optionalInputs)optionalInputs.insertAdjacentElement('afterend',firstPanel);
+  else if(marketSettings)marketSettings.insertAdjacentElement('afterend',firstPanel);
+  if(earlyAi)firstPanel.insertBefore(earlyAi,firstBtn);
   firstBtn.addEventListener('click',function(){run()});
  }
  function moveToResearch(id){
@@ -96,7 +97,7 @@
  }
  function firstProgress(message,running){
   if(firstState)firstState.textContent=message;
-  if(firstBtn){firstBtn.disabled=!!running;firstBtn.textContent=running?'Research running…':'Run Growth research again →'}
+  if(firstBtn){firstBtn.disabled=!!running;firstBtn.textContent=running?'Research running…':'Run Growth Research →'}
  }
  function section(title){var s=node('section',null,researchDetails||container);node('h2',title,s);return s}
  function table(headers,rows,parent){
@@ -432,8 +433,8 @@
   var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
   if(d.gap_list&&typeof renderChecklist==='function'){
    var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
-   var choiceBox=node('section',null,container);choiceBox.id='growthGapChoice';
-   node('h2','Step 1 · Choose what to add',choiceBox);
+   var choiceBox=node('details',null,container);choiceBox.id='growthGapChoice';choiceBox.hidden=true;
+   node('summary','Optional editorial writing controls — the full content inventory is in the brief',choiceBox);
    try{renderChecklist({...gl,target_url:d.url},choiceBox,{write:writeUrl?async function(ids){
     // Without AI answers of the last 14 days the editor decides first: check AI, or continue without it.
     var choice=await aiGate(d);if(!choice)return {success:false,code:'Check the AI answers first (see “AI answers for …” above); your selection is kept.'};
@@ -1060,12 +1061,20 @@
     :{t:'Download the editor brief for the '+n+' chosen topic(s)',why:'AI writing is not available here; hand the brief under the list to whoever writes your page.',b:'Go to the list',to:'growthGapChoice'})
    :{t:'Choose what to add to your page',why:'Tick the topics you want on your page. Growth writes only what you tick.',b:'Choose topics',to:'growthGapChoice'};
   return {stage:stage,now:now}}
- function trCockpit(c,n){var x=trNow(c,n),now=x.now;
-  return '<span class="tg-eyebrow">STEP '+x.stage+' OF 3 · DO THIS NOW</span><h2 id="trackerActionTitle">'+esc(now.t)+'</h2><p>'+esc(now.why)+'</p><p><a class="growth-primary-finish tg-go" href="#'+esc(now.to)+'">'+esc(now.b)+' →</a></p>'+
-   (c.selfOpen?'<p class="tg-sub">Also: <a href="#growthSelfDo">'+c.selfOpen+' thing(s) to do yourself</a> — Growth does not write these.</p>':'')+
-   '<div class="tg-flow">'+[['Choose','growthGapChoice'],['Write','growthFinalActions'],['Publish & measure','growthNextAction']].map(function(st,i){return '<a class="'+(i+1<x.stage?'done':i+1===x.stage?'active':'')+'" href="#'+st[1]+'">'+(i+1<x.stage?'✓ ':(i+1)+'. ')+esc(st[0])+'</a>'}).join('')+'</div>'}
- function trUpdate(n){if(!NOWC)return;var card=document.getElementById('trackerNextAction');if(card)card.innerHTML=trCockpit(NOWC,n);
-  var x=trNow(NOWC,n),bar=document.getElementById('trNowBar');if(bar)bar.innerHTML='<span><small>Step '+x.stage+' of 3 · do this now</small><strong>'+esc(x.now.t)+'</strong></span><a class="tg-go" href="#'+esc(x.now.to)+'">'+esc(x.now.b)+' →</a><a class="tg-top" href="#trackerNextAction">↑ Top</a>'}
+ // Research has already been completed before this report is rendered.
+ // The report itself is the next step; no second Choose / Write wizard.
+ function trCockpit(c,n){
+  return '<span class="tg-eyebrow">GROWTH RESEARCH REPORT</span>'+
+   '<h2 id="trackerActionTitle">Complete Growth Brief</h2>'+
+   '<p>Review the priorities and full content inventory below. Complete, partial, missing and unknown topics remain available to the editor.</p>'+
+   '<p><a class="growth-primary-finish tg-go" href="#growthAiContentTasks">Open complete writing brief →</a></p>'+
+   '<p class="tg-sub"><a href="#growthNextAction">Publish & measure</a></p>';
+ }
+ function trUpdate(n){
+  if(!NOWC)return;
+  var card=document.getElementById('trackerNextAction');if(card)card.innerHTML=trCockpit(NOWC,n);
+  var bar=document.getElementById('trNowBar');if(bar)bar.hidden=true;
+ }
  // The third step is deliberately simple: publish in the owner's CMS, confirm the
  // real publication timestamp once, then inspect the separately measured outcomes.
  // The same-page / same-question check prevents accidentally re-recording an older update.
@@ -1117,15 +1126,52 @@
  }
 
  function renderAiContentTasks(d,choice){
-  if(!choice)return;
   var topics=aiContentTasks(d),box=document.getElementById('growthAiContentTasks');
   if(!box){box=document.createElement('section');box.id='growthAiContentTasks';box.className='tg-self';
    box.style.cssText='border:1px solid #93c5fd;background:#eff6ff;border-radius:12px;padding:16px;margin:16px 0';
-   choice.parentNode.insertBefore(box,choice.nextSibling)}
+   var place=document.querySelector('.tg-found')||choice;
+   if(place&&place.parentNode)place.parentNode.insertBefore(box,place.nextSibling);
+   else container.appendChild(box)}
   box.textContent='';box.hidden=!(d&&d.gap_list||d&&d.search_discovery||d&&d.ai_check);if(box.hidden)return;
   node('h3','Complete Growth AI Research & Writing Brief · '+topics.length+' AI-source topics',box);
   if(!topics.length)node('p','No AI-cited content gaps were identified or verified in this run. The complete research brief is still available, including Google research, current-page evidence, missing information, and the NO CHANGE option.',box).className='info';
   node('p','Pre-Write-grade work package: exact customer question and URL, current-page structure, ranked competitors, AI answer evidence, observed gaps, FAQ/PAA leads, entities, sources, statistics and quote verification, internal links, SEO metadata, CMS HTML output, editorial QA and measurement instructions. Missing research is clearly marked — it is never invented.',box).className='info';
+  // The complete editorial inventory is displayed in the brief itself, not only in its download.
+  var builder=window.GrowthCompleteAiBrief;
+  var inventory=builder&&typeof builder.contentInventory==='function'?builder.contentInventory(d):[];
+  var priorities=node('section',null,box);priorities.id='growthBriefPriorities';
+  node('h3','Priorities and research coverage',priorities);
+  var blocked=(d.evidence_warnings||[]).length||d.page_content?.signals?.available!==true;
+  if(blocked)node('p','Research limitations need review; unknown coverage must not be treated as missing content.',priorities);
+  var counts=['PARTIAL','MISSING','COMPLETE','UNKNOWN','REVIEW_CONFLICT'].map(function(kind){return kind+': '+inventory.filter(function(x){return x.coverage===kind}).length});
+  node('p',counts.join(' · '),priorities);
+  var high=inventory.filter(function(x){return x.coverage==='PARTIAL'||x.coverage==='MISSING'||x.coverage==='REVIEW_CONFLICT'});
+  if(high.length){
+   var shortlist=node('ol',null,priorities);
+   high.forEach(function(x){node('li',x.coverage+' — '+x.topic,shortlist)});
+  }else node('p','No confirmed addition priorities from this report. Complete and unknown topics remain available below for editorial review.',priorities);
+  var inventoryBox=node('details',null,box);inventoryBox.id='growthCompleteContentInventory';inventoryBox.open=true;
+  node('summary','Full useful content inventory ('+inventory.length+' topics) — nothing silently filtered',inventoryBox);
+  var itemList=node('ol',null,inventoryBox);
+  inventory.forEach(function(x){
+   var item=node('li',null,itemList);
+   node('strong',x.topic+' — '+x.coverage,item);
+   var observations=node('details',null,item);node('summary','Research observations ('+x.observations.length+')',observations);
+   x.observations.forEach(function(o){
+    var entry=node('div',null,observations);entry.style.cssText='padding:8px 0;border-bottom:1px solid #e2e8f0';
+    node('small',o.source+' · reported coverage '+o.reported_coverage,entry);
+    var data=o.details||{};
+    if(data.reader_question)node('p','Reader question: '+data.reader_question,entry);
+    if(data.competitor_excerpt)node('p','Observed excerpt: '+data.competitor_excerpt,entry);
+    (Array.isArray(data.examples)?data.examples:[]).forEach(function(ex){
+     if(ex.excerpt)node('p','Source excerpt: '+ex.excerpt,entry);
+     if(ex.url)link(ex.url,ex.url,entry);
+    });
+    if(data.url)link(data.url,data.url,entry);
+    if(data.competitor_url)link(data.competitor_url,data.competitor_url,entry);
+   });
+  });
+  node('small','COMPLETE means already covered according to saved research, not an independently verified claim. PARTIAL means improve without duplicating. MISSING means consider an intent-relevant addition. UNKNOWN means inspect the original source before deciding.',inventoryBox);
   var ul=node('ul',null,box);
   topics.forEach(t=>{var li=node('li',null,ul);node('strong',t.topic,li);
    node('small','Reported coverage: '+t.coverage+' · source domains: '+(t.sites.join(', ')||'unknown'),li)});
@@ -1174,8 +1220,8 @@
   var keepDecision=!!(decision&&main.getAttribute('data-owner-draft')==='true'&&(d.editorial_work_packet?.editorial_decision||outcome).decision==='IMPROVE_EXISTING'&&(d.editorial_work_packet?.editorial_decision||outcome).proposed_text);
   var nav=document.getElementById('growthDecisionNav');if(nav)nav.remove();
   // 1. Do this now + what the check found, at the top of the report.
-  var top=document.createElement('section');top.id='trackerNextAction';top.className='tg-cockpit';container.insertBefore(top,container.firstChild);
-  var found=document.createElement('section');found.className='tg-found';container.insertBefore(found,top.nextSibling);
+  var top=document.createElement('section');top.id='trackerNextAction';top.className='tg-cockpit';top.hidden=true;container.insertBefore(top,container.firstChild);
+  var found=document.createElement('section');found.className='tg-found';found.hidden=true;container.insertBefore(found,top.nextSibling);
   node('strong','Research results · verified scope and next action',found);var fl=node('ul',null,found);
   var head=ocx&&ocx.headline||null;
   if(head)node('li','Editorial assessment (not a measured Google ranking result): '+head,fl);
@@ -1212,32 +1258,42 @@
   // This matches the Free Growth flow; AI answers remain optional.
   if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
-  if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';
-   renderAiContentTasks(d,choice);var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
+  renderAiContentTasks(d,choice);
+  var currentBrief=document.getElementById('growthAiContentTasks');
+  if(aiBox&&currentBrief){
+   var aiDetails=document.createElement('details');aiDetails.id='growthAiObservations';
+   node('summary','AI systems observations and source details',aiDetails);
+   aiDetails.appendChild(aiBox);currentBrief.appendChild(aiDetails);
+  }
+  if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';}
   if(decision&&!keepDecision){var dh=decision.querySelector('h2');if(dh)dh.textContent='Growth’s analysis of this search'}
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
-  if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
+  // Editorial proposals are included in the brief evidence, not shown as a separate step.
   // 3. Step 2 and step 3 (static parts of the page).
-  var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Step 2 · Write and prepare the CMS package';
+  var publishPanel=document.getElementById('growthNextAction');if(publishPanel)publishPanel.hidden=false;
+  var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Optional CMS preparation';
    var note=fin.querySelector('.growth-finish-note'),ho=document.getElementById('growthEditorHandoff'),checked=!!((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url);
    if(note)note.textContent=written||checked?'Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.':gl?'Nothing written yet: tick topics in step 1 and click “Write selected with AI”. The CMS package opens here once concepts are written.':'No content change is ready for a CMS package for this research.';
    if(ho&&ho.parentNode)ho.parentNode.hidden=!(written||checked)}
-  var meas=document.querySelector('#growthNextAction > h2');if(meas)meas.textContent='Step 3 · Publish and measure';
+  var meas=document.querySelector('#growthNextAction > h2');if(meas)meas.textContent='Publish and measure';
   // 4. Evidence: one closed section with tabs.
-  var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';container.appendChild(all);
+  var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';var brief=document.getElementById('growthAiContentTasks');if(brief)brief.appendChild(all);else container.appendChild(all);
   node('summary','What was checked — technical evidence (Growth analysis · Google research details)',all);
   var tabs=node('div',null,all);tabs.className='tg-tabs';var panes=[];
-  [['decision','Growth’s analysis',keepDecision?null:decision],['research','Research details',ev]].forEach(function(t){if(!t[2])return;
+  [['decision','Growth’s analysis',decision],['research','Research details',ev]].forEach(function(t){if(!t[2])return;
    var b=node('button',t[1],tabs);b.type='button';b.setAttribute('data-tab',t[0]);var pane=node('div',null,all);pane.className='tg-pane';pane.setAttribute('data-tab',t[0]);pane.appendChild(t[2]);panes.push(pane);
    if(t[0]==='research'&&t[2].tagName==='DETAILS')t[2].open=true;
    b.addEventListener('click',function(){trTab(t[0])})});
   if(panes.length)trTab(panes[0].getAttribute('data-tab'));
+  // Keep research scope available once, inside the brief's technical appendix.
+  found.hidden=false;all.appendChild(found);
+  var followups=selfItems(d);if(followups.length){var manual=document.createElement('section');manual.id='growthSelfDo';manual.className='tg-self';container.appendChild(manual);node('h3','Manual follow-ups — after reviewing the brief',manual);selfRender(manual,followups)}
   // 5. The next action: live while ticking, and in a bar at the bottom when the card is out of view.
   NOWC={published:false,written:written||((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
   trUpdate(trPicked());restorePublicationRecord();
   if(choice&&!choice.dataset.nowWired){choice.dataset.nowWired='1';choice.addEventListener('change',function(e){if(e.target&&e.target.type==='checkbox')trUpdate(trPicked())})}
-  if(window.IntersectionObserver){if(nowObs)nowObs.disconnect();nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''});nowObs.observe(top)}
+  // The duplicate sticky research wizard is intentionally retired.
  }
  function trTab(name){document.querySelectorAll('#growthEvidenceAll .tg-pane').forEach(function(p){p.hidden=p.getAttribute('data-tab')!==name});document.querySelectorAll('#growthEvidenceAll .tg-tabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===name))})}
  // Every in-page link opens what it points at (a closed evidence tab, a closed details) and scrolls to it.
@@ -1316,7 +1372,7 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Research complete. Review the evidence and next action below.',false);runProgressText(false);moveToResearch('trackerNextAction');if(owner)triggerAutomaticAi(result);
+   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Research complete. Review the evidence and next action below.',false);runProgressText(false);moveToResearch('growthAiContentTasks');if(owner)triggerAutomaticAi(result);
    return true;
   }catch(e){firstProgress('Growth research failed: '+String(e.message||e)+'. No completed report was saved.',false);runProgressText(false);moveToResearch('researchStatus');status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false;return false
@@ -1325,6 +1381,7 @@
  document.getElementById('retryResearch').addEventListener('click',run);
  // The finish step says "your concepts are saved": only shown once there is a report (organize() decides what it says).
  var finishBox=document.getElementById('growthFinalActions');if(finishBox&&typeof document.querySelectorAll==='function')finishBox.hidden=true;
+ var publishOnLoad=document.getElementById('growthNextAction');if(publishOnLoad)publishOnLoad.hidden=true;
  async function restore(){
   var status=document.getElementById('researchStatus');
   // Never expose a stale download control if this viewer cannot load the owner report.
@@ -1334,17 +1391,17 @@
    var saved=await response.json();
    if(!response.ok||saved.success!==true)throw Error(saved.code||'SAVED_REPORT_UNAVAILABLE');
    if(saved.found&&saved.report&&saved.report.success===true){
-    last=saved.report;render(saved.report);pointHandoff(saved.report);showAiEarly();if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
+    last=saved.report;render(saved.report);pointHandoff(saved.report);showAiEarly();// Loading a saved report never starts an optional AI provider check.
     status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
-    firstProgress('Saved report loaded ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new research ran. Press Run Growth above to refresh.',false);
-    document.getElementById('retryResearch').hidden=false;
+    firstProgress('Previous research available ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). This is not a new scan of your current inputs. Choose Run Growth Research when ready.',false);
+    document.getElementById('retryResearch').hidden=true;
     return;
    }
    status.textContent='No saved research report for this page, market and query yet. ';
-   firstProgress('No saved research for this exact page and question. Press Run Growth above.',false);
-   var startBtn=document.createElement('button');startBtn.type='button';startBtn.id='growthStartResearch';startBtn.textContent='Run the research now →';startBtn.addEventListener('click',function(){startBtn.remove();run()});status.appendChild(startBtn);
+   firstProgress('Ready for the first Growth research run after all inputs are reviewed.',false);
+   // The only primary research action stays in the setup panel.
   }catch(e){status.textContent='Saved report could not be loaded: '+String(e.message||e)+'. No new scan was run.'}
-  document.getElementById('retryResearch').hidden=false;
+  document.getElementById('retryResearch').hidden=true;
  }
 
  // Market save is isolated in /growth-market-controls.js so a report-rendering failure cannot disable it.
@@ -1367,14 +1424,7 @@
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(href),2000);
  });
- // A market save queues exactly one new run. Consume the flag before requesting,
- // so reload/error cannot cause an unbounded research loop.
- var afterSaveKey='growthRunAfterMarketSave:'+location.pathname+location.search;
- var afterSaveStamp=null;
- try{afterSaveStamp=sessionStorage.getItem(afterSaveKey);if(afterSaveStamp!==null)sessionStorage.removeItem(afterSaveKey)}catch(e){}
+ // Input changes do not start an implicit research run.
  showAiEarly();
- if(afterSaveStamp!==null&&Date.now()-Number(afterSaveStamp)<120000){
-  firstProgress('Settings saved. Starting the requested fresh research now…',true);
-  run();
- }else restore();
+ restore();
 })();
