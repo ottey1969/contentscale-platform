@@ -78,7 +78,9 @@
   // Move the existing settings form (do not clone it): its isolated save handler remains bound.
   var marketSettings=document.getElementById('marketSetting');
   if(marketSettings)questionBox.insertAdjacentElement('afterend',marketSettings);
-  if(marketSettings)marketSettings.insertAdjacentElement('afterend',firstPanel);
+  var optionalInputs=document.getElementById('growthBeforeResearch');
+  if(optionalInputs)optionalInputs.insertAdjacentElement('afterend',firstPanel);
+  else if(marketSettings)marketSettings.insertAdjacentElement('afterend',firstPanel);
   if(earlyAi)firstPanel.insertBefore(earlyAi,firstBtn);
   firstBtn.addEventListener('click',function(){run()});
  }
