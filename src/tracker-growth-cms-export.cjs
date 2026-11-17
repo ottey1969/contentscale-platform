@@ -280,6 +280,7 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     const html=String(change?.html||'');
     for(const m of html.matchAll(/\bhref=(["'])([^"']+)\1/gi)){
      const url=m[2];
+     if(url.startsWith('#'))continue; // in-page anchors are not redirecting outbound links
      let target;try{target=new URL(url,v.page.url)}catch{continue}
      if(target.origin!==ownOrigin)continue;
      if(!['https:','http:'].includes(target.protocol))continue;
