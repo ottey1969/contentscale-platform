@@ -27,6 +27,24 @@ const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
 const briefKey=id=>-Math.abs(Number(id));
 const slugOf=t=>String(t||'').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80);
 
+ // The planned slug belongs to Pre-Write. Growth may research a page that is not live yet;
+ // never substitute an existing-page URL or guess that the planned URL is already published.
+ const plannedUrl=(home,b,pages)=>{
+  if(!home)return null;
+  const meta=b.brief_json?.meta_package||{};
+  const decision=String(b.brief_json?.content_decision?.recommended_treatment||'').toUpperCase();
+  const supplied=decision==='EXPAND_EXISTING_PAGE'?(meta.proposed_new_slug||''):(meta.url_slug||meta.proposed_new_slug||'');
+  let pathname=null;
+  if(typeof supplied==='string'&&supplied.length<=250&&/^\/?[a-z0-9][a-z0-9\/_-]*\/?$/i.test(supplied)&&
+    !/(?:^|\/)\.{1,2}(?:\/|$)/.test(supplied)&&
+    !/^\/?(?:wp-admin|wp-json|wp-content|feed)(?:\/|$)/i.test(supplied)){
+   pathname='/'+supplied.replace(/^\/+|\/+$/g,'')+'/';
+  }
+  const source=pathname?'PREWRITE_BRIEF_SLUG':'KEYWORD_FALLBACK';
+  const url=home.replace(/\/+$/,'')+(pathname||'/'+(slugOf(b.keyword)||'new-page')+'/');
+  return {url,source,taken:pages.some(p=>String(p.url).replace(/\/$/,'')===url.replace(/\/$/,''))};
+ };
+
 function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,renderOwn=renderPublicGrowthPage,
  retryDelayMs=1500,buildOverview=buildCompetitorOverview,generateDraft=generateGrowthEditorDraft,
  recordGapList=null,loadGapList=null,recordSelection=null,addToSelection=null,loadOpenSelection=null,
@@ -59,23 +77,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    await Promise.resolve(loadSiteMarkets({clientId})).catch(()=>null):null;
   return {own,configured:resolveMarketSetting(own,fromBrief.countries.length||fromBrief.language?fromBrief:null,site)};
  }
- // The planned slug belongs to Pre-Write. Growth may research a page that is not live yet;
- // never substitute an existing-page URL or guess that the planned URL is already published.
- const plannedUrl=(home,b,pages)=>{
-  if(!home)return null;
-  const meta=b.brief_json?.meta_package||{};
-  const decision=String(b.brief_json?.content_decision?.recommended_treatment||'').toUpperCase();
-  const supplied=decision==='EXPAND_EXISTING_PAGE'?(meta.proposed_new_slug||''):(meta.url_slug||meta.proposed_new_slug||'');
-  let pathname=null;
-  if(typeof supplied==='string'&&supplied.length<=250&&/^\/?[a-z0-9][a-z0-9\/_-]*\/?$/i.test(supplied)&&
-    !/(?:^|\/)\.{1,2}(?:\/|$)/.test(supplied)&&
-    !/^\/?(?:wp-admin|wp-json|wp-content|feed)(?:\/|$)/i.test(supplied)){
-   pathname='/'+supplied.replace(/^\/+|\/+$/g,'')+'/';
-  }
-  const source=pathname?'PREWRITE_BRIEF_SLUG':'KEYWORD_FALLBACK';
-  const url=home.replace(/\/+$/,'')+(pathname||'/'+(slugOf(b.keyword)||'new-page')+'/');
-  return {url,source,taken:pages.some(p=>String(p.url).replace(/\/$/,'')===url.replace(/\/$/,''))};
- };
+
 
  // Research for a new page from a brief. Nothing is written.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/new-page/research',data,async(req,res)=>{
