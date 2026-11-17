@@ -98,27 +98,28 @@
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
-  $('download').disabled=!!safe.exported||!(safe.savedQuestionConfirmed&&safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim()&&$('title').value.trim()&&$('meta').value.trim()&&$('approved').checked&&manualReady&&factsChecked);
+  $('download').disabled=!!safe.exported||!(safe.savedQuestionConfirmed&&safe.source&&$('title').value.trim()&&$('meta').value.trim()&&$('heading').value.trim()&&$('copy').value.trim().length>=30&&$('approved').checked&&manualReady&&factsChecked);
   $('download').textContent=safe.exported?'4. CMS handoff ZIP downloaded':'4. Download reviewed CMS handoff ZIP';
-  var hasCurrentDraft=!!safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim();
-   var draftBtn=$('generateEditorialDraft');
-   draftBtn.dataset.stage=hasCurrentDraft?'done':'first';
-   if(draftBtn.dataset.requestPending!=='true')draftBtn.textContent=hasCurrentDraft?'3A. AI draft generated ✓ Generate again':'3A. FIRST · Advanced: Generate a different draft →';
-   var unlock=$('cmsUnlockHint');
-   if(unlock){
-    unlock.dataset.stage=!$('download').disabled&&!safe.exported?'ready':'locked';
-    unlock.textContent=safe.exported?'✓ CMS handoff package downloaded. Next: publish and register the real publication date.':
-     !hasCurrentDraft?'🔒 Step 3A first: click the orange Advanced button to generate this question’s draft. Then review and approve; the CMS button will turn blue.':
-     !$('approved').checked||!factsChecked?'✓ AI draft generated. Next review all claims and approve in step 3C; then the CMS button turns blue.':
-     $('download').disabled?'Finish the remaining required checks to unlock the CMS download.':
-     '✓ Draft generated and approved. The blue CMS download button is now active.';
-   }
+  var alternativeDraft=!!safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim();
+  var draftBtn=$('generateEditorialDraft');
+  draftBtn.dataset.stage=alternativeDraft?'done':'optional';
+  if(draftBtn.dataset.requestPending!=='true')draftBtn.textContent=alternativeDraft?'Advanced · Alternative ready ✓ Generate another':'Advanced · Generate a different draft (optional)';
+  var unlock=$('cmsUnlockHint');
+  if(unlock){
+   unlock.dataset.stage=!$('download').disabled&&!safe.exported?'ready':'locked';
+   unlock.textContent=safe.exported?'✓ CMS handoff ZIP downloaded. Publish the changes and record the real date.':
+    !safe.source?'Select the saved research question and check the original page.':
+    !$('heading').value.trim()||!$('copy').value.trim()?'Review the automatically loaded Growth draft, or write checked copy. Advanced is optional.':
+    !$('approved').checked||!factsChecked?'Review factual claims and approve the Growth draft. You do not need the Advanced alternative.':
+    $('download').disabled?'Finish the remaining checks to unlock the CMS download.':
+    '✓ Growth content reviewed and approved. The blue CMS download button is active.';
+  }
   // Owner 2026-11-01: a grey button without a reason. Say exactly what is still missing.
   var missing=[];
   if(!safe.savedQuestionConfirmed)missing.push('select a matching saved Growth research question first');
    if(!safe.source)missing.push('check the original page first (step 1)');
    if(!$('title').value.trim()||!$('meta').value.trim())missing.push('review and enter the new SEO title and description for this exact question');
-  if(safe.source&&safe.aiDraftReadyForQuery!==$('query').value.trim())missing.push('generate the required Advanced AI draft for this question in step 3');
+  if(safe.source&&!$('heading').value.trim())missing.push('review the saved Growth proposal or enter checked copy for this question');
   if(hasManual&&!manualReady)missing.push('paste the original page HTML and tick that it is not live-verified');
   if(open.length)missing.push('confirm the '+facts.length+' statement'+(facts.length===1?'':'s')+' (one tick “I checked all …” above, or each one; '+open.length+' open, marked in yellow)');
   if(!$('approved').checked)missing.push('tick “I reviewed the actual page…” at the end of step 3');
@@ -310,6 +311,25 @@
   return out;
  }
  // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
+ function seoStartingPoint(question){
+  const q=String(question||'').replace(/\s+/g,' ').trim().replace(/[?!.]+$/,'');
+  if(!q)return {title:'',meta:''};
+  let title=q.charAt(0).toUpperCase()+q.slice(1);
+  if(title.length>95)title=title.slice(0,95).replace(/\s+\S*$/,'');
+  const topic=q.replace(/^who offers\s+/i,'');
+  let meta='Explore '+topic.charAt(0).toLowerCase()+topic.slice(1)+': what to check, questions to ask, and how to choose the next step.';
+  if(meta.length>200)meta=meta.slice(0,197).replace(/\s+\S*$/,'')+'.';
+  return {title,meta};
+ }
+ function populateSeoStartingPoint(){
+  if(!safe.savedQuestionConfirmed)return;
+  const meta=seoStartingPoint($('query').value);
+  if(!$('title').value.trim())$('title').value=meta.title;
+  if(!$('meta').value.trim())$('meta').value=meta.meta;
+  const note=$('seoDraftNotice');
+  if(note){note.hidden=false;note.textContent='Auto-filled from the selected customer question as editable SEO starting points, not verified business claims. Review and adjust to the actual page content.'}
+  ready();
+ }
  async function loadProposal(src){
   try{
    var exactQuestion=String($('query').value||'').trim();
@@ -327,27 +347,28 @@
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
    var p=d.proposal,box=$('growthProposal');box.textContent='';box.hidden=false;
    if(String(p.focus_query||'').trim().toLowerCase()!==exactQuestion.toLowerCase()){
-    var earlier=document.createElement('p');earlier.textContent='Saved proposal #'+p.id+' concerns “'+p.focus_query+'”, not this selected customer question “'+exactQuestion+'”. It is historical context only, not an eligible draft for download. Generate a new AI draft below.';box.appendChild(earlier);return;
+    var earlier=document.createElement('p');earlier.textContent='Saved proposal #'+p.id+' concerns “'+p.focus_query+'”, not the exact selected question “'+exactQuestion+'”. This older draft cannot be reused for a different intent. Open Growth research for this question; Advanced remains optional.';box.appendChild(earlier);return;
    }
    var summary=document.createElement('strong');summary.textContent='Growth research proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(summary);
    var fact=document.createElement('p');fact.className='small';
    fact.textContent='This is an UNAPPROVED draft for “'+String(p.focus_query||exactQuestion)+'”. It is not a verified content gap or fact-checked article. Review the original research before accepting any text.';
    box.appendChild(fact);
-   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Saved research proposal for reference. Required workflow: generate a new Advanced AI draft for this question → check claims → approve → download.';box.appendChild(next);
+   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Saved Growth copy loaded automatically. Review claims, approve and download. Advanced is an optional alternative.';box.appendChild(next);
    var summaryList=document.createElement('p');summaryList.textContent='Suggested sections: '+(p.sections||[]).map(function(x){return x.h2}).join(' · ');box.appendChild(summaryList);
-   var review=document.createElement('button');review.type='button';review.textContent='Review proposed text and claims →';
+   var review=document.createElement('button');review.type='button';review.textContent='Growth proposal loaded · review proposed text and claims';
    review.className='growth-primary-finish';box.appendChild(review);
-   var skip=document.createElement('button');skip.type='button';skip.textContent='Dismiss saved proposal · generate a new AI draft';
+   var skip=document.createElement('button');skip.type='button';skip.textContent='Discard this proposal · write checked content myself';
    skip.style.cssText='margin-left:8px';box.appendChild(skip);
    skip.addEventListener('click',function(){
     safe.proposal=null;box.hidden=true;box.textContent='';
+    $('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('mainPlacement').textContent='';
     $('approved').checked=false;ready();
-    status('downloadStatus','Saved proposal #'+p.id+' was dismissed. Generate the required Advanced draft, then review and approve it.',false);
+    status('downloadStatus','Saved proposal #'+p.id+' discarded. Write reviewed content yourself or optionally generate a different AI draft.',false);
    });
    review.addEventListener('click',function(){
     if(review.disabled)return;
-    review.disabled=true;skip.hidden=true;summaryList.hidden=true;
-    next.textContent='Saved proposal review only. To unlock the CMS download, first generate a new Advanced AI draft for the current question, then review and approve its claims.';
+    review.disabled=true;skip.hidden=false;summaryList.hidden=true;
+    next.textContent='Review the saved Growth proposal below. Verify all claims, approve it and download. Advanced is optional.';
     var first=p.sections[0];
     // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
     safe.proposal=p;
@@ -383,9 +404,10 @@
     review.hidden=true;
     reapplyRemovals();$('approved').checked=false;ready();
    });
+   if(safe.source===src&&$('query').value.trim()===exactQuestion)review.click();
    reapplyRemovals();
    $('approved').checked=false;ready();
-  }catch(e){/* no proposal: manual or AI-assisted text stays available */}
+  }catch(e){/* no proposal: manual or optional AI alternative remains available */}
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
@@ -561,7 +583,7 @@
    var output=await r.json();
    if(!r.ok||output.success!==true)throw Error(output.code||'Draft not available');
    if(output.status!=='AI_DRAFT_REVIEW_REQUIRED'||!output.draft){
-    status('aiDraftStatus','A required AI draft is not available ('+(output.status||'Unconfigured')+'). The CMS download stays disabled. Saved research is preserved.',true);
+    status('aiDraftStatus','Optional alternative unavailable ('+(output.status||'Unconfigured')+'). Saved Growth research and existing proposal are still available.',true);
     return;
    }
    if(output.canonical_url!==safe.source.canonical_url||Number(output.page_id)!==pageId||$('query').value.trim()!==draftQuery)
@@ -570,7 +592,7 @@
    if(draft.seo_title)$('title').value=draft.seo_title;
    if(draft.meta_description)$('meta').value=draft.meta_description;
    var parts=draft.sections||[];
-   if(!parts.length||!String(parts[0].h2||'').trim()||(parts[0].paragraphs||[]).join(' ').trim().length<30)throw Error('AI did not return reviewable text. The CMS download stays disabled.');
+   if(!parts.length||!String(parts[0].h2||'').trim()||(parts[0].paragraphs||[]).join(' ').trim().length<30)throw Error('Optional alternative did not return reviewable text. The saved Growth draft can still be reviewed.');
    if(parts.length){
     $('heading').value=parts[0].h2;
     $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
@@ -587,7 +609,7 @@
   finally{
    buttonProgress(btn,false,false);
    delete btn.dataset.requestPending;
-   btn.textContent=safe.aiDraftReadyForQuery===$('query').value.trim()?'3A. AI draft generated ✓ Generate again':originalLabel;
+   btn.textContent=safe.aiDraftReadyForQuery===$('query').value.trim()?'Advanced · Alternative ready ✓ Generate another':originalLabel;
    btn.disabled=!safe.source;
    previousButtonStates.forEach(item=>{if(item.button.dataset.growthDraftLocked==='true'){item.button.disabled=item.disabled;delete item.button.dataset.growthDraftLocked}});
    ready();
@@ -596,7 +618,7 @@
  function build(){
   showVerifiedLink();
   const src=safe.source;if(!src)throw Error('Check the saved original page first');
-   if(safe.aiDraftReadyForQuery!==$('query').value.trim())throw Error('Generate the Advanced AI draft for this customer question before the CMS package');
+   if(!safe.savedQuestionConfirmed)throw Error('Confirm the saved Growth question before the CMS package');
   if(!$('approved').checked)throw Error('Editorial approval is required');
   const heading=$('heading').value.trim(),copy=$('copy').value.trim();
   if(!heading||copy.length<30)throw Error('Provide a useful H2 and at least 30 characters of approved copy');
@@ -815,7 +837,7 @@
    var current=String($('query').value||'').trim();
    var market=String(new URLSearchParams(location.search).get('market')||'').trim().toUpperCase();
    var matched=questions.some(function(q){return String(q.question).trim().toLowerCase()===current.toLowerCase()&&String(q.market||'').toUpperCase()===market});
-   if(current&&matched){safe.savedQuestionConfirmed=true;wrap.hidden=true;ready();if(!$('checkSource').disabled)$('checkSource').click();return}
+   if(current&&matched){safe.savedQuestionConfirmed=true;wrap.hidden=true;populateSeoStartingPoint();ready();if(!$('checkSource').disabled)$('checkSource').click();return}
    // An explicit user-supplied question is never silently replaced, even when an older report exists.
    // Even one historical report must be chosen deliberately: it may be a different intent.
    if(!current||questions.length){
@@ -836,6 +858,7 @@
    $('title').value='';$('meta').value='';$('existingTitle').textContent='';$('existingMeta').textContent='';$('existingMetadata').hidden=true;
    $('linkUrl').value='';$('linkText').value='';showVerifiedLink();
    $('evidence').value='needs_access';$('checkSource').disabled=false;$('checkSource').textContent='1. Check original Tracker page';
+   populateSeoStartingPoint();
    var url=new URL(location.href);url.searchParams.set('query',question);
    if(market)url.searchParams.set('market',market);else url.searchParams.delete('market');
    history.replaceState(null,'',url.pathname+url.search);

@@ -13,9 +13,9 @@ test('the page wiring: a hidden tick stays hidden, and a note says why there is 
   assert.match(HTML, /<p id="noStatementsNote" class="small" hidden>No individual verification notes were generated/);
   assert.match(JS, /var none=\$\('noStatementsNote'\);if\(none\)none\.hidden=!!facts\.length\|\|!safe\.source;/);
   // The download still needs the review tick; facts only block when there are open ones.
-  assert.match(JS, /safe\.aiDraftReadyForQuery===\$\('query'\)\.value\.trim\(\)/);
-  assert.match(JS, /Generate the Advanced AI draft for this customer question before the CMS package/);
-  assert.match(HTML, /Required before CMS download/);
+  assert.doesNotMatch(JS, /if\(safe\.aiDraftReadyForQuery!==\$\('query'\)\.value\.trim\(\)\)throw Error/);
+  assert.match(JS, /if\(!safe\.savedQuestionConfirmed\)throw Error/);
+  assert.match(HTML, /Normal Growth handoff/);
   assert.match(REPORT_UI, /if\(selectedQuestion\)target\.searchParams\.set\('query',selectedQuestion\)/);
 });
 
@@ -30,13 +30,19 @@ test('optional link controls are hidden when no verified URL is available and th
  assert.match(JS, /requestedQuestion\?'&query='/);
 });
 
-test('required draft action is orange and download stays grey until approved, then turns blue', () => {
- assert.match(HTML, /#generateEditorialDraft\{background:#c65b07/);
- assert.match(HTML, /#download:disabled\{background:#d8dee8/);
- assert.match(HTML, /#download:not\(:disabled\)\{background:#1d4ed8/);
- assert.match(HTML, /id="cmsUnlockHint"/);
- assert.match(JS, /unlock\.dataset\.stage=/);
- assert.match(JS, /safe\.aiDraftReadyForQuery===\$\('query'\)\.value\.trim\(\)/);
+test('Growth proposal is automatic; Advanced is optional; CMS button still requires explicit approval',()=>{
+ assert.match(HTML,/id="advancedAlternative"/);
+ assert.match(HTML,/Generate a different draft \(optional\)/);
+ assert.doesNotMatch(HTML,/3A\. FIRST/);
+ assert.match(HTML,/#download:disabled\{background:#d8dee8/);
+ assert.match(HTML,/#download:not\(:disabled\)\{background:#1d4ed8/);
+ assert.match(HTML,/id="cmsUnlockHint"/);
+ assert.match(JS,/if\(safe\.source===src&&\$\('query'\)\.value\.trim\(\)===exactQuestion\)review\.click\(\)/);
+ assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&\$\('title'\)\.value\.trim\(\)/);
+ assert.doesNotMatch(JS,/generate the required Advanced AI draft for this question/);
+ assert.match(JS,/function populateSeoStartingPoint\(\)/);
+ assert.match(JS,/if\(!safe\.savedQuestionConfirmed\)return/);
+ assert.match(JS,/if\(!\$\('title'\)\.value\.trim\(\)\)\$\('title'\)\.value=meta\.title/);
 });
 
 test('in a browser, the hidden "I checked all" tick is not displayed', { skip: !chromium && 'Playwright not installed' }, async () => {
@@ -75,10 +81,10 @@ test('CMS cannot silently load a different question or carry its old SEO metadat
  assert.doesNotMatch(JS,/if\(!\$\('meta'\)\.value&&x\.meta\)\$\('meta'\)\.value=x\.meta/);
  assert.match(JS,/\$\('title'\)\.value='';\$\('meta'\)\.value=''/);
  assert.match(JS,/\$\('existingMetadata'\)\.hidden=false/);
- assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&safe\.aiDraftReadyForQuery/);
+ assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&\$\('title'\)\.value\.trim\(\)/);
  assert.match(JS,/\$\('title'\)\.value\.trim\(\)&&\$\('meta'\)\.value\.trim\(\)/);
  assert.match(JS,/Research question changed while loading/);
  assert.match(JS,/Open Growth research for this exact question/);
  assert.match(HTML,/Existing page metadata — reference only/);
- assert.match(HTML,/Meta description proposed for this customer question/);
+ assert.match(HTML,/Meta description draft for this customer question/);
 });
