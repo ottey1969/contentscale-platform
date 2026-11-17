@@ -258,6 +258,10 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     const p=await proposalById(pool,{clientId:v.client.id,id:req.body.growth_proposal_id});
     if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
      return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
+    if(String(p.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')!==String(req.body?.focus_query||'').trim().toLowerCase().replace(/\s+/g,' '))
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'The stored concept was written for a different customer question. Rerun research for this exact question before packaging.'});
+    if(String(p.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')!==String(req.body?.focus_query||'').trim().toLowerCase().replace(/\s+/g,' '))
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'The stored concept was written for a different customer question. Rerun research for this exact question before packaging.'});
     growthProposal={id:Number(p.id),sections:p.sections};
    }
    // Earlier concepts the editor added to this package: each must belong to this page and URL.
