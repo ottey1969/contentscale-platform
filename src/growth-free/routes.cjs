@@ -25,6 +25,7 @@ const styleFix=require('../growth-style-fix.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const cmsPackage=require('./cms-package.cjs');
+const {resolveFreeCmsLink,verifyFreeCmsSuggestions}=require('./internal-links.cjs');
 const reminders=require('./reminders.cjs');
 const topicLang=require('./topic-lang.cjs');
 const {discoverCustomerQuestions,aiQuestionForTerm}=require('../growth-customer-questions.cjs');
@@ -509,7 +510,7 @@ function pkgHtml(r){var list=(r&&r.sections)||[];PKG_FLAGS={};PKG_FLAG_REASONS={
  h+='<label for="pkgTitle">SEO title</label><input id="pkgTitle" maxlength="100">';
  h+='<label for="pkgMeta">Meta description</label><textarea id="pkgMeta" rows="2" maxlength="220"></textarea>';
  h+='<label for="pkgCms">Website system (CMS)</label><select id="pkgCms"><option value="generic">Other / not sure</option><option value="wordpress">WordPress</option><option value="wix">Wix</option><option value="webflow">Webflow</option><option value="squarespace">Squarespace</option><option value="custom">Custom built</option></select>';
- h+='<details><summary>Internal link</summary><label for="pkgLinkUrl">Page of this website to link to</label><input id="pkgLinkUrl" type="url" placeholder="https://" list="pkgLinkChoices"><datalist id="pkgLinkChoices"></datalist><small id="pkgLinkHelp" class="muted"></small><label for="pkgLinkLabel">Link words (what the reader clicks)</label><input id="pkgLinkLabel" maxlength="120"></details>';
+ h+='<details id="pkgLinkWrap" hidden><summary>Verified internal link (optional)</summary><label for="pkgLinkUrl">Page of this website to link to</label><input id="pkgLinkUrl" type="url" placeholder="https://" list="pkgLinkChoices"><datalist id="pkgLinkChoices"></datalist><small id="pkgLinkHelp" class="muted"></small><label for="pkgLinkLabel">Link words (what the reader clicks)</label><input id="pkgLinkLabel" maxlength="120"></details>';
  h+='<label class="check"><input type="checkbox" id="pkgApprove"><span>I reviewed the page, the sections and the link. Every statement is true for this business.</span></label>';
  h+='<p><button type="button" id="pkgDownload" class="action-blue">Download CMS package (ZIP)</button> <span id="pkgStatus" class="muted"></span></p><div id="pkgIssues"></div>';
  return h}
@@ -537,7 +538,9 @@ async function pkgReadSource(){var el=document.getElementById('pkgSource');if(!e
   // Internal link: pages of this site that the page already links to; choosing one fills in the page's own link words.
   var links=x.source.internal_links||[],dl=document.getElementById('pkgLinkChoices'),lu=document.getElementById('pkgLinkUrl'),ll=document.getElementById('pkgLinkLabel'),lh=document.getElementById('pkgLinkHelp');
   if(dl){dl.innerHTML=links.map(function(l){return '<option value="'+esc(l.url)+'">'+esc(l.label)+'</option>'}).join('')}
-  if(lh)lh.textContent=links.length?'Click the field to choose one of the '+links.length+' page(s) of your site this page already links to; the link words fill in by themselves. Or type another page of your site.':'This page links to no other page of your site; type one yourself (optional).';
+  var linkWrap=document.getElementById('pkgLinkWrap');if(linkWrap)linkWrap.hidden=!links.length;
+  if(lh)lh.textContent=links.length?'Verified same-site HTTPS 200 destinations. Redirects resolve directly to the final URL; leave blank if not needed.':'';
+
   // Chosen automatically: the page of this site that fits the written sections best (a service or contact page counts a
   // little more). Shown in the fields, so the visitor sees it and can change or empty it.
   var sl=x.source.suggested_link;if(sl&&lu&&ll&&!lu.value.trim()&&!ll.value.trim()){lu.value=sl.url;ll.value=sl.label;var dt=lu.closest('details');if(dt)dt.open=true;
@@ -1615,7 +1618,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   try{const html=await readOwnPage(row);if(!html)throw Error('empty');
    const wv=viewOf(row.written),sectionsText=((wv&&wv.sections)||[]).map(x=>(x.h2||'')+' '+(x.paragraphs||[]).join(' ')).join(' ').slice(0,20000);
-   const src=cmsPackage.pageSource(html,{url:row.url,sectionsText,focus:searchTermOf(row)||''});res.set('Cache-Control','no-store').json({success:true,source:src,voice:cmsPackage.voiceOf({title:src.title,meta:src.meta_description}),cms:cmsPackage.CMS})}
+   const src=cmsPackage.pageSource(html,{url:row.url,sectionsText,focus:searchTermOf(row)||''});
+    const checked=await verifyFreeCmsSuggestions(src,{pageUrl:row.url,maxChecks:12});
+    src.internal_links=checked.internal_links;src.suggested_link=checked.suggested_link;
+    src.internal_link_verification='LIVE_HTTPS_FINAL_200';src.internal_links_checked=checked.checked;
+    res.set('Cache-Control','no-store').json({success:true,source:src,voice:cmsPackage.voiceOf({title:src.title,meta:src.meta_description}),cms:cmsPackage.CMS})}
   catch(e){res.status(503).json({success:false,error:'Your page could not be read right now. Try again in a moment.'})}
  });
  app.post(apiPath+'/checks/:id/package',async(req,res)=>{
@@ -1624,6 +1631,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const b=req.body||{};
   let html;try{html=await readOwnPage(row)}catch(e){html=''}
   if(!html)return res.status(503).json({success:false,ready:false,messages:[cmsPackage.PLAIN.ORIGINAL_PAGE_SNAPSHOT_REQUIRED]});
+  // Free Growth must reject or resolve every chosen URL before shipping it in the CMS package.
+  if(b.link&&String(b.link.url||'').trim()){
+   const checked=await resolveFreeCmsLink(b.link.url,row.url);
+   if(!checked.url)return res.status(409).set('Cache-Control','no-store').json({
+    success:false,ready:false,issues:['LINK_DESTINATION_NOT_VERIFIED'],
+    messages:['Internal link did not resolve to a direct HTTPS 200 page on this website ('+checked.status+'). Clear the link or select a verified destination.']});
+   b.link={...b.link,url:checked.url};
+  }
   const term=searchTermOf(row);
   let gscVerifiedTerm=false;
   try{const list=await storage.listGscUploads(pool,row.id),last=list[list.length-1];
