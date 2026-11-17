@@ -336,8 +336,8 @@
     $('growthReviewContent').hidden=true;$('growthSeoFields').hidden=true;
     var box=$('growthProposal');box.hidden=false;box.textContent='';
     var reason=document.createElement('strong');reason.textContent='Growth content proposal missing for this customer question';box.appendChild(reason);
-    var note=document.createElement('p');note.textContent='The saved research and a finished Growth writing proposal are different stages. Research alone cannot populate a reviewed H2, copy or SEO description. No placeholder content has been created.';box.appendChild(note);
-    var act=document.createElement('a');act.textContent='Return to Growth → Select improvements and write the proposal';act.href=$('researchReviewLink').href;act.style.cssText='display:inline-block;margin:8px 0;color:#1d4ed8;font-weight:700';box.appendChild(act);
+    var note=document.createElement('p');note.textContent='This exact question has research, but no saved content proposal. In Growth, select the supported improvements and click “Write selected with AI (concepts for review)”. Once writing is saved, the matching CMS handoff becomes available automatically. No extra generation is started by opening this page.';box.appendChild(note);
+    var act=document.createElement('a');act.textContent='Go to Growth writing → Select topics and prepare CMS';act.href=$('researchReviewLink').href+'#growthGapChoice';act.style.cssText='display:inline-block;margin:8px 0;color:#1d4ed8;font-weight:700';box.appendChild(act);
     ready();return;
    }
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]')){safe.proposalState='READY';ready();return}
