@@ -1109,7 +1109,7 @@
   node('li','Google Search: '+leads.length+' result leads; '+readCount+' competitor pages opened. A found URL is not proof that its article was analyzed.',fl);
   if(sdx.search_term_used)node('li','Google used “'+sdx.search_term_used+'”. AI systems still use the original customer question.',fl);
   var gapCount=gl&&Array.isArray(gl.items)?gl.items.length:0;
-  node('li',gl?gapCount+' candidate topics for editorial review (not proven missing content).':'No completed Google topic-comparison list available.',fl);
+  node('li',gl?(gapCount?'Current competitor run: '+gapCount+' candidate topic(s) for editorial review (not proven missing).':'Current competitor run: 0 new topic candidates. Saved Growth proposals belong to a separate writing history and may target another question. '+(gl.evidence?.reason||'Inspect readable competitor evidence before deciding whether to rerun.')):'No completed Google topic-comparison list available.',fl);
   var as=d.ai_check&&d.ai_check.summary,ag=d.ai_check&&d.ai_check.gap;
   var verifiedAi=as&&Array.isArray(as.engines)?as.engines.filter(function(e){return e.verifiable}):[];
   var citedAi=verifiedAi.filter(function(e){return e.own_site_cited});
