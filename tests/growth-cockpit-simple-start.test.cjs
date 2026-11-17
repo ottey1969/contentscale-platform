@@ -43,7 +43,7 @@ test('new page uses Pre-Write while the old opportunity finder remains secondary
  assert.match(cockpit,/growth-simple-start\.js\?v=/);
  const head=cockpit.indexOf('g.can_edit?simpleLauncher');
  const advanced=cockpit.indexOf('<details class="growth-details"',head);
- const old=cockpit.indexOf('g.can_edit?oppBox+guide',head);
+ const old=cockpit.indexOf('g.can_edit?oppBox+siteMarketBox',head);
  assert.ok(head>0&&advanced>head&&old>advanced,'Old GSC-first content should be inside collapsed Advanced');
 });
 test('HTML-unsafe tracked keywords and urls are escaped',()=>{
