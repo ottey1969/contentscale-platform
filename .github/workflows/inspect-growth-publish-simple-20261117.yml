@@ -21,6 +21,8 @@ jobs:
       - name: Workflow and regression
         run: |
           node --test tests/growth-publish-measure-simple.test.cjs
+          node --test tests/growth-publication-revision.test.cjs
+          node tests/tracker-growth-execution.test.cjs
           node --test tests/growth-owner-direct-complete-ui.test.cjs
           node --test tests/growth-publication-time.test.cjs
           node --test tests/growth-first-screen.test.cjs
