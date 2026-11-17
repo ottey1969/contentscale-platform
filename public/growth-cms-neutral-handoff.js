@@ -274,18 +274,41 @@
    t.textContent='#'+p.id+' · '+String(p.created_at||'').slice(0,10)+(p.focus_query?' · “'+p.focus_query+'”':'')+': '+p.sections.map(function(x){return '“'+x.h2+'”'}).join(', ');
    r0.appendChild(t);
    var b=document.createElement('button');b.type='button';b.textContent='Add to this package';
+   // Older concepts are optional, not proof that the current search requires
+   // their content. Any addition must be reversible without hunting for fields.
+   var removeConcept=document.createElement('button');removeConcept.type='button';
+   removeConcept.textContent='Remove this concept from CMS package';removeConcept.hidden=true;
+   removeConcept.style.cssText='margin:8px;background:#b91c1c;color:white';
+   var currentChecks=document.createElement('div');currentChecks.className='growth-optional-concept-checks';
+   removeConcept.addEventListener('click',function(){
+    safe.added=safe.added.filter(function(a){return a.id!==p.id});
+    document.querySelectorAll('[data-proposal-id]').forEach(function(node){
+     if(node.dataset.proposalId===String(p.id))node.remove();
+    });
+    currentChecks.textContent='';
+    b.disabled=false;b.textContent='Add to this package';
+    removeConcept.hidden=true;
+    $('approved').checked=false;ready();
+    status('downloadStatus','Old concept #'+p.id+' removed from this CMS package. Existing published content was not changed.',false);
+   });
    b.addEventListener('click',function(){
     if(safe.added.some(function(a){return a.id===p.id}))return;
     var r=p.review||{};safe.added.push({id:p.id,review:r});
     p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
     reapplyRemovals();
     var seen=new Set();
-    (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite, remove, or keep it if it is true: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason);flaggedReviewAction(r0,f)});
-    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(r0,'Check: '+item)})});
+    (r.flagged||[]).forEach(function(f){
+     checkItem(currentChecks,'Rewrite, remove, or keep it if it is true: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason,f.sentence);
+     flaggedReviewAction(currentChecks,f);
+    });
+    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){
+     (r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(currentChecks,'Check: '+item)});
+    });
+    removeConcept.hidden=false;
     b.disabled=true;b.textContent='Added — review the sections above';
     $('approved').checked=false;ready();
    });
-   r0.appendChild(b);into.appendChild(r0);
+   r0.appendChild(b);r0.appendChild(removeConcept);r0.appendChild(currentChecks);into.appendChild(r0);
   };
   if(concepts.length){
    var h=document.createElement('strong');h.textContent='Also written for this page: '+concepts.length+' other concept'+(concepts.length===1?'':'s');box.appendChild(h);
@@ -293,6 +316,11 @@
    intro.textContent='Written in the last 30 days for improvements you chose, on topics not already in the text above. Add the ones you want; each still needs your review.';
    box.appendChild(intro);concepts.forEach(function(p){row(p,box)});
   }
+  // The download is at the end of the CMS form. Keep its route visible even
+  // when earlier-concept review and factual checks make the page very long.
+  var jump=document.createElement('button');jump.type='button';jump.textContent='Review requirements → Download CMS package ↓';
+  jump.className='growth-cms-download-jump';jump.style.cssText='display:block;margin:12px 0;background:#1d4ed8;color:white;padding:10px 14px';
+  jump.addEventListener('click',goToCmsDownload);box.appendChild(jump);
   if(older.length){
    var d=document.createElement('details');var sm=document.createElement('summary');
    sm.textContent='Earlier versions from previous research runs ('+older.length+') — usually not needed';d.appendChild(sm);
