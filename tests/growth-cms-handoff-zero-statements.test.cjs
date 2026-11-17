@@ -75,6 +75,10 @@ test('CMS cannot silently load a different question or carry its old SEO metadat
  assert.doesNotMatch(JS,/if\(!\$\('meta'\)\.value&&x\.meta\)\$\('meta'\)\.value=x\.meta/);
  assert.match(JS,/\$\('title'\)\.value='';\$\('meta'\)\.value=''/);
  assert.match(JS,/\$\('existingMetadata'\)\.hidden=false/);
+ assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&safe\.aiDraftReadyForQuery/);
+ assert.match(JS,/\$\('title'\)\.value\.trim\(\)&&\$\('meta'\)\.value\.trim\(\)/);
+ assert.match(JS,/Research question changed while loading/);
+ assert.match(JS,/Open Growth research for this exact question/);
  assert.match(HTML,/Existing page metadata — reference only/);
  assert.match(HTML,/Meta description proposed for this customer question/);
 });
