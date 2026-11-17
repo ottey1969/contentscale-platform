@@ -30,6 +30,37 @@
  var safeJson=x=>{
   try{return JSON.stringify(x==null?null:x,null,2)}catch(_){return 'NOT SERIALIZABLE'}
  };
+ // Preserve every useful observed topic, including content already complete on the page.
+ // Editorial coverage and evidence verification are separate axes.
+ function contentInventory(d){
+  var gap=d.gap_list||{},ai=d.ai_check?.gap||{},plan=d.practical_growth_plan||{};
+  var ownReadable=d.page_content?.signals?.available===true;
+  var rows=[],index=new Map();
+  function record(topic,coverage,source,data){
+   topic=str(topic,500);if(!topic)return;
+   var key=topic.toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu,' ').trim();
+   var status=String(coverage||'UNKNOWN').toUpperCase().replace(/[ -]+/g,'_');
+   if(['PRESENT','COVERED','ALREADY_PRESENT','FULL','COMPLETE'].includes(status))status='COMPLETE';
+   else if(['PARTIAL','PARTIALLY_PRESENT','INCOMPLETE'].includes(status))status='PARTIAL';
+   else if(['MISSING','ABSENT','NOT_PRESENT'].includes(status))status='MISSING';
+   else status='UNKNOWN';
+   // Without a readable target page, never assert that content is missing or complete.
+   if(!ownReadable)status='UNKNOWN';
+   var found=index.get(key);
+   if(!found){found={topic:topic,coverage:status,observations:[]};index.set(key,found);rows.push(found)}
+   else if(found.coverage==='UNKNOWN'&&status!=='UNKNOWN')found.coverage=status;
+   else if(status!==found.coverage&&status!=='UNKNOWN')found.coverage='REVIEW_CONFLICT';
+   found.observations.push({source:source,reported_coverage:coverage||'UNKNOWN',details:data||{}});
+  }
+  list(gap.items).forEach(x=>record(x.title||x.topic||x.heading,x.coverage,'GOOGLE_COMPETITOR_COMPARISON',x));
+  list(ai.missing_topics).forEach(x=>record(x.topic||x.title,x.coverage,'AI_CITED_PAGE_COMPARISON',x));
+  list(plan.competitors?.side_by_side).forEach(x=>record(x.competitor_section||x.observed_heading||x.competitor_heading,'UNKNOWN','COMPETITOR_SIDE_BY_SIDE',x));
+  // Existing headings are explicitly visible even if competitor extraction has no gap.
+  var heads=d.page_content?.headings||gap.research?.source_headings||{};
+  ['h1','h2','h3'].forEach(level=>list(heads[level]).forEach(h=>record(h,ownReadable?'COMPLETE':'UNKNOWN','EXISTING_PAGE_HEADING',{level:level,heading:h,coverage_note:'Heading exists; completeness of its body still requires review'})));
+  list(gap.unique_content).forEach(x=>record(typeof x==='string'?x:x.heading||x.title||x.topic,ownReadable?'COMPLETE':'UNKNOWN','EXISTING_UNIQUE_CONTENT',x));
+  return rows;
+ }
  function build(d,opts){
   d=d&&typeof d==='object'?d:{};opts=opts||{};
   var search=d.search_discovery||{},gap=d.gap_list||{},ai=d.ai_check||{},aig=ai.gap||{},aiSummary=ai.summary||{},
@@ -65,6 +96,23 @@
    'This exact user question controls intent, entities, examples, calls to action and page sections.',
    'DO NOT broaden an informational question into a provider recommendation or vice versa.'
   ].join('\n'));
+  var inventory=contentInventory(d);
+  add('1A. EDITORIAL PRIORITIES — WITHOUT HIDING OTHER USEFUL FINDINGS',[
+   'Priorities are a navigational summary, NOT a filter. The complete inventory follows.',
+   'Coverage counts: '+['COMPLETE','PARTIAL','MISSING','UNKNOWN','REVIEW_CONFLICT'].map(status=>status+'='+inventory.filter(x=>x.coverage===status).length).join(' | '),
+   'Suggested review order: factual/research blockers; PARTIAL topics to deepen; MISSING intent-relevant topics; COMPLETE topics to preserve or clarify; UNKNOWN and conflicting classifications to inspect.',
+   'No coverage category is automatically excluded from the external AI/editor brief. Relevance to the exact customer question controls the final editorial choice.',
+   'GSC is optional; do not claim measured clicks, ranking impact or priority by traffic when GSC data is missing.'
+  ].join('\\n'));
+  add('1B. COMPLETE CONTENT COVERAGE INVENTORY — ALL USEFUL OBSERVATIONS',[
+   'Preserve COMPLETE, PARTIAL, MISSING and UNKNOWN topics. Do not silently discard material simply because it is already on the page.',
+   'COMPLETE means an existing section/topic was reported as covered, not that every factual claim is verified.',
+   'PARTIAL means expand or clarify without duplicating existing content. MISSING means consider adding only when relevant. UNKNOWN means assess the original page first.',
+   'Each observation retains its original coverage label and full stored evidence for the external editor; disagreements are shown as REVIEW_CONFLICT.',
+   bullet(inventory.map((x,i)=>(i+1)+'. '+x.topic+' | COVERAGE '+x.coverage+'\\n'+
+    x.observations.map(o=>'    SOURCE '+o.source+' | REPORTED '+o.reported_coverage+' | DETAILS '+safeJson(o.details)).join('\\n'))),
+   'Competitor sections and AI-cited topics are research leads, not permission to copy text or assert company-specific promises.'
+  ].join('\\n'));
   add('2. WHAT IS ALREADY ON THE PAGE — PRESERVE / IMPROVE',[
    'Current H1 headings:',bullet(sourceHeads.h1||[]),
    'Current H2 headings:',bullet(sourceHeads.h2||[]),
@@ -203,7 +251,7 @@
    'Any field that is null or not present here was NOT included in this saved Growth research. Source leads do not replace live fact verification.',
    'The appendix preserves all stored observations used by the brief without silently truncating long excerpts.'
   ].join('\\n'));
-  add('14. RESEARCH SNAPSHOT AND UNSUPPORTED FIELDS',[
+  add('15. EDITORIAL DECISIONS AND SAVED SETTINGS',[
    'Stored research decision:',safeJson(editor,6500),
    'Market coverage:',safeJson(search.market_coverage||{},3500),
    'Page signals:',safeJson(page.signals||{},3500),
@@ -219,5 +267,5 @@
    'Every source must be traceable and every unverified business claim must remain flagged. Return an explicit BLOCKED result if the minimum evidence is not available.\n');
   return lines.join('\n');
  }
- return {build,sourceUrls};
+ return {build,sourceUrls,contentInventory};
 });
