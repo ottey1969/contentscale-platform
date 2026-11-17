@@ -1029,8 +1029,8 @@
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
  var NOWC=null,nowObs=null;
  function trNow(c,n){
-  var stage=c.written?2:n?2:1;
-  var now=c.written?{t:'Check the text and prepare the CMS package',why:'AI wrote concepts for '+c.written+' topic(s). Open the CMS package, read and approve the text, then download it. Nothing is published automatically.',b:'Go to step 2',to:'growthFinalActions'}
+  var stage=c.published?3:c.written?2:n?2:1;
+  var now=c.published?{t:'Publication recorded · review measurement',why:'The publication date is saved. Growth only measures actual before/after results when the correct evidence is available.',b:'View measurement',to:'growthNextAction'}:c.written?{t:'Check the text and prepare the CMS package',why:'AI wrote concepts for '+c.written+' topic(s). Open the CMS package, approve the content and publish it in your own CMS. Then confirm when it went live in step 3.',b:'Go to step 2',to:'growthFinalActions'}
    :!c.hasList?{t:c.headline||'Read what Growth found',why:'There is no list of topics to choose from for this search. The evidence below says why and what to do next.',b:'See the evidence',to:'growthEvidenceAll'}
    :n?(document.getElementById('growthWriteButton')?{t:'Let AI write the '+n+' chosen topic(s)',why:'Click “Write selected with AI” under the list. You check every concept before it goes into the CMS package.',b:'Go to the write button',to:'growthWriteButton'}
     :{t:'Download the editor brief for the '+n+' chosen topic(s)',why:'AI writing is not available here; hand the brief under the list to whoever writes your page.',b:'Go to the list',to:'growthGapChoice'})
@@ -1115,7 +1115,7 @@
    var note=fin.querySelector('.growth-finish-note'),ho=document.getElementById('growthEditorHandoff'),checked=!!(d.cms_handoff&&d.cms_handoff.url);
    if(note)note.textContent=written||checked?'Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.':gl?'Nothing written yet: tick topics in step 1 and click “Write selected with AI”. The CMS package opens here once concepts are written.':'No content change is ready for a CMS package for this research.';
    if(ho&&ho.parentNode)ho.parentNode.hidden=!(written||checked)}
-  var meas=document.querySelector('#growthNextAction > summary');if(meas)meas.textContent='Step 3 · Publish & measure (after the change is live)';
+  var meas=document.querySelector('#growthNextAction > h2');if(meas)meas.textContent='Step 3 · Publish and measure';
   // 4. Evidence: one closed section with tabs.
   var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';container.appendChild(all);
   node('summary','What was checked — technical evidence (Growth analysis · Google research details)',all);
@@ -1126,9 +1126,9 @@
    b.addEventListener('click',function(){trTab(t[0])})});
   if(panes.length)trTab(panes[0].getAttribute('data-tab'));
   // 5. The next action: live while ticking, and in a bar at the bottom when the card is out of view.
-  NOWC={written:written||(d.cms_handoff&&d.cms_handoff.url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
+  NOWC={published:false,written:written||(d.cms_handoff&&d.cms_handoff.url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
-  trUpdate(trPicked());
+  trUpdate(trPicked());wireSimplePublication();restorePublicationRecord();
   if(choice&&!choice.dataset.nowWired){choice.dataset.nowWired='1';choice.addEventListener('change',function(e){if(e.target&&e.target.type==='checkbox')trUpdate(trPicked())})}
   if(window.IntersectionObserver){if(nowObs)nowObs.disconnect();nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''});nowObs.observe(top)}
  }
