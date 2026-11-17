@@ -191,9 +191,9 @@
    var num=node('strong',String(value),tile);num.style.cssText='font-size:24px;display:block';
    node('small',label,tile);
   }
-  stat(prePresent+'/5','Writing answers available');
-  stat(verifiable+'/5','Citation sources verifiable');
-  node('p',(pre&&pre.status==='MATCHED'?'Pre-Write Brief #'+pre.brief_id+' · ':'')+recent+' of '+total+' Growth observations saved. Writing answers are kept; citation verification is separate and optional.',overview).className='info';
+  stat(prePresent+'/5','Linked Pre-Write answers');
+  stat(verifiable+'/5','Growth citation checks verifiable');
+  node('p',(pre&&pre.status==='MATCHED'?'Pre-Write Brief #'+pre.brief_id+' linked · ':'No matching Pre-Write Brief linked · ')+recent+' of '+total+' Growth citation observations saved. These are different from reusable Pre-Write writing answers; missing Pre-Write answers do not erase Growth observations.',overview).className='info';
   var details=node('details',null,overview);details.id='growthAiSourceDetails';
   node('summary','Show details per AI system',details);
   node('p','Existing writing research never needs to be pasted again. Citation checks require a real source list from the original answer; editorial source leads are not assumed to be citations.',details).className='info';
@@ -231,8 +231,8 @@
   var missing=(c.engines||[]).filter(function(e){return !existing.has(e.id)});
   var form=node('details',null,box);form.className='growth-ai-manual';
   if(missing.length&&box.parentNode&&box.parentNode.id==='growthAiEarly')form.open=true;
-  node('summary',missing.length?'Add a missing AI-system answer (optional)':'All five writing answers are present · no input needed',form);
-  node('p',missing.length?'Already saved answers are protected. Enter only a missing system, or deliberately unlock replacement below.':'All existing Pre-Write answers remain available for writing. You do not need to enter them again. For updated citation evidence, explicitly choose to replace a system.',form);
+  node('summary',missing.length?'Add a missing AI-system answer (optional)':'All five AI-system observations or answers are present · no input needed',form);
+  node('p',missing.length?'Already saved answers are protected. Enter only a missing system, or deliberately unlock replacement below.':'No missing AI systems for citation observations. Linked Pre-Write writing answers are counted separately above. For updated citation evidence, explicitly choose to replace a system.',form);
   var changeBtn=node('button','Replace or refresh an existing AI answer (optional)',form);changeBtn.type='button';
   changeBtn.className='ghost';changeBtn.style.cssText='background:#475569;color:white;margin:8px 0';
   var unlocked=false;
