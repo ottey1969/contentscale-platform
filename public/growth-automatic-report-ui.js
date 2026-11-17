@@ -433,7 +433,7 @@
   var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
   if(d.gap_list&&typeof renderChecklist==='function'){
    var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
-   var choiceBox=node('details',null,container);choiceBox.id='growthGapChoice';
+   var choiceBox=node('details',null,container);choiceBox.id='growthGapChoice';choiceBox.hidden=true;
    node('summary','Optional editorial writing controls — the full content inventory is in the brief',choiceBox);
    try{renderChecklist({...gl,target_url:d.url},choiceBox,{write:writeUrl?async function(ids){
     // Without AI answers of the last 14 days the editor decides first: check AI, or continue without it.
@@ -1184,8 +1184,8 @@
   var keepDecision=!!(decision&&main.getAttribute('data-owner-draft')==='true'&&(d.editorial_work_packet?.editorial_decision||outcome).decision==='IMPROVE_EXISTING'&&(d.editorial_work_packet?.editorial_decision||outcome).proposed_text);
   var nav=document.getElementById('growthDecisionNav');if(nav)nav.remove();
   // 1. Do this now + what the check found, at the top of the report.
-  var top=document.createElement('section');top.id='trackerNextAction';top.className='tg-cockpit';container.insertBefore(top,container.firstChild);
-  var found=document.createElement('section');found.className='tg-found';container.insertBefore(found,top.nextSibling);
+  var top=document.createElement('section');top.id='trackerNextAction';top.className='tg-cockpit';top.hidden=true;container.insertBefore(top,container.firstChild);
+  var found=document.createElement('section');found.className='tg-found';found.hidden=true;container.insertBefore(found,top.nextSibling);
   node('strong','Research results · verified scope and next action',found);var fl=node('ul',null,found);
   var head=ocx&&ocx.headline||null;
   if(head)node('li','Editorial assessment (not a measured Google ranking result): '+head,fl);
@@ -1223,7 +1223,7 @@
   if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   renderAiContentTasks(d,choice);
-  if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
+  if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';}
   if(decision&&!keepDecision){var dh=decision.querySelector('h2');if(dh)dh.textContent='Growth’s analysis of this search'}
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
   if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
@@ -1234,7 +1234,7 @@
    if(ho&&ho.parentNode)ho.parentNode.hidden=!(written||checked)}
   var meas=document.querySelector('#growthNextAction > h2');if(meas)meas.textContent='Publish and measure';
   // 4. Evidence: one closed section with tabs.
-  var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';container.appendChild(all);
+  var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';var brief=document.getElementById('growthAiContentTasks');if(brief)brief.appendChild(all);else container.appendChild(all);
   node('summary','What was checked — technical evidence (Growth analysis · Google research details)',all);
   var tabs=node('div',null,all);tabs.className='tg-tabs';var panes=[];
   [['decision','Growth’s analysis',keepDecision?null:decision],['research','Research details',ev]].forEach(function(t){if(!t[2])return;
@@ -1242,6 +1242,9 @@
    if(t[0]==='research'&&t[2].tagName==='DETAILS')t[2].open=true;
    b.addEventListener('click',function(){trTab(t[0])})});
   if(panes.length)trTab(panes[0].getAttribute('data-tab'));
+  // Keep research scope available once, inside the brief's technical appendix.
+  found.hidden=false;all.appendChild(found);
+  var followups=selfItems(d);if(followups.length){var manual=document.createElement('section');manual.id='growthSelfDo';manual.className='tg-self';container.appendChild(manual);node('h3','Manual follow-ups — after reviewing the brief',manual);selfRender(manual,followups)}
   // 5. The next action: live while ticking, and in a bar at the bottom when the card is out of view.
   NOWC={published:false,written:written||((d.cms_handoff&&d.cms_handoff.url)||gl?.cms_url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
@@ -1326,7 +1329,7 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Research complete. Review the evidence and next action below.',false);runProgressText(false);moveToResearch('trackerNextAction');if(owner)triggerAutomaticAi(result);
+   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Research complete. Review the evidence and next action below.',false);runProgressText(false);moveToResearch('growthAiContentTasks');if(owner)triggerAutomaticAi(result);
    return true;
   }catch(e){firstProgress('Growth research failed: '+String(e.message||e)+'. No completed report was saved.',false);runProgressText(false);moveToResearch('researchStatus');status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false;return false
