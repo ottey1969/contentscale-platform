@@ -1088,6 +1088,30 @@
    cb.addEventListener('change',function(){var d2=selfDone();if(cb.checked)d2[x.id]=1;else delete d2[x.id];try{localStorage.setItem(selfKey(),JSON.stringify(d2))}catch(e){}selfRender(box,list);if(NOWC){NOWC.selfOpen=list.filter(function(y){return !selfDone()[y.id]}).length;trUpdate(trPicked())}})};
   var ul=node('ul',null,box);ul.style.listStyle='none';ul.style.padding='0';open.forEach(function(x){add(x,ul)});
   if(fin.length){var dd=node('details',null,box);node('summary','Done ('+fin.length+')',dd);var u2=node('ul',null,dd);u2.style.listStyle='none';fin.forEach(function(x){add(x,u2)})}}
+ function improvementPanel(d){
+  var gl=d.gap_list||{},items=Array.isArray(gl.items)?gl.items:[],recommended=items.filter(x=>x.writable&&x.recommended);
+  var candidates=recommended.length?recommended:items.filter(x=>x.writable&&x.priority&&x.priority.sources>0);
+  var panel=node('section',null);panel.id='growthPageImprovementPlan';panel.style.cssText='background:white;border:2px solid #1d4ed8;border-radius:12px;padding:18px;margin:14px 0';
+  node('h2','How to strengthen this page',panel);
+  var q=d.editorial_decision_gate?.focus_query||d.search_discovery?.target_query||runQuery;
+  if(q)node('p','Research question: '+q,panel);
+  if(gl.writing_allowed===false)node('p','Insufficient competitor evidence for a publication recommendation. These are research leads only.',panel);
+  if(!candidates.length)node('p','No supported improvements found. Review the number of competitor pages read, then rerun when needed.',panel);
+  else{
+   node('p',recommended.length&&gl.writing_allowed!==false?'Priority improvements from live competitor comparison. Confirm on-page coverage before publishing.':'Topics to investigate; not proven missing content.',panel);
+   candidates.slice(0,5).forEach(function(item,i){
+    var card=node('article',null,panel);card.style.cssText='border:1px solid #cbd5e1;border-radius:9px;padding:14px;margin:10px 0;background:#f8fafc';
+    node('h3',(i+1)+'. '+(item.title||'Topic to review'),card);
+    node('p','Current page: '+(item.coverage==='PARTIAL'?'partly covered':item.coverage==='MISSING'?'not found in comparison':'not confirmed'),card);
+    node('p','Suggested edit: '+(item.priority?.suggested_action||'Check existing page coverage before writing.'),card);
+    var examples=(item.examples||[]).filter(e=>e&&typeof e.url==='string'&&e.url.startsWith('https://')).slice(0,3);
+    if(examples.length){var ul=node('ul',null,card);examples.forEach(function(e){var li=node('li',null,ul);link(e.url,e.heading||e.site||e.url,li);if(e.excerpt)node('small',' — '+String(e.excerpt).slice(0,180),li)})}
+    else node('small','No linked competitor excerpt retained: verify before using this suggestion.',card);
+   });
+  }
+  var p=node('p',null,panel),go=node('a','Choose page improvements →',p);go.href='#growthGapChoice';go.style.cssText='background:#1d4ed8;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700';
+  return panel;
+ }
  function organize(d){
   // Needs a real DOM (a browser); minimal test DOMs keep the plain report order.
   if(typeof document.querySelectorAll!=='function'||typeof container.insertBefore!=='function')return;
@@ -1133,7 +1157,8 @@
   var evl=node('li',null,fl),eva=node('a','Open source evidence',evl);eva.href='#growthEvidenceAll';
   // The AI systems research is visible BEFORE topics, not buried under evidence tabs.
   // This matches the Free Growth flow; AI answers remain optional.
-  if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
+  var summaryPanel=improvementPanel(d);container.insertBefore(summaryPanel,found.nextSibling);
+   if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';
    var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
