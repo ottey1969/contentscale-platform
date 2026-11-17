@@ -27,5 +27,5 @@ test('a long combined fact-check string is split into separate confirmations',()
  assert.match(ui,/function reviewStatements\(item\)/);
  assert.match(ui,/units\.length>1\?units/);
  assert.match(ui,/bits\.forEach\(function\(bit\)/);
- assert.match(ui,/not independently verified/);
+ assert.match(ui,/NOT independently verified/);
 });
