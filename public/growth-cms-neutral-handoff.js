@@ -570,6 +570,14 @@
     (preview.manifest?.growth_proposal?(preview.manifest.growth_proposal.editor_changed_text?' The text differs from Growth proposal #'+preview.manifest.growth_proposal.id+' (recorded in the package).':' Text exactly as in Growth proposal #'+preview.manifest.growth_proposal.id+'.'):'')+
     ((preview.warnings||[]).length?' Review: '+preview.warnings.join(', '):''),false);
    safe.exported=true;showPublicationForm(payload);
+   // Only after an actual package download: put the owner at the next action.
+   var finish=document.getElementById('publicationWrap');if(finish){
+    finish.style.scrollMarginTop='90px';
+    requestAnimationFrame(function(){
+     var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+     finish.scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'});
+    });
+   }
   }catch(err){status('downloadStatus',err.message||'Download failed',true)}
   finally{buttonProgress(btn,false,!!safe.exported);ready()}
  });
@@ -600,13 +608,18 @@
    var d=await r.json();
    if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
    safe.publicationRecorded=true;safe.publicationId=d.publication&&d.publication.id||safe.publicationId;
+   var go=document.getElementById('publicationMeasurement'),link=document.getElementById('publicationMeasureLink');
+   if(go&&link){
+    go.hidden=false;
+    link.href='/track/'+encodeURIComponent(token)+'/growth/measurement'+(safe.publicationId?'#publication-'+encodeURIComponent(safe.publicationId):'');
+   }
    status('downloadStatus','Website publication recorded for this page. The ZIP itself did not publish the change; your confirmed live publication is saved separately.',false);
    var cf=d.reminder&&d.reminder.confirmation;
    var rem=d.reminder&&d.reminder.error?' The reminder could not be saved; try again.':d.reminder?' Reminder e-mail to '+d.reminder.emails.join(', ')+' on '+String(d.reminder.due_at).slice(0,10)+'.'+
     (cf?(cf.sent?' A confirmation e-mail was sent just now'+(cf.translation&&cf.translation!=='AI_CHECKED'?' in English (no checked translation into the page language was available)':cf.language&&cf.language!=='en'?' in the page language ('+cf.language+')':'')+'; check your inbox (and spam).':cf.reason==='EMAIL_NOT_CONFIGURED'?' Warning: e-mail sending is not configured on the server (BREVO_API_KEY), so no confirmation and no reminder can be sent.':' Warning: the confirmation e-mail was not accepted by the mail service; the reminder may not arrive.'):''):' No reminder e-mail set.';
    status('publicationStatus',(editing?'Changes saved.':'Recorded. Growth reads the Search Console numbers of both periods itself when they are final; at the end of the test period you enter your enquiries from the e-mail link (or on the measurement page). You can close this page.')+rem+' You can still correct this record here while this page is open.',false);
   }catch(err){status('publicationStatus',err.message||'Not saved',true)}
-  finally{buttonProgress(btn,false,false);btn.disabled=false;btn.textContent=safe.publicationId?'Save changes to this publication':'Save publication checkpoint'}
+  finally{buttonProgress(btn,false,false);btn.disabled=false;btn.textContent=safe.publicationId?'Save changes to this publication':'Confirm publication → start measurement'}
  });
  // An edited package is a new candidate and can be exported again; no silent duplicate downloads.
  $('handoffForm').addEventListener('input',function(ev){
