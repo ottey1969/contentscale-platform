@@ -1109,7 +1109,7 @@
   node('li','Google Search: '+leads.length+' result leads; '+readCount+' competitor pages opened. A found URL is not proof that its article was analyzed.',fl);
   if(sdx.search_term_used)node('li','Google used “'+sdx.search_term_used+'”. AI systems still use the original customer question.',fl);
   var gapCount=gl&&Array.isArray(gl.items)?gl.items.length:0;
-  node('li',gl?gapCount+' candidate topics for editorial review (not proven missing content).':'No completed Google topic-comparison list available.',fl);
+  node('li',gl?(gapCount?'Current competitor run: '+gapCount+' candidate topic(s) for editorial review (not proven missing).':'Current competitor run: 0 new topic candidates. Saved Growth proposals belong to a separate writing history and may target another question. '+(gl.evidence?.reason||'Inspect readable competitor evidence before deciding whether to rerun.')):'No completed Google topic-comparison list available.',fl);
   var as=d.ai_check&&d.ai_check.summary,ag=d.ai_check&&d.ai_check.gap;
   var verifiedAi=as&&Array.isArray(as.engines)?as.engines.filter(function(e){return e.verifiable}):[];
   var citedAi=verifiedAi.filter(function(e){return e.own_site_cited});
@@ -1172,7 +1172,12 @@
  function pointHandoff(r){
   var a=document.getElementById('growthEditorHandoff'),h=r&&r.cms_handoff;
   if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
-  a.href=h.url;a.textContent='Prepare the CMS package with the checked Growth text';
+  var selectedQuestion=runQuery;
+   var target=new URL(h.url,location.origin);
+   if(target.origin!==location.origin)return;
+   if(selectedQuestion)target.searchParams.set('query',selectedQuestion);
+   a.href=target.pathname+target.search;
+   a.textContent='Review the draft and prepare CMS package'+(selectedQuestion?' for this customer question':'');
  }
  // Share Free Growth's genuinely grounded Gemini check; never misattribute other AI providers.
  var autoAiPending=false;

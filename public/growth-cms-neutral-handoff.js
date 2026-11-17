@@ -5,7 +5,7 @@
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
+ const safe={source:null,proposal:null,aiDraftReadyForQuery:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
@@ -69,7 +69,7 @@
   }
  }
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
- $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
+ $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+(requestedQuestion?'&query='+encodeURIComponent(requestedQuestion):'');
  function status(id,msg,error){
   const el=$(id);el.textContent=msg;el.style.color=error?'#b91c1c':'#166534';
  }
@@ -96,12 +96,25 @@
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
-  $('download').disabled=!!safe.exported||!(safe.source&&$('approved').checked&&manualReady&&factsChecked);
+  $('download').disabled=!!safe.exported||!(safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim()&&$('approved').checked&&manualReady&&factsChecked);
   $('download').textContent=safe.exported?'4. CMS handoff ZIP downloaded':'4. Download reviewed CMS handoff ZIP';
-  $('download').style.background=safe.exported?'#94a3b8':'';
+  var hasCurrentDraft=!!safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim();
+   var draftBtn=$('generateEditorialDraft');
+   draftBtn.dataset.stage=hasCurrentDraft?'done':'first';
+   if(draftBtn.dataset.requestPending!=='true')draftBtn.textContent=hasCurrentDraft?'3A. AI draft generated ✓ Generate again':'3A. FIRST · Advanced: Generate a different draft →';
+   var unlock=$('cmsUnlockHint');
+   if(unlock){
+    unlock.dataset.stage=!$('download').disabled&&!safe.exported?'ready':'locked';
+    unlock.textContent=safe.exported?'✓ CMS handoff package downloaded. Next: publish and register the real publication date.':
+     !hasCurrentDraft?'🔒 Step 3A first: click the orange Advanced button to generate this question’s draft. Then review and approve; the CMS button will turn blue.':
+     !$('approved').checked||!factsChecked?'✓ AI draft generated. Next review all claims and approve in step 3C; then the CMS button turns blue.':
+     $('download').disabled?'Finish the remaining required checks to unlock the CMS download.':
+     '✓ Draft generated and approved. The blue CMS download button is now active.';
+   }
   // Owner 2026-11-01: a grey button without a reason. Say exactly what is still missing.
   var missing=[];
   if(!safe.source)missing.push('check the original page first (step 1)');
+  if(safe.source&&safe.aiDraftReadyForQuery!==$('query').value.trim())missing.push('generate the required Advanced AI draft for this question in step 3');
   if(hasManual&&!manualReady)missing.push('paste the original page HTML and tick that it is not live-verified');
   if(open.length)missing.push('confirm the '+facts.length+' statement'+(facts.length===1?'':'s')+' (one tick “I checked all …” above, or each one; '+open.length+' open, marked in yellow)');
   if(!$('approved').checked)missing.push('tick “I reviewed the actual page…” at the end of step 3');
@@ -309,25 +322,28 @@
    }
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
    var p=d.proposal,box=$('growthProposal');box.textContent='';box.hidden=false;
+   if(String(p.focus_query||'').trim().toLowerCase()!==exactQuestion.toLowerCase()){
+    var earlier=document.createElement('p');earlier.textContent='Saved proposal #'+p.id+' concerns “'+p.focus_query+'”, not this selected customer question “'+exactQuestion+'”. It is historical context only, not an eligible draft for download. Generate a new AI draft below.';box.appendChild(earlier);return;
+   }
    var summary=document.createElement('strong');summary.textContent='Growth research proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(summary);
    var fact=document.createElement('p');fact.className='small';
    fact.textContent='This is an UNAPPROVED draft for “'+String(p.focus_query||exactQuestion)+'”. It is not a verified content gap or fact-checked article. Review the original research before accepting any text.';
    box.appendChild(fact);
-   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Progress: research proposal available → review useful claims → approve → download CMS package.';box.appendChild(next);
+   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Saved research proposal for reference. Required workflow: generate a new Advanced AI draft for this question → check claims → approve → download.';box.appendChild(next);
    var summaryList=document.createElement('p');summaryList.textContent='Suggested sections: '+(p.sections||[]).map(function(x){return x.h2}).join(' · ');box.appendChild(summaryList);
    var review=document.createElement('button');review.type='button';review.textContent='Review proposed text and claims →';
    review.className='growth-primary-finish';box.appendChild(review);
-   var skip=document.createElement('button');skip.type='button';skip.textContent='Skip this draft · write verified content myself';
+   var skip=document.createElement('button');skip.type='button';skip.textContent='Dismiss saved proposal · generate a new AI draft';
    skip.style.cssText='margin-left:8px';box.appendChild(skip);
    skip.addEventListener('click',function(){
     safe.proposal=null;box.hidden=true;box.textContent='';
     $('approved').checked=false;ready();
-    status('downloadStatus','Saved draft #'+p.id+' was skipped. No draft text was added; use your own fact-checked copy or return to Growth research.',false);
+    status('downloadStatus','Saved proposal #'+p.id+' was dismissed. Generate the required Advanced draft, then review and approve it.',false);
    });
    review.addEventListener('click',function(){
     if(review.disabled)return;
     review.disabled=true;skip.hidden=true;summaryList.hidden=true;
-    next.textContent='Progress: reviewing selected claims. Next: approve verified edits and download the CMS package.';
+    next.textContent='Saved proposal review only. To unlock the CMS download, first generate a new Advanced AI draft for the current question, then review and approve its claims.';
     var first=p.sections[0];
     // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
     safe.proposal=p;
@@ -369,6 +385,11 @@
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
+ function showVerifiedLink(){
+  var hasLink=!!$('linkUrl').value.trim();
+  $('growthVerifiedLinkFields').hidden=!hasLink;
+  if(!hasLink)$('linkText').value='';
+ }
  async function loadSeoProposal(target,linkUrl){
   try{
    var res=await fetch(base+'/seo-proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(String($('query').value||requestedQuestion||'').trim())+(linkUrl?'&link='+encodeURIComponent(linkUrl):''),{cache:'no-store',credentials:'same-origin'});
@@ -376,12 +397,13 @@
    var old=target.querySelector&&target.querySelector('.seo-proposal');if(old)old.remove();
    var box=document.createElement('div');box.className='note seo-proposal';target.appendChild(box);
    if(linkUrl&&!d.link_url){
-    if($('linkUrl').value===linkUrl){$('linkUrl').value='';$('linkText').value=''}
+    if($('linkUrl').value===linkUrl){$('linkUrl').value='';$('linkText').value='';showVerifiedLink()}
     var note=document.createElement('p');
     note.textContent='Internal link not verified as a direct working page ('+String(d.link_verification||'unknown')+'). It was removed; no 301 or unverified link will enter the CMS package.';
     box.appendChild(note);
    }else if(linkUrl&&d.link_url&&d.link_url!==linkUrl){
     if($('linkUrl').value===linkUrl)$('linkUrl').value=d.link_url;
+    showVerifiedLink();
     var note=document.createElement('p');
     note.textContent='Redirect resolved: the proposed link now points straight to '+d.link_url+'.';
     box.appendChild(note);
@@ -390,7 +412,7 @@
    // The owner's own values are kept from the first time only (a second source check must not keep the AI text as "current").
    if(!safe.seoOriginal)safe.seoOriginal={title:$('title').value,meta:$('meta').value,link:$('linkText').value};
    var cur=d.current||{},prev=safe.seoOriginal;
-   $('title').value=d.title;$('meta').value=d.meta_description;if(d.link_text&&$('linkUrl').value)$('linkText').value=d.link_text;
+   $('title').value=d.title;$('meta').value=d.meta_description;if(d.link_text&&$('linkUrl').value)$('linkText').value=d.link_text;showVerifiedLink();
    var h=document.createElement('strong');h.textContent='SEO title, description'+(d.link_text?' and link text':'')+' proposed by AI — review before you download';box.appendChild(h);
    var w=document.createElement('p');w.className='small';w.textContent=(d.why?d.why+' ':'')+'Checked: length, the search term in the title, no number, superlative or promise that is not already on your page. Current title: “'+(cur.title||prev.title)+'”.';box.appendChild(w);
    var back=document.createElement('button');back.type='button';back.textContent='Use my current title and description';
@@ -401,13 +423,17 @@
  async function loadResearchSuggestions(src){
   var target=$('growthResearchHints');
   try{
-   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
+   // Read only the stored report for this exact question; opening CMS must never trigger paid research.
+   var exactQuery=String($('query').value||requestedQuestion||src.working_keyword||'').trim();
+   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(pageId)+(exactQuery?'&query='+encodeURIComponent(exactQuery):'');
    var res=await fetch(url,{cache:'no-store',credentials:'same-origin'});
-   if(!res.ok)throw Error('Research unavailable');
-   var d=await res.json(),x=d.handoff_suggestions||{};
-   if(d.success!==true||Number(d.page_id)!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
+   if(!res.ok)throw Error('Saved research unavailable');
+   var saved=await res.json();
+   if(saved.success!==true||saved.found!==true||!saved.report)throw Error('No saved research for this exact customer question');
+   var d=saved.report,x=d.handoff_suggestions||{};
+   if(d.url!==src.canonical_url||x.safe!==true)throw Error('Saved report source identity did not match');
    if(d.competitor_overview&&typeof window.renderGrowthCompetitorOverview==='function'){var ov=$('growthCompetitorOverview');ov.textContent='';try{ov.hidden=!window.renderGrowthCompetitorOverview(d.competitor_overview,ov)}catch(e){ov.hidden=true}}
-   try{$('linkUrl').placeholder=new URL(src.canonical_url).origin+'/a-related-page/';$('linkText').placeholder='Words that say where the link goes'}catch(e){}
+   showVerifiedLink(); // No fake link or inputs when no verified internal destination exists.
    if(!$('query').value&&x.query)$('query').value=x.query;
    if(!$('title').value&&x.title)$('title').value=x.title;
    if(!$('meta').value&&x.meta)$('meta').value=x.meta;
@@ -435,29 +461,32 @@
     // Filled in automatically for review (the editor approves the whole package; the fields stay editable).
     if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
     if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
+    showVerifiedLink();
     var sug=document.createElement('p');sug.textContent='Internal link filled in by Growth: '+x.internal_url+(x.internal_reason?'. '+x.internal_reason:'')+' Check it, change it or clear both fields.';target.appendChild(sug);
    }
-   else{var none=document.createElement('p');none.textContent='No internal link suggested by the research. The link is optional: leave both fields empty, or add a page of your own site that helps this reader next.';target.appendChild(none)}
-   void loadSeoProposal(target,x.internal_url||'');
+   else{showVerifiedLink()}
+   // No automatic AI SEO request: opening the form should be free of AI-generation calls.
    if(!x.meta||!x.title){
     var missing=document.createElement('p');
     missing.textContent='Missing SEO metadata requires an editor-written, source-checked proposal.';
     target.appendChild(missing);
    }
    ready();
-  }catch(e){target.hidden=false;target.textContent='Research could not be loaded. Manual review stays available without GSC.';}
+  }catch(e){target.hidden=false;target.textContent='No saved research for this exact customer question. Open Growth research explicitly to run or review it. Opening the CMS form did not trigger paid research.';}
  }
  if(!Number.isSafeInteger(pageId)||pageId<1){
   status('sourceStatus','A valid tracked page ID is required. Return to Growth and select a page.',true);
   $('checkSource').disabled=true;
  }
  if(requestedQuestion)$('query').value=requestedQuestion;
+ showVerifiedLink();
+ $('query').addEventListener('input',function(){safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';ready()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);
  $('manualOriginalHtml').addEventListener('input',ready);
  $('checkSource').addEventListener('click',async function(){
-  this.disabled=true;buttonProgress(this,true);safe.source=null;lockWhileLoading(true);
+  this.disabled=true;buttonProgress(this,true);safe.source=null;safe.aiDraftReadyForQuery=null;lockWhileLoading(true);
   try{
    const response=await fetch(base+'/source?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
    const data=await response.json();
@@ -504,6 +533,9 @@
   if(btn.dataset.requestPending==='true')return;
   btn.dataset.requestPending='true';
   var originalLabel=btn.textContent;
+  var draftQuery=$('query').value.trim();
+  if(!draftQuery){status('aiDraftStatus','Enter a customer question before generating.',true);delete btn.dataset.requestPending;return}
+  safe.aiDraftReadyForQuery=null;$('approved').checked=false;ready();
   // Keep the running task unmistakable, and prevent competing actions or duplicate requests.
   var lockedButtons=[...document.querySelectorAll('button')].filter(b=>b!==btn);
   var previousButtonStates=lockedButtons.map(b=>({button:b,disabled:b.disabled}));
@@ -515,19 +547,20 @@
   try{
    var r=await fetch(base+'/editor-draft',{method:'POST',credentials:'same-origin',
     cache:'no-store',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({page_id:pageId,focus_query:$('query').value.trim()})});
+    body:JSON.stringify({page_id:pageId,focus_query:draftQuery})});
    var output=await r.json();
    if(!r.ok||output.success!==true)throw Error(output.code||'Draft not available');
    if(output.status!=='AI_DRAFT_REVIEW_REQUIRED'||!output.draft){
-    status('aiDraftStatus','AI is optional: '+(output.status||'Unconfigured')+'. You can continue with the regular reviewed CMS handoff.',true);
+    status('aiDraftStatus','A required AI draft is not available ('+(output.status||'Unconfigured')+'). The CMS download stays disabled. Saved research is preserved.',true);
     return;
    }
-   if(output.canonical_url!==safe.source.canonical_url||Number(output.page_id)!==pageId)
+   if(output.canonical_url!==safe.source.canonical_url||Number(output.page_id)!==pageId||$('query').value.trim()!==draftQuery)
     throw Error('Source identity changed');
    var draft=output.draft;
    if(draft.seo_title)$('title').value=draft.seo_title;
    if(draft.meta_description)$('meta').value=draft.meta_description;
    var parts=draft.sections||[];
+   if(!parts.length||!String(parts[0].h2||'').trim()||(parts[0].paragraphs||[]).join(' ').trim().length<30)throw Error('AI did not return reviewable text. The CMS download stays disabled.');
    if(parts.length){
     $('heading').value=parts[0].h2;
     $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
@@ -537,20 +570,23 @@
    $('growthAdditionalSections').textContent='';
    parts.slice(1,5).forEach(function(section,i){addSection(section.h2,(section.paragraphs||[]).join('\n\n'),'AI draft section '+(i+2)+' · verify facts',null)});
    reapplyRemovals();
+   safe.aiDraftReadyForQuery=draftQuery;
    $('approved').checked=false;ready();
    status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
   }catch(err){status('aiDraftStatus',String(err.message||err),true)}
   finally{
    buttonProgress(btn,false,false);
    delete btn.dataset.requestPending;
-   btn.textContent=originalLabel;
+   btn.textContent=safe.aiDraftReadyForQuery===$('query').value.trim()?'3A. AI draft generated ✓ Generate again':originalLabel;
    btn.disabled=!safe.source;
    previousButtonStates.forEach(item=>{if(item.button.dataset.growthDraftLocked==='true'){item.button.disabled=item.disabled;delete item.button.dataset.growthDraftLocked}});
    ready();
   }
  });
  function build(){
+  showVerifiedLink();
   const src=safe.source;if(!src)throw Error('Check the saved original page first');
+   if(safe.aiDraftReadyForQuery!==$('query').value.trim())throw Error('Generate the Advanced AI draft for this customer question before the CMS package');
   if(!$('approved').checked)throw Error('Editorial approval is required');
   const heading=$('heading').value.trim(),copy=$('copy').value.trim();
   if(!heading||copy.length<30)throw Error('Provide a useful H2 and at least 30 characters of approved copy');
