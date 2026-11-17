@@ -182,7 +182,11 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    const wanted=String(req.query?.query||'').trim().toLowerCase().replace(/\s+/g,' ');
    const all=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url});
    const selectedId=Number(req.query?.proposal_id);
-   const exact=Number.isSafeInteger(selectedId)&&selectedId>0?all.find(x=>Number(x.id)===selectedId):null;
+   let exact=null;
+   if(Number.isSafeInteger(selectedId)&&selectedId>0){
+    const candidate=await proposalById(pool,{clientId:v.client.id,id:selectedId});
+    if(candidate&&Number(candidate.target_page_id)===Number(v.page.id)&&candidate.target_url===v.page.url)exact=candidate;
+   }
    // The stored proposal is the authority for the question. Never use a stale
    // browser query or the page seed to relabel an already-written concept.
    if(req.query?.proposal_id&&(!exact||!Array.isArray(exact.sections)||!exact.sections.length))
