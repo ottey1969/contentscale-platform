@@ -68,9 +68,11 @@ registerGrowthCockpit({get(path,...handlers){routes[path]=handlers}},{
  for(let i=0;i<100&&!ownerRes.html;i++)await new Promise(r=>setTimeout(r,5));
  assert.match(ownerRes.html,/<h2>Default target market for this site<\/h2>/);assert.match(ownerRes.html,/A market you set on a page \(for example nl — Netherlands, English\) always wins/);
  // An existing page (the protected homepage too: research only) is chosen directly; a new page starts from Pre-Write.
- assert.match(ownerRes.html,/<form class="pick-page" method="get" action="\/track\/owner-tok\/growth\/auto-research">/);
- assert.match(ownerRes.html,/<option value="1">https:\/\/contentscale\.site\/ — content at scale \(protected: research only\)<\/option>/);
- assert.match(ownerRes.html,/A page that does not exist yet:<\/strong> <a href="\/track\/owner-tok\/growth\/new-page">/);
+ assert.match(ownerRes.html,/<form id="growthSimpleForm" autocomplete="off">/);
+ assert.match(ownerRes.html,/id="growthSimpleContinue" disabled>Choose a page first/);
+ assert.match(ownerRes.html,/<option value="1" data-keyword="content at scale"[^>]*>https:\/\/contentscale\.site\/ · content at scale/);
+ assert.match(ownerRes.html,/Need a new page\?<\/strong> <a href="\/track\/owner-tok\/growth\/new-page">/);
+ assert.match(ownerRes.html,/Advanced · Opportunity Finder, Search Console and history/);
  assert.match(htmlRes.html,/Top click opportunities/);
  assert.match(htmlRes.html,/Action plan · 4 steps/);
  assert.match(htmlRes.html,/Open \/ copy execution brief/);
