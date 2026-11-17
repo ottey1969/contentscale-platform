@@ -65,3 +65,27 @@ test('Tracker Growth: do this now, three steps, do it yourself, evidence in tabs
   assert.deepEqual(errs,[]);
  }finally{await b.close();srv.close()}
 });
+
+test('selected writing topics and manual AI follow-ups have separate statuses and containers',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const ui=fs.readFileSync(path.join(__dirname,'../public/growth-automatic-report-ui.js'),'utf8');
+ assert.match(ui,/Separate manual follow-ups/);
+ assert.match(ui,/Selected Growth writing topics:/);
+ assert.match(ui,/Mark completed only after doing it:/);
+ assert.match(ui,/choice\.parentNode\.insertBefore\(selfBox,choice\.nextSibling\)/);
+ assert.match(ui,/Manual tasks completed:/);
+});
+
+test('AI-only missing content topics route into Growth proposals, not manual tasks',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const ui=fs.readFileSync(path.join(__dirname,'../public/growth-automatic-report-ui.js'),'utf8');
+ const from=ui.indexOf('function selfItems(d)'),to=ui.indexOf('function aiTopicWords',from);
+ assert.ok(from>0&&to>from);
+ assert.doesNotMatch(ui.slice(from,to),/missing_topics/,'missing content must not be assigned to the manual task counter');
+ assert.match(ui,/function aiWritingSuggestions\(d\)/);
+ assert.match(ui,/focus!==aiTerm/,'suggestions must match the current research question');
+ assert.match(ui,/x\.priority\?\.sources>=2/,'AI topic match requires independent competitor evidence');
+ assert.match(ui,/choice\.dataset\.aiAutoReviewedIds/,'editor deselection must not be overridden');
+ assert.match(ui,/Growth handles AI content topics/);
+ assert.match(ui,/checkbox\.dispatchEvent\(new Event\('change',\{bubbles:true\}\)\)/);
+});
