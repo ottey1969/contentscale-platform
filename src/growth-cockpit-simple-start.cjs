@@ -1,7 +1,7 @@
 'use strict';
 // The first Growth action is always a deliberate page choice. Search Console
 // prioritization is optional and belongs in Advanced, not the starting flow.
-function renderSimpleGrowthStart({pages=[],token='',siteMarkets=null,regions=[],languages=[],countryName,languageName,escapeHtml}={}){
+function renderSimpleGrowthStart({pages=[],token='',siteMarkets=null,pageMarketOverrides={},regions=[],languages=[],countryName,languageName,escapeHtml}={}){
  const esc=typeof escapeHtml==='function'?escapeHtml:x=>String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const path='/track/'+encodeURIComponent(token);
  const country=c=>String(c).toLowerCase()+' — '+(typeof countryName==='function'?countryName(c):String(c));
@@ -15,7 +15,7 @@ function renderSimpleGrowthStart({pages=[],token='',siteMarkets=null,regions=[],
   '<input id="growthSimpleFilter" type="search" placeholder="Find a page by name or URL">'+
   '<select id="growthSimplePage" name="page_id" required>'+
   '<option value="">Choose a page…</option>'+
-  pages.map(p=>'<option value="'+esc(p.id)+'" data-keyword="'+esc(p.keyword||'')+'">'+esc(p.url)+(p.keyword?' · '+esc(p.keyword):'')+(p.eligibility?.status==='PROTECTED'?' · Research only':'')+'</option>').join('')+
+  pages.map(p=>{const own=pageMarketOverrides?.[String(p.id)]||null;return '<option value="'+esc(p.id)+'" data-keyword="'+esc(p.keyword||'')+'" data-countries="'+esc(own?(own.countries||[]).map(country).join(', '):markets)+'" data-language="'+esc(own?.language&&typeof languageName==='function'?languageName(own.language):language)+'">'+esc(p.url)+(p.keyword?' · '+esc(p.keyword):'')+(p.eligibility?.status==='PROTECTED'?' · Research only':'')+'</option>'}).join('')+
   '</select>'+
   '<small id="growthSimplePageStatus" role="status">Select a page first. Nothing is selected automatically.</small>'+
   '<label for="growthSimpleQuery"><strong>2. Customer question or seed keyword</strong> (optional)</label>'+
