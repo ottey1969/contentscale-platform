@@ -134,6 +134,17 @@ function registerGrowthExecution(app,pool,deps={}){
    const mail=reminders.parseEmails(req.body&&req.body.reminder_emails);
    if(mail.invalid.length)return res.status(400).json({success:false,error:'Not an e-mail address: '+mail.invalid.slice(0,3).join(', ')});
    if(mail.too_many)return res.status(400).json({success:false,error:'At most 5 e-mail addresses for the reminder'});
+   // A correction without any actual changed date, notes or reminder recipients
+   // must not produce a second confirmation or a false "saved" event.
+   if(!modified){
+    if(!(req.body&&'reminder_emails' in req.body))
+     return res.status(409).json({success:false,code:'NO_PUBLICATION_CHANGE',error:'Nothing changed. This publication is already recorded; edit a field or register a distinct later live update.'});
+    const previousReminder=await reminders.loadReminder(pool,{clientId:c.id,publicationId:id}).catch(()=>null);
+    const oldEmails=(previousReminder?.emails||[]).map(x=>String(x).toLowerCase()).sort();
+    const nextEmails=[...mail.emails].map(x=>String(x).toLowerCase()).sort();
+    if(JSON.stringify(oldEmails)===JSON.stringify(nextEmails))
+     return res.status(409).json({success:false,code:'NO_PUBLICATION_CHANGE',error:'No publication details or reminder recipients changed. Nothing was resent.'});
+   }
    const row=(await pool.query('UPDATE tracker_growth_publications SET notes=$3,published_at=$4 WHERE id=$1 AND tracker_client_id=$2 RETURNING id,published_at,notes',[id,c.id,notes,publishedAt])).rows[0];
    const reminder=req.body&&'reminder_emails' in req.body?await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:mail.emails,publishedAt}):await reminders.loadReminder(pool,{clientId:c.id,publicationId:id});
    if(reminder&&moved&&!(req.body&&'reminder_emails' in req.body))await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:reminder.emails,publishedAt});
