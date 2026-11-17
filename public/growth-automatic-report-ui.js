@@ -1057,6 +1057,7 @@
   var notRecorded=document.getElementById('growthPublishNotRecorded'),recorded=document.getElementById('growthPublishRecorded');
   if(!wizard||!status||!notRecorded||!recorded)return;
   notRecorded.hidden=!!record;recorded.hidden=!record;
+  var measure=document.getElementById('growthMeasurementCTA');if(measure)measure.hidden=!record;
   status.textContent=record?'Publication registered: '+String(record.published_at||'date unavailable').slice(0,16).replace('T',' ')+'.':'No publication recorded yet for this exact page and question.';
   if(NOWC){NOWC.published=!!record;trUpdate(trPicked())}
  }
@@ -1070,33 +1071,6 @@
    var matches=(payload.records||[]).filter(publicationMatch).sort(function(a,b){return String(b.published_at||'').localeCompare(String(a.published_at||''))});
    setPublishState(matches[0]||null);
   }catch(e){if(status)status.textContent='Could not check existing publication records. Reload before recording again: '+String(e.message||e)}
- }
- function wireSimplePublication(){
-  var reveal=document.getElementById('growthPublishReveal'),form=document.getElementById('growthPublishForm');
-  if(!reveal||!form||form.dataset.wired)return;form.dataset.wired='1';
-  reveal.addEventListener('click',function(){form.hidden=false;reveal.hidden=true;var date=document.getElementById('growthPublishedAt');if(date)date.focus()});
-  form.addEventListener('submit',async function(event){
-   event.preventDefault();
-   if(!last)return;
-   var button=document.getElementById('growthPublishConfirm'),feedback=document.getElementById('growthPublishFeedback');
-   var dateValue=document.getElementById('growthPublishedAt').value,notes=document.getElementById('growthPublishedNotes').value.trim();
-   var actual=new Date(dateValue),question=publishedQuery();
-   if(!dateValue||!Number.isFinite(actual.getTime())||actual.getTime()>Date.now()+60000||!notes||!question){
-    feedback.textContent='Enter the actual past publication date and a short description. The exact customer question must be known.';return;
-   }
-   button.disabled=true;button.textContent='Recording publication…';feedback.textContent='Saving a publication checkpoint. Nothing is published automatically.';
-   try{
-    var response=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/publication',{
-     method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({page_id:Number(id),query:question,notes:notes,published_at:actual.toISOString()})
-    });
-    var result=await response.json().catch(function(){return {}});
-    if(!response.ok||!result.success)throw Error(result.error||result.code||'Publication not recorded');
-    setPublishState({published_at:actual.toISOString(),query:question,url:last.url});
-    feedback.textContent='Publication checkpoint saved. Growth will compare actual evidence when the before/after periods are complete.';
-    moveToResearch('growthNextAction');
-   }catch(e){feedback.textContent='Not recorded: '+String(e.message||e)+'. Check the details and try again.';button.disabled=false;button.textContent='Confirm publication and start measurement →'}
-  });
  }
  function trPicked(){return document.querySelectorAll('#growthGapChoice input[type=checkbox]:checked').length}
  function selfKey(){return 'trackerGrowthSelfDone:'+token+':'+id}
@@ -1184,7 +1158,7 @@
   // 5. The next action: live while ticking, and in a bar at the bottom when the card is out of view.
   NOWC={published:false,written:written||(d.cms_handoff&&d.cms_handoff.url?1:0),hasList:!!(gl&&(gl.items||[]).length),headline:head,selfOpen:selfItems(d).filter(function(x){return !selfDone()[x.id]}).length};
   var bar=document.getElementById('trNowBar');if(!bar){bar=document.createElement('div');bar.id='trNowBar';bar.className='tg-bar';bar.hidden=true;document.body.appendChild(bar)}
-  trUpdate(trPicked());wireSimplePublication();restorePublicationRecord();
+  trUpdate(trPicked());restorePublicationRecord();
   if(choice&&!choice.dataset.nowWired){choice.dataset.nowWired='1';choice.addEventListener('change',function(e){if(e.target&&e.target.type==='checkbox')trUpdate(trPicked())})}
   if(window.IntersectionObserver){if(nowObs)nowObs.disconnect();nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''});nowObs.observe(top)}
  }
