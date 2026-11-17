@@ -1341,4 +1341,4 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    .set('Referrer-Policy','no-referrer').type('html').send(html);
  });
 }
-module.exports={registerGrowthAutomaticResearch};
+module.exports={registerGrowthAutomaticResearch,trackerSitemapFallback};
