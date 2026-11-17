@@ -63,3 +63,33 @@ test('switching pages uses that page’s saved market and language without silen
  assert.match(js,/originalCountries=opt\?String\(opt\.dataset\.countries/);
  assert.match(js,/if\(countries!==originalCountries\|\|language!==originalLanguage\)/);
 });
+
+test('page selection enables the blue action and opens the exact selected research URL',async()=>{
+ const vm=require('node:vm');
+ const handlers={};
+ const make=(id,props={})=>Object.assign({id,textContent:'',value:'',disabled:false,
+  addEventListener(type,fn){handlers[id+':'+type]=fn}},props);
+ const option0={value:'',textContent:'Choose a page…',disabled:false,hidden:false,dataset:{}};
+ const option1={value:'2290',textContent:'Emergency roof repair NJ',disabled:false,hidden:false,
+  dataset:{keyword:'emergency roof repair NJ',countries:'us — United States',language:'English'}};
+ const page=make('growthSimplePage',{options:[option0,option1]});
+ Object.defineProperty(page,'selectedIndex',{get(){return page.options.findIndex(x=>x.value===page.value)}});
+ const form=make('growthSimpleForm',{elements:{
+  query:{value:'Who offers 24-hour emergency roof repair in New Jersey?'},location:{value:''},
+  countries:{value:'us — United States'},language:{value:'English'}}});
+ const go=make('growthSimpleContinue'),filter=make('growthSimpleFilter');
+ const status=make('growthSimpleStatus'),pageStatus=make('growthSimplePageStatus');
+ const elements={growthSimpleForm:form,growthSimplePage:page,growthSimpleFilter:filter,growthSimpleContinue:go,
+  growthSimpleStatus:status,growthSimplePageStatus:pageStatus,
+  growthSimpleOriginalCountries:{value:'us — United States'},growthSimpleOriginalLanguage:{value:'English'}};
+ let opened=null,posts=0;
+ vm.runInNewContext(js,{document:{getElementById:id=>elements[id]},
+  window:{location:{assign:url=>{opened=url}}},location:{pathname:'/track/sample-token/growth'},
+  fetch:async()=>{posts++;return {ok:true,json:async()=>({success:true})}}});
+ assert.equal(go.disabled,true);
+ page.value='2290';handlers['growthSimplePage:change']();
+ assert.equal(go.disabled,false);
+ await handlers['growthSimpleForm:submit']({preventDefault(){}});
+ assert.equal(posts,0,'No market API call when nothing was changed');
+ assert.match(opened,/\/growth\/auto-research\?page_id=2290&query=Who%20offers%2024-hour%20emergency%20roof%20repair%20in%20New%20Jersey%3F/);
+});
