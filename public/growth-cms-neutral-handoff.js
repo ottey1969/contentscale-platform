@@ -619,8 +619,8 @@
    $('recordPublication').textContent='Save correction to existing publication';
   }else{
    $('publishedAt').value=localNow();
-   $('publicationVersionChoice').textContent='Register only if different changes actually went live later. This starts a separate measurement period. Describe the new changes and select the actual live date.';
-   $('recordPublication').textContent='Record later publication and notify recipients';
+   $('publicationVersionChoice').textContent='Register only if different changes actually went live later. This starts a separate measurement period. Describe the new changes and select the actual live date. An updated e-mail is only sent to previously opted-in or newly supplied addresses when sending succeeds.';
+   $('recordPublication').textContent='Record later publication (email if configured)';
   }
  }
  $('editPreviousPublication').addEventListener('click',function(){selectPublicationChoice('edit')});
@@ -682,7 +682,7 @@
     (cf?(cf.sent?' A confirmation e-mail was sent just now'+(cf.translation&&cf.translation!=='AI_CHECKED'?' in English (no checked translation into the page language was available)':cf.language&&cf.language!=='en'?' in the page language ('+cf.language+')':'')+'; check your inbox (and spam).':cf.reason==='EMAIL_NOT_CONFIGURED'?' Warning: e-mail sending is not configured on the server (BREVO_API_KEY), so no confirmation and no reminder can be sent.':' Warning: the confirmation e-mail was not accepted by the mail service; the reminder may not arrive.'):''):' No reminder e-mail set.';
    status('publicationStatus',(editing?'Changes saved.':'Recorded. Growth reads the Search Console numbers of both periods itself when they are final; at the end of the test period you enter your enquiries from the e-mail link (or on the measurement page). You can close this page.')+rem+' You can still correct this record here while this page is open.',false);
   }catch(err){status('publicationStatus',err.message||'Not saved',true)}
-  finally{buttonProgress(btn,false,false);btn.disabled=false;btn.textContent=safe.publicationChoice==='new'?'Record later publication and notify recipients':safe.publicationId?'Save correction to existing publication':'Confirm publication → start measurement'}
+  finally{buttonProgress(btn,false,false);btn.disabled=false;btn.textContent=safe.publicationChoice==='new'?'Record later publication (email if configured)':safe.publicationId?'Save correction to existing publication':'Confirm publication → start measurement'}
  });
  // An edited package is a new candidate and can be exported again; no silent duplicate downloads.
  $('handoffForm').addEventListener('input',function(ev){
