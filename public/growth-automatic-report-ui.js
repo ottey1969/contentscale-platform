@@ -1119,11 +1119,12 @@
  }
 
  function renderAiContentTasks(d,choice){
-  if(!choice)return;
   var topics=aiContentTasks(d),box=document.getElementById('growthAiContentTasks');
   if(!box){box=document.createElement('section');box.id='growthAiContentTasks';box.className='tg-self';
    box.style.cssText='border:1px solid #93c5fd;background:#eff6ff;border-radius:12px;padding:16px;margin:16px 0';
-   choice.parentNode.insertBefore(box,choice.nextSibling)}
+   var place=document.querySelector('.tg-found')||choice;
+   if(place&&place.parentNode)place.parentNode.insertBefore(box,place.nextSibling);
+   else container.appendChild(box)}
   box.textContent='';box.hidden=!(d&&d.gap_list||d&&d.search_discovery||d&&d.ai_check);if(box.hidden)return;
   node('h3','Complete Growth AI Research & Writing Brief · '+topics.length+' AI-source topics',box);
   if(!topics.length)node('p','No AI-cited content gaps were identified or verified in this run. The complete research brief is still available, including Google research, current-page evidence, missing information, and the NO CHANGE option.',box).className='info';
@@ -1214,8 +1215,8 @@
   // This matches the Free Growth flow; AI answers remain optional.
   if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
-  if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';
-   renderAiContentTasks(d,choice);var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
+  renderAiContentTasks(d,choice);
+  if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
   if(decision&&!keepDecision){var dh=decision.querySelector('h2');if(dh)dh.textContent='Growth’s analysis of this search'}
   if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
   if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
