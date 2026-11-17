@@ -35,7 +35,7 @@ test('a removal is stored only when server accepts; ZIP route remains available 
  assert.match(ui,/function goToCmsDownload\(/);
  assert.match(ui,/removedSentences\(\)\.includes\(f\.sentence\)/);
 });
-test('screen's earlier concept remains optional and no automatic WordPress publication occurs',()=>{
+test('Earlier concept remains optional and never automatically publishes to WordPress',()=>{
  assert.match(ui,/Add to this package/);
  assert.match(ui,/safe\.added\.some/);
  assert.match(html,/CMS handoff ZIP/);
