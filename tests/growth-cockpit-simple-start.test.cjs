@@ -98,8 +98,11 @@ test('all five AI engines are visible in Cockpit without pretending a check happ
  const html=renderSimpleGrowthStart(opts);
  assert.match(html,/id="growthSimpleAiSystems"/);
  assert.match(html,/ChatGPT · Gemini · Perplexity · Claude · Copilot/);
- assert.match(html,/AI answers are optional/);
- assert.match(html,/no system has been checked by this start form/);
- assert.match(html,/Choose a page and run Growth to see saved AI answers/);
+ assert.match(html,/STEP 2 · OPTIONAL · AFTER GROWTH RESEARCH/);
+ assert.match(html,/What you do:/);
+ assert.match(html,/First choose a page above and start Growth/);
+ assert.match(html,/you may proceed without AI answers/);
+ assert.match(html,/No AI system is checked just by viewing this Cockpit/);
  assert.match(html,/id="growthSimpleContinue" disabled/);
+ assert.ok(html.indexOf('</form>') < html.indexOf('id="growthSimpleAiSystems"'),'AI systems must be a separate card outside the main page-selection form');
 });
