@@ -48,6 +48,19 @@ test('one CMS form offers choice between correcting record and distinct later pu
  assert.match(js,/safe\.publicationId=mode==='edit'\?Number\(old\.id\):null/);
  assert.match(js,/publicationChoice==='new'/);
 });
+test('a second mail is delivered to explicitly opted-in recipients and reports the new changes',async()=>{
+ const {sendConfirmation}=require('../src/growth-measurement-reminders.cjs');
+ const sent=[];
+ const r=await sendConfirmation({emails:['owner@example.com'],url:page,publishedAt:later,
+  notes:'Updated safety steps and contact guidance',send:async x=>{sent.push(x);return true},
+  model:null,updated:true,gscAvailable:false});
+ assert.equal(r.sent,true);
+ assert.deepEqual(sent[0].to,['owner@example.com']);
+ assert.match(sent[0].subject,/Updated published content/);
+ assert.match(sent[0].html,/Updated safety steps and contact guidance/);
+ const no=await sendConfirmation({emails:[],url:page,publishedAt:later,updated:true,send:async()=>{throw Error('should not send')}});
+ assert.equal(no.sent,false);assert.equal(no.reason,'NO_ADDRESSES');
+});
 test('corrected or second publication has a clearly distinguished email with content changes',()=>{
  const first=confirmationMessage({emails:['editor@example.com'],url:page,publishedAt:later,notes:'Original changes',gscAvailable:false});
  const updated=confirmationMessage({emails:['editor@example.com'],url:page,publishedAt:later,notes:'Updated page with newer sections',gscAvailable:false,updated:true});
