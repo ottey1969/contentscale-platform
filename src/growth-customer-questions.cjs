@@ -32,13 +32,16 @@ const searchable = (q, brand) => { const t = clean(q); const w = t.split(' ').le
 // sends SERPAPI_KEY to google.serper.dev). Before 2026-11-12 only SERPER_API_KEY was read, so in production no Google
 // question was ever found and Pre-Write fell back to the bare keyword.
 const serperKey = () => process.env.SERPER_API_KEY || process.env.SERPAPI_KEY || '';
-async function fromGoogle({ query, gl = 'us', hl = 'en', key = serperKey(), fetchImpl = global.fetch, ownHost = '' }) {
+async function fromGoogle({ query, gl = 'us', hl = 'en', location = '', key = serperKey(), fetchImpl = global.fetch, ownHost = '' }) {
   const term = clean(query).slice(0, 100);
+  // An owner-selected geographic location affects Google results, not just the displayed label.
+  const place = clean(location).slice(0, 100);
+  const geo = place ? { location: place } : {};
   if (!term) return { status: 'NO_SEARCH_TERM', questions: [] };
   if (!String(key || '').trim()) return { status: 'GOOGLE_NOT_CONFIGURED', questions: [] };
   try {
     const r = await fetchImpl('https://google.serper.dev/search', { method: 'POST', headers: { 'X-API-KEY': String(key).trim(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: term, gl, hl, num: 10 }), signal: AbortSignal.timeout(10000) });
+      body: JSON.stringify({ q: term, gl, hl, num: 10, ...geo }), signal: AbortSignal.timeout(10000) });
     if (!r.ok) return { status: 'GOOGLE_UNAVAILABLE', questions: [] };
     const p = await r.json();
     const out = [];
@@ -49,7 +52,7 @@ async function fromGoogle({ query, gl = 'us', hl = 'en', key = serperKey(), fetc
     if (!out.length) {
       try {
         const a = await fetchImpl('https://google.serper.dev/autocomplete', { method: 'POST', headers: { 'X-API-KEY': String(key).trim(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: term, gl, hl }), signal: AbortSignal.timeout(8000) });
+          body: JSON.stringify({ q: term, gl, hl, ...geo }), signal: AbortSignal.timeout(8000) });
         if (a && a.ok) { const j = await a.json();
           // Every keyword word as a whole word (owner 2026-11-12: "consultor geo" → "consultor geologia", "consultor político").
           const fold = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -59,7 +62,7 @@ async function fromGoogle({ query, gl = 'us', hl = 'en', key = serperKey(), fetc
             out.push({ text: q, source: 'GOOGLE_AUTOCOMPLETE', label: 'Google · Autocomplete (search phrase, not a question)' }); } }
       } catch (e) { /* autocomplete is optional */ }
     }
-    return { status: out.length ? 'GOOGLE_QUESTIONS_FOUND' : 'GOOGLE_NO_QUESTIONS', questions: out, searched: { query: term, gl, hl } };
+    return { status: out.length ? 'GOOGLE_QUESTIONS_FOUND' : 'GOOGLE_NO_QUESTIONS', questions: out, searched: { query: term, gl, hl, ...(place ? { location: place } : {}) } };
   } catch (e) { return { status: 'GOOGLE_UNAVAILABLE', questions: [] }; }
 }
 
@@ -166,10 +169,11 @@ async function aiQuestionForTerm({term,gl='us',hl='en',key,fetchImpl,now=Date.no
 // shows nothing there, one market with the same language is asked, and every question says where it was seen.
 const MARKET_FALLBACK = { es: 'mx', nl: 'be', uk: 'us', gb: 'us', us: 'uk', de: 'at', fr: 'be', it: 'ch', pt: 'br' };
 const MARKET_NAME = { es: 'Spain', mx: 'México', nl: 'Netherlands', be: 'Belgium', uk: 'United Kingdom', gb: 'United Kingdom', us: 'United States', de: 'Germany', at: 'Austria', fr: 'France', it: 'Italy', ch: 'Switzerland', pt: 'Portugal', br: 'Brasil' };
-async function googleWithFallback({ query, gl, hl, key, fetchImpl, ownHost }) {
-  const g = await fromGoogle({ query, gl, hl, key, fetchImpl, ownHost });
+async function googleWithFallback({ query, gl, hl, location = '', key, fetchImpl, ownHost }) {
+  const g = await fromGoogle({ query, gl, hl, location, key, fetchImpl, ownHost });
   const alt = MARKET_FALLBACK[String(gl || '').toLowerCase()];
-  if (g.questions.length || !alt || /UNAVAILABLE|NOT_CONFIGURED|NO_SEARCH_TERM/.test(g.status || '')) return g;
+  // A specified state/city must never silently fall back to a different country.
+  if (location || g.questions.length || !alt || /UNAVAILABLE|NOT_CONFIGURED|NO_SEARCH_TERM/.test(g.status || '')) return g;
   const f = await fromGoogle({ query, gl: alt, hl, key, fetchImpl, ownHost });
   if (!f.questions.length) return g;
   const name = MARKET_NAME[alt] || alt.toUpperCase(), home = MARKET_NAME[String(gl).toLowerCase()] || String(gl).toUpperCase();
@@ -188,12 +192,12 @@ function otherLanguage(text,hl){
   const strong=w.filter(x=>EN_STRONG.has(x)).length,all=w.filter(x=>EN_ONLY.has(x)).length;
   return strong>=2&&all/w.length>=0.3;
 }
-async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl = 'us', hl = 'en', key, fetchImpl, model } = {}) {
+async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl = 'us', hl = 'en', location = '', key, fetchImpl, model } = {}) {
   const offer = pageOffer(html);
   const ownHost = (() => { try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch (e) { return ''; } })();
   // Google is asked with the tracked keyword, or the page's own topic when there is none (context, not the question).
   const seed = clean(keyword) || (offer.h1[0] || offer.title.split(/\s[|–—-]\s/)[0] || '');
-  const g = await googleWithFallback({ query: seed, gl, hl, key, fetchImpl, ownHost });
+  const g = await googleWithFallback({ query: seed, gl, hl, location, key, fetchImpl, ownHost });
   const observed = rankQuestions(g.questions,{offer,seed});
   // Never spend AI credits generating suggestions if relevant Google-observed questions exist.
   const a = observed.observed_question_count
