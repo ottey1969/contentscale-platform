@@ -11,8 +11,8 @@ input,select,textarea{box-sizing:border-box;width:100%;padding:11px;border:1px s
 textarea{resize:vertical;min-height:100px}button{border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:750;padding:11px 16px;cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color .18s ease,transform .15s ease,box-shadow .18s ease}button:not(:disabled):active,button.growth-pressed{transform:scale(.98);filter:brightness(1.08)}button[data-busy="true"]{position:relative;padding-right:42px;cursor:progress;animation:growthButtonPulse 1.2s ease-in-out infinite}button[data-busy="true"]::after{content:"";position:absolute;right:14px;top:50%;width:14px;height:14px;margin-top:-9px;border:2px solid rgba(255,255,255,.55);border-top-color:white;border-radius:50%;animation:growthButtonSpin .7s linear infinite}button[data-done="true"]{background:#15803d;color:white}@keyframes growthButtonSpin{to{transform:rotate(360deg)}}@keyframes growthButtonPulse{50%{filter:brightness(1.1)}}@media(prefers-reduced-motion:reduce){button,button[data-busy="true"],button[data-busy="true"]::after{animation:none;transition:none}}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:20px}
 /* One unmistakable action: orange draft first, then blue CMS download after approval. */
-#generateEditorialDraft{background:#c65b07;color:#fff;border:2px solid #a84305;box-shadow:0 3px 0 rgba(124,45,18,.16);font-size:15px}
-#generateEditorialDraft:not(:disabled):hover{background:#9a3412}
+#generateEditorialDraft{background:#64748b;color:#fff;border:1px solid #475569;box-shadow:none;font-size:14px}
+#generateEditorialDraft:not(:disabled):hover{background:#475569}
 #generateEditorialDraft[data-stage="done"]{background:#15803d;border-color:#166534;box-shadow:none}
 #generateEditorialDraft:disabled{opacity:.58}
 #download{background:#1d4ed8;color:#fff}
@@ -55,26 +55,26 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <label for="query">Customer question for this Growth draft (exact research intent)</label>
 <p class="small">This must match the customer question from the original Growth research. A tracked seed is not a substitute.</p><input id="query" maxlength="300" autocomplete="off"><div id="savedQuestionChooser" class="note" hidden aria-live="polite"><strong>Select the saved Growth research question</strong><p class="small">This CMS link did not contain a question, or the exact saved report was not found. Choose the correct previous research below. No new scan or credits are used.</p><div id="savedQuestionChoices"></div></div>
 <div id="existingMetadata" class="note" hidden><strong>Existing page metadata — reference only, not approved for this research question</strong><p id="existingTitle" class="small"></p><p id="existingMeta" class="small"></p></div>
-<label for="title">SEO title proposed for this customer question · review required</label><input id="title" maxlength="100" required>
-<label for="meta">Meta description proposed for this customer question · verify every business claim</label>
-<p class="small">Do not reuse an older query’s title, or unconfirmed promises about 24-hour response, licensing, service area or phone numbers.</p><textarea id="meta" maxlength="220" rows="2" required></textarea>
+<label for="title">SEO title draft for this customer question · review required</label><input id="title" maxlength="100" required>
+<label for="meta">Meta description draft for this customer question · review required</label>
+<p id="seoDraftNotice" class="small" hidden></p><p class="small">Do not reuse unconfirmed promises about availability, response time, licensing, service area or phone numbers.</p><textarea id="meta" maxlength="220" rows="2" required></textarea>
 <label class="check"><input id="personalVoice" type="checkbox"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label>
 </fieldset>
-<fieldset><legend>3. Generate, review and approve content for the original page</legend>
-<p class="note"><strong>Required before CMS download:</strong> Generate an AI draft for this customer question. Then review the wording, facts and safety claims, and approve. Previously saved proposals are reference material, not approved new research.</p>
-<div class="actions"><button type="button" id="generateEditorialDraft" disabled>3A. FIRST · Advanced: Generate a different draft →</button><small id="aiDraftStatus" role="status">FIRST: generate the draft for the exact customer question above. Then review and approve it to unlock the CMS download.</small></div>
+<fieldset><legend>3. Review saved Growth content for the original page</legend>
+<p class="note"><strong>Normal Growth handoff:</strong> the existing Growth proposal is loaded automatically for the same customer question. Review the suggested copy and claims, approve, then download the CMS package. A second AI draft is not required.</p>
+<details id="advancedAlternative"><summary>Advanced · Generate a different draft (optional)</summary><p class="small">Only use this if you want a fresh alternative instead of the saved Growth text. It may use AI credits. It is NOT required for CMS download.</p><div class="actions"><button type="button" id="generateEditorialDraft" disabled>Advanced · Generate a different draft (optional)</button><small id="aiDraftStatus" role="status">Optional alternative — your saved Growth proposal does not require another AI request.</small></div></details>
 <div id="growthProposal" class="note" hidden aria-live="polite"></div>
 <div id="mainPlacement"></div>
-<label for="heading">3B. Review the proposed H2 heading · approve before publication</label><input id="heading" required>
+<label for="heading">Review the proposed H2 heading · approve before publication</label><input id="heading" required>
 <label for="copy">Reviewed copy (at least 30 characters; verify all factual and safety claims)</label><textarea id="copy" rows="7" required placeholder="Use real customer-approved facts and documented evidence. No invented reviews, rankings or projects."></textarea>
 <div id="growthAdditionalSections" aria-label="Additional optional drafted sections"></div>
 
 <div class="form-grid" id="growthVerifiedLinkFields" hidden><div><label for="linkUrl">Optional contextual internal link URL</label><input id="linkUrl" type="url"></div><div><label for="linkText">Internal link label</label><input id="linkText"></div></div>
 <label class="check" id="confirmAllWrap" hidden><input id="confirmAll" type="checkbox"><span id="confirmAllText">I checked every statement listed above.</span></label>
 <p id="noStatementsNote" class="small" hidden>No individual verification notes were generated. This does not prove that the text is correct or publication-ready. Review every factual and safety claim before approving.</p>
-<label class="check"><input id="approved" type="checkbox" required><span>3C. I reviewed the actual page, the proposed facts, source evidence and link. I approve a package for a human editor, not automatic publication.</span></label>
+<label class="check"><input id="approved" type="checkbox" required><span>I reviewed the actual page, the proposed facts, source evidence and link. I approve a package for a human editor, not automatic publication.</span></label>
 </fieldset>
-<p id="cmsUnlockHint" data-stage="locked" role="status" aria-live="polite">🔒 First click the orange Advanced button above. Then review and approve the draft; this CMS download button will turn blue and become active.</p>
+<p id="cmsUnlockHint" data-stage="locked" role="status" aria-live="polite">Review the saved Growth content, verify claims and approve it. The Advanced alternative is optional.</p>
 <div class="actions"><button id="download" type="submit" disabled>4. Download reviewed CMS handoff ZIP</button><span id="downloadStatus" role="status"></span></div>
 <p id="downloadWhy" class="small" role="status" hidden></p>
 </form>
