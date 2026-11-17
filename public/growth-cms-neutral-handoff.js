@@ -174,6 +174,25 @@
    all.textContent=n?'Removed '+n+' flagged sentence(s)':'Nothing left to remove';all.disabled=true};
   anchor.parentNode.insertBefore(all,anchor);
  }
+ // A warning for text which is no longer in the editable package is not a
+ // statement the owner must mark true. Dismiss its obsolete check persistently.
+ function retireAbsentFlag(box,sentence){
+  var key=normS(sentence);
+  [...(box||document).querySelectorAll('.growth-flag-fact')].forEach(function(label){
+   if(label.dataset.flaggedSentence===key)label.remove();
+  });
+  ready();
+ }
+ function goToCmsDownload(){
+  var target=$('download'),reason=$('downloadWhy');
+  if(!target)return;
+  ready();
+  var el=target.disabled&&reason&&!reason.hidden?reason:target;
+  el.style.scrollMarginTop='110px';
+  el.scrollIntoView({block:'center',behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  if(target.disabled&&reason){reason.style.outline='2px solid #f59e0b';reason.style.padding='8px';reason.style.borderRadius='6px';reason.textContent='CMS package not ready: '+reason.textContent}
+  else target.focus();
+ }
  function flaggedReviewAction(box,flag){
   var sentence=String(flag&&flag.sentence||'').trim();
   if(!sentence)return;
@@ -205,24 +224,38 @@
     alt.onclick=function(){var n=removeFlaggedSentence(near.text);if(n){saveRemoval(sentence,'REMOVED_BY_BUTTON');done('Changed version removed — remembered for this page.')}
      else result.textContent='Why not: the changed sentence could not be found as one piece (it may run across lines). Delete it by hand in the text field.'};
     return}
-   // Not in the text at all: nothing to remove, no click needed. Shown as resolved; only an owner's click is remembered,
-   // and the package itself still checks the final text.
-   done('Not in your text anymore — nothing to remove; the package checks the final text again.','Resolved — not in text');
+   // The old proposal warned about a sentence that is not in the actual
+   // editable text. Let the owner dismiss the stale warning instead of
+   // requiring a meaningless "it is true" checkbox.
+   action.hidden=false;action.disabled=false;action.textContent='Dismiss obsolete warning — sentence not in draft';
+   keep.hidden=true;show.hidden=true;alt.hidden=true;undoKeep.hidden=true;
+   result.textContent='This sentence is not in the editable CMS text. You can dismiss the obsolete warning; the final package still checks its content.';
   };
-  action.addEventListener('click',function(){
+  action.addEventListener('click',async function(){
+   action.disabled=true;
    var n=removeFlaggedSentence(sentence);
-   if(n){saveRemoval(sentence,'REMOVED_BY_BUTTON');done('Removed from '+n+' draft text field(s) — remembered for this page. Review the remaining paragraph before downloading.')}
-   else refresh();
+   if(n){
+    var saved=await saveRemoval(sentence,'REMOVED_BY_BUTTON');
+    if(!saved){result.textContent='Removed locally, but the decision could not be saved to this page. Check your connection before downloading.';action.disabled=false;return}
+    retireAbsentFlag(box,sentence);
+    done('Removed from '+n+' draft text field(s) and saved for this page. Review the remaining paragraph.');
+   }else if(!inDraft(sentence)&&!closestSentence(sentence)){
+    var savedAbsent=await saveRemoval(sentence,'NOT_IN_DRAFT');
+    if(!savedAbsent){action.disabled=false;result.textContent='Cannot save this dismissal yet; retry when the connection works.';return}
+    retireAbsentFlag(box,sentence);
+    done('Obsolete warning dismissed and saved. The sentence is not in the CMS package.','Dismissed — not in draft');
+   }else{action.disabled=false;refresh()}
   });
-  flagRows.push({refresh:refresh});
+  flagRows.push({refresh:function(){if(row.isConnected)refresh()}});
   box.appendChild(row);
   // The first flagged sentence brings the page-wide "Remove all" button with it (placed above that box).
   if(box.parentNode)flaggedRemoveAll(box);
   setTimeout(refresh,0);
  }
  // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
- function checkItem(box,item){
+ function checkItem(box,item,flaggedSentence){
   var l=document.createElement('label');l.className='check';
+  if(flaggedSentence){l.classList.add('growth-flag-fact');l.dataset.flaggedSentence=normS(flaggedSentence)}
   var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
   var sp=document.createElement('span');sp.textContent=item;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
  }
@@ -304,7 +337,7 @@
     // One tick per sentence, under the first (strictest-listed) check that names it.
     var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
     var t=document.createElement('p');t.textContent=g[1]+' (confirm them all at once at the end of step 3, or one by one):';box.appendChild(t);
-    items.forEach(function(item){checkItem(box,item)});
+    items.forEach(function(item){var match=g[0]==='flagged_text'?(r.flagged||[]).find(function(f){return f.sentence&&item.indexOf('“'+f.sentence+'”')>=0}):null;checkItem(box,item,match&&match.sentence)});
     if(g[0]==='flagged_text')(r.flagged||[]).forEach(function(f){flaggedReviewAction(box,f)});
    });
    if((r.competitor_sources||[]).length){
