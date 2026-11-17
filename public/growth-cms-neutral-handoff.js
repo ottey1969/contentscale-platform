@@ -369,6 +369,11 @@
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
+ function showVerifiedLink(){
+  var hasLink=!!$('linkUrl').value.trim();
+  $('growthVerifiedLinkFields').hidden=!hasLink;
+  if(!hasLink)$('linkText').value='';
+ }
  async function loadSeoProposal(target,linkUrl){
   try{
    var res=await fetch(base+'/seo-proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(String($('query').value||requestedQuestion||'').trim())+(linkUrl?'&link='+encodeURIComponent(linkUrl):''),{cache:'no-store',credentials:'same-origin'});
@@ -376,12 +381,13 @@
    var old=target.querySelector&&target.querySelector('.seo-proposal');if(old)old.remove();
    var box=document.createElement('div');box.className='note seo-proposal';target.appendChild(box);
    if(linkUrl&&!d.link_url){
-    if($('linkUrl').value===linkUrl){$('linkUrl').value='';$('linkText').value=''}
+    if($('linkUrl').value===linkUrl){$('linkUrl').value='';$('linkText').value='';showVerifiedLink()}
     var note=document.createElement('p');
     note.textContent='Internal link not verified as a direct working page ('+String(d.link_verification||'unknown')+'). It was removed; no 301 or unverified link will enter the CMS package.';
     box.appendChild(note);
    }else if(linkUrl&&d.link_url&&d.link_url!==linkUrl){
     if($('linkUrl').value===linkUrl)$('linkUrl').value=d.link_url;
+     showVerifiedLink();
     var note=document.createElement('p');
     note.textContent='Redirect resolved: the proposed link now points straight to '+d.link_url+'.';
     box.appendChild(note);
@@ -390,7 +396,7 @@
    // The owner's own values are kept from the first time only (a second source check must not keep the AI text as "current").
    if(!safe.seoOriginal)safe.seoOriginal={title:$('title').value,meta:$('meta').value,link:$('linkText').value};
    var cur=d.current||{},prev=safe.seoOriginal;
-   $('title').value=d.title;$('meta').value=d.meta_description;if(d.link_text&&$('linkUrl').value)$('linkText').value=d.link_text;
+   $('title').value=d.title;$('meta').value=d.meta_description;if(d.link_text&&$('linkUrl').value)$('linkText').value=d.link_text;showVerifiedLink();
    var h=document.createElement('strong');h.textContent='SEO title, description'+(d.link_text?' and link text':'')+' proposed by AI — review before you download';box.appendChild(h);
    var w=document.createElement('p');w.className='small';w.textContent=(d.why?d.why+' ':'')+'Checked: length, the search term in the title, no number, superlative or promise that is not already on your page. Current title: “'+(cur.title||prev.title)+'”.';box.appendChild(w);
    var back=document.createElement('button');back.type='button';back.textContent='Use my current title and description';
@@ -407,7 +413,7 @@
    var d=await res.json(),x=d.handoff_suggestions||{};
    if(d.success!==true||Number(d.page_id)!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
    if(d.competitor_overview&&typeof window.renderGrowthCompetitorOverview==='function'){var ov=$('growthCompetitorOverview');ov.textContent='';try{ov.hidden=!window.renderGrowthCompetitorOverview(d.competitor_overview,ov)}catch(e){ov.hidden=true}}
-   try{$('linkUrl').placeholder=new URL(src.canonical_url).origin+'/a-related-page/';$('linkText').placeholder='Words that say where the link goes'}catch(e){}
+    showVerifiedLink(); // No fabricated example destination.
    if(!$('query').value&&x.query)$('query').value=x.query;
    if(!$('title').value&&x.title)$('title').value=x.title;
    if(!$('meta').value&&x.meta)$('meta').value=x.meta;
@@ -435,9 +441,10 @@
     // Filled in automatically for review (the editor approves the whole package; the fields stay editable).
     if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
     if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
+     showVerifiedLink();
     var sug=document.createElement('p');sug.textContent='Internal link filled in by Growth: '+x.internal_url+(x.internal_reason?'. '+x.internal_reason:'')+' Check it, change it or clear both fields.';target.appendChild(sug);
    }
-   else{var none=document.createElement('p');none.textContent='No internal link suggested by the research. The link is optional: leave both fields empty, or add a page of your own site that helps this reader next.';target.appendChild(none)}
+    else{showVerifiedLink()}
    void loadSeoProposal(target,x.internal_url||'');
    if(!x.meta||!x.title){
     var missing=document.createElement('p');
@@ -452,7 +459,8 @@
   $('checkSource').disabled=true;
  }
  if(requestedQuestion)$('query').value=requestedQuestion;
- $('approved').addEventListener('change',ready);
+ showVerifiedLink();
+  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);
  $('manualOriginalHtml').addEventListener('input',ready);
@@ -550,6 +558,7 @@
   }
  });
  function build(){
+   showVerifiedLink();
   const src=safe.source;if(!src)throw Error('Check the saved original page first');
   if(!$('approved').checked)throw Error('Editorial approval is required');
   const heading=$('heading').value.trim(),copy=$('copy').value.trim();
