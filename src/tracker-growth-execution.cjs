@@ -72,16 +72,41 @@ function registerGrowthExecution(app,pool,deps={}){
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS gsc_evidence TEXT;
     ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS growth_proposal_id BIGINT`);
+   // Never treat a second click as another publication. Editing an existing
+   // checkpoint uses /publication/:id; a genuine later live update is a new
+   // measurement event and must be explicitly chosen by its owner.
+   const prior=(await pool.query(
+    "SELECT id,published_at,notes FROM tracker_growth_publications WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND LOWER(TRIM(query))=LOWER(TRIM($3)) ORDER BY published_at DESC,id DESC LIMIT 1",
+    [c.id,pageId,query])).rows[0]||null;
+   if(prior){
+    const newer=Date.parse(publishedAt)>Date.parse(prior.published_at)+60000;
+    const distinct=notes.toLowerCase().replace(/\s+/g,' ').trim()!==String(prior.notes||'').toLowerCase().replace(/\s+/g,' ').trim();
+    if(req.body?.new_publication!==true||!newer||!distinct){
+     return res.status(409).json({success:false,code:'EXISTING_PUBLICATION',
+      error:!newer&&req.body?.new_publication===true?'The new publication must have a later actual live date than the previous update.':
+       !distinct&&req.body?.new_publication===true?'Describe the new changes, not the same earlier publication.':
+       'This page and question already have a recorded publication. Update the existing record, or explicitly confirm a different later live update.',
+      previous:{id:prior.id,published_at:prior.published_at,notes:prior.notes},
+      can_update:true,can_record_later_release:true});
+    }
+   }
    const gscEvidence=verified?'VERIFIED':'NEEDS_ACCESS';
    const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at,gsc_evidence,growth_proposal_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt,gscEvidence,proposalId]);
    // Baseline: if the 28 days before publication are already final in Search Console (a publication recorded a few days
    // late), read them now; otherwise the hourly check reads them as soon as they are.
    const pubId=Number(result.rows[0].id);
    setImmediate(()=>require('./tracker-growth-gsc-direct.cjs').importGscWindows(pool,{clientId:c.id,publicationId:pubId,periods:['before']}).catch(()=>{}));
-   const reminder=mail.emails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:mail.emails,publishedAt}).catch(()=>null):null;
+   // A deliberate second publication should notify the same opted-in contacts
+   // unless the owner supplied different addresses (or explicitly opted out).
+   var recipientEmails=mail.emails;
+   if(prior&&req.body?.new_publication===true&&!recipientEmails.length&&req.body?.send_update_email!==false){
+    const previousReminder=await reminders.loadReminder(pool,{clientId:c.id,publicationId:Number(prior.id)}).catch(()=>null);
+    recipientEmails=previousReminder?.emails||[];
+   }
+   const reminder=recipientEmails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:recipientEmails,publishedAt}).catch(()=>null):null;
    const html=reminder?(await pool.query("SELECT to_jsonb(p)->>'html_content' AS html FROM tracker_pages p WHERE id=$1",[pageId]).catch(()=>({rows:[]}))).rows[0]?.html:null;
    const ctx=reminder?await reminders.publicationContext(pool,{clientId:c.id,publicationId:pubId}).catch(()=>null):null;
-   const confirmation=reminder?await reminders.sendConfirmation({emails:reminder.emails,url:pg.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx}):null;
+   const confirmation=reminder?await reminders.sendConfirmation({emails:reminder.emails,url:pg.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx,updated:!!prior}):null;
    res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,reminder:reminder?{emails:reminder.emails,due_at:reminder.due_at,confirmation}:mail.emails.length?{error:'NOT_SAVED'}:null,
     state:verified?'PUBLISHED_AWAITING_GSC_COMPARISON':'PUBLISHED_NEEDS_SEARCH_CONSOLE_FOR_MEASUREMENT',measured_improvement:false});
   }catch(e){console.error('[growth-publication]',e.message);res.status(503).json({success:false,error:'Publication record unavailable; no claims were made'})}
@@ -109,14 +134,26 @@ function registerGrowthExecution(app,pool,deps={}){
    const mail=reminders.parseEmails(req.body&&req.body.reminder_emails);
    if(mail.invalid.length)return res.status(400).json({success:false,error:'Not an e-mail address: '+mail.invalid.slice(0,3).join(', ')});
    if(mail.too_many)return res.status(400).json({success:false,error:'At most 5 e-mail addresses for the reminder'});
+   // A correction without any actual changed date, notes or reminder recipients
+   // must not produce a second confirmation or a false "saved" event.
+   if(!modified){
+    if(!(req.body&&'reminder_emails' in req.body))
+     return res.status(409).json({success:false,code:'NO_PUBLICATION_CHANGE',error:'Nothing changed. This publication is already recorded; edit a field or register a distinct later live update.'});
+    const previousReminder=await reminders.loadReminder(pool,{clientId:c.id,publicationId:id}).catch(()=>null);
+    const oldEmails=(previousReminder?.emails||[]).map(x=>String(x).toLowerCase()).sort();
+    const nextEmails=[...mail.emails].map(x=>String(x).toLowerCase()).sort();
+    if(JSON.stringify(oldEmails)===JSON.stringify(nextEmails))
+     return res.status(409).json({success:false,code:'NO_PUBLICATION_CHANGE',error:'No publication details or reminder recipients changed. Nothing was resent.'});
+   }
    const row=(await pool.query('UPDATE tracker_growth_publications SET notes=$3,published_at=$4 WHERE id=$1 AND tracker_client_id=$2 RETURNING id,published_at,notes',[id,c.id,notes,publishedAt])).rows[0];
    const reminder=req.body&&'reminder_emails' in req.body?await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:mail.emails,publishedAt}):await reminders.loadReminder(pool,{clientId:c.id,publicationId:id});
    if(reminder&&moved&&!(req.body&&'reminder_emails' in req.body))await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:reminder.emails,publishedAt});
-   const wantsMail=!!(reminder&&req.body&&'reminder_emails' in req.body);
+   const modified=String(notes)!==String(pub.notes)||Date.parse(publishedAt)!==Date.parse(pub.published_at);
+   const wantsMail=!!(reminder&&(modified||(req.body&&'reminder_emails' in req.body)));
    const html=wantsMail?(await pool.query("SELECT to_jsonb(p)->>'html_content' AS html FROM tracker_pages p JOIN tracker_growth_publications g ON g.tracker_page_id=p.id AND g.tracker_client_id=p.tracker_client_id WHERE g.id=$1",[id]).catch(()=>({rows:[]}))).rows[0]?.html:null;
    const ctx=wantsMail?await reminders.publicationContext(pool,{clientId:c.id,publicationId:id}).catch(()=>null):null;
-   const confirmation=wantsMail?await reminders.sendConfirmation({emails:reminder.emails,url:pub.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx}):null;
-   res.json({success:true,publication:row,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt),confirmation}:null,live_page_changed:false});
+   const confirmation=wantsMail?await reminders.sendConfirmation({emails:reminder.emails,url:pub.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx,updated:modified}):null;
+   res.json({success:true,publication:row,updated_existing:true,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt),confirmation}:null,live_page_changed:false});
   }catch(e){console.error('[growth-publication-edit]',e.message);res.status(503).json({success:false,error:'Publication record unavailable'})}
  });
  reminders.startReminderLoop(pool);

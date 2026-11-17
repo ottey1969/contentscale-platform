@@ -62,7 +62,7 @@ const T={
   addedWhy:(a,h)=>(a?'Answers the question: “'+a+'”. ':'')+(h?'Pages that Google shows for this search answer it too: '+h+'.':''),
   standing:'Where your page stands in Google now',
   purpose:'Why Growth recommended this change',purposeText:'Growth compares your page with pages appearing in Google for the same search. It looks for useful questions and topics that relevant competing pages address but your page does not cover sufficiently. These are opportunities to help visitors find clearer, more complete answers—not proof that Google rewards a particular section.',
-  method:'Where the information comes from',methodText:'The search term and proposed sections come from the saved Growth research and editorial proposal. The example websites listed under each section come from that research; they are not endorsements or proof of a ranking factor. Clicks, impressions and average position, when available, come from Google Search Console or the named Tracker data. We compare 28 days before and after publication, but changes cannot be attributed to the edit alone.',
+  method:'Where the information comes from',methodText:'The search term and proposed sections come from the saved Growth research and editorial proposal. The example websites listed under each section come from that research; they are not endorsements or proof of a ranking factor. The counts of how often the page appeared in Google, how often people clicked it and where it typically appeared come from Google Search Console or the named Tracker data, when available. We compare 28 days before and after publication, but changes cannot be attributed to the edit alone.',
   baseBefore:(c,i,p)=>'In the 4 weeks before the update ('+p+') your page was shown '+i+' times in Google for this search and clicked '+c+' times (Google Search Console).',
   baseLatest:(c,i,pos,d)=>'The latest Google numbers we have for this search ('+d+'): shown '+i+' times, clicked '+c+' times'+(pos?', average position '+pos:'')+' (Google Search Console).',
   baseCountry:(c,i,p)=>'In '+p+' your page was shown '+i+' times in Google for this search and clicked '+c+' times (Google Search Console).',
@@ -154,12 +154,12 @@ function message({url,query,publishedAt,link,gsc=null,leads=null,notes='',lang='
  const html=wrap('<p>'+t.hello+'</p><p>'+t.intro2+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+rationaleBlock(lang)+addedBlock(ctx,lang)+block(t.measured,numbers)+question+block(t.next,'<p>'+(need.length?t.nextAsk:t.nextDone)+'</p>')+block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.sign+'</p>');
  return {subject:t.subjResult(page(url),need.length>0),html};
 }
-function confirmationMessage({emails,url,publishedAt,notes='',gscAvailable,lang='en',ctx=null}){
+function confirmationMessage({emails,url,publishedAt,notes='',gscAvailable,lang='en',ctx=null,updated=false}){
  const t=tx(lang),due=dueAt(publishedAt),w=windowsOf(publishedAt),d=longDate(due,lang);
  const html=wrap('<p>'+t.hello+'</p><p>'+t.intro1+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+rationaleBlock(lang)+addedBlock(ctx,lang)+standingBlock(ctx,publishedAt,lang)+block(t.now,'<p>'+t.nowText+'</p>')+
   block(t.check(d),'<ul style="padding-left:20px"><li>'+t.checkGoogle(span(w,'before',lang),span(w,'after',lang))+(gscAvailable?t.readsItself:t.noAccessYet)+'</li><li>'+t.checkLeads(d)+'</li></ul>')+
   block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.why(emails.map(escH).join(', '))+'</p><p>'+t.sign+'</p>');
- return {subject:t.subjConfirm(d),html};
+ return {subject:updated?'Updated published content — '+t.subjConfirm(d):t.subjConfirm(d),html:updated?html.replace('<p>'+t.hello+'</p>','<p>'+t.hello+'</p><p><strong>This is a second confirmation because the recorded page content or publication was updated.</strong> The current changes and dates are listed below.</p>'):html};
 }
 // What Growth knows about a publication: search term, added sections (from the Growth proposal it came from) and the
 // best available current Google numbers for this page and term, in this order: the stored "before" period, the latest
@@ -245,11 +245,11 @@ function brevoSend({to,subject,html}){
 }
 // Confirmation right after the reminder is set or changed (owner 2026-11-02: "it does not work" — nothing arrived, so
 // nothing showed that it was set). It states the date and the addresses; it contains no owner link.
-async function sendConfirmation({emails,url,publishedAt,notes='',send=brevoSend,lang='en',model=undefined,ctx=null,
+async function sendConfirmation({emails,url,publishedAt,notes='',send=brevoSend,lang='en',model=undefined,ctx=null,updated=false,
  gscAvailable=!!(process.env.GSC_SERVICE_ACCOUNT_JSON||process.env.GSC_GROWTH_SERVICE_ACCOUNT_KEY_FILE||process.env.GSC_GROWTH_REFRESH_TOKEN)}){
  if(!emails.length)return {sent:false,reason:'NO_ADDRESSES'};
  if(send===brevoSend&&!process.env.BREVO_API_KEY)return {sent:false,reason:'EMAIL_NOT_CONFIGURED'};
- const m=await localize(confirmationMessage({emails,url,publishedAt,notes,gscAvailable,lang:T[lang]?lang:'en',ctx}),lang,{model:model===undefined?require('./growth-task-meaning.cjs').geminiModel():model});
+ const m=await localize(confirmationMessage({emails,url,publishedAt,notes,gscAvailable,lang:T[lang]?lang:'en',ctx,updated}),lang,{model:model===undefined?require('./growth-task-meaning.cjs').geminiModel():model});
  const ok=await send({to:emails,subject:m.subject,html:m.html}).catch(()=>false);
  return ok?{sent:true,language:m.language,...(m.translation?{translation:m.translation}:{})}:{sent:false,reason:'NOT_ACCEPTED'};
 }

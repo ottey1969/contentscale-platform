@@ -1248,8 +1248,16 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<details id="growthTechnicalExport"><summary>Advanced · Technical report and research controls</summary><p class="info">JSON is for audits and troubleshooting, not required for publication.</p>',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button> ',
    '<button id="retryResearch" type="button" hidden style="background:#64748b">Run research again</button></details></section>',
-   '<details id="growthNextAction"><summary>Measurement after publication</summary>',
-   '<p><a id="growthMeasurementLink" href="'+base+'/measurement">Review publication measurement readiness</a> — GSC is optional for research and required only for verified Google measurements.</p></details>',
+   '<section id="growthNextAction"><h2>Step 3 · Publish and measure</h2>',
+   '<p class="info">Once the changes have been reviewed and published on your actual website, record their publication in the same CMS package. Growth does not publish automatically.</p>',
+   (req.growth?.can_edit!==true?'<p>Only the Tracker owner can prepare publication or record a change.</p>':
+    v.page.case_study_active?'<p class="error">This page is protected by an active Case Study. End the Case Study in Tracker before publishing a change.</p>':
+    '<div id="growthPublishWizard"><p id="growthPublishState" role="status" aria-live="polite">Checking whether an update has already been recorded…</p>'+
+    '<div id="growthPublishNotRecorded" hidden><p><strong>1.</strong> Review and download the CMS package. <strong>2.</strong> Publish the approved changes on your website. <strong>3.</strong> Use the publication confirmation on that same CMS package page (date, changes, optional reminder e-mails).</p>'+
+    '<p><a id="growthPublishContinue" class="growth-primary-finish" href="'+handoff+'">Open CMS package → publication confirmation</a></p></div></div>'),
+   '<div id="growthPublishRecorded" hidden><p><strong>Publication recorded.</strong> The date and query are saved; real before/after evidence is needed before Growth can report click changes.</p></div>',
+   '<p id="growthMeasurementCTA" hidden><a id="growthMeasurementLink" class="growth-primary-finish" href="'+base+'/measurement">View measurement status →</a></p>',
+   '<details id="growthMeasurementAdvanced"><summary>Advanced · How measurements work</summary><p class="info">Google Search Console is optional for research. Verified Google click comparisons require actual page/query metrics from matching 28-day periods. You can also record enquiries from your own records. Results are observations, not proof that the edit caused them.</p></details></section>',
    '</main></body></html>'
   ].join('');
   return res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex,nofollow')
