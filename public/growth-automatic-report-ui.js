@@ -1172,7 +1172,12 @@
  function pointHandoff(r){
   var a=document.getElementById('growthEditorHandoff'),h=r&&r.cms_handoff;
   if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
-  a.href=h.url;a.textContent='Prepare the CMS package with the checked Growth text';
+  var selectedQuestion=runQuery;
+   var target=new URL(h.url,location.origin);
+   if(target.origin!==location.origin)return;
+   if(selectedQuestion)target.searchParams.set('query',selectedQuestion);
+   a.href=target.pathname+target.search;
+   a.textContent='Review the draft and prepare CMS package'+(selectedQuestion?' for this customer question':'');
  }
  // Share Free Growth's genuinely grounded Gemini check; never misattribute other AI providers.
  var autoAiPending=false;
