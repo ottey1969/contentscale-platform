@@ -1157,8 +1157,9 @@
   var evl=node('li',null,fl),eva=node('a','Open source evidence',evl);eva.href='#growthEvidenceAll';
   // The AI systems research is visible BEFORE topics, not buried under evidence tabs.
   // This matches the Free Growth flow; AI answers remain optional.
+  if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
+  // The actionable plan belongs above the AI-system counters, not underneath them.
   var summaryPanel=improvementPanel(d);container.insertBefore(summaryPanel,found.nextSibling);
-   if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';
    var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
