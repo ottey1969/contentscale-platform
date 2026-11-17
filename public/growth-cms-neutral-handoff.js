@@ -5,7 +5,7 @@
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
+ const safe={source:null,proposal:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
@@ -369,7 +369,7 @@
  // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
  async function loadSeoProposal(target,linkUrl){
   try{
-   var res=await fetch(base+'/seo-proposal?page_id='+encodeURIComponent(pageId)+(linkUrl?'&link='+encodeURIComponent(linkUrl):''),{cache:'no-store',credentials:'same-origin'});
+   var res=await fetch(base+'/seo-proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(String($('query').value||requestedQuestion||'').trim())+(linkUrl?'&link='+encodeURIComponent(linkUrl):''),{cache:'no-store',credentials:'same-origin'});
    var d=await res.json();if(!res.ok||d.success!==true)return;
    var old=target.querySelector&&target.querySelector('.seo-proposal');if(old)old.remove();
    var box=document.createElement('div');box.className='note seo-proposal';target.appendChild(box);
