@@ -24,7 +24,7 @@ test('CMS package preserves selected question, matching latest proposal and reje
  assert.match(route,/growth\/cms-export\?page_id=/);
  assert.match(route,/encodeURIComponent\(String\(req\.query\.query\)/);
  assert.match(exportCode,/aligned=all\.filter\(x=>sameIntent\(x\.focus_query,wanted\)\)/);
- assert.match(exportCode,/const p=aligned\[0\]\|\|null/);
+ assert.match(exportCode,/const p=exact\|\|aligned\[0\]\|\|null/);
  assert.match(exportCode,/LEGACY_PROPOSAL_ADDITIONS_NOT_SUPPORTED/);
  assert.match(exportCode,/if\(!sameIntent\(p\.focus_query,req\.body\?\.focus_query\)\)/);
  assert.match(ui,/requestedQuestion/);
@@ -37,4 +37,16 @@ test('a long combined fact-check string is split into separate confirmations',()
  assert.match(ui,/units\.length>1\?units/);
  assert.match(ui,/bits\.forEach\(function\(bit\)/);
  assert.match(ui,/NOT independently verified/);
+});
+
+test('CMS proposal links are bound to a saved ID, never a stale query',()=>{
+ const route=fs.readFileSync('src/tracker-growth-automatic-routes.cjs','utf8');
+ const exporter=fs.readFileSync('src/tracker-growth-cms-export.cjs','utf8');
+ const store=fs.readFileSync('src/growth-proposal-store.cjs','utf8');
+ assert.match(route,/&proposal_id=/);
+ assert.match(exporter,/proposal_id_matched:/);
+ assert.match(exporter,/SELECTED_GROWTH_PROPOSAL_NOT_FOUND/);
+ assert.match(exporter,/proposalById\(pool,\{clientId:v\.client\.id,id:selectedId\}\)/);
+ assert.match(exporter,/Number\(candidate\.target_page_id\)===Number\(v\.page\.id\)/);
+ assert.match(store,/SELECT id,research_page_id,target_page_id,target_url,focus_query/);
 });

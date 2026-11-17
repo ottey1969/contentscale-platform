@@ -325,7 +325,8 @@
   try{
    var exactQuestion=String($('query').value||'').trim();
    safe.proposalState='LOADING';ready();
-   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(exactQuestion),{cache:'no-store',credentials:'same-origin'});
+   var requestedId=new URLSearchParams(location.search).get('proposal_id');
+   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(exactQuestion)+(requestedId?'&proposal_id='+encodeURIComponent(requestedId):''),{cache:'no-store',credentials:'same-origin'});
    var d=await res.json();
    if(!res.ok||d.success!==true||safe.source!==src)return;
    if(!d.proposal||!(d.proposal.sections||[]).length){
@@ -517,7 +518,7 @@
  if(requestedQuestion)$('query').value=requestedQuestion;
  if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
- $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.verifiedLinkSuggestion=null;safe.seoOriginal=null;safe.exported=false;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
+ $('query').addEventListener('input',function(){if(new URLSearchParams(location.search).get('proposal_id')){var u=new URL(location.href);u.searchParams.delete('proposal_id');history.replaceState(null,'',u.pathname+u.search)}safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.proposalState='NOT_LOADED';safe.verifiedLinkSuggestion=null;safe.seoOriginal=null;safe.exported=false;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
  $('query').addEventListener('change',function(){void recoverSavedQuestions()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
@@ -778,6 +779,37 @@
   if(!safe.exported)return;
   if(ev.target&&ev.target.matches('input,textarea,select')){safe.exported=false;ready()}
  });
+ // The proposal written by Growth binds the exact customer question and source
+ // research page. It is the authority, NOT the seed keyword or an old query URL.
+ async function recoverSelectedProposal(){
+  var proposalId=String(new URLSearchParams(location.search).get('proposal_id')||'').trim();
+  if(!/^[1-9][0-9]*$/.test(proposalId))return false;
+  try{
+   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&proposal_id='+encodeURIComponent(proposalId),
+    {credentials:'same-origin',cache:'no-store'});
+   var data=await res.json();
+   if(!res.ok||data.success!==true||!data.proposal||Number(data.proposal.id)!==Number(proposalId))throw Error('Saved proposal not available');
+   var p=data.proposal,question=String(p.focus_query||'').trim();
+   if(!question||!Array.isArray(p.sections)||!p.sections.length)throw Error('Saved writing has no reviewable content');
+   $('query').value=question;safe.savedQuestionConfirmed=true;
+   var url=new URL(location.href);url.searchParams.set('query',question);
+   history.replaceState(null,'',url.pathname+url.search);
+   var sourcePage=Number(p.research_page_id)||pageId;
+   $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(sourcePage)+'&query='+encodeURIComponent(question)+(requestedMarket?'&market='+encodeURIComponent(requestedMarket):'');
+   $('savedQuestionChooser').hidden=true;
+   $('checkSource').disabled=false;
+   ready();if(!$('checkSource').disabled)$('checkSource').click();
+   return true;
+  }catch(e){
+   var wrap=$('savedQuestionChooser');wrap.hidden=false;
+   var choices=$('savedQuestionChoices');choices.textContent='';
+   var p=document.createElement('p');
+   p.textContent='This saved Growth proposal ID could not be verified for this page. Return to the Growth writing result and open its CMS link; an older query will not be substituted.';
+   choices.appendChild(p);
+   $('query').value='';safe.savedQuestionConfirmed=false;ready();
+   return true;
+  }
+ }
  // Recover older links safely: show saved page/question pairs instead of inserting the seed.
  async function recoverSavedQuestions(){
   var wrap=$('savedQuestionChooser'),choices=$('savedQuestionChoices');if(!wrap||!choices)return;
@@ -786,20 +818,66 @@
     {cache:'no-store',credentials:'same-origin'});
    var data=await resp.json();if(!resp.ok||data.success!==true)throw Error('Saved question lookup unavailable');
    var questions=Array.isArray(data.questions)?data.questions:[];
+    // The CMS destination may differ from the research source page. Saved
+    // writing proposals are the authoritative selections for this destination.
+    var proposed=[];
+    try{
+     var pr=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
+     var pd=await pr.json();
+     if(pr.ok&&pd.success===true&&Array.isArray(pd.available_proposals))proposed=pd.available_proposals;
+    }catch(_){}
+    // Old links may carry an unrelated question. Never accept it as the
+    // current CMS writing task merely because an unrelated research row exists.
+    var oldRequested=String($('query').value||'').trim();
+    if(proposed.length){
+     wrap.hidden=false;choices.textContent='';
+     var intro=document.createElement('p');
+     intro.textContent=oldRequested?'This older CMS link says “'+oldRequested+'”. Select the actual saved Growth content proposal below instead; the old question is not automatically used.':'Choose the saved Growth writing proposal for this page.';
+     choices.appendChild(intro);
+     proposed.forEach(function(p){
+      var button=document.createElement('button');button.type='button';
+      button.textContent=String(p.focus_query||'Untitled Growth proposal')+' · '+p.sections_count+' section(s)';
+      button.style.cssText='margin:5px 6px 5px 0;padding:9px 12px;background:#eff6ff;color:#1e40af;border:1px solid #93c5fd;border-radius:8px;text-align:left';
+      button.addEventListener('click',function(){
+       var url=new URL(location.href);
+       url.searchParams.set('proposal_id',String(p.id));
+       url.searchParams.set('query',String(p.focus_query||''));
+       history.replaceState(null,'',url.pathname+url.search);
+       // Reuse the exact verified server proposal and its research source.
+       void recoverSelectedProposal();
+      });
+      choices.appendChild(button);
+     });
+     safe.savedQuestionConfirmed=false;$('query').value='';ready();
+     return;
+    }
    // Keep saved variations separate by market, but never repeat identical question/market combinations.
    var seen=new Set();
    questions=questions.filter(function(q){var key=String(q.question||'').trim().toLowerCase()+'|'+String(q.market||'').trim().toUpperCase();if(!q.question||seen.has(key))return false;seen.add(key);return true});
    var current=String($('query').value||'').trim();
    var market=String(new URLSearchParams(location.search).get('market')||'').trim().toUpperCase();
    var matched=questions.some(function(q){return String(q.question).trim().toLowerCase()===current.toLowerCase()&&String(q.market||'').toUpperCase()===market});
-   if(current&&matched){safe.savedQuestionConfirmed=true;wrap.hidden=true;ready();if(!$('checkSource').disabled)$('checkSource').click();return}
+   // Legacy links without an exact proposal ID cannot silently confirm any
+    // question. Even a matching research entry may not have written content.
+    if(current&&matched){
+     var legacy=document.createElement('p');
+     legacy.textContent='The old CMS URL requested “'+current+'”, but it did not identify a saved writing proposal. Choose this research question explicitly below if it is correct.';
+     choices.textContent='';choices.appendChild(legacy);
+    }
    // An explicit user-supplied question is never silently replaced, even when an older report exists.
    // Even one historical report must be chosen deliberately: it may be a different intent.
-   if(!current||questions.length){
-    wrap.hidden=false;choices.textContent='';
-    if(current){var note=document.createElement('p');note.textContent='This exact question has no saved completed research for the selected page and market. The suggestions below are older, different research questions; they cannot be substituted for it.';choices.appendChild(note);
+   if(true){
+    wrap.hidden=false;
+    var hadLegacy=!!(current&&matched);
+    if(!hadLegacy)choices.textContent='';
+    // The URL alone is unverified. Empty the field until the editor selects
+    // the actual saved research question.
+    safe.savedQuestionConfirmed=false;
+    $('query').value='';
+    ready();
+    if(current&&!matched){var note=document.createElement('p');note.textContent='This exact question has no saved completed research for the selected page and market. The suggestions below are older, different research questions; they cannot be substituted for it.';choices.appendChild(note);
      var go=document.createElement('a');go.textContent='Open Growth research for this exact question →';go.href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(current)+(market?'&market='+encodeURIComponent(market):'');go.style.cssText='display:inline-block;margin:8px 0;color:#1d4ed8;font-weight:700';choices.appendChild(go)}
-    if(!questions.length){var no=document.createElement('p');no.textContent='No previously saved customer question was found for this Tracker page. Open Growth research and save a run first.';choices.appendChild(no);return}
+    if(!questions.length){var no=document.createElement('p');no.textContent='There is no saved Growth research question or writing proposal for this destination page. Use the original Growth research link to select the intended question and save writing first.';choices.appendChild(no);return}
     questions.forEach(function(q){
      var btn=document.createElement('button');btn.type='button';btn.textContent=q.question+(q.market?' · '+q.market:'');
      btn.style.cssText='margin:5px 6px 5px 0;padding:9px 12px;background:#fff;color:#1e40af;border:1px solid #93c5fd;border-radius:8px;text-align:left';
@@ -826,6 +904,6 @@
  }
  // Direct from Growth: verify owner, source and research automatically; never approve or publish.
  if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(async()=>{
-  await recoverSavedQuestions();
+  if(!await recoverSelectedProposal())await recoverSavedQuestions();
  });
 })();

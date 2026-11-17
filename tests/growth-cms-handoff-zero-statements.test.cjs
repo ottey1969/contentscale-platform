@@ -9,14 +9,14 @@ const JS = fs.readFileSync(path.join(__dirname, '../public/growth-cms-neutral-ha
 const REPORT_UI = fs.readFileSync(path.join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
 
 test('the page wiring: a hidden tick stays hidden, and a note says why there is nothing to confirm', () => {
-  assert.match(HTML, /\.check\[hidden\]\{display:none\}/);
+  assert.match(HTML, /\.check\[hidden\],\.form-grid\[hidden\]\{display:none\}/);
   assert.match(HTML, /<p id="noStatementsNote" class="small" hidden>No individual verification notes were generated/);
   assert.match(JS, /var none=\$\('noStatementsNote'\);if\(none\)none\.hidden=!!facts\.length\|\|!safe\.source;/);
   // The download still needs the review tick; facts only block when there are open ones.
   assert.doesNotMatch(JS, /if\(safe\.aiDraftReadyForQuery!==\$\('query'\)\.value\.trim\(\)\)throw Error/);
   assert.match(JS, /if\(!safe\.savedQuestionConfirmed\)throw Error/);
-  assert.match(HTML, /Normal Growth handoff/);
-  assert.match(REPORT_UI, /if\(selectedQuestion\)target\.searchParams\.set\('query',selectedQuestion\)/);
+  assert.match(HTML, /Growth content handoff/);
+  assert.match(REPORT_UI, /target\.searchParams\.get\('query'\)/);
 });
 
 test('optional link controls are hidden when no verified URL is available and the intended question survives', () => {
@@ -65,17 +65,17 @@ test('a missing CMS query must never be replaced with the Tracker seed or an old
  assert.match(JS, /auto-research\/queries\?page_id=/);
  assert.match(JS, /Choose the exact saved customer question first/);
  assert.doesNotMatch(JS, /\$\('query'\)\.value=data\.working_keyword/);
- assert.match(JS, /Even one historical report must be chosen deliberately/);
+ assert.match(JS, /Legacy links without an exact proposal ID cannot silently confirm/);
  assert.match(JS, /history\.replaceState\(null/);
  assert.match(JS, /\$\('researchReviewLink'\)\.href=/);
  assert.match(REPORT_UI, /r\.gap_list\?\.focus_query/);
- assert.match(REPORT_UI, /if\(runMarket\)target\.searchParams\.set\('market',runMarket\)/);
+ assert.match(REPORT_UI, /if\(!target\.searchParams\.get\('market'\)&&runMarket\)target\.searchParams\.set\('market',runMarket\)/);
 });
 
 test('CMS cannot silently load a different question or carry its old SEO metadata',()=>{
  assert.match(JS,/savedQuestionConfirmed:false/);
  assert.match(JS,/if\(!safe\.savedQuestionConfirmed\|\|!\$\('query'\)\.value\.trim\(\)\)/);
- assert.match(JS,/await recoverSavedQuestions\(\)/);
+ assert.match(JS,/if\(!await recoverSelectedProposal\(\)\)await recoverSavedQuestions\(\)/);
  assert.doesNotMatch(JS,/\$\('query'\)\.value=data\.working_keyword/);
  assert.doesNotMatch(JS,/if\(!\$\('title'\)\.value&&x\.title\)\$\('title'\)\.value=x\.title/);
  assert.doesNotMatch(JS,/if\(!\$\('meta'\)\.value&&x\.meta\)\$\('meta'\)\.value=x\.meta/);
@@ -108,4 +108,17 @@ test('Missing same-query proposal points to the actual Growth writing step, with
  assert.match(JS,/act\.href=\$\('researchReviewLink'\)\.href\+'#growthGapChoice'/);
  assert.match(JS,/Write selected with AI \(concepts for review\)/);
  assert.doesNotMatch(JS,/editor-draft/);
+});
+
+test('saved proposal ID fixes customer question automatically; old question-only links need a choice',()=>{
+ assert.match(JS,/function recoverSelectedProposal\(\)/);
+ assert.match(JS,/data\.proposal\.id/);
+ assert.match(JS,/\$\('query'\)\.value=question;safe\.savedQuestionConfirmed=true/);
+ assert.match(JS,/url\.searchParams\.set\('query',question\)/);
+ assert.match(JS,/research_page_id/);
+ assert.match(JS,/proposal_id/);
+ assert.match(JS,/available_proposals/);
+ assert.match(JS,/Select the actual saved Growth content proposal below/);
+ assert.match(JS,/safe\.savedQuestionConfirmed=false;\$\('query'\)\.value='';ready\(\)/);
+ assert.match(JS,/if\(!await recoverSelectedProposal\(\)\)await recoverSavedQuestions\(\)/);
 });
