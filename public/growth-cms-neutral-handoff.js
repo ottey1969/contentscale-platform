@@ -375,6 +375,17 @@
    var d=await res.json();if(!res.ok||d.success!==true)return;
    var old=target.querySelector&&target.querySelector('.seo-proposal');if(old)old.remove();
    var box=document.createElement('div');box.className='note seo-proposal';target.appendChild(box);
+   if(linkUrl&&!d.link_url){
+    if($('linkUrl').value===linkUrl){$('linkUrl').value='';$('linkText').value=''}
+    var note=document.createElement('p');
+    note.textContent='Internal link not verified as a direct working page ('+String(d.link_verification||'unknown')+'). It was removed; no 301 or unverified link will enter the CMS package.';
+    box.appendChild(note);
+   }else if(linkUrl&&d.link_url&&d.link_url!==linkUrl){
+    if($('linkUrl').value===linkUrl)$('linkUrl').value=d.link_url;
+    var note=document.createElement('p');
+    note.textContent='Redirect resolved: the proposed link now points straight to '+d.link_url+'.';
+    box.appendChild(note);
+   }
    if(d.status!=='AI_PROPOSAL_FOR_REVIEW'){var n=document.createElement('p');n.textContent='No AI proposal for the title and description ('+String(d.status||'').toLowerCase().replace(/_/g,' ')+'): the current values are used; edit them if needed.';box.appendChild(n);return}
    // The owner's own values are kept from the first time only (a second source check must not keep the AI text as "current").
    if(!safe.seoOriginal)safe.seoOriginal={title:$('title').value,meta:$('meta').value,link:$('linkText').value};

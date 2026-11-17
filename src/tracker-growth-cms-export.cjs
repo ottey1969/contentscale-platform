@@ -2,6 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto');
 const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.cjs');
 const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
+const {resolveGrowthInternalLink}=require('./growth-internal-link-resolver.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-editor.cjs');
 const {normalizeGrowthResearchContext}=require('./growth-editorial-research-context.cjs');
 const {loadGrowthOptionalGsc}=require('./growth-optional-gsc-draft-evidence.cjs');
@@ -191,14 +192,18 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
   try{
    const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
-   let linkUrl=null;try{const u=new URL(String(req.query?.link||''));if(u.protocol==='https:'&&u.origin===new URL(v.page.url).origin)linkUrl=u.href}catch{}
+   let linkUrl=null,linkStatus=null;
+   if(req.query?.link){
+    const checked=await resolveGrowthInternalLink(String(req.query.link),v.page.url,{fetchLive});
+    linkUrl=checked.url;linkStatus=checked.status;
+   }
    const requested=String(req.query?.query||v.page.keyword||'').trim();
    const rows=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url}).catch(()=>[]);
    const current=rows.find(p=>sameIntent(p.focus_query,requested));
    const concepts=[...new Set((current?.sections||[]).map(x=>x.h2).filter(Boolean))];
    const model=seoModel===undefined?require('./growth-task-meaning.cjs').geminiModel():seoModel;
    const out=await require('./growth-seo-meta-proposal.cjs').proposeSeoMeta({model,query:requested,html:v.page.html_content,concepts,linkUrl});
-   res.set('Cache-Control','private, no-store').json({success:true,...out,link_url:linkUrl,published:false});
+   res.set('Cache-Control','private, no-store').json({success:true,...out,link_url:linkUrl,link_verification:linkStatus,published:false});
   }catch(e){console.warn('[growth-seo-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'SEO_PROPOSAL_UNAVAILABLE'})}
  });
  // Flagged sentences the owner removed from this page's draft (owner link only), remembered on the server.
@@ -266,11 +271,44 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     return res.status(409).json({success:false,code:'LEGACY_PROPOSAL_ADDITIONS_NOT_SUPPORTED'});
    // Sentences the owner kept ("it is true") come from the stored decisions for this page, never from the request.
    let decisions=[];try{decisions=await removals.loadRemovals(pool,{clientId:v.client.id,pageId:v.page.id})}catch(e){}
+   // A redirect is a valid incoming alias but never an outbound CMS link.
+   // A valid owner-supplied href is rewritten to the verified direct 200 target.
+   const approvedForExport=Array.isArray(req.body?.approved_changes)?req.body.approved_changes:[];
+   const linkCache=new Map();
+   const ownOrigin=new URL(v.page.url).origin;
+   for(const change of approvedForExport){
+    const html=String(change?.html||'');
+    for(const m of html.matchAll(/\bhref=(["'])([^"']+)\1/gi)){
+     const url=m[2];
+     if(url.startsWith('#'))continue; // in-page anchors are not redirecting outbound links
+     let target;try{target=new URL(url,v.page.url)}catch{continue}
+     if(target.origin!==ownOrigin)continue;
+     if(!['https:','http:'].includes(target.protocol))continue;
+     const absolute=target.href;
+     if(!linkCache.has(url)){
+      if(linkCache.size>=12)return res.status(409).json({success:false,code:'TOO_MANY_INTERNAL_LINKS_TO_VERIFY'});
+      linkCache.set(url,await resolveGrowthInternalLink(absolute,v.page.url,{fetchLive}));
+     }
+     const checked=linkCache.get(url);
+     if(!checked.url)return res.status(409).json({success:false,code:'INTERNAL_LINK_NOT_DIRECT_200',
+       link_url:url,verification:checked.status,message:'Use the verified final URL. This internal link could not be validated as a direct 200 page.'});
+    }
+   }
+   const fixedChanges=approvedForExport.map(change=>{
+    if(!change||typeof change.html!=='string')return change;
+    let html=change.html;
+    for(const [oldUrl,verified] of linkCache){
+     if(!verified.url||oldUrl===verified.url)continue;
+     html=html.split('href="'+oldUrl+'"').join('href="'+verified.url+'"')
+       .split("href='"+oldUrl+"'").join("href='"+verified.url+"'");
+    }
+    return {...change,html};
+   });
    const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:removals.applyKept(req.body?.review_notes||null,decisions),addedProposalIds:[],
     canonicalUrl:v.page.url,originalHtml,sourceExpectedSha256:originalHash,
     caseStudyLocked:v.page.case_study_active,editorApproved:req.body?.editor_approved===true,
     cms:req.body?.cms||'generic',pageTitle:req.body?.seo_title,
-    metaDescription:req.body?.meta_description,changes:req.body?.approved_changes,
+    metaDescription:req.body?.meta_description,changes:fixedChanges,
     focusQuery:req.body?.focus_query||'',evidenceScope:scope,
     language:req.body?.language||'en',
     // The owner's choice for this package: the page presents a person ("I", "my" allowed). Default: the service speaks.
