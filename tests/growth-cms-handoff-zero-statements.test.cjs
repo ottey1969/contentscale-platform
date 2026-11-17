@@ -19,6 +19,17 @@ test('the page wiring: a hidden tick stays hidden, and a note says why there is 
   assert.match(REPORT_UI, /if\(selectedQuestion\)target\.searchParams\.set\('query',selectedQuestion\)/);
 });
 
+test('optional link controls are hidden when no verified URL is available and the intended question survives', () => {
+ assert.match(HTML, /id="growthVerifiedLinkFields" hidden/);
+ assert.match(HTML, /\.form-grid\[hidden\]\{display:none\}/);
+ assert.match(JS, /\$\('growthVerifiedLinkFields'\)\.hidden=!hasLink/);
+ assert.doesNotMatch(JS, /a-related-page/);
+ assert.match(JS, /auto-research\/saved\?page_id=/);
+ assert.match(JS, /exactQuery\?'&query='/);
+ assert.doesNotMatch(JS, /void loadSeoProposal/);
+ assert.match(JS, /requestedQuestion\?'&query='/);
+});
+
 test('required draft action is orange and download stays grey until approved, then turns blue', () => {
  assert.match(HTML, /#generateEditorialDraft\{background:#c65b07/);
  assert.match(HTML, /#download:disabled\{background:#d8dee8/);
