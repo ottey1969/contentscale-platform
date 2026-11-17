@@ -91,3 +91,30 @@ test('complete research brief remains available with zero AI topic gaps',()=>{
  assert.match(output,/GOOGLE RANKING-PAGE CONTENT GAPS/);
  assert.match(output,/NO_CHANGE is a legitimate result/);
 });
+
+test('Growth brief preserves complete, partial, missing and unknown content without Gemini gap filtering',()=>{
+ const d=fixture();
+ d.gap_list.items.push(
+  {id:'present',title:'Existing roof leak guidance',coverage:'COMPLETE',examples:[{url:'https://competitor-one.example/roof-emergencies',excerpt:'Useful additional nuance'}]},
+  {id:'partial',title:'Temporary protection steps',coverage:'PARTIAL',examples:[{url:'https://competitor-one.example/roof-emergencies',excerpt:'Practical instructions'}]},
+  {id:'unknown',title:'Insurance documentation',coverage:'UNSURE'});
+ const output=build(d);
+ for(const text of ['COMPLETE CONTENT COVERAGE INVENTORY','Existing roof leak guidance','Temporary protection steps',
+  'Insurance documentation','COVERAGE COMPLETE','COVERAGE PARTIAL','COVERAGE MISSING','COVERAGE UNKNOWN','Useful additional nuance'])
+  assert.ok(output.includes(text),'Missing useful content: '+text);
+});
+test('unreadable own page never produces false complete or missing coverage',()=>{
+ const d=fixture();d.page_content.signals.available=false;
+ const output=build(d);
+ assert.match(output,/Temporary weather protection \\| COVERAGE UNKNOWN/);
+ assert.match(output,/Existing page sections must be re-opened/);
+});
+test('AI observations and Google findings remain together even when no new gaps are accepted',()=>{
+ const d=fixture();
+ d.gap_list.items=[];
+ d.ai_check.gap.missing_topics=[{topic:'Detailed safety preparation',coverage:'PARTIAL',examples:[{site:'roof.example',excerpt:'Useful procedures'}]}];
+ const output=build(d);
+ assert.match(output,/Detailed safety preparation \\| COVERAGE PARTIAL/);
+ assert.match(output,/Useful procedures/);
+ assert.match(output,/RANKING COMPETITOR SOURCE LEADS/);
+});
