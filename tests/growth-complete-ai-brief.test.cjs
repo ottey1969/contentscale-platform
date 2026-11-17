@@ -82,3 +82,12 @@ test('browser loads complete builder and uses same full content for copy and dow
  assert.match(ui,/no partial prompt was copied/);
  assert.match(ui,/no partial file was generated/);
 });
+
+test('complete research brief remains available with zero AI topic gaps',()=>{
+ const ui=fs.readFileSync(path.join(__dirname,'../public/growth-automatic-report-ui.js'),'utf8');
+ assert.match(ui,/No AI-cited content gaps were identified or verified/);
+ assert.doesNotMatch(ui,/box\.hidden=!topics\.length;if\(!topics\.length\)return/);
+ const output=build({...fixture(),ai_check:{search_term:q,gap:{missing_topics:[]}}});
+ assert.match(output,/GOOGLE RANKING-PAGE CONTENT GAPS/);
+ assert.match(output,/NO_CHANGE is a legitimate result/);
+});
