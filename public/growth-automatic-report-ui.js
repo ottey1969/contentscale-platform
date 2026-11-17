@@ -1045,10 +1045,10 @@
  // The third step is deliberately simple: publish in the owner's CMS, confirm the
  // real publication timestamp once, then inspect the separately measured outcomes.
  // The same-page / same-question check prevents accidentally re-recording an older update.
- function publishedQuery(){return String((last&&last.ai_check&&last.ai_check.search_term)||runQuery||'').trim()}
+ function publishedQuery(){return String((last&&last.ai_check&&last.ai_check.search_term)||(last&&last.editorial_decision_gate&&last.editorial_decision_gate.focus_query)||(last&&last.search&&last.search.focus_query)||runQuery||'').trim()}
  function publicationMatch(record){
   if(!record||!last)return false;
-  var expected='',actual='';try{expected=new URL(String(last.url||'')).href.replace(/\\/$/,'');actual=new URL(String(record.url||'')).href.replace(/\\/$/,'')}catch(e){return false}
+  var expected='',actual='';try{expected=new URL(String(last.url||'')).href;actual=new URL(String(record.url||'')).href;if(expected.endsWith('/'))expected=expected.slice(0,-1);if(actual.endsWith('/'))actual=actual.slice(0,-1)}catch(e){return false}
   var q=publishedQuery();
   return !!q&&actual===expected&&String(record.query||'').trim().toLowerCase()===q.toLowerCase();
  }
