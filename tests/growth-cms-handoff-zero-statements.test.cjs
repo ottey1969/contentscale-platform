@@ -30,16 +30,16 @@ test('optional link controls are hidden when no verified URL is available and th
  assert.match(JS, /requestedQuestion\?'&query='/);
 });
 
-test('Growth proposal is automatic; Advanced is optional; CMS button still requires explicit approval',()=>{
- assert.match(HTML,/id="advancedAlternative"/);
- assert.match(HTML,/Generate a different draft \(optional\)/);
- assert.doesNotMatch(HTML,/3A\. FIRST/);
+test('single Growth proposal workflow has no Advanced alternative and still requires editor approval',()=>{
+ assert.doesNotMatch(HTML,/advancedAlternative|generateEditorialDraft|aiDraftStatus|Advanced ·/);
+ assert.doesNotMatch(JS,/generateEditorialDraft|aiDraftStatus|aiDraftReadyForQuery|editor-draft/);
+ assert.match(HTML,/Review saved Growth content for the original page/);
  assert.match(HTML,/#download:disabled\{background:#d8dee8/);
  assert.match(HTML,/#download:not\(:disabled\)\{background:#1d4ed8/);
  assert.match(HTML,/id="cmsUnlockHint"/);
  assert.match(JS,/if\(safe\.source===src&&\$\('query'\)\.value\.trim\(\)===exactQuestion\)review\.click\(\)/);
  assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&\$\('title'\)\.value\.trim\(\)/);
- assert.doesNotMatch(JS,/generate the required Advanced AI draft for this question/);
+ assert.match(JS,/\$\('approved'\)\.checked&&manualReady&&factsChecked/);
  assert.match(JS,/function populateSeoStartingPoint\(\)/);
  assert.match(JS,/if\(!safe\.savedQuestionConfirmed\)return/);
  assert.match(JS,/if\(!\$\('title'\)\.value\.trim\(\)\)\$\('title'\)\.value=meta\.title/);
