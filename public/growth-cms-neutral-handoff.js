@@ -857,12 +857,25 @@
    var current=String($('query').value||'').trim();
    var market=String(new URLSearchParams(location.search).get('market')||'').trim().toUpperCase();
    var matched=questions.some(function(q){return String(q.question).trim().toLowerCase()===current.toLowerCase()&&String(q.market||'').toUpperCase()===market});
-   if(current&&matched){safe.savedQuestionConfirmed=true;wrap.hidden=true;ready();if(!$('checkSource').disabled)$('checkSource').click();return}
+   // Legacy links without an exact proposal ID cannot silently confirm any
+    // question. Even a matching research entry may not have written content.
+    if(current&&matched){
+     var legacy=document.createElement('p');
+     legacy.textContent='The old CMS URL requested “'+current+'”, but it did not identify a saved writing proposal. Choose this research question explicitly below if it is correct.';
+     choices.textContent='';choices.appendChild(legacy);
+    }
    // An explicit user-supplied question is never silently replaced, even when an older report exists.
    // Even one historical report must be chosen deliberately: it may be a different intent.
    if(!current||questions.length){
-    wrap.hidden=false;choices.textContent='';
-    if(current){var note=document.createElement('p');note.textContent='This exact question has no saved completed research for the selected page and market. The suggestions below are older, different research questions; they cannot be substituted for it.';choices.appendChild(note);
+    wrap.hidden=false;
+    var hadLegacy=!!(current&&matched);
+    if(!hadLegacy)choices.textContent='';
+    // The URL alone is unverified. Empty the field until the editor selects
+    // the actual saved research question.
+    safe.savedQuestionConfirmed=false;
+    $('query').value='';
+    ready();
+    if(current&&!matched){var note=document.createElement('p');note.textContent='This exact question has no saved completed research for the selected page and market. The suggestions below are older, different research questions; they cannot be substituted for it.';choices.appendChild(note);
      var go=document.createElement('a');go.textContent='Open Growth research for this exact question →';go.href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(current)+(market?'&market='+encodeURIComponent(market):'');go.style.cssText='display:inline-block;margin:8px 0;color:#1d4ed8;font-weight:700';choices.appendChild(go)}
     if(!questions.length){var no=document.createElement('p');no.textContent='No previously saved customer question was found for this Tracker page. Open Growth research and save a run first.';choices.appendChild(no);return}
     questions.forEach(function(q){
