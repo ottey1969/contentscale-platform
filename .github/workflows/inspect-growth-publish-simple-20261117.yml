@@ -1,14 +1,30 @@
-name: Inspect Publish and Measure UI entrypoints
+name: Verify simplified Growth publish and measure
 on:
   push:
     branches: [fix/growth-publish-measure-simple-20261117]
 permissions:
   contents: read
 jobs:
-  inspect:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate markup and client handlers
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
         run: |
-          grep -RIn -C 4 --exclude-dir=.git --exclude='package-lock.json' -E 'Record actual publication|Save publication checkpoint|published_at.*name=|growthPublication' src public | head -240 || true
+          node --check public/growth-automatic-report-ui.js
+          node --check public/growth-cms-neutral-handoff.js
+          node --check src/tracker-growth-automatic-routes.cjs
+          node --check src/tracker-growth-measurement.cjs
+      - name: Workflow and regression
+        run: |
+          node --test tests/growth-publish-measure-simple.test.cjs
+          node --test tests/growth-owner-direct-complete-ui.test.cjs
+          node --test tests/growth-publication-time.test.cjs
+          node --test tests/growth-first-screen.test.cjs
+          node --test tests/growth-save-run-scroll-summary.test.cjs
+          node tests/tracker-growth-measurement.test.cjs
+          node --test tests/tracker-growth-measurement-share.test.cjs
+          node --test tests/growth-measurement-reminders.test.cjs
