@@ -19,14 +19,14 @@ function setup(fetcher){
  vm.runInNewContext(source,ctx);
  return {nodes,requests,get reloads(){return reloads}};
 }
-test('market button: saves market, shows feedback, reloads and cannot double click during save',async()=>{
+test('market button: saves market without starting research or reloading and cannot double click during save',async()=>{
  let resolve;const ui=setup(()=>new Promise(r=>{resolve=r}));
  const pending=ui.nodes.marketSave.click();assert.equal(ui.nodes.marketSave.disabled,true);
  assert.match(ui.nodes.marketSave.textContent,/Saving/);
  const duplicate=ui.nodes.marketSave.click();assert.equal(ui.requests.length,1);
  resolve({ok:true,json:async()=>({success:true,markets:{countries:['NL'],language:'en'}})});
  await pending;await duplicate;
- assert.equal(ui.reloads,1);assert.match(ui.nodes.marketSaid.textContent,/saved/);assert.equal(ui.nodes.marketSave.dataset.state,'saved');
+ assert.equal(ui.reloads,0);assert.match(ui.nodes.marketSaid.textContent,/saved/);assert.match(ui.nodes.marketSaid.textContent,/Run Growth Research/);assert.equal(ui.nodes.marketSave.dataset.state,'saved');
  const body=JSON.parse(ui.requests[0].arg.body);assert.equal(body.countries,'nl — Netherlands');assert.equal(body.language,'English');
 });
 test('market button: validation failure stays visible and allows retry',async()=>{
