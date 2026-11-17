@@ -21,8 +21,8 @@
   return out;
  };
  var section=(name,body)=>'\n## '+name+'\n\n'+(body||'NOT AVAILABLE IN SAVED RESEARCH')+'\n';
- var safeJson=(x,max=25000)=>{
-  try{return JSON.stringify(x,null,2).slice(0,max)}catch(_){return 'NOT SERIALIZABLE'}
+ var safeJson=x=>{
+  try{return JSON.stringify(x==null?null:x,null,2)}catch(_){return 'NOT SERIALIZABLE'}
  };
  function build(d,opts){
   d=d&&typeof d==='object'?d:{};opts=opts||{};
@@ -189,11 +189,23 @@
    'The editor must explicitly approve proposed changes and publication.'
   ].join('\n'));
   add('14. RESEARCH SNAPSHOT AND UNSUPPORTED FIELDS',[
+   'Saved AI / Pre-Write answer availability:',safeJson({prewrite_reuse:ai.prewrite_reuse,prewrite_editorial_answers:d.prewrite_editorial_answers,ai_system_evidence:d.ai_system_evidence,ai_answers:ai.answers||ai.saved_answers||null}),
+   'Full source competitor observations:',safeJson({ranking_pages:gap.ranking_pages,competitor_overview:d.competitor_overview,search_discovery:search,ai_cited_gap:aig}),
+   'Full selected Growth research gap list and on-page evidence:',safeJson({items:gap.items,unique_content:gap.unique_content,source_headings:sourceHeads,page_content:page}),
+   'Existing-page editorial plan and writing evidence:',safeJson({editorial_work_packet:d.editorial_work_packet,practical_growth_plan:plan,editorial_decision_gate:editor}),
+   'Research and provider coverage status:',safeJson({ai_summary:aiSummary,ai_prior_checks:ai.prior_checks,evidence_warnings:d.evidence_warnings,market_coverage:search.market_coverage}),
+   'Any field that is null or not present here was NOT included in this saved Growth research. Source leads do not replace live fact verification.',
+   'The appendix preserves all stored observations used by the brief without silently truncating long excerpts.'
+  ].join('\\n'));
+  add('14. RESEARCH SNAPSHOT AND UNSUPPORTED FIELDS',[
    'Stored research decision:',safeJson(editor,6500),
    'Market coverage:',safeJson(search.market_coverage||{},3500),
    'Page signals:',safeJson(page.signals||{},3500),
    'Existing-page improvement plan:',safeJson({change:plan.change,comparison_questions:questions},8000),
-   'Pre-Write link (if present in report):',safeJson(pre,2500),
+   'Pre-Write link (if present in report):',safeJson(pre),
+   'Pre-Write answer reuse statuses:',safeJson(ai.prewrite_reuse||{}),
+   'Editor quality-gate status:',value(d.editorial_work_packet?.qa_status||d.editorial_work_packet?.status||d.publication_qa?.status),
+   'Known user selection from Growth:',safeJson(gap.selected||[]),
    'Missing items in the saved report must be re-researched externally; never pretend the brief already verified them.'
   ].join('\n'));
   lines.push('\n## FINAL OUTPUT FORMAT REQUIRED FROM EXTERNAL AI\n',
