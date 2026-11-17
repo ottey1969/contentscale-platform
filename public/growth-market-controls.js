@@ -37,13 +37,11 @@
    var countries=Array.isArray(result.countries)?result.countries:[];
    var summary=countries.length?'Market: '+countries.join(', '):'Market: inherited from Pre-Write or page';
    summary+=' · Language: '+(result.language||'inherited');
-   state('saved','✓ Settings saved. '+summary+'. Starting a fresh research run…');
-   busy(true,'Saved ✓ · Starting research…');
-   // The Growth renderer consumes this one-shot instruction on the next page load.
-   // Saving settings alone is not research. Never show "research complete" until the endpoint succeeds.
-   try{sessionStorage.setItem('growthRunAfterMarketSave:'+location.pathname+location.search,String(Date.now()))}
-   catch(e){throw Error('RESEARCH_RESTART_UNAVAILABLE')}
-   window.location.reload();
+   // Saving research inputs must never silently launch a new research run.
+   state('saved','✓ Settings saved. '+summary+'. Continue with optional AI and GSC inputs, then select Run Growth Research once.');
+   busy(false);
+   try{window.dispatchEvent(new CustomEvent('growth:inputs-saved'))}catch(e){}
+
   }catch(error){
    var code=String(error&&error.message||'SAVE_FAILED');
    var message=code==='UNKNOWN_COUNTRY'?'Select valid markets, separated by commas (e.g. nl — Netherlands).':
