@@ -6,7 +6,7 @@
  const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const requestedMarket=String(new URLSearchParams(location.search).get('market')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={savedQuestionConfirmed:false,source:null,proposal:null,aiDraftReadyForQuery:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
+ const safe={savedQuestionConfirmed:false,source:null,proposal:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
@@ -64,7 +64,6 @@
    sourceButtonStates.forEach(function(s){s.button.disabled=s.disabled});
    document.querySelectorAll('button').forEach(function(b){if(!known.has(b))b.disabled=false});
    sourceButtonStates=[];
-   $('generateEditorialDraft').disabled=!safe.source;
    flagRows.forEach(function(f){f.refresh()});
    ready();
   }
@@ -100,17 +99,13 @@
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
   $('download').disabled=!!safe.exported||!(safe.savedQuestionConfirmed&&safe.source&&$('title').value.trim()&&$('meta').value.trim()&&$('heading').value.trim()&&$('copy').value.trim().length>=30&&$('approved').checked&&manualReady&&factsChecked);
   $('download').textContent=safe.exported?'4. CMS handoff ZIP downloaded':'4. Download reviewed CMS handoff ZIP';
-  var alternativeDraft=!!safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim();
-  var draftBtn=$('generateEditorialDraft');
-  draftBtn.dataset.stage=alternativeDraft?'done':'optional';
-  if(draftBtn.dataset.requestPending!=='true')draftBtn.textContent=alternativeDraft?'Advanced · Alternative ready ✓ Generate another':'Advanced · Generate a different draft (optional)';
   var unlock=$('cmsUnlockHint');
   if(unlock){
    unlock.dataset.stage=!$('download').disabled&&!safe.exported?'ready':'locked';
    unlock.textContent=safe.exported?'✓ CMS handoff ZIP downloaded. Publish the changes and record the real date.':
     !safe.source?'Select the saved research question and check the original page.':
-    !$('heading').value.trim()||!$('copy').value.trim()?'Review the automatically loaded Growth draft, or write checked copy. Advanced is optional.':
-    !$('approved').checked||!factsChecked?'Review factual claims and approve the Growth draft. You do not need the Advanced alternative.':
+    !$('heading').value.trim()||!$('copy').value.trim()?'Review the saved Growth proposal or write checked copy using the research.':
+    !$('approved').checked||!factsChecked?'Review factual claims and approve the Growth draft.':
     $('download').disabled?'Finish the remaining checks to unlock the CMS download.':
     '✓ Growth content reviewed and approved. The blue CMS download button is active.';
   }
@@ -347,13 +342,13 @@
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
    var p=d.proposal,box=$('growthProposal');box.textContent='';box.hidden=false;
    if(String(p.focus_query||'').trim().toLowerCase()!==exactQuestion.toLowerCase()){
-    var earlier=document.createElement('p');earlier.textContent='Saved proposal #'+p.id+' concerns “'+p.focus_query+'”, not the exact selected question “'+exactQuestion+'”. This older draft cannot be reused for a different intent. Open Growth research for this question; Advanced remains optional.';box.appendChild(earlier);return;
+    var earlier=document.createElement('p');earlier.textContent='Saved proposal #'+p.id+' concerns “'+p.focus_query+'”, not the exact selected question “'+exactQuestion+'”. This older draft cannot be reused for a different intent. Open Growth research for this question.';box.appendChild(earlier);return;
    }
    var summary=document.createElement('strong');summary.textContent='Growth research proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(summary);
    var fact=document.createElement('p');fact.className='small';
    fact.textContent='This is an UNAPPROVED draft for “'+String(p.focus_query||exactQuestion)+'”. It is not a verified content gap or fact-checked article. Review the original research before accepting any text.';
    box.appendChild(fact);
-   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Saved Growth copy loaded automatically. Review claims, approve and download. Advanced is an optional alternative.';box.appendChild(next);
+   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Saved Growth copy loaded automatically. Review claims, approve and download.';box.appendChild(next);
    var summaryList=document.createElement('p');summaryList.textContent='Suggested sections: '+(p.sections||[]).map(function(x){return x.h2}).join(' · ');box.appendChild(summaryList);
    var review=document.createElement('button');review.type='button';review.textContent='Growth proposal loaded · review proposed text and claims';
    review.className='growth-primary-finish';box.appendChild(review);
@@ -363,12 +358,12 @@
     safe.proposal=null;box.hidden=true;box.textContent='';
     $('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('mainPlacement').textContent='';
     $('approved').checked=false;ready();
-    status('downloadStatus','Saved proposal #'+p.id+' discarded. Write reviewed content yourself or optionally generate a different AI draft.',false);
+    status('downloadStatus','Saved proposal #'+p.id+' discarded. Review the research and write checked content yourself.',false);
    });
    review.addEventListener('click',function(){
     if(review.disabled)return;
     review.disabled=true;skip.hidden=false;summaryList.hidden=true;
-    next.textContent='Review the saved Growth proposal below. Verify all claims, approve it and download. Advanced is optional.';
+    next.textContent='Review the saved Growth proposal below. Verify all claims, approve it and download.';
     var first=p.sections[0];
     // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
     safe.proposal=p;
@@ -407,7 +402,7 @@
    if(safe.source===src&&$('query').value.trim()===exactQuestion)review.click();
    reapplyRemovals();
    $('approved').checked=false;ready();
-  }catch(e){/* no proposal: manual or optional AI alternative remains available */}
+  }catch(e){/* no proposal: editor can write from saved research */}
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
@@ -507,7 +502,7 @@
  if(requestedQuestion)$('query').value=requestedQuestion;
  if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
- $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.seoOriginal=null;safe.exported=false;safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
+ $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.proposal=null;safe.seoOriginal=null;safe.exported=false;$('approved').checked=false;$('title').value='';$('meta').value='';$('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('growthProposal').hidden=true;$('growthProposal').textContent='';$('existingMetadata').hidden=true;$('linkUrl').value='';$('linkText').value='';showVerifiedLink();$('savedQuestionChooser').hidden=false;$('checkSource').disabled=true;ready()});
  $('query').addEventListener('change',function(){void recoverSavedQuestions()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
@@ -517,7 +512,7 @@
   if(!safe.savedQuestionConfirmed||!$('query').value.trim()){
     status('sourceStatus','Choose the exact saved customer question first. The tracked seed is not a substitute.',true);$('savedQuestionChooser').hidden=false;return;
    }
-   this.disabled=true;buttonProgress(this,true);safe.source=null;safe.aiDraftReadyForQuery=null;lockWhileLoading(true);
+   this.disabled=true;buttonProgress(this,true);safe.source=null;lockWhileLoading(true);
   try{
    const response=await fetch(base+'/source?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
    const data=await response.json();
@@ -558,62 +553,6 @@
    }
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
   finally{lockWhileLoading(false);var verified=!!safe.source;buttonProgress(this,false,verified);this.disabled=verified;this.textContent=verified?'1. Original Tracker page checked':'1. Check original Tracker page';if(verified){this.style.background='#94a3b8';this.style.color='#fff'}else{this.style.background='';this.style.color=''}ready()}
- });
- $('generateEditorialDraft').addEventListener('click',async function(){
-  if(!safe.source)return;
-  var btn=this;
-  if(btn.dataset.requestPending==='true')return;
-  btn.dataset.requestPending='true';
-  var originalLabel=btn.textContent;
-  var draftQuery=$('query').value.trim();
-  if(!draftQuery){status('aiDraftStatus','Enter a customer question before generating.',true);delete btn.dataset.requestPending;return}
-  safe.aiDraftReadyForQuery=null;$('approved').checked=false;ready();
-  // Keep the running task unmistakable, and prevent competing actions or duplicate requests.
-  var lockedButtons=[...document.querySelectorAll('button')].filter(b=>b!==btn);
-  var previousButtonStates=lockedButtons.map(b=>({button:b,disabled:b.disabled}));
-  lockedButtons.forEach(b=>{b.disabled=true;b.dataset.growthDraftLocked='true'});
-  btn.disabled=true;
-  btn.textContent='⏳ Generating draft… please wait';
-  buttonProgress(btn,true);
-  status('aiDraftStatus','Generating your draft from the original page. Please wait; other actions are temporarily unavailable.',false);
-  try{
-   var r=await fetch(base+'/editor-draft',{method:'POST',credentials:'same-origin',
-    cache:'no-store',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({page_id:pageId,focus_query:draftQuery})});
-   var output=await r.json();
-   if(!r.ok||output.success!==true)throw Error(output.code||'Draft not available');
-   if(output.status!=='AI_DRAFT_REVIEW_REQUIRED'||!output.draft){
-    status('aiDraftStatus','Optional alternative unavailable ('+(output.status||'Unconfigured')+'). Saved Growth research and existing proposal are still available.',true);
-    return;
-   }
-   if(output.canonical_url!==safe.source.canonical_url||Number(output.page_id)!==pageId||$('query').value.trim()!==draftQuery)
-    throw Error('Source identity changed');
-   var draft=output.draft;
-   if(draft.seo_title)$('title').value=draft.seo_title;
-   if(draft.meta_description)$('meta').value=draft.meta_description;
-   var parts=draft.sections||[];
-   if(!parts.length||!String(parts[0].h2||'').trim()||(parts[0].paragraphs||[]).join(' ').trim().length<30)throw Error('Optional alternative did not return reviewable text. The saved Growth draft can still be reviewed.');
-   if(parts.length){
-    $('heading').value=parts[0].h2;
-    $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
-   }
-   // An AI draft replaces the checked Growth proposal; the package then no longer claims to come from it.
-   safe.proposal=null;$('growthProposal').hidden=true;$('growthProposal').textContent='';$('mainPlacement').textContent='';
-   $('growthAdditionalSections').textContent='';
-   parts.slice(1,5).forEach(function(section,i){addSection(section.h2,(section.paragraphs||[]).join('\n\n'),'AI draft section '+(i+2)+' · verify facts',null)});
-   reapplyRemovals();
-   safe.aiDraftReadyForQuery=draftQuery;
-   $('approved').checked=false;ready();
-   status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
-  }catch(err){status('aiDraftStatus',String(err.message||err),true)}
-  finally{
-   buttonProgress(btn,false,false);
-   delete btn.dataset.requestPending;
-   btn.textContent=safe.aiDraftReadyForQuery===$('query').value.trim()?'Advanced · Alternative ready ✓ Generate another':originalLabel;
-   btn.disabled=!safe.source;
-   previousButtonStates.forEach(item=>{if(item.button.dataset.growthDraftLocked==='true'){item.button.disabled=item.disabled;delete item.button.dataset.growthDraftLocked}});
-   ready();
-  }
  });
  function build(){
   showVerifiedLink();
@@ -854,7 +793,7 @@
   }catch(e){wrap.hidden=false;choices.textContent='Could not look up previous Growth questions. Open the exact Growth research URL and use its CMS link.'}
   function choose(q){
    var question=String(q.question||'').trim(),market=String(q.market||'').trim();if(!question)return;
-   $('query').value=question;safe.savedQuestionConfirmed=true;safe.source=null;safe.aiDraftReadyForQuery=null;safe.proposal=null;$('approved').checked=false;
+   $('query').value=question;safe.savedQuestionConfirmed=true;safe.source=null;safe.proposal=null;$('approved').checked=false;
    $('title').value='';$('meta').value='';$('existingTitle').textContent='';$('existingMeta').textContent='';$('existingMetadata').hidden=true;
    $('linkUrl').value='';$('linkText').value='';showVerifiedLink();
    $('evidence').value='needs_access';$('checkSource').disabled=false;$('checkSource').textContent='1. Check original Tracker page';
