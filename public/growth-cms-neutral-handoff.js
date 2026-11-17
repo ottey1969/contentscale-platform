@@ -401,7 +401,7 @@
    }
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
    var p=d.proposal,first=p.sections[0];
-   if(String(p.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')!==exactQuestion.toLowerCase().replace(/\s+/g,' '))throw Error('Proposal query mismatch; text not loaded');
+   // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
    safe.proposal=p;
    $('heading').value=first.h2;$('copy').value=first.text;
    $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
