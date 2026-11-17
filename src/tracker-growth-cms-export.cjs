@@ -278,13 +278,15 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    const ownOrigin=new URL(v.page.url).origin;
    for(const change of approvedForExport){
     const html=String(change?.html||'');
-    for(const m of html.matchAll(/\\bhref=(["'])(https:\/\/[^"']+)\\1/gi)){
+    for(const m of html.matchAll(/\bhref=(["'])([^"']+)\1/gi)){
      const url=m[2];
-     let target;try{target=new URL(url)}catch{continue}
+     let target;try{target=new URL(url,v.page.url)}catch{continue}
      if(target.origin!==ownOrigin)continue;
+     if(!['https:','http:'].includes(target.protocol))continue;
+     const absolute=target.href;
      if(!linkCache.has(url)){
       if(linkCache.size>=12)return res.status(409).json({success:false,code:'TOO_MANY_INTERNAL_LINKS_TO_VERIFY'});
-      linkCache.set(url,await resolveGrowthInternalLink(url,v.page.url,{fetchLive}));
+      linkCache.set(url,await resolveGrowthInternalLink(absolute,v.page.url,{fetchLive}));
      }
      const checked=linkCache.get(url);
      if(!checked.url)return res.status(409).json({success:false,code:'INTERNAL_LINK_NOT_DIRECT_200',
