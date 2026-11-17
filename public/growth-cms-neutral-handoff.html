@@ -63,15 +63,16 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <p id="downloadWhy" class="small" role="status" hidden></p>
 </form>
 <section id="publicationWrap" class="note" hidden aria-label="Record actual publication">
-<h2>5. After the change is live: record the publication</h2>
-<p>Only fill this in once the editor has actually published the change on the original page. This starts the 28-day measurement; it does not change the website.</p>
+<h2>Finish · Record your published update</h2>
+<p>After you publish the approved changes in your own CMS, confirm the actual date below. Growth will measure eligible results later. It does not publish anything for you.</p>
 <form id="publicationForm" novalidate>
 <label class="check"><input id="confirmPublished" type="checkbox" required><span>I confirm that the changes were actually published on the live website. Record the real publication date below.</span></label>
 <label for="publishedAt">Publication date and time</label><input id="publishedAt" type="datetime-local" required>
 <label for="publicationNotes">What was actually published?</label><textarea id="publicationNotes" rows="3" maxlength="3000" required></textarea>
-<label for="reminderEmails">Remind me after 28 days by e-mail (optional, up to 5 addresses, separated by commas)</label><input id="reminderEmails" type="text" inputmode="email" autocomplete="email" placeholder="you@example.com, colleague@example.com">
-<p class="small">At the end of the test period (day 32) Growth reads the Search Console numbers itself and e-mails you a link to enter your enquiries for both periods. Nothing else to do now; you can change the text, date and addresses later.</p>
-<div class="actions"><button type="submit" id="recordPublication">Save publication checkpoint</button><span id="publicationStatus" role="status"></span></div>
+<details id="publicationReminderOptions"><summary>Optional · Reminder e-mails</summary><label for="reminderEmails">Remind me after 28 days (up to 5 e-mail addresses, separated by commas)</label><input id="reminderEmails" type="text" inputmode="email" autocomplete="email" placeholder="you@example.com, colleague@example.com"></details>
+<p class="small">After saving: Growth keeps the publication time. Where authorized, comparable Search Console periods are checked when they become available. You can also record your enquiries later; missing data is never counted as zero.</p>
+<div class="actions"><button type="submit" id="recordPublication">Confirm publication → start measurement</button><span id="publicationStatus" role="status"></span></div>
+<p id="publicationMeasurement" hidden><a id="publicationMeasureLink" class="primary" href="#">View your measurement status →</a></p>
 </form>
 </section>
 <p class="small">Includes editable Markdown, indexable HTML fragments, SEO metadata, a preservation checklist and an honest measurement plan. For Wix, use native heading/text elements, not an iframe.</p>
