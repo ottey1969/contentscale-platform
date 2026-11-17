@@ -80,7 +80,7 @@ function registerGrowthExecution(app,pool,deps={}){
     [c.id,pageId,query])).rows[0]||null;
    if(prior){
     const newer=Date.parse(publishedAt)>Date.parse(prior.published_at)+60000;
-    const distinct=notes.toLowerCase().replace(/\\s+/g,' ').trim()!==String(prior.notes||'').toLowerCase().replace(/\\s+/g,' ').trim();
+    const distinct=notes.toLowerCase().replace(/\s+/g,' ').trim()!==String(prior.notes||'').toLowerCase().replace(/\s+/g,' ').trim();
     if(req.body?.new_publication!==true||!newer||!distinct){
      return res.status(409).json({success:false,code:'EXISTING_PUBLICATION',
       error:!newer&&req.body?.new_publication===true?'The new publication must have a later actual live date than the previous update.':
@@ -96,7 +96,14 @@ function registerGrowthExecution(app,pool,deps={}){
    // late), read them now; otherwise the hourly check reads them as soon as they are.
    const pubId=Number(result.rows[0].id);
    setImmediate(()=>require('./tracker-growth-gsc-direct.cjs').importGscWindows(pool,{clientId:c.id,publicationId:pubId,periods:['before']}).catch(()=>{}));
-   const reminder=mail.emails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:mail.emails,publishedAt}).catch(()=>null):null;
+   // A deliberate second publication should notify the same opted-in contacts
+   // unless the owner supplied different addresses (or explicitly opted out).
+   var recipientEmails=mail.emails;
+   if(prior&&req.body?.new_publication===true&&!recipientEmails.length&&req.body?.send_update_email!==false){
+    const previousReminder=await reminders.loadReminder(pool,{clientId:c.id,publicationId:Number(prior.id)}).catch(()=>null);
+    recipientEmails=previousReminder?.emails||[];
+   }
+   const reminder=recipientEmails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:recipientEmails,publishedAt}).catch(()=>null):null;
    const html=reminder?(await pool.query("SELECT to_jsonb(p)->>'html_content' AS html FROM tracker_pages p WHERE id=$1",[pageId]).catch(()=>({rows:[]}))).rows[0]?.html:null;
    const ctx=reminder?await reminders.publicationContext(pool,{clientId:c.id,publicationId:pubId}).catch(()=>null):null;
    const confirmation=reminder?await reminders.sendConfirmation({emails:reminder.emails,url:pg.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx}):null;
@@ -130,11 +137,12 @@ function registerGrowthExecution(app,pool,deps={}){
    const row=(await pool.query('UPDATE tracker_growth_publications SET notes=$3,published_at=$4 WHERE id=$1 AND tracker_client_id=$2 RETURNING id,published_at,notes',[id,c.id,notes,publishedAt])).rows[0];
    const reminder=req.body&&'reminder_emails' in req.body?await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:mail.emails,publishedAt}):await reminders.loadReminder(pool,{clientId:c.id,publicationId:id});
    if(reminder&&moved&&!(req.body&&'reminder_emails' in req.body))await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:reminder.emails,publishedAt});
-   const wantsMail=!!(reminder&&req.body&&'reminder_emails' in req.body);
+   const modified=String(notes)!==String(pub.notes)||Date.parse(publishedAt)!==Date.parse(pub.published_at);
+   const wantsMail=!!(reminder&&(modified||(req.body&&'reminder_emails' in req.body)));
    const html=wantsMail?(await pool.query("SELECT to_jsonb(p)->>'html_content' AS html FROM tracker_pages p JOIN tracker_growth_publications g ON g.tracker_page_id=p.id AND g.tracker_client_id=p.tracker_client_id WHERE g.id=$1",[id]).catch(()=>({rows:[]}))).rows[0]?.html:null;
    const ctx=wantsMail?await reminders.publicationContext(pool,{clientId:c.id,publicationId:id}).catch(()=>null):null;
    const confirmation=wantsMail?await reminders.sendConfirmation({emails:reminder.emails,url:pub.url,publishedAt,notes,send:deps.send,model:deps.model,lang:reminders.pageLanguage(html),ctx}):null;
-   res.json({success:true,publication:row,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt),confirmation}:null,live_page_changed:false});
+   res.json({success:true,publication:row,updated_existing:true,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt),confirmation}:null,live_page_changed:false});
   }catch(e){console.error('[growth-publication-edit]',e.message);res.status(503).json({success:false,error:'Publication record unavailable'})}
  });
  reminders.startReminderLoop(pool);
