@@ -98,7 +98,7 @@
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
-  $('download').disabled=!!safe.exported||!(safe.savedQuestionConfirmed&&safe.source&&$('title').value.trim()&&$('meta').value.trim()&&$('approved').checked&&manualReady&&factsChecked);
+  $('download').disabled=!!safe.exported||!(safe.savedQuestionConfirmed&&safe.source&&$('title').value.trim()&&$('meta').value.trim()&&$('heading').value.trim()&&$('copy').value.trim().length>=30&&$('approved').checked&&manualReady&&factsChecked);
   $('download').textContent=safe.exported?'4. CMS handoff ZIP downloaded':'4. Download reviewed CMS handoff ZIP';
   var alternativeDraft=!!safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim();
   var draftBtn=$('generateEditorialDraft');
@@ -347,7 +347,7 @@
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
    var p=d.proposal,box=$('growthProposal');box.textContent='';box.hidden=false;
    if(String(p.focus_query||'').trim().toLowerCase()!==exactQuestion.toLowerCase()){
-    var earlier=document.createElement('p');earlier.textContent='Saved proposal #'+p.id+' concerns “'+p.focus_query+'”, not this selected customer question “'+exactQuestion+'”. It is historical context only, not an eligible draft for download. Generate a new AI draft below.';box.appendChild(earlier);return;
+    var earlier=document.createElement('p');earlier.textContent='Saved proposal #'+p.id+' concerns “'+p.focus_query+'”, not the exact selected question “'+exactQuestion+'”. This older draft cannot be reused for a different intent. Open Growth research for this question; Advanced remains optional.';box.appendChild(earlier);return;
    }
    var summary=document.createElement('strong');summary.textContent='Growth research proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(summary);
    var fact=document.createElement('p');fact.className='small';
@@ -361,12 +361,13 @@
    skip.style.cssText='margin-left:8px';box.appendChild(skip);
    skip.addEventListener('click',function(){
     safe.proposal=null;box.hidden=true;box.textContent='';
+    $('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';$('mainPlacement').textContent='';
     $('approved').checked=false;ready();
     status('downloadStatus','Saved proposal #'+p.id+' discarded. Write reviewed content yourself or optionally generate a different AI draft.',false);
    });
    review.addEventListener('click',function(){
     if(review.disabled)return;
-    review.disabled=true;skip.hidden=true;summaryList.hidden=true;
+    review.disabled=true;skip.hidden=false;summaryList.hidden=true;
     next.textContent='Review the saved Growth proposal below. Verify all claims, approve it and download. Advanced is optional.';
     var first=p.sections[0];
     // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
