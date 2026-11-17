@@ -71,6 +71,19 @@
       locHelp.textContent='Used to localize Google customer-question discovery. The full Pre-Write competitor scan currently uses the country setting; do not treat this field as proof of a state-localized competitor SERP.';
       whereWrap.append(whereLabel,whereInput,locList,locHelp);
       regionField.insertAdjacentElement('afterend',whereWrap);
+      // Save per keyword and country: NJ must never accidentally carry over to a different brief.
+      var lastLocationKey='';
+      function locationKey(){return 'cs:prewrite:location:'+val('pwbRegion').slice(0,2).toLowerCase()+':'+val('pwbKeyword').toLowerCase()}
+      function restoreLocation(){
+       var key=locationKey();if(key===lastLocationKey)return;
+       lastLocationKey=key;
+       try{whereInput.value=localStorage.getItem(key)||''}catch(e){whereInput.value=''}
+      }
+      whereInput.addEventListener('input',function(){
+       try{localStorage.setItem(locationKey(),whereInput.value.trim())}catch(e){}
+      });
+      window.__pwbRestoreSearchLocation=restoreLocation;
+      restoreLocation();
     }
     heading.textContent = 'Collect AI answers';
     var tabs = document.createElement('div');
@@ -311,6 +324,7 @@
     function refreshFromForm() {
       var modal = $('prewriteBriefModal');
       if (modal && !modal.getClientRects().length) return;
+      if(typeof window.__pwbRestoreSearchLocation==='function')window.__pwbRestoreSearchLocation();
       var state = JSON.stringify(currentInputs());
       if (state === lastFormState) return;
       lastFormState = state;
