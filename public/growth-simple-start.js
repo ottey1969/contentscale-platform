@@ -5,8 +5,9 @@
  var page=document.getElementById('growthSimplePage'),filter=document.getElementById('growthSimpleFilter'),
   continueBtn=document.getElementById('growthSimpleContinue'),pageStatus=document.getElementById('growthSimplePageStatus'),
   status=document.getElementById('growthSimpleStatus');
- var originalCountries=document.getElementById('growthSimpleOriginalCountries').value,
-  originalLanguage=document.getElementById('growthSimpleOriginalLanguage').value;
+ var baseCountries=document.getElementById('growthSimpleOriginalCountries').value,
+  baseLanguage=document.getElementById('growthSimpleOriginalLanguage').value;
+ var originalCountries=baseCountries,originalLanguage=baseLanguage;
  var options=Array.from(page.options).slice(1);
  function sync(){
   var selected=page.options[page.selectedIndex],valid=!!page.value&&!selected.disabled&&!selected.hidden;
@@ -14,9 +15,16 @@
   continueBtn.textContent=valid?'Run Growth research →':'Choose a page first';
   pageStatus.textContent=valid?'Selected: '+selected.textContent:'Select a page first. Nothing is selected automatically.';
  }
+ function applySelectedSettings(){
+  var opt=page.value?page.options[page.selectedIndex]:null;
+  originalCountries=opt?String(opt.dataset.countries||''):baseCountries;
+  originalLanguage=opt?String(opt.dataset.language||''):baseLanguage;
+  form.elements.countries.value=originalCountries;
+  form.elements.language.value=originalLanguage;
+ }
  page.value='';
- sync();
- page.addEventListener('change',sync);
+ applySelectedSettings();sync();
+ page.addEventListener('change',function(){applySelectedSettings();sync()});
  filter.addEventListener('input',function(){
   var term=filter.value.toLowerCase().replace(/[^a-z0-9]/g,''),visible=0;
   options.forEach(function(option){
@@ -24,7 +32,9 @@
    option.hidden=!matches;option.disabled=!matches;
    if(matches)visible++;
   });
-  if(page.value&&(page.options[page.selectedIndex].disabled||page.options[page.selectedIndex].hidden))page.value='';
+  if(page.value&&(page.options[page.selectedIndex].disabled||page.options[page.selectedIndex].hidden)){
+   page.value='';applySelectedSettings();
+  }
   sync();
   status.textContent=visible+' matching page(s). Choose one to continue.';
  });
