@@ -89,7 +89,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    const {home,pages}=await site(cid);
    const query=clip(b.keyword,160);
    // Pre-Write findings are editorial leads, not newly verified Google evidence.
-   const prewriteFindings=briefFindingsForGrowth(b.brief_json||{});
+   const prewriteFindings=briefFindingsForGrowth({...b.brief_json,keyword:b.keyword});
    const {configured}=await marketFor(cid,b);
    const locale=deriveSearchLocale({html:'',url:home||'https://example.invalid/',configured});
    const discovery=await Promise.resolve().then(()=>searchLive({query,ownUrl:home,market:null,locale}))
@@ -221,7 +221,12 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
   const L=['# New page concept: '+(pkg.title||pkg.keyword),'','Keyword: '+pkg.keyword,'Planned URL: '+(pkg.planned_url||'—')+' (not published)',
    'From Pre-Write brief #'+pkg.prewrite_brief_id+(pkg.market?.country?' · market '+pkg.market.country+(pkg.market.language?' · language '+pkg.market.language:''):''),
    ...(pkg.overlap&&pkg.overlap.status!=='NO_OVERLAP_FOUND'?['','> Overlap check: '+pkg.overlap.status+' — '+[...(pkg.overlap.exact||[]),...(pkg.overlap.possible||[])].map(p=>p.url).join(', ')]:[]),'',
-   ...pkg.sections.flatMap(s=>['## '+s.h2,'',s.text,'',
+   ...(pkg.prewrite_findings?['## Pre-Write findings to verify — not new evidence','',
+     'These are editorial leads from the saved Pre-Write Brief, not verified source claims or proof of missing content.','',
+     ...(pkg.prewrite_findings.outline||[]).map(x=>'- Planned section: '+x.heading),
+     ...(pkg.prewrite_findings.competitor_gaps||[]).map(x=>'- Competitor lead to recheck: '+(x.competitor?x.competitor+' — ':'')+x.gap),
+     ...(pkg.prewrite_findings.questions||[]).map(x=>'- Reader question: '+x),'']:[]),
+    ...pkg.sections.flatMap(s=>['## '+s.h2,'',s.text,'',
     '_Answers: '+(s.basis?.answers||s.task||'—')+' · basis: '+String(s.basis?.evidence_level||'—').toLowerCase().replace(/_/g,' ')+
     ((s.basis?.competitor_evidence||[]).length?' · sources: '+s.basis.competitor_evidence.map(e=>e.site).join(', '):'')+'_',
     ...(s.basis?.warning?['','> '+s.basis.warning]:[]),'']),
