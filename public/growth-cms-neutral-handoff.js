@@ -5,7 +5,7 @@
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
+ const safe={source:null,proposal:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
@@ -57,7 +57,7 @@
   }else{
    var dl2=$('download');if(dl2&&dl2.dataset.loadingText!==undefined){delete dl2.dataset.busy;dl2.removeAttribute('aria-busy');delete dl2.dataset.loadingText}
    // Buttons that existed before loading get their state back; buttons created DURING loading (the flagged-sentence
-   // removal, "Add to this package") were switched off by ready() and must come back on too (owner 2026-11-02: the
+   // removal) were switched off by ready() and must come back on too (owner 2026-11-02: the
    // removal button stayed grey and did nothing). Their own state is then set by their refresh.
    var known=new Set(sourceButtonStates.map(function(s){return s.button}));
    sourceButtonStates.forEach(function(s){s.button.disabled=s.disabled});
@@ -279,105 +279,10 @@
  }
  // Other proposals and written concepts stored for this page (for example improvements the owner chose on the research
  // page). Each one is added only when the editor clicks it; its checks come with it and the package records its id.
- function renderEarlier(list){
-  var box=$('growthEarlier');if(!box)return;box.textContent='';
-  if(!list||!list.length){box.hidden=true;return}
-  box.hidden=false;
-  // Concepts the owner had written for a selection are offered; earlier research runs of the same page are older wordings
-  // of the same tasks and stay folded away (owner 2026-11-01: nine "other concepts" were mostly earlier versions).
-  var concepts=list.filter(function(p){return p.kind!=='EARLIER_RESEARCH_VERSION'}),older=list.filter(function(p){return p.kind==='EARLIER_RESEARCH_VERSION'});
-  // Do not automatically reuse a saved concept about another state as if
-  // it were a current local service recommendation. The earlier version is
-  // preserved as history, but needs new same-market research first.
-  function unrelatedGeography(p){
-   var context=String((safe.source&&safe.source.canonical_url)||'')+' '+String($('query').value||'');
-   var content=(p.sections||[]).map(function(x){return String(x.text||'')}).join(' ')+' '+(p.review&&p.review.flagged||[]).map(function(x){return String(x.sentence||'')}).join(' ');
-   var nj=/(?:\bnew jersey\b|(?:^|[\/_-])nj(?:[\/_-]|$))/i.test(context);
-   var fl=/(?:\bflorida\b|(?:^|[\/_-])fl(?:[\/_-]|$))/i.test(context);
-   if(nj&&!fl&&/\bflorida\b/i.test(content))return 'Florida';
-   if(fl&&!nj&&/\bnew jersey\b/i.test(content))return 'New Jersey';
-   return '';
-  }
-  var row=function(p,into){
-   var r0=document.createElement('div');r0.className='earlier-concept';
-   var t=document.createElement('p');
-   t.textContent='#'+p.id+' · '+String(p.created_at||'').slice(0,10)+(p.focus_query?' · “'+p.focus_query+'”':'')+': '+p.sections.map(function(x){return '“'+x.h2+'”'}).join(', ');
-   r0.appendChild(t);
-   var mismatchedRegion=unrelatedGeography(p);
-   if(mismatchedRegion){
-    var warning=document.createElement('p');warning.className='small';
-    warning.textContent='Different location: this earlier concept mentions '+mismatchedRegion+', but the selected page is for another market. This proposal is retained as history only. Run same-market research before using it.';
-    warning.style.cssText='border:1px solid #b45309;background:#fffbeb;padding:8px';
-    r0.appendChild(warning);
-   }
-   var b=document.createElement('button');b.type='button';b.textContent='Add to this package';
-   // Older concepts are optional, not proof that the current search requires
-   // their content. Any addition must be reversible without hunting for fields.
-   var removeConcept=document.createElement('button');removeConcept.type='button';
-   removeConcept.textContent='Remove this concept from CMS package';removeConcept.hidden=true;
-   removeConcept.style.cssText='margin:8px;background:#b91c1c;color:white';
-   var currentChecks=document.createElement('div');currentChecks.className='growth-optional-concept-checks';
-   removeConcept.addEventListener('click',function(){
-    safe.added=safe.added.filter(function(a){return a.id!==p.id});
-    document.querySelectorAll('[data-proposal-id]').forEach(function(node){
-     if(node.dataset.proposalId===String(p.id))node.remove();
-    });
-    currentChecks.textContent='';
-    // The first warning may have inserted a page-wide removal control into this
-    // concept row. Remove that control together with the optional concept.
-    var orphanRemove=r0.querySelector('#growthFlaggedRemoveAll');if(orphanRemove)orphanRemove.remove();
-    b.disabled=false;b.textContent='Add to this package';
-    removeConcept.hidden=true;
-    $('approved').checked=false;ready();
-    status('downloadStatus','Old concept #'+p.id+' removed from this CMS package. Existing published content was not changed.',false);
-    goToCmsDownload();
-   });
-   b.addEventListener('click',function(){
-    if(mismatchedRegion){status('downloadStatus','This older concept refers to '+mismatchedRegion+' and does not match this page. Re-run Growth research for the correct market before adding it.',true);return}
-    if(safe.added.some(function(a){return a.id===p.id}))return;
-    var r=p.review||{};safe.added.push({id:p.id,review:r});
-    p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
-    reapplyRemovals();
-    var seen=new Set();
-    (r.flagged||[]).forEach(function(f){
-     checkItem(currentChecks,'Rewrite, remove, or keep it if it is true: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason,f.sentence);
-     flaggedReviewAction(currentChecks,f);
-    });
-    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){
-     (r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(currentChecks,'Check: '+item)});
-    });
-    removeConcept.hidden=false;
-    b.disabled=true;b.textContent='Added — review the sections above';
-    $('approved').checked=false;ready();
-   });
-   if(mismatchedRegion){b.disabled=true;b.textContent='Different market — new research required'}
-   r0.appendChild(b);r0.appendChild(removeConcept);r0.appendChild(currentChecks);into.appendChild(r0);
-  };
-  if(concepts.length){
-   // Historical concepts are not missing tasks and are not a checklist of
-   // things the owner must add. Hide the entire legacy drafting workflow.
-   var history=document.createElement('details');history.className='growth-legacy-concepts';
-   var title=document.createElement('summary');title.textContent='Advanced · Older saved concepts ('+concepts.length+') — not required';history.appendChild(title);
-   var intro=document.createElement('p');intro.className='small';
-   intro.textContent='These were written for earlier selections. They do not prove any current content gap. Leave them out unless you intentionally want to inspect an older draft; the current research should decide what is needed.';
-   history.appendChild(intro);concepts.forEach(function(p){row(p,history)});box.appendChild(history);
-  }
-  // The download is at the end of the CMS form. Keep its route visible even
-  // when earlier-concept review and factual checks make the page very long.
-  var jump=document.createElement('button');jump.type='button';jump.textContent='Review requirements → Download CMS package ↓';
-  jump.className='growth-cms-download-jump';jump.style.cssText='display:block;margin:12px 0;background:#1d4ed8;color:white;padding:10px 14px';
-  jump.addEventListener('click',goToCmsDownload);box.appendChild(jump);
-  if(older.length){
-   var d=document.createElement('details');var sm=document.createElement('summary');
-   sm.textContent='Earlier versions from previous research runs ('+older.length+') — usually not needed';d.appendChild(sm);
-   var n=document.createElement('p');n.className='small';n.textContent='Each research run stores its own proposal. These are older wordings of the same or similar topics; the text above is the newest. Open only if you want an older wording.';
-   d.appendChild(n);older.forEach(function(p){row(p,d)});box.appendChild(d);
-  }
- }
- // The review notes of the main proposal plus those of every added concept, so the package checks all flagged sentences.
+ // Legacy proposal selector deliberately removed. Only current research is eligible.
  function mergedReview(main){
   var out={},keys=['needs_fact_check','needs_owner_confirmation','needs_safety_review','requirements','flagged','basis','competitor_sources'];
-  [main||{}].concat(safe.added.map(function(a){return a.review||{}})).forEach(function(r){
+  [main||{}].forEach(function(r){
    keys.forEach(function(k){if(Array.isArray(r[k]))out[k]=(out[k]||[]).concat(r[k])});
    if(r.dossier&&!out.dossier)out.dossier=r.dossier});
   // Persisted dismissals remain in the audit store; do not reproduce obsolete
@@ -408,6 +313,7 @@
    var fact=document.createElement('p');fact.className='small';
    fact.textContent='This is an UNAPPROVED draft for “'+String(p.focus_query||exactQuestion)+'”. It is not a verified content gap or fact-checked article. Review the original research before accepting any text.';
    box.appendChild(fact);
+   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Progress: research proposal available → review useful claims → approve → download CMS package.';box.appendChild(next);
    var summaryList=document.createElement('p');summaryList.textContent='Suggested sections: '+(p.sections||[]).map(function(x){return x.h2}).join(' · ');box.appendChild(summaryList);
    var review=document.createElement('button');review.type='button';review.textContent='Review proposed text and claims →';
    review.className='growth-primary-finish';box.appendChild(review);
@@ -421,6 +327,7 @@
    review.addEventListener('click',function(){
     if(review.disabled)return;
     review.disabled=true;skip.hidden=true;summaryList.hidden=true;
+    next.textContent='Progress: reviewing selected claims. Next: approve verified edits and download the CMS package.';
     var first=p.sections[0];
     // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
     safe.proposal=p;
@@ -456,7 +363,6 @@
     review.hidden=true;
     reapplyRemovals();$('approved').checked=false;ready();
    });
-   renderEarlier(d.earlier);
    reapplyRemovals();
    $('approved').checked=false;ready();
   }catch(e){/* no proposal: manual or AI-assisted text stays available */}
@@ -465,7 +371,7 @@
  // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
  async function loadSeoProposal(target,linkUrl){
   try{
-   var res=await fetch(base+'/seo-proposal?page_id='+encodeURIComponent(pageId)+(linkUrl?'&link='+encodeURIComponent(linkUrl):''),{cache:'no-store',credentials:'same-origin'});
+   var res=await fetch(base+'/seo-proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(String($('query').value||requestedQuestion||'').trim())+(linkUrl?'&link='+encodeURIComponent(linkUrl):''),{cache:'no-store',credentials:'same-origin'});
    var d=await res.json();if(!res.ok||d.success!==true)return;
    var old=target.querySelector&&target.querySelector('.seo-proposal');if(old)old.remove();
    var box=document.createElement('div');box.className='note seo-proposal';target.appendChild(box);
@@ -616,7 +522,7 @@
     $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
    }
    // An AI draft replaces the checked Growth proposal; the package then no longer claims to come from it.
-   safe.proposal=null;safe.added=[];if($('growthEarlier')){$('growthEarlier').hidden=true;$('growthEarlier').textContent=''}$('growthProposal').hidden=true;$('growthProposal').textContent='';$('mainPlacement').textContent='';
+   safe.proposal=null;$('growthProposal').hidden=true;$('growthProposal').textContent='';$('mainPlacement').textContent='';
    $('growthAdditionalSections').textContent='';
    parts.slice(1,5).forEach(function(section,i){addSection(section.h2,(section.paragraphs||[]).join('\n\n'),'AI draft section '+(i+2)+' · verify facts',null)});
    reapplyRemovals();
@@ -679,7 +585,6 @@
    cms:$('cms').value,evidence_scope:$('evidence').value,focus_query:$('query').value.trim(),
    seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),personal_voice:$('personalVoice').checked===true,
    ...(proposal?{growth_proposal_id:proposal.id,review_notes:mergedReview(proposal.review)}:{}),
-   ...(proposal&&safe.added.length?{added_growth_proposal_ids:safe.added.map(function(a){return a.id})}:{}),
    approved_changes:reviewedSections};
  }
  async function post(body,format){
