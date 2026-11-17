@@ -106,7 +106,7 @@ test('Growth brief preserves complete, partial, missing and unknown content with
 test('unreadable own page never produces false complete or missing coverage',()=>{
  const d=fixture();d.page_content.signals.available=false;
  const output=build(d);
- assert.match(output,/Temporary weather protection \\| COVERAGE UNKNOWN/);
+ assert.ok(output.includes('Temporary weather protection | COVERAGE UNKNOWN'));
  assert.match(output,/Existing page sections must be re-opened/);
 });
 test('AI observations and Google findings remain together even when no new gaps are accepted',()=>{
@@ -114,7 +114,7 @@ test('AI observations and Google findings remain together even when no new gaps 
  d.gap_list.items=[];
  d.ai_check.gap.missing_topics=[{topic:'Detailed safety preparation',coverage:'PARTIAL',examples:[{site:'roof.example',excerpt:'Useful procedures'}]}];
  const output=build(d);
- assert.match(output,/Detailed safety preparation \\| COVERAGE PARTIAL/);
+ assert.ok(output.includes('Detailed safety preparation | COVERAGE PARTIAL'));
  assert.match(output,/Useful procedures/);
  assert.match(output,/RANKING COMPETITOR SOURCE LEADS/);
 });
