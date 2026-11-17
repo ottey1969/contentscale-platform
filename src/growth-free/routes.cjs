@@ -201,7 +201,7 @@ ${aiStartScript(t)}
   }catch(e){return null}
  }
  function sync(){
-  var valid=!!normalized();btn.disabled=!valid;btn.textContent=valid?FT.submit:FT.simpleChooseUrl;
+  var valid=!!normalized();btn.disabled=!valid;btn.textContent=valid?(typeof OWNER!=='undefined'&&OWNER?'Run the check (owner)':FT.submit):FT.simpleChooseUrl;
   st.textContent=valid?FT.simpleUrlReady:FT.simpleUrlStatus;
   if(open)open.disabled=!((s&&s.value.trim())||valid);
  }
