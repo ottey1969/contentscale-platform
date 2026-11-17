@@ -25,6 +25,7 @@ const styleFix=require('../growth-style-fix.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const {importSitemap}=require('./sitemap-import.cjs');
+const {trackerSitemapFallback}=require('../tracker-growth-automatic-routes.cjs');
 const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
 const topicLang=require('./topic-lang.cjs');
@@ -320,7 +321,7 @@ try{
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -1061,14 +1062,22 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
      // No customer question found for a rank tracker topic: the tracked keyword itself is researched.
      else if(job.topic){job.query=job.topic;if(chosenQuestion)chosenQuestion.text_fallback='TOPIC'}
-     const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[],sitemapUrls:job.sitemap?.urls||[]},engineDeps);
+     if(job.sitemap?.sitemapUrl){
+       try{
+        const fallback=await trackerSitemapFallback([{sitemap_url:job.sitemap.sitemapUrl}],job.url,[],
+         u=>fetchPublicGrowthHtml(u,{limit:1024*1024,timeout:4500,redirects:1,allowSitemapXml:true}));
+        job.sitemap={fileName:'Sitemap URL',urls:fallback.urls,totalFound:fallback.count,limited:fallback.count>=300,
+         source:'PUBLIC_SITEMAP_URL',status:fallback.fetch_status};
+       }catch(e){job.sitemap={fileName:'Sitemap URL',urls:[],totalFound:0,limited:false,source:'PUBLIC_SITEMAP_URL',status:'SITEMAP_UNAVAILABLE'}}
+      }
+      const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[],sitemapUrls:job.sitemap?.urls||[]},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
-       if(job.sitemap)out.report.sitemap_import={status:'IMPORTED_URL_INVENTORY_ONLY',source:'VISITOR_XML_UPLOAD',file_name:job.sitemap.fileName,urls_found:job.sitemap.totalFound,urls_used:job.sitemap.urls.length,limited:job.sitemap.limited,urls:job.sitemap.urls,note:'Sitemap URLs are site inventory only. No imported page was treated as read, indexed, canonical or verified.'};
+       if(job.sitemap)out.report.sitemap_import={status:job.sitemap.urls.length?'IMPORTED_URL_INVENTORY_ONLY':'SITEMAP_UNAVAILABLE',source:job.sitemap.source||'VISITOR_XML_UPLOAD',file_name:job.sitemap.fileName,urls_found:job.sitemap.totalFound,urls_used:job.sitemap.urls.length,limited:job.sitemap.limited,urls:job.sitemap.urls,note:'Sitemap URLs are site inventory only. No imported page was treated as read, indexed, canonical or verified.'};
       if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       // The AI systems are asked the best real Google question for the search term, not the bare keyword (owner 2026-11-12).
@@ -1246,7 +1255,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {fileName:clean(f.name,200),upload};
  }
  function readSitemapFile(b,url,res){
-   try{return importSitemap(b&&b.sitemap_file,url)}catch(e){res.status(400).json({success:false,error:'Sitemap import: '+String(e.message||'INVALID_SITEMAP')});return undefined}
+   try{
+    if(b&&b.sitemap_file&&b.sitemap_file.content_base64)return importSitemap(b.sitemap_file,url);
+    const raw=String(b&&b.sitemap_url||'').trim();if(!raw)return null;
+    const target=new URL(raw),page=new URL(url);
+    if(target.protocol!=='https:'||target.hostname.toLowerCase()!==page.hostname.toLowerCase()||target.username||target.password||target.port&&target.port!=='443'||raw.length>500)throw Error('SITEMAP_URL_MUST_BE_PUBLIC_HTTPS_ON_SAME_HOST');
+    return {fileName:'Sitemap URL',sitemapUrl:target.href,urls:[],totalFound:0,limited:false};
+   }catch(e){res.status(400).json({success:false,error:'Sitemap import: '+String(e.message||'INVALID_SITEMAP')});return undefined}
   }
   const gscRowsOf=(gsc,url)=>gsc?gscExport.engineRows(gsc.upload,{pageUrl:url}):[];
  // The visitor's Search Console uploads for this check: the latest one is shown; all are kept for the 28-day comparison.
