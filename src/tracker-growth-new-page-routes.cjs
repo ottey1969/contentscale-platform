@@ -36,12 +36,12 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
  const no=(res,status,code,extra={})=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code,...extra});
  const owner=req=>req.growth?.can_edit===true;
  async function briefs(clientId){
-  try{return (await pool.query('SELECT id,keyword,working_title,language,region,created_at FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC,id DESC LIMIT 50',[clientId])).rows}
+  try{return (await pool.query('SELECT id,keyword,working_title,language,region,brief_json,created_at FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC,id DESC LIMIT 50',[clientId])).rows}
   catch(e){if(e.code==='42P01')return [];throw e}
  }
  async function brief(clientId,id){
   if(!/^[1-9][0-9]{0,12}$/.test(String(id||'')))return null;
-  try{return (await pool.query('SELECT id,keyword,working_title,language,region,created_at FROM prewrite_briefs WHERE client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
+  try{return (await pool.query('SELECT id,keyword,working_title,language,region,brief_json,created_at FROM prewrite_briefs WHERE client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
   catch(e){if(e.code==='42P01')return null;throw e}
  }
  async function site(clientId){
@@ -59,8 +59,23 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    await Promise.resolve(loadSiteMarkets({clientId})).catch(()=>null):null;
   return {own,configured:resolveMarketSetting(own,fromBrief.countries.length||fromBrief.language?fromBrief:null,site)};
  }
- const plannedUrl=(home,b,pages)=>{if(!home)return null;let u=home+(slugOf(b.keyword)||'new-page')+'/';
-  return {url:u,taken:pages.some(p=>String(p.url).replace(/\/$/,'')===u.replace(/\/$/,''))}};
+ // The planned slug belongs to Pre-Write. Growth may research a page that is not live yet;
+ // never substitute an existing-page URL or guess that the planned URL is already published.
+ const plannedUrl=(home,b,pages)=>{
+  if(!home)return null;
+  const meta=b.brief_json?.meta_package||{};
+  const decision=String(b.brief_json?.content_decision?.recommended_treatment||'').toUpperCase();
+  const supplied=decision==='EXPAND_EXISTING_PAGE'?(meta.proposed_new_slug||''):(meta.url_slug||meta.proposed_new_slug||'');
+  let pathname=null;
+  if(typeof supplied==='string'&&supplied.length<=250&&/^\/?[a-z0-9][a-z0-9\/_-]*\/?$/i.test(supplied)&&
+    !/(?:^|\/)\.{1,2}(?:\/|$)/.test(supplied)&&
+    !/^\/?(?:wp-admin|wp-json|wp-content|feed)(?:\/|$)/i.test(supplied)){
+   pathname='/'+supplied.replace(/^\/+|\/+$/g,'')+'/';
+  }
+  const source=pathname?'PREWRITE_BRIEF_SLUG':'KEYWORD_FALLBACK';
+  const url=home.replace(/\/+$/,'')+(pathname||'/'+(slugOf(b.keyword)||'new-page')+'/');
+  return {url,source,taken:pages.some(p=>String(p.url).replace(/\/$/,'')===url.replace(/\/$/,''))};
+ };
 
  // Research for a new page from a brief. Nothing is written.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/new-page/research',data,async(req,res)=>{
@@ -98,7 +113,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
      carried={from_gap_list_id:open.gap_list_id,pending_ids:m.carried,needs_confirmation:m.needs_confirmation,needs_remapping:m.needs_remapping,no_longer_found:m.no_longer_found,
       note:'Items you selected earlier and that were not written yet. Ticked again only when the new research still shows the same need; nothing is written until you click.'}}
    }
-   res.set('Cache-Control','private, no-store').json({success:true,...report,new_page_research:{planned_url:planned?.url||null,planned_url_taken:!!planned?.taken,
+   res.set('Cache-Control','private, no-store').json({success:true,...report,new_page_research:{planned_url:planned?.url||null,planned_url_source:planned?.source||null,planned_url_taken:!!planned?.taken,
      overlap,market_coverage:discovery.market_coverage||null,home_url:home},
     gap_list:{...gapList,target_url:planned?.url||null,carried_over:carried,id:ref?Number(ref.id):null,
      write_url:ref?api(req.params.token)+'/write':null,selection_url:ref?api(req.params.token)+'/selection':null},
@@ -261,4 +276,4 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    '<button id="newPageDownload" type="button" hidden>Download research (JSON)</button></section><div id="newPageReport"></div>');
  });
 }
-module.exports={registerGrowthNewPage,briefKey};
+module.exports={registerGrowthNewPage,briefKey,plannedUrl};
