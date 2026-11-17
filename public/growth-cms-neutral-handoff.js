@@ -354,10 +354,13 @@
    r0.appendChild(b);r0.appendChild(removeConcept);r0.appendChild(currentChecks);into.appendChild(r0);
   };
   if(concepts.length){
-   var h=document.createElement('strong');h.textContent='Also written for this page: '+concepts.length+' other concept'+(concepts.length===1?'':'s');box.appendChild(h);
+   // Historical concepts are not missing tasks and are not a checklist of
+   // things the owner must add. Hide the entire legacy drafting workflow.
+   var history=document.createElement('details');history.className='growth-legacy-concepts';
+   var title=document.createElement('summary');title.textContent='Advanced · Older saved concepts ('+concepts.length+') — not required';history.appendChild(title);
    var intro=document.createElement('p');intro.className='small';
-   intro.textContent='Written in the last 30 days for improvements you chose, on topics not already in the text above. Add the ones you want; each still needs your review.';
-   box.appendChild(intro);concepts.forEach(function(p){row(p,box)});
+   intro.textContent='These were written for earlier selections. They do not prove any current content gap. Leave them out unless you intentionally want to inspect an older draft; the current research should decide what is needed.';
+   history.appendChild(intro);concepts.forEach(function(p){row(p,history)});box.appendChild(history);
   }
   // The download is at the end of the CMS form. Keep its route visible even
   // when earlier-concept review and factual checks make the page very long.
@@ -425,11 +428,11 @@
     $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
     p.sections.slice(1,5).forEach(function(x,i){addSection(x.h2,x.text,'Growth proposal section '+(i+2),x.placement)});
     if(!$('query').value&&p.focus_query)$('query').value=p.focus_query;
-    var reviewBox=document.createElement('div');reviewBox.className='growth-proposal-review';box.appendChild(reviewBox);
+    var reviewBox=document.createElement('div');reviewBox.className='growth-proposal-review';$('growthProposal').appendChild(reviewBox);
     var box=reviewBox;
-    var h=document.createElement('strong');h.textContent='Checked Growth proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(h);
+    var h=document.createElement('strong');h.textContent='Unapproved draft #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(h);
     var intro=document.createElement('p');
-    intro.textContent='This is the text Growth checked against the ranking pages'+(p.focus_query?' for “'+p.focus_query+'”':'')+'. You may still edit it; the package records whether you did. Nothing is published.';
+    intro.textContent='Draft for '+(p.focus_query?'“'+p.focus_query+'”':'the selected question')+'. Comparing pages is research, not verification that all these additions are missing, accurate or safe. Nothing has been approved or published.';
     var scope=document.createElement('p');scope.className='small';
     scope.textContent='Editorial concept only. Growth proposed this copy for the stated query, but its facts, competitors, safety instructions and originality are NOT independently verified. Do not publish without reviewing each claim against reliable evidence. Roofing work on wet or damaged roofs must be left to qualified professionals.';
     box.appendChild(intro);box.appendChild(scope);
@@ -451,6 +454,7 @@
     }
  
     review.hidden=true;
+    reapplyRemovals();$('approved').checked=false;ready();
    });
    renderEarlier(d.earlier);
    reapplyRemovals();
