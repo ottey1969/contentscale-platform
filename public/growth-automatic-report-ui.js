@@ -1042,6 +1042,62 @@
    '<div class="tg-flow">'+[['Choose','growthGapChoice'],['Write','growthFinalActions'],['Publish & measure','growthNextAction']].map(function(st,i){return '<a class="'+(i+1<x.stage?'done':i+1===x.stage?'active':'')+'" href="#'+st[1]+'">'+(i+1<x.stage?'✓ ':(i+1)+'. ')+esc(st[0])+'</a>'}).join('')+'</div>'}
  function trUpdate(n){if(!NOWC)return;var card=document.getElementById('trackerNextAction');if(card)card.innerHTML=trCockpit(NOWC,n);
   var x=trNow(NOWC,n),bar=document.getElementById('trNowBar');if(bar)bar.innerHTML='<span><small>Step '+x.stage+' of 3 · do this now</small><strong>'+esc(x.now.t)+'</strong></span><a class="tg-go" href="#'+esc(x.now.to)+'">'+esc(x.now.b)+' →</a><a class="tg-top" href="#trackerNextAction">↑ Top</a>'}
+ // The third step is deliberately simple: publish in the owner's CMS, confirm the
+ // real publication timestamp once, then inspect the separately measured outcomes.
+ // The same-page / same-question check prevents accidentally re-recording an older update.
+ function publishedQuery(){return String((last&&last.ai_check&&last.ai_check.search_term)||runQuery||'').trim()}
+ function publicationMatch(record){
+  if(!record||!last)return false;
+  var expected='',actual='';try{expected=new URL(String(last.url||'')).href.replace(/\\/$/,'');actual=new URL(String(record.url||'')).href.replace(/\\/$/,'')}catch(e){return false}
+  var q=publishedQuery();
+  return !!q&&actual===expected&&String(record.query||'').trim().toLowerCase()===q.toLowerCase();
+ }
+ function setPublishState(record){
+  var wizard=document.getElementById('growthPublishWizard'),status=document.getElementById('growthPublishState');
+  var notRecorded=document.getElementById('growthPublishNotRecorded'),recorded=document.getElementById('growthPublishRecorded');
+  if(!wizard||!status||!notRecorded||!recorded)return;
+  notRecorded.hidden=!!record;recorded.hidden=!record;
+  status.textContent=record?'Publication registered: '+String(record.published_at||'date unavailable').slice(0,16).replace('T',' ')+'.':'No publication recorded yet for this exact page and question.';
+  if(NOWC){NOWC.published=!!record;trUpdate(trPicked())}
+ }
+ async function restorePublicationRecord(){
+  var wizard=document.getElementById('growthPublishWizard');if(!wizard||!last)return;
+  var status=document.getElementById('growthPublishState');
+  try{
+   var response=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/measurement',{credentials:'same-origin',cache:'no-store'});
+   var payload=await response.json().catch(function(){return {}});
+   if(!response.ok||!payload.success)throw Error(payload.error||'Measurement unavailable');
+   var matches=(payload.records||[]).filter(publicationMatch).sort(function(a,b){return String(b.published_at||'').localeCompare(String(a.published_at||''))});
+   setPublishState(matches[0]||null);
+  }catch(e){if(status)status.textContent='Could not check existing publication records. Reload before recording again: '+String(e.message||e)}
+ }
+ function wireSimplePublication(){
+  var reveal=document.getElementById('growthPublishReveal'),form=document.getElementById('growthPublishForm');
+  if(!reveal||!form||form.dataset.wired)return;form.dataset.wired='1';
+  reveal.addEventListener('click',function(){form.hidden=false;reveal.hidden=true;var date=document.getElementById('growthPublishedAt');if(date)date.focus()});
+  form.addEventListener('submit',async function(event){
+   event.preventDefault();
+   if(!last)return;
+   var button=document.getElementById('growthPublishConfirm'),feedback=document.getElementById('growthPublishFeedback');
+   var dateValue=document.getElementById('growthPublishedAt').value,notes=document.getElementById('growthPublishedNotes').value.trim();
+   var actual=new Date(dateValue),question=publishedQuery();
+   if(!dateValue||!Number.isFinite(actual.getTime())||actual.getTime()>Date.now()+60000||!notes||!question){
+    feedback.textContent='Enter the actual past publication date and a short description. The exact customer question must be known.';return;
+   }
+   button.disabled=true;button.textContent='Recording publication…';feedback.textContent='Saving a publication checkpoint. Nothing is published automatically.';
+   try{
+    var response=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/publication',{
+     method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({page_id:Number(id),query:question,notes:notes,published_at:actual.toISOString()})
+    });
+    var result=await response.json().catch(function(){return {}});
+    if(!response.ok||!result.success)throw Error(result.error||result.code||'Publication not recorded');
+    setPublishState({published_at:actual.toISOString(),query:question,url:last.url});
+    feedback.textContent='Publication checkpoint saved. Growth will compare actual evidence when the before/after periods are complete.';
+    moveToResearch('growthNextAction');
+   }catch(e){feedback.textContent='Not recorded: '+String(e.message||e)+'. Check the details and try again.';button.disabled=false;button.textContent='Confirm publication and start measurement →'}
+  });
+ }
  function trPicked(){return document.querySelectorAll('#growthGapChoice input[type=checkbox]:checked').length}
  function selfKey(){return 'trackerGrowthSelfDone:'+token+':'+id}
  function selfDone(){try{return JSON.parse(localStorage.getItem(selfKey())||'{}')}catch(e){return {}}}
