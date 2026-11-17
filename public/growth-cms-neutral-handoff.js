@@ -98,7 +98,19 @@
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
   $('download').disabled=!!safe.exported||!(safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim()&&$('approved').checked&&manualReady&&factsChecked);
   $('download').textContent=safe.exported?'4. CMS handoff ZIP downloaded':'4. Download reviewed CMS handoff ZIP';
-  $('download').style.background=safe.exported?'#94a3b8':'';
+  var hasCurrentDraft=!!safe.source&&safe.aiDraftReadyForQuery===$('query').value.trim();
+   var draftBtn=$('generateEditorialDraft');
+   draftBtn.dataset.stage=hasCurrentDraft?'done':'first';
+   if(draftBtn.dataset.requestPending!=='true')draftBtn.textContent=hasCurrentDraft?'3A. AI draft generated ✓ Generate again':'3A. FIRST · Advanced: Generate a different draft →';
+   var unlock=$('cmsUnlockHint');
+   if(unlock){
+    unlock.dataset.stage=!$('download').disabled&&!safe.exported?'ready':'locked';
+    unlock.textContent=safe.exported?'✓ CMS handoff package downloaded. Next: publish and register the real publication date.':
+     !hasCurrentDraft?'🔒 Step 3A first: click the orange Advanced button to generate this question’s draft. Then review and approve; the CMS button will turn blue.':
+     !$('approved').checked||!factsChecked?'✓ AI draft generated. Next review all claims and approve in step 3C; then the CMS button turns blue.':
+     $('download').disabled?'Finish the remaining required checks to unlock the CMS download.':
+     '✓ Draft generated and approved. The blue CMS download button is now active.';
+   }
   // Owner 2026-11-01: a grey button without a reason. Say exactly what is still missing.
   var missing=[];
   if(!safe.source)missing.push('check the original page first (step 1)');
@@ -456,7 +468,7 @@
   $('checkSource').disabled=true;
  }
  if(requestedQuestion)$('query').value=requestedQuestion;
- $('query').addEventListener('input',function(){safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('generateEditorialDraft').textContent='3A. Required · Advanced: Generate a different draft →';ready()});
+ $('query').addEventListener('input',function(){safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';ready()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);
