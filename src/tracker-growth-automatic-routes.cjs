@@ -70,7 +70,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
   final_url:source.final_url||null,canonical};
 }
 // Tracker sitemap is fallback discovery only. Never invent Tracker page IDs or claim that sitemap URLs were read.
-function trackerSitemapFallback(rows,pageUrl,trackedPages=[]){
+async function trackerSitemapFallback(rows,pageUrl,trackedPages=[],fetchXml=null){
  const row=Array.isArray(rows)?rows[0]:null;
  let parsed=[];try{const x=JSON.parse(String(row?.sitemap_urls||'[]'));if(Array.isArray(x))parsed=x}catch(_){}
  let host='';try{host=new URL(pageUrl).hostname.toLowerCase()}catch(_){}
@@ -87,7 +87,34 @@ function trackerSitemapFallback(rows,pageUrl,trackedPages=[]){
  }
  let sitemapUrl=null;
  try{const u=new URL(String(row?.sitemap_url||''));if(u.protocol==='https:'&&u.hostname.toLowerCase()===host&&!u.username&&!u.password)sitemapUrl=u.href}catch(_){}
- return {status:out.length?'SAVED_URL_FALLBACK':'NO_SAVED_URL_LIST',sitemap_url:sitemapUrl,urls:out,count:out.length,
+ let source='SAVED_TRACKER_URL_LIST',fetchStatus='NOT_NEEDED';
+ if(!out.length&&sitemapUrl&&typeof fetchXml==='function'){
+  const {importSitemap}=require('./growth-free/sitemap-import.cjs');
+  const fetchOne=async u=>{
+   const read=await fetchXml(u);
+   if(!read||read.truncated||!read.html||new URL(read.final_url||u).hostname.toLowerCase()!==host)
+    throw Error('SITEMAP_UNREADABLE_OR_TRUNCATED');
+   return String(read.html);
+  };
+  try{
+   const root=await fetchOne(sitemapUrl);
+   const files=/<(?:[\w.-]+:)?sitemapindex(?:\s|>)/i.test(root)?
+    [...root.matchAll(/<(?:[\w.-]+:)?loc\s*>([\s\S]*?)<\/(?:[\w.-]+:)?loc>/gi)]
+     .map(m=>m[1].trim().replace(/&amp;/gi,'&')).filter(u=>{try{const x=new URL(u);return x.protocol==='https:'&&x.hostname.toLowerCase()===host&&!x.username&&!x.password}catch(_){return false}}).slice(0,3)
+    :[sitemapUrl];
+   for(const url of files){
+    const xml=url===sitemapUrl?root:await fetchOne(url);
+    try{
+     const data=importSitemap({name:'sitemap.xml',content_base64:Buffer.from(xml).toString('base64')},pageUrl);
+     for(const value of data.urls){if(known.has(normUrl(value))||seen.has(normUrl(value)))continue;
+      seen.add(normUrl(value));out.push(value);if(out.length>=300)break}
+    }catch(e){if(url===sitemapUrl)throw e}
+    if(out.length>=300)break;
+   }
+   source='FETCHED_TRACKER_SITEMAP_XML';fetchStatus=files.length?'READ':'NO_SITEMAP_FILES';
+  }catch(e){fetchStatus=String(e.code||e.message||'SITEMAP_UNAVAILABLE').slice(0,80)}
+ }
+ return {status:out.length?'SAVED_URL_FALLBACK':'NO_SAVED_URL_LIST',source,fetch_status:fetchStatus,sitemap_url:sitemapUrl,urls:out,count:out.length,
   evidence:'UNVERIFIED_URL_INVENTORY',note:'Saved sitemap URLs are research leads only, not fetched pages, verified canonicals or approved internal links.'};
 }
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,autoGroundedAnswer=groundedGeminiAnswer,questionModel=undefined,questionFetch=undefined,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null,aiGapModel=undefined,fetchAiCited=null}={}){
@@ -128,7 +155,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const rows=i=>optional[i].status==='fulfilled'?optional[i].value.rows||[]:[];
   const unavailable=optional.map((x,i)=>x.status==='rejected'?['competitor_snapshots','ai_evidence','gsc_queries','site_inventory','site_gsc_queries'][i]:null).filter(Boolean);
   const snapshot=rows(0)[0]||null,historical=snapshotCompetitorLeads({page,snapshot}).leads;
-  const sitemapFallback=trackerSitemapFallback(rows(5),page.url,rows(3));
+  const sitemapFallback=await trackerSitemapFallback(rows(5),page.url,rows(3),
+    fetchLive===fetchPublicGrowthHtml?u=>fetchPublicGrowthHtml(u,{limit:1024*1024,timeout:4500,redirects:1,allowSitemapXml:true}):null);
   const own=await fetchLive(page.url,RESEARCH_FETCH).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
   // Only use the browser if the static public source is too thin to assess.
   // Prevent mock-network tests from launching real Chromium unintentionally.
