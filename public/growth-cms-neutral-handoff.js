@@ -4,7 +4,7 @@
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false};
+ const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
@@ -589,6 +589,58 @@
   var heads=payload.approved_changes.map(c=>(/<h2>([\s\S]*?)<\/h2>/.exec(c.html)||[])[1]).filter(Boolean).map(h=>h.replace(/&[^;]+;/g,' ').trim());
   if(!$('publicationNotes').value)$('publicationNotes').value='Added to '+safe.source.canonical_url+': '+heads.join('; ')+(payload.growth_proposal_id?' (Growth proposal #'+payload.growth_proposal_id+')':'');
   $('publicationWrap').hidden=false;
+  checkExistingPublication();
+ }
+ // Reusing the same page/question is NOT a new publication. The owner explicitly
+ // chooses to correct the existing record or to register a distinct later live edit.
+ function localDateTime(value){
+  var d=new Date(value);if(!Number.isFinite(d.getTime()))return '';
+  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);
+ }
+ function showPublicationChoice(previous){
+  if(!previous||!previous.id)return;
+  safe.priorPublication=previous;safe.publicationChoice=null;safe.newPublication=false;
+  $('existingPublicationChoice').hidden=false;
+  $('reusePublicationEmailLabel').hidden=true;
+  $('previousPublicationSummary').textContent='Already recorded: '+localDateTime(previous.published_at).replace('T',' ')+' · '+String(previous.notes||'').slice(0,220)+'. Choose whether you are correcting it or confirming a different later live update.';
+  $('publicationVersionChoice').textContent='Choose an option before saving. A duplicate checkpoint is refused.';
+  $('recordPublication').disabled=true;
+ }
+ function selectPublicationChoice(mode){
+  var old=safe.priorPublication;if(!old)return;
+  safe.publicationChoice=mode;safe.newPublication=mode==='new';
+  safe.publicationId=mode==='edit'?Number(old.id):null;
+  $('recordPublication').disabled=false;
+  $('reusePublicationEmailLabel').hidden=mode!=='new';
+  if(mode==='edit'){
+   $('publishedAt').value=localDateTime(old.published_at);
+   $('publicationNotes').value=String(old.notes||'');
+   $('publicationVersionChoice').textContent='Editing the original checkpoint. A substantive change sends a revised confirmation to previously opted-in recipients.';
+   $('recordPublication').textContent='Save correction to existing publication';
+  }else{
+   $('publishedAt').value=localNow();
+   $('publicationVersionChoice').textContent='Register only if different changes actually went live later. This starts a separate measurement period. Describe the new changes and select the actual live date.';
+   $('recordPublication').textContent='Record later publication and notify recipients';
+  }
+ }
+ $('editPreviousPublication').addEventListener('click',function(){selectPublicationChoice('edit')});
+ $('newPublishedUpdate').addEventListener('click',function(){selectPublicationChoice('new')});
+ async function checkExistingPublication(){
+  if(!safe.published||!safe.published.query)return;
+  $('publicationVersionChoice').textContent='Checking earlier publications for this page and question…';
+  try{
+   var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/measurement',{cache:'no-store',credentials:'same-origin'});
+   var j=await r.json();if(!r.ok||!j.success)throw Error(j.error||'Unavailable');
+   var matches=(j.records||[]).filter(function(p){
+    return Number(p.page_id)===pageId&&String(p.query||'').trim().toLowerCase()===String(safe.published.query||'').trim().toLowerCase();
+   }).sort(function(a,b){return String(b.published_at||'').localeCompare(String(a.published_at||''))});
+   if(matches.length)showPublicationChoice(matches[0]);
+   else $('publicationVersionChoice').textContent='No previous publication recorded for this exact page and question.';
+  }catch(e){
+   // The server remains authoritative and rejects duplicates even if the
+   // optional lookup was unavailable. Never claim none were recorded.
+   $('publicationVersionChoice').textContent='Could not check earlier publications. Submission will be checked by the server before a new record is saved.';
+  }
  }
  // Record the publication; afterwards the same form corrects it (text, date, reminder addresses), it never locks
  // (owner 2026-11-02: "after the download I changed it, so I must be able to edit").
@@ -602,10 +654,21 @@
    var at=new Date($('publishedAt').value);if(!Number.isFinite(at.getTime()))throw Error('Enter the actual publication date and time');
    // A time later than now cannot be the publication time (owner 2026-11-02: an unclear refusal); say it in local time.
    if(at.getTime()>Date.now()+300000)throw Error('This time ('+at.toLocaleString()+') is later than now ('+new Date().toLocaleString()+'). Enter when the change actually went live (check AM/PM).');
-   var body={notes:$('publicationNotes').value.trim(),published_at:at.toISOString(),reminder_emails:$('reminderEmails')?$('reminderEmails').value:''};
+   if(safe.priorPublication&&!safe.publicationChoice)throw Error('This page and query were already recorded. Choose Edit existing publication or Register a newer published change.');
+   if(safe.newPublication&&at.getTime()<=Date.parse(safe.priorPublication.published_at)+60000)
+    throw Error('The second live update must be later than the already recorded publication.');
+   var enteredEmails=$('reminderEmails')?$('reminderEmails').value.trim():'';
+   var body={notes:$('publicationNotes').value.trim(),published_at:at.toISOString()};
+   if(enteredEmails)body.reminder_emails=enteredEmails;
+   if(safe.newPublication){body.new_publication=true;body.send_update_email=$('reusePublicationEmail').checked;}
+   if(!editing&&!safe.newPublication)body.reminder_emails=enteredEmails;
    var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/publication'+(editing?'/'+encodeURIComponent(safe.publicationId):'');
    var r=await fetch(url,{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(editing?body:{...safe.published,...body})});
    var d=await r.json();
+   if(r.status===409&&d.code==='EXISTING_PUBLICATION'&&d.previous){
+    showPublicationChoice(d.previous);
+    throw Error('This publication already exists. Choose to correct the original record or register a different, later live update.');
+   }
    if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
    safe.publicationRecorded=true;safe.publicationId=d.publication&&d.publication.id||safe.publicationId;
    var go=document.getElementById('publicationMeasurement'),link=document.getElementById('publicationMeasureLink');
@@ -619,7 +682,7 @@
     (cf?(cf.sent?' A confirmation e-mail was sent just now'+(cf.translation&&cf.translation!=='AI_CHECKED'?' in English (no checked translation into the page language was available)':cf.language&&cf.language!=='en'?' in the page language ('+cf.language+')':'')+'; check your inbox (and spam).':cf.reason==='EMAIL_NOT_CONFIGURED'?' Warning: e-mail sending is not configured on the server (BREVO_API_KEY), so no confirmation and no reminder can be sent.':' Warning: the confirmation e-mail was not accepted by the mail service; the reminder may not arrive.'):''):' No reminder e-mail set.';
    status('publicationStatus',(editing?'Changes saved.':'Recorded. Growth reads the Search Console numbers of both periods itself when they are final; at the end of the test period you enter your enquiries from the e-mail link (or on the measurement page). You can close this page.')+rem+' You can still correct this record here while this page is open.',false);
   }catch(err){status('publicationStatus',err.message||'Not saved',true)}
-  finally{buttonProgress(btn,false,false);btn.disabled=false;btn.textContent=safe.publicationId?'Save changes to this publication':'Confirm publication → start measurement'}
+  finally{buttonProgress(btn,false,false);btn.disabled=false;btn.textContent=safe.publicationChoice==='new'?'Record later publication and notify recipients':safe.publicationId?'Save correction to existing publication':'Confirm publication → start measurement'}
  });
  // An edited package is a new candidate and can be exported again; no silent duplicate downloads.
  $('handoffForm').addEventListener('input',function(ev){
