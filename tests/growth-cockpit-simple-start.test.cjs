@@ -93,3 +93,16 @@ test('page selection enables the blue action and opens the exact selected resear
  assert.equal(posts,0,'No market API call when nothing was changed');
  assert.match(opened,/\/growth\/auto-research\?page_id=2290&query=Who%20offers%2024-hour%20emergency%20roof%20repair%20in%20New%20Jersey%3F/);
 });
+
+test('all five AI engines are visible in Cockpit without pretending a check happened',()=>{
+ const html=renderSimpleGrowthStart(opts);
+ assert.match(html,/id="growthSimpleAiSystems"/);
+ assert.match(html,/ChatGPT · Gemini · Perplexity · Claude · Copilot/);
+ assert.match(html,/STEP 2 · OPTIONAL · AFTER GROWTH RESEARCH/);
+ assert.match(html,/What you do:/);
+ assert.match(html,/First choose a page above and start Growth/);
+ assert.match(html,/you may proceed without AI answers/);
+ assert.match(html,/No AI system is checked just by viewing this Cockpit/);
+ assert.match(html,/id="growthSimpleContinue" disabled/);
+ assert.ok(html.indexOf('</form>') < html.indexOf('id="growthSimpleAiSystems"'),'AI systems must be a separate card outside the main page-selection form');
+});
