@@ -15,6 +15,7 @@ test('the page wiring: a hidden tick stays hidden, and a note says why there is 
   assert.match(JS, /safe\.aiDraftReadyForQuery===\$\('query'\)\.value\.trim\(\)/);
   assert.match(JS, /Generate the Advanced AI draft for this customer question before the CMS package/);
   assert.match(HTML, /Required before CMS download/);
+  assert.match(JS, /if\(selectedQuestion\)target\.searchParams\.set\('query',selectedQuestion\)/);
 });
 
 test('in a browser, the hidden "I checked all" tick is not displayed', { skip: !chromium && 'Playwright not installed' }, async () => {
