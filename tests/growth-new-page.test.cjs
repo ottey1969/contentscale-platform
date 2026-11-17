@@ -46,3 +46,22 @@ test('overlap with tracked pages: same keyword, most of the keyword, and per top
  assert.match(items[0].priority.why.at(-1),/an existing page may already cover it/);
  assert.equal(items[1].existing_page_overlap,undefined);
 });
+
+test('Growth new page keeps the planned Pre-Write slug instead of regenerating it from the seed',()=>{
+ const {plannedUrl}=require('../src/tracker-growth-new-page-routes.cjs');
+ const b={keyword:'24 hour emergency roof repair nj',brief_json:{meta_package:{url_slug:'/emergency-roof-repair-new-jersey/'}}};
+ const got=plannedUrl('https://perfectroofingteam.com/',b,[]);
+ assert.equal(got.url,'https://perfectroofingteam.com/emergency-roof-repair-new-jersey/');
+ assert.equal(got.source,'PREWRITE_BRIEF_SLUG');
+ assert.equal(got.taken,false);
+ assert.equal(plannedUrl('https://perfectroofingteam.com/',b,[{url:got.url}]).taken,true);
+});
+test('Growth new page does not adopt existing-page URL, unsafe slug, or unrelated domain',()=>{
+ const {plannedUrl}=require('../src/tracker-growth-new-page-routes.cjs');
+ const home='https://perfectroofingteam.com/';
+ const expanded={keyword:'24 hour emergency roof repair nj',brief_json:{content_decision:{recommended_treatment:'EXPAND_EXISTING_PAGE',closest_existing_url:'https://perfectroofingteam.com/roofing-services/'},meta_package:{url_slug:'/roofing-services/',proposed_new_slug:'/24-hour-emergency-roof-repair-nj/'}}};
+ assert.equal(plannedUrl(home,expanded,[]).url,home+'24-hour-emergency-roof-repair-nj/');
+ const unsafe={keyword:'24 hour emergency roof repair nj',brief_json:{meta_package:{url_slug:'https://other.example/path'}}};
+ assert.equal(plannedUrl(home,unsafe,[]).source,'KEYWORD_FALLBACK');
+ assert.equal(plannedUrl(home,{keyword:'24 hour emergency roof repair nj'},[]).url,home+'24-hour-emergency-roof-repair-nj/');
+});
