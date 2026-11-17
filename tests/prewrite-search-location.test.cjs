@@ -34,5 +34,31 @@ test('Pre-Write location control is visible in the AI-question form and sent in 
  const fs=require('node:fs');const code=fs.readFileSync(require('node:path').join(__dirname,'../public/prewrite-research-tab.js'),'utf8');
  assert.match(code,/whereInput\.id='pwbLocation'/);
  assert.match(code,/location=' \+ encodeURIComponent\(val\('pwbLocation'\)\)/);
- assert.match(code,/do not treat this field as proof of a state-localized competitor SERP/);
+ assert.match(code,/both Google customer questions and the full Pre-Write competitor SERP/);
+});
+
+test('Pre-Write full ranking SERP uses state location and the correct search language',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const {patch}=require('../scripts/patch-prewrite-local-serp.cjs');
+ const {googleMarket,serperParams}=require('../src/prewrite-local-serp.cjs');
+ const source=fs.readFileSync(path.join(__dirname,'../src/index.js'),'utf8');
+ const built=patch(source);
+ assert.equal(patch(built),built,'Build patch is idempotent');
+ assert.match(built,/searchLocation:String\(\(document\.getElementById\('pwbLocation'\)/);
+ assert.match(built,/searchLocation, manualAioText, manualAiEvidence/);
+ assert.match(built,/body: JSON\.stringify\(_pwbLocalSerp\.serperParams\(keyword,_pwbSerpMarket,10\)\)/);
+ assert.match(built,/brief\.search_scope=\{provider:'SERPER_GOOGLE_ORGANIC'/);
+ assert.match(built,/requested_location:_pwbSerpLocation\|\|null/);
+ assert.doesNotMatch(built,/hl:glParam,gl:glParam/);
+ const nj=googleMarket({region:'us',language:'English',location:'New Jersey, United States'});
+ assert.deepEqual(serperParams('24 Hour Emergency Roof Repair NJ',nj,10),{
+  q:'24 Hour Emergency Roof Repair NJ',num:10,hl:'en',gl:'us',location:'New Jersey, United States'});
+ const national=serperParams('24 Hour Emergency Roof Repair NJ',googleMarket({region:'us',language:'English'}),10);
+ assert.ok(!('location' in national),'Optional location does not alter country-wide search');
+});
+test('Pre-Write location is validated and does not silently contradict a country',()=>{
+ const {googleMarket}=require('../src/prewrite-local-serp.cjs');
+ assert.equal(googleMarket({region:'us',language:'English',location:'NJ'}).location,'New Jersey, United States');
+ assert.throws(()=>googleMarket({region:'nl',language:'Dutch',location:'New Jersey, United States'}),/PREWRITE_LOCATION_COUNTRY_MISMATCH/);
+ assert.throws(()=>googleMarket({region:'us',language:'English',location:'https://example.com'}),/INVALID_PREWRITE_SEARCH_LOCATION/);
 });
