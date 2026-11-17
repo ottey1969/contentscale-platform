@@ -21,7 +21,7 @@
     // The customer question asked to the AI systems (#cs-ai-question, chosen automatically from Google's own questions).
     var qEl = $('cs-ai-question'), aq = qEl && String(qEl.value || '').trim();
     return { query: val('pwbKeyword'), ai_question: aq && aq.toLowerCase() !== val('pwbKeyword').toLowerCase() ? { text: aq, source: qEl.dataset.source || null } : null,
-      language: val('pwbLanguage'), market: region, require_google_source: true,
+      language: val('pwbLanguage'), market: region, location: val('pwbLocation'), require_google_source: true,
       answers: FIELDS.map(function (f) { var a = { engine: f[0], answer: val(f[1]).slice(0, CLIP) }; if (f[0] === 'google_aio') a.google_source = val('pwbGoogleSource'); return a; }) };
   }
   function lib() { return window.PrewriteAiAnswerResearch || null; }
@@ -51,6 +51,40 @@
     var heading = findHeading(), grid = $('pwbAioText') && $('pwbAioText').closest('.pwb-ai-five-grid');
     if (!heading || !grid) return false;
     addStyles();
+    // Optional precise Google question location, kept separate from the country and language.
+    // Never claim it scopes the main competitor brief until that server research path supports it.
+    var regionField = $('pwbRegion');
+    if(regionField && !$('pwbLocation')){
+      var whereWrap=document.createElement('div');whereWrap.id='pwbLocationWrap';
+      whereWrap.style.cssText='margin:12px 0 6px;max-width:440px';
+      var whereLabel=document.createElement('label');whereLabel.htmlFor='pwbLocation';
+      whereLabel.textContent='SEARCH LOCATION — OPTIONAL (STATE / CITY)';
+      whereLabel.style.cssText='display:block;font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:6px';
+      var whereInput=document.createElement('input');whereInput.id='pwbLocation';
+      whereInput.type='text';whereInput.placeholder='e.g. New Jersey, United States';
+      whereInput.maxLength=100;whereInput.autocomplete='off';
+      whereInput.setAttribute('list','pwbLocationSuggestions');
+      whereInput.style.cssText='display:block;width:100%;box-sizing:border-box;min-height:38px;padding:9px;background:transparent;color:inherit;border:1px solid #64748b;border-radius:6px';
+      var locList=document.createElement('datalist');locList.id='pwbLocationSuggestions';
+      ['New Jersey, United States','New York, United States','California, United States','Florida, United States','Amsterdam, Netherlands','London, United Kingdom'].forEach(function(v){var op=document.createElement('option');op.value=v;locList.appendChild(op)});
+      var locHelp=document.createElement('small');locHelp.style.cssText='display:block;color:#94a3b8;margin-top:5px';
+      locHelp.textContent='Used to localize Google customer-question discovery. The full Pre-Write competitor scan currently uses the country setting; do not treat this field as proof of a state-localized competitor SERP.';
+      whereWrap.append(whereLabel,whereInput,locList,locHelp);
+      regionField.insertAdjacentElement('afterend',whereWrap);
+      // Save per keyword and country: NJ must never accidentally carry over to a different brief.
+      var lastLocationKey='';
+      function locationKey(){return 'cs:prewrite:location:'+val('pwbRegion').slice(0,2).toLowerCase()+':'+val('pwbKeyword').toLowerCase()}
+      function restoreLocation(){
+       var key=locationKey();if(key===lastLocationKey)return;
+       lastLocationKey=key;
+       try{whereInput.value=localStorage.getItem(key)||''}catch(e){whereInput.value=''}
+      }
+      whereInput.addEventListener('input',function(){
+       try{localStorage.setItem(locationKey(),whereInput.value.trim())}catch(e){}
+      });
+      window.__pwbRestoreSearchLocation=restoreLocation;
+      restoreLocation();
+    }
     heading.textContent = 'Collect AI answers';
     var tabs = document.createElement('div');
     tabs.id = 'cs-research-tabs';
@@ -130,7 +164,7 @@
       qState.kw = kw; qState.manual = false; var seq = ++qState.seq;
       if (!tok) { qInput.value = kw; qSrc.textContent = 'The keyword is used.'; return; }
       qSrc.textContent = 'Finding the question customers ask in Google…';
-      var u = '/api/tracker-client/' + encodeURIComponent(tok) + '/prewrite-customer-question?keyword=' + encodeURIComponent(kw) + '&region=' + encodeURIComponent(val('pwbRegion')) + '&language=' + encodeURIComponent(val('pwbLanguage')) + (trSel.value ? '&translate=' + encodeURIComponent(trSel.value) : '');
+      var u = '/api/tracker-client/' + encodeURIComponent(tok) + '/prewrite-customer-question?keyword=' + encodeURIComponent(kw) + '&region=' + encodeURIComponent(val('pwbRegion')) + '&location=' + encodeURIComponent(val('pwbLocation')) + '&language=' + encodeURIComponent(val('pwbLanguage')) + (trSel.value ? '&translate=' + encodeURIComponent(trSel.value) : '');
       fetch(u).then(function (r) { return r.json(); }).then(function (d) {
         if (seq !== qState.seq || qState.manual) return;
         qChips.innerHTML = ''; trMap = (d && d.translations) || {};
@@ -153,7 +187,7 @@
     }
     function scheduleQuestion() { clearTimeout(qState.timer); qState.timer = setTimeout(loadQuestion, 700); }
     qInput.addEventListener('input', function () { qTr.textContent = ''; qState.manual = true; qInput.dataset.source = 'Your own question'; qSrc.textContent = 'Your own question.'; syncAsk(); });
-    ['pwbKeyword', 'pwbRegion', 'pwbLanguage'].forEach(function (id) { var el = $(id); if (el) { el.addEventListener('change', function () { qState.manual = false; scheduleQuestion(); }); if (id === 'pwbKeyword') el.addEventListener('input', scheduleQuestion); } });
+    ['pwbKeyword', 'pwbRegion', 'pwbLanguage', 'pwbLocation'].forEach(function (id) { var el = $(id); if (el) { el.addEventListener('change', function () { qState.manual = false; scheduleQuestion(); }); if (id === 'pwbKeyword') el.addEventListener('input', scheduleQuestion); } });
     var status = document.createElement('p'); status.className = 'cs-rp-status'; status.setAttribute('role', 'status');
     var note = document.createElement('p');
     note.textContent = 'This is the prompt the Pre-Write Brief generator uses for the AI answer research: writing research for a clearer, better-sourced answer, not citation tracking. The fields under "AI Answer Inputs" stay the saved source of truth.';
@@ -272,7 +306,7 @@
     });
     choice.addEventListener('change', render);
     // Keep the prompt current while the owner edits the keyword, market, language or answers.
-    ['pwbKeyword', 'pwbLanguage', 'pwbRegion', 'pwbGoogleSource'].concat(FIELDS.map(function (f) { return f[1]; })).forEach(function (id) {
+    ['pwbKeyword', 'pwbLanguage', 'pwbRegion', 'pwbLocation', 'pwbGoogleSource'].concat(FIELDS.map(function (f) { return f[1]; })).forEach(function (id) {
       var el = $(id), onEdit = function () { checkFields(); syncAsk(); render(); };
       if (el) { el.addEventListener('input', onEdit); if (el.tagName === 'SELECT') el.addEventListener('change', onEdit); }
     });
@@ -290,6 +324,7 @@
     function refreshFromForm() {
       var modal = $('prewriteBriefModal');
       if (modal && !modal.getClientRects().length) return;
+      if(typeof window.__pwbRestoreSearchLocation==='function')window.__pwbRestoreSearchLocation();
       var state = JSON.stringify(currentInputs());
       if (state === lastFormState) return;
       lastFormState = state;
