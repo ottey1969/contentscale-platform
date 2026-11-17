@@ -275,11 +275,30 @@
   // Concepts the owner had written for a selection are offered; earlier research runs of the same page are older wordings
   // of the same tasks and stay folded away (owner 2026-11-01: nine "other concepts" were mostly earlier versions).
   var concepts=list.filter(function(p){return p.kind!=='EARLIER_RESEARCH_VERSION'}),older=list.filter(function(p){return p.kind==='EARLIER_RESEARCH_VERSION'});
+  // Do not automatically reuse a saved concept about another state as if
+  // it were a current local service recommendation. The earlier version is
+  // preserved as history, but needs new same-market research first.
+  function unrelatedGeography(p){
+   var context=String((safe.source&&safe.source.canonical_url)||'')+' '+String($('query').value||'');
+   var content=(p.sections||[]).map(function(x){return String(x.text||'')}).join(' ')+' '+(p.review&&p.review.flagged||[]).map(function(x){return String(x.sentence||'')}).join(' ');
+   var nj=/(?:\bnew jersey\b|(?:^|[\/_-])nj(?:[\/_-]|$))/i.test(context);
+   var fl=/(?:\bflorida\b|(?:^|[\/_-])fl(?:[\/_-]|$))/i.test(context);
+   if(nj&&!fl&&/\bflorida\b/i.test(content))return 'Florida';
+   if(fl&&!nj&&/\bnew jersey\b/i.test(content))return 'New Jersey';
+   return '';
+  }
   var row=function(p,into){
    var r0=document.createElement('div');r0.className='earlier-concept';
    var t=document.createElement('p');
    t.textContent='#'+p.id+' · '+String(p.created_at||'').slice(0,10)+(p.focus_query?' · “'+p.focus_query+'”':'')+': '+p.sections.map(function(x){return '“'+x.h2+'”'}).join(', ');
    r0.appendChild(t);
+   var mismatchedRegion=unrelatedGeography(p);
+   if(mismatchedRegion){
+    var warning=document.createElement('p');warning.className='small';
+    warning.textContent='Different location: this earlier concept mentions '+mismatchedRegion+', but the selected page is for another market. This proposal is retained as history only. Run same-market research before using it.';
+    warning.style.cssText='border:1px solid #b45309;background:#fffbeb;padding:8px';
+    r0.appendChild(warning);
+   }
    var b=document.createElement('button');b.type='button';b.textContent='Add to this package';
    // Older concepts are optional, not proof that the current search requires
    // their content. Any addition must be reversible without hunting for fields.
@@ -299,6 +318,7 @@
     status('downloadStatus','Old concept #'+p.id+' removed from this CMS package. Existing published content was not changed.',false);
    });
    b.addEventListener('click',function(){
+    if(mismatchedRegion){status('downloadStatus','This older concept refers to '+mismatchedRegion+' and does not match this page. Re-run Growth research for the correct market before adding it.',true);return}
     if(safe.added.some(function(a){return a.id===p.id}))return;
     var r=p.review||{};safe.added.push({id:p.id,review:r});
     p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
@@ -315,6 +335,7 @@
     b.disabled=true;b.textContent='Added — review the sections above';
     $('approved').checked=false;ready();
    });
+   if(mismatchedRegion){b.disabled=true;b.textContent='Different market — new research required'}
    r0.appendChild(b);r0.appendChild(removeConcept);r0.appendChild(currentChecks);into.appendChild(r0);
   };
   if(concepts.length){
