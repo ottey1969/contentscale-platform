@@ -88,11 +88,28 @@
   button.classList.add('growth-pressed');
   setTimeout(function(){button.classList.remove('growth-pressed')},350);
  },true);
+ // Only required editor inputs are outlined; optional link and research controls are not errors.
+ function markMissingEditorFields(){
+  var active=!!safe.source;
+  [['query',1],['title',1],['meta',1],['heading',1],['copy',30]].forEach(function(item){
+   var el=$(item[0]),minimum=item[1];
+   if(!el)return;
+   var missing=active&&el.value.trim().length<minimum;
+   el.classList.toggle('growth-needs-input',missing);
+   if(missing)el.setAttribute('aria-invalid','true');else el.removeAttribute('aria-invalid');
+  });
+  var approval=$('approved'),label=approval&&approval.closest('label');
+  if(label)label.classList.toggle('growth-needs-approval',active&&!approval.checked);
+ }
+ document.addEventListener('input',function(e){
+  if(e.target&&['query','title','meta','heading','copy'].includes(e.target.id))markMissingEditorFields();
+ });
  function ready(){
   if(safe.loadingSource){
    document.querySelectorAll('button').forEach(function(b){b.disabled=true});
    return;
   }
+  markMissingEditorFields();
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
