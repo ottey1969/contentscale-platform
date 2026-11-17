@@ -154,7 +154,21 @@
      if(pending)el('p','Still to write from your selection ('+r.pending.length+'): '+r.pending.map(function(x){return x.title}).join(' · ')+'. Click again to write the next ones.',out,'small');
      (r.unlinked_sections||[]).forEach(function(x){el('p','Not linked to a selected item and not used: “'+x.h2+'” — '+x.reason,out,'small')});
      if(r.new_page_package&&r.new_page_package.url){var np=el('a','Download the new page package (Markdown with the evidence dossier)',el('p',null,out));np.href=r.new_page_package.url}
-     if(r.cms_handoff&&r.cms_handoff.url)ready(r.cms_handoff.url)
+     if(r.cms_handoff&&r.cms_handoff.url){
+       ready(r.cms_handoff.url);
+       if(r.stored===true&&!r.storage_error){
+        // The user already requested writing. After it is SAVED, show the exact
+        // same-question CMS handoff right here; never require a new draft request.
+        try{
+         var dest=new URL(r.cms_handoff.url,location.origin);
+         if(dest.origin===location.origin&&/^\/track\/[^/]+\/growth\/cms-export$/.test(dest.pathname)&&dest.searchParams.get('query')){
+          var cms=el('a','Review saved Growth draft → Open CMS handoff',el('p',null,out));
+          cms.href=dest.pathname+dest.search;
+          cms.style.cssText='display:inline-block;background:#1d4ed8;color:white;padding:12px 16px;border-radius:8px;text-decoration:none;font-weight:750';
+         }
+        }catch(_){}
+       }
+      }
     }catch(e){var message=String(e&&e.message||e);if(/PAGE_HEADINGS_CHANGED|PAGE_CHANGED_SINCE_RESEARCH|PAGE_NOT_READABLE_NOW_RERUN_RESEARCH|headings changed since the research|page changed since the research/i.test(message))showStaleRefresh(message);else status.textContent='Not written: '+message+'. Your selection and the research are kept; you can download the brief.'}
     finally{w.removeAttribute('aria-busy');if(!staleBlocked&&w.textContent!=='Writing complete'&&w.textContent!=='Already written'){w.disabled=false;w.textContent='Write next selected topics';w.style.background='#2563eb'}}
    });
