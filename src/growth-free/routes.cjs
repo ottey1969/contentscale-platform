@@ -182,12 +182,12 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <input type="hidden" name="lang" value="${esc(lang)}"><p><button type="submit" id="freePrimaryRun" disabled>${esc(t.simpleChooseUrl)}</button> <small id="s" role="status"></small></p>
 </form>
 ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p class="muted">Signed in with your admin key: no daily limit, and AI writes the chosen H2s in your checks${cfg.writing==='off'?' (AI writing is switched off on the server: GROWTH_FREE_WRITING=off)':''}. Visitors keep their normal limits.</p><p><button type="button" class="ghost" id="ownerOut">Sign out</button></p></div>`:owner.available?`<details class="card" id="ownerBox"><summary class="owner-sum"><span class="owner-btn">🔑 Owner? Sign in</span> <small class="muted">no daily limit, AI writing on</small></summary><form id="ownerIn" autocomplete="off"><label for="ownerKey">Admin key (GROWTH_FREE_ADMIN_KEY in Railway)</label><input id="ownerKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit">Sign in as owner</button> <small id="ownerSt" role="status"></small></p></form></details>`:''}
-<div class="card"><h2 style="margin-top:0">${esc(t.getTitle)}</h2><ul>
+<details class="card free-simple-details"><summary><strong>${esc(t.getTitle)}</strong></summary><ul>
 <li>${t.get1}</li>
 <li>${esc(t.get2)}</li>
 <li>${esc(t.get3)}</li>
 <li>${esc(t.get4)}</li></ul>
-<p class="muted">${esc(t.getNote)}</p></div>
+<p class="muted">${esc(t.getNote)}</p></details>
 <script>
 var FT=${js(t)};
 ${aiStartScript(t)}
@@ -196,8 +196,8 @@ ${aiStartScript(t)}
   s=document.getElementById('freeSitemapUrl'),open=document.getElementById('freeSitemapOpen'),note=document.getElementById('freeSitemapStatus');
  if(!u||!btn)return;
  function normalized(){
-  try{var raw=u.value.trim(),p=new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)?raw:'https://'+raw);
-   return /^https?:$/.test(p.protocol)&&p.hostname.includes('.')&&!p.username&&!p.password&&!/\s/.test(raw)?p:null;
+  try{var raw=u.value.trim(),p=new URL(raw.includes('://')?raw:'https://'+raw);
+   return /^https?:$/.test(p.protocol)&&p.hostname.includes('.')&&!p.username&&!p.password&&raw.indexOf(' ')<0?p:null;
   }catch(e){return null}
  }
  function sync(){
