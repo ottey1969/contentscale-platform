@@ -312,10 +312,14 @@
      if(node.dataset.proposalId===String(p.id))node.remove();
     });
     currentChecks.textContent='';
+    // The first warning may have inserted a page-wide removal control into this
+    // concept row. Remove that control together with the optional concept.
+    var orphanRemove=r0.querySelector('#growthFlaggedRemoveAll');if(orphanRemove)orphanRemove.remove();
     b.disabled=false;b.textContent='Add to this package';
     removeConcept.hidden=true;
     $('approved').checked=false;ready();
     status('downloadStatus','Old concept #'+p.id+' removed from this CMS package. Existing published content was not changed.',false);
+    goToCmsDownload();
    });
    b.addEventListener('click',function(){
     if(mismatchedRegion){status('downloadStatus','This older concept refers to '+mismatchedRegion+' and does not match this page. Re-run Growth research for the correct market before adding it.',true);return}
