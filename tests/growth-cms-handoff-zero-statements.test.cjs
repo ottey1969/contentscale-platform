@@ -19,6 +19,15 @@ test('the page wiring: a hidden tick stays hidden, and a note says why there is 
   assert.match(REPORT_UI, /if\(selectedQuestion\)target\.searchParams\.set\('query',selectedQuestion\)/);
 });
 
+test('required draft action is orange and download stays grey until approved, then turns blue', () => {
+ assert.match(HTML, /#generateEditorialDraft\{background:#c65b07/);
+ assert.match(HTML, /#download:disabled\{background:#d8dee8/);
+ assert.match(HTML, /#download:not\(:disabled\)\{background:#1d4ed8/);
+ assert.match(HTML, /id="cmsUnlockHint"/);
+ assert.match(JS, /unlock\.dataset\.stage=/);
+ assert.match(JS, /safe\.aiDraftReadyForQuery===\$\('query'\)\.value\.trim\(\)/);
+});
+
 test('in a browser, the hidden "I checked all" tick is not displayed', { skip: !chromium && 'Playwright not installed' }, async () => {
   const b = await chromium.launch();
   try {
