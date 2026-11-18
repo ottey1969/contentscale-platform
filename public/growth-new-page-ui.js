@@ -31,6 +31,19 @@
   var ov=r.overlap||{};el('p',ov.note||'',s,ov.status==='EXISTING_PAGE_TARGETS_THIS_KEYWORD'?'error':'');
   (ov.exact||[]).concat(ov.possible||[]).forEach(function(p){var row=el('p',null,s);var a=el('a',p.url,row);a.href=p.url;a.target='_blank';a.rel='noopener noreferrer';if(p.keyword)el('small','Tracked keyword: '+p.keyword,row)});
   if(r.planned_url)el('p','Planned URL: '+r.planned_url+(r.planned_url_taken?' — already a tracked URL: choose another one.':' (you can choose another one when publishing)'),s,r.planned_url_taken?'error':'');
+  // Reuse the planned Pre-Write path; it is NOT the Growth app's private report URL.
+  if(r.planned_url)el('small','URL source: '+(r.planned_url_source==='PREWRITE_BRIEF_SLUG'?'Pre-Write planned slug':'Keyword-derived fallback')+' · Not published or verified live',s);
+  var pw=d.prewrite_findings||{},outline=pw.outline||[],gaps=pw.competitor_gaps||[],questions=pw.questions||[];
+  if(outline.length||gaps.length||questions.length){
+   var prior=el('section',null,out);el('h2','Pre-Write research carried into Growth',prior);
+   el('p','Editorial research leads only. Growth must verify them against current competitor pages before treating them as evidence or writing business claims.',prior);
+   if(outline.length){el('h3','Planned sections ('+outline.length+')',prior);var ul=el('ul',null,prior);
+    outline.forEach(function(x){el('li',x.heading,ul)})}
+   if(gaps.length){el('h3','Competitor gaps to recheck ('+gaps.length+')',prior);var glist=el('ul',null,prior);
+    gaps.forEach(function(x){el('li',(x.competitor?x.competitor+': ':'')+x.gap+(x.to_add?' — '+x.to_add:''),glist)})}
+   if(questions.length){el('h3','Customer questions from the Brief ('+questions.length+')',prior);var qlist=el('ul',null,prior);
+    questions.forEach(function(x){el('li',x,qlist)})}
+  }
   var cov=disc.market_coverage||{},loc=disc.search_locale||{};
   var m=el('section',null,out);el('h2','Research per market',m);
   el('p','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':loc.source==='SITE_DEFAULT'?'site default (Growth Cockpit)':'not confirmed'),m);

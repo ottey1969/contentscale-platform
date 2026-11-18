@@ -15,6 +15,7 @@ const {readRankingPages}=require('./growth-ranking-page-reader.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {buildGapList}=require('./growth-gap-list.cjs');
 const {checkNewPageOverlap}=require('./growth-new-page-overlap.cjs');
+const {briefFindingsForGrowth}=require('./prewrite-existing-page.cjs');
 const {deriveSearchLocale,validCountries,validLanguage,countryName,languageName}=require('./growth-search-locale.cjs');
 const {resolveMarketSetting}=require('./growth-market-store.cjs');
 const {writeForSelection,planBatch,remapSelection,MAX_ITEMS}=require('./growth-selected-writing.cjs');
@@ -27,6 +28,24 @@ const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
 const briefKey=id=>-Math.abs(Number(id));
 const slugOf=t=>String(t||'').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80);
 
+ // The planned slug belongs to Pre-Write. Growth may research a page that is not live yet;
+ // never substitute an existing-page URL or guess that the planned URL is already published.
+ const plannedUrl=(home,b,pages)=>{
+  if(!home)return null;
+  const meta=b.brief_json?.meta_package||{};
+  const decision=String(b.brief_json?.content_decision?.recommended_treatment||'').toUpperCase();
+  const supplied=decision==='EXPAND_EXISTING_PAGE'?(meta.proposed_new_slug||''):(meta.url_slug||meta.proposed_new_slug||'');
+  let pathname=null;
+  if(typeof supplied==='string'&&supplied.length<=250&&/^\/?[a-z0-9][a-z0-9\/_-]*\/?$/i.test(supplied)&&
+    !/(?:^|\/)\.{1,2}(?:\/|$)/.test(supplied)&&
+    !/^\/?(?:wp-admin|wp-json|wp-content|feed)(?:\/|$)/i.test(supplied)){
+   pathname='/'+supplied.replace(/^\/+|\/+$/g,'')+'/';
+  }
+  const source=pathname?'PREWRITE_BRIEF_SLUG':'KEYWORD_FALLBACK';
+  const url=home.replace(/\/+$/,'')+(pathname||'/'+(slugOf(b.keyword)||'new-page')+'/');
+  return {url,source,taken:pages.some(p=>String(p.url).replace(/\/$/,'')===url.replace(/\/$/,''))};
+ };
+
 function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,renderOwn=renderPublicGrowthPage,
  retryDelayMs=1500,buildOverview=buildCompetitorOverview,generateDraft=generateGrowthEditorDraft,
  recordGapList=null,loadGapList=null,recordSelection=null,addToSelection=null,loadOpenSelection=null,
@@ -36,12 +55,12 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
  const no=(res,status,code,extra={})=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code,...extra});
  const owner=req=>req.growth?.can_edit===true;
  async function briefs(clientId){
-  try{return (await pool.query('SELECT id,keyword,working_title,language,region,created_at FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC,id DESC LIMIT 50',[clientId])).rows}
+  try{return (await pool.query('SELECT id,keyword,working_title,language,region,brief_json,created_at FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC,id DESC LIMIT 50',[clientId])).rows}
   catch(e){if(e.code==='42P01')return [];throw e}
  }
  async function brief(clientId,id){
   if(!/^[1-9][0-9]{0,12}$/.test(String(id||'')))return null;
-  try{return (await pool.query('SELECT id,keyword,working_title,language,region,created_at FROM prewrite_briefs WHERE client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
+  try{return (await pool.query('SELECT id,keyword,working_title,language,region,brief_json,created_at FROM prewrite_briefs WHERE client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
   catch(e){if(e.code==='42P01')return null;throw e}
  }
  async function site(clientId){
@@ -59,8 +78,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    await Promise.resolve(loadSiteMarkets({clientId})).catch(()=>null):null;
   return {own,configured:resolveMarketSetting(own,fromBrief.countries.length||fromBrief.language?fromBrief:null,site)};
  }
- const plannedUrl=(home,b,pages)=>{if(!home)return null;let u=home+(slugOf(b.keyword)||'new-page')+'/';
-  return {url:u,taken:pages.some(p=>String(p.url).replace(/\/$/,'')===u.replace(/\/$/,''))}};
+
 
  // Research for a new page from a brief. Nothing is written.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/new-page/research',data,async(req,res)=>{
@@ -70,6 +88,8 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
   try{
    const {home,pages}=await site(cid);
    const query=clip(b.keyword,160);
+   // Pre-Write findings are editorial leads, not newly verified Google evidence.
+   const prewriteFindings=briefFindingsForGrowth({...b.brief_json,keyword:b.keyword});
    const {configured}=await marketFor(cid,b);
    const locale=deriveSearchLocale({html:'',url:home||'https://example.invalid/',configured});
    const discovery=await Promise.resolve().then(()=>searchLive({query,ownUrl:home,market:null,locale}))
@@ -81,6 +101,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
     .catch(()=>({status:'OVERVIEW_UNAVAILABLE'}));
    const report={generated_at:new Date().toISOString(),url:null,new_page:true,
     brief:{id:Number(b.id),keyword:b.keyword,working_title:b.working_title||null,region:b.region||null,language:b.language||null,created_at:b.created_at},
+    prewrite_findings:{...prewriteFindings,brief_id:Number(b.id),evidence_status:'EDITORIAL_LEADS_REQUIRE_FRESH_VERIFICATION'},
     search_discovery:{...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:query,search_locale:{...locale,
       ...(configured?.brief?{brief:configured.brief}:{})},competitor_fetch_log:reader.fetchLog,fetch_summary:reader.fetchSummary},
     competitor_overview:overview};
@@ -88,7 +109,9 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    const overlap=checkNewPageOverlap({keyword:query,sitePages:pages,items:gapList.items});
    gapList.recommended=gapList.items.filter(x=>x.recommended).map(x=>x.id);
    const planned=plannedUrl(home,b,pages);
-   gapList.research={...gapList.research,page_url:planned?.url||null,overlap:{status:overlap.status,exact:overlap.exact,possible:overlap.possible}};
+   gapList.research={...gapList.research,page_url:planned?.url||null,
+    prewrite_findings:report.prewrite_findings,
+    overlap:{status:overlap.status,exact:overlap.exact,possible:overlap.possible}};
    let ref=null;
    if(typeof recordGapList==='function')ref=await Promise.resolve(recordGapList({clientId:cid,prewriteBriefId:Number(b.id),targetUrl:planned?.url||'new-page:'+b.id,focusQuery:query,list:gapList})).catch(e=>{console.warn('[growth-new-page] gap list not saved',String(e?.code||'unknown'));return null});
    let carried=null;
@@ -98,7 +121,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
      carried={from_gap_list_id:open.gap_list_id,pending_ids:m.carried,needs_confirmation:m.needs_confirmation,needs_remapping:m.needs_remapping,no_longer_found:m.no_longer_found,
       note:'Items you selected earlier and that were not written yet. Ticked again only when the new research still shows the same need; nothing is written until you click.'}}
    }
-   res.set('Cache-Control','private, no-store').json({success:true,...report,new_page_research:{planned_url:planned?.url||null,planned_url_taken:!!planned?.taken,
+   res.set('Cache-Control','private, no-store').json({success:true,...report,new_page_research:{planned_url:planned?.url||null,planned_url_source:planned?.source||null,planned_url_taken:!!planned?.taken,
      overlap,market_coverage:discovery.market_coverage||null,home_url:home},
     gap_list:{...gapList,target_url:planned?.url||null,carried_over:carried,id:ref?Number(ref.id):null,
      write_url:ref?api(req.params.token)+'/write':null,selection_url:ref?api(req.params.token)+'/selection':null},
@@ -189,7 +212,8 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
   const review={flagged:concepts.flatMap(c=>c.review?.flagged||[]),fact:[...new Set(concepts.flatMap(c=>c.review?.needs_fact_check||[]))],
    owner:[...new Set(concepts.flatMap(c=>c.review?.needs_owner_confirmation||[]))],safety:[...new Set(concepts.flatMap(c=>c.review?.needs_safety_review||[]))]};
   const pkg={kind:'NEW_PAGE_CONCEPT',keyword:first.keyword,title:last.title,planned_url:last.planned_url,prewrite_brief_id:Number(first.prewrite_brief_id),
-   overlap:list.research?.overlap||null,market:list.research?.market||null,sections:[...latest.values()],review,
+   overlap:list.research?.overlap||null,market:list.research?.market||null,
+    prewrite_findings:list.research?.prewrite_findings||null,sections:[...latest.values()],review,
    dossiers:concepts.map(c=>c.review?.dossier).filter(Boolean),published:false,
    next_steps:['Check every statement; rewrite or remove every flagged sentence.','Publish the page yourself at the planned URL (or another free URL).',
     'Link to it from related pages of the site.','Add the published URL to the Tracker: it then continues in the existing-page research and measurement.']};
@@ -197,7 +221,12 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
   const L=['# New page concept: '+(pkg.title||pkg.keyword),'','Keyword: '+pkg.keyword,'Planned URL: '+(pkg.planned_url||'—')+' (not published)',
    'From Pre-Write brief #'+pkg.prewrite_brief_id+(pkg.market?.country?' · market '+pkg.market.country+(pkg.market.language?' · language '+pkg.market.language:''):''),
    ...(pkg.overlap&&pkg.overlap.status!=='NO_OVERLAP_FOUND'?['','> Overlap check: '+pkg.overlap.status+' — '+[...(pkg.overlap.exact||[]),...(pkg.overlap.possible||[])].map(p=>p.url).join(', ')]:[]),'',
-   ...pkg.sections.flatMap(s=>['## '+s.h2,'',s.text,'',
+   ...(pkg.prewrite_findings?['## Pre-Write findings to verify — not new evidence','',
+     'These are editorial leads from the saved Pre-Write Brief, not verified source claims or proof of missing content.','',
+     ...(pkg.prewrite_findings.outline||[]).map(x=>'- Planned section: '+x.heading),
+     ...(pkg.prewrite_findings.competitor_gaps||[]).map(x=>'- Competitor lead to recheck: '+(x.competitor?x.competitor+' — ':'')+x.gap),
+     ...(pkg.prewrite_findings.questions||[]).map(x=>'- Reader question: '+x),'']:[]),
+    ...pkg.sections.flatMap(s=>['## '+s.h2,'',s.text,'',
     '_Answers: '+(s.basis?.answers||s.task||'—')+' · basis: '+String(s.basis?.evidence_level||'—').toLowerCase().replace(/_/g,' ')+
     ((s.basis?.competitor_evidence||[]).length?' · sources: '+s.basis.competitor_evidence.map(e=>e.site).join(', '):'')+'_',
     ...(s.basis?.warning?['','> '+s.basis.warning]:[]),'']),
@@ -261,4 +290,4 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    '<button id="newPageDownload" type="button" hidden>Download research (JSON)</button></section><div id="newPageReport"></div>');
  });
 }
-module.exports={registerGrowthNewPage,briefKey};
+module.exports={registerGrowthNewPage,briefKey,plannedUrl};
