@@ -142,13 +142,6 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.selectOption('#aiEngine', 'perplexity');
     assert.match(await p.inputValue('#aiText'), /TEST: For roof repair in Lodi NJ/, 'the pasted answer is still there after a refresh');
     await p.click('#aiSave');
-    // Diagnostic only: distinguish failed AI POST from a client-side render error on this regression.
-    await p.waitForTimeout(1200);
-    console.log('AI SAVE DIAGNOSTIC',JSON.stringify({
-      status: await p.locator('#aiStatus').count()?await p.locator('#aiStatus').textContent():null,
-      research: (await p.locator('#freeAiResearch').textContent()).slice(0,260),
-      browserErrors: await p.evaluate(()=>window.__freeGrowthClientError||null)
-    }));
     await p.waitForFunction(() => /1 of 5/.test(document.getElementById('freeAiResearch')?.textContent || ''), null, { timeout: 30000 });
     assert.equal(await p.locator('#freeAiResearch').isVisible(), true, 'the saved AI answer returns to the visible research card');
     assert.equal(await p.locator('#stepResearch').evaluate(el => el.open), false, 'saving an AI answer must not force-open technical evidence');
