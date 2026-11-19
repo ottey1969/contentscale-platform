@@ -103,7 +103,7 @@
   var suggestedAdditions=inventory.filter(x=>x.coverage==='MISSING'||x.coverage==='PARTIAL');
   var gateVerdict=String(editor.decision||'').toUpperCase();
   var noChangeConflict=gateVerdict==='NO_CHANGE'&&suggestedAdditions.length>0;
-  var claimedBusinessLocation=/(?:service area|service coverage|serves|serving|dispatch|arrival|response time|all\\s+\\d+\\s+counties|licensed|insured|24\\s*\\/?\\s*7|immediate)/i;
+  var claimedBusinessLocation=/(?:service area|service coverage|serves|serving|dispatch|arrival|response time|all\s+\d+\s+counties|licensed|insured|24\s*\/?\s*7|immediate)/i;
   var riskyLocations=inventory.filter(x=>claimedBusinessLocation.test(x.topic));
   add('1A. EDITORIAL VERDICT RECONCILIATION & BUSINESS FACT SAFETY',[
    'Stored editorial verdict: '+value(gateVerdict),
@@ -116,7 +116,7 @@
    'Location or capability claims present in research headings (review, not approval): '+(riskyLocations.length?riskyLocations.map(x=>x.topic).join('; '):'none identified in heading text; paragraph-level fact review still required'),
    'Publication blocked for all proposed copy containing an unverified business fact, even when the user ticked include or a model drafted polished text. Keep the original published page unchanged.',
    'Output one final editorial choice: KEEP unchanged, IMPROVE a verified existing answer, ADD a verified distinct answer, or BLOCK until evidence is available.'
-  ].join('\\n'));
+  ].join('\n'));
   add('1A. EDITORIAL PRIORITIES — WITHOUT HIDING OTHER USEFUL FINDINGS',[
    'Priorities are a navigational summary, NOT a filter. The complete inventory follows.',
    'Coverage counts: '+['COMPLETE','PARTIAL','MISSING','UNKNOWN','REVIEW_CONFLICT'].map(status=>status+'='+inventory.filter(x=>x.coverage===status).length).join(' | '),

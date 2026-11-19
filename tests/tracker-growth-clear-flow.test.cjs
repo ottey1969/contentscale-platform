@@ -34,37 +34,27 @@ test('Tracker Growth: do this now, three steps, do it yourself, evidence in tabs
  const srv=app.listen(0),base='http://127.0.0.1:'+srv.address().port;const b=await chromium.launch();
  try{const p=await b.newPage({viewport:{width:1200,height:900}});const errs=[];p.on('pageerror',e=>errs.push(e.message));
   await p.goto(base+'/track/t/growth/auto-research?page_id=7&query='+encodeURIComponent(QUERY));
-  // No saved report: a visible start button (not hidden under Advanced), and no "concepts are saved" before any research.
-  await p.waitForSelector('#growthStartResearch');assert.equal(await p.locator('#growthFinalActions').isVisible(),false);
-  await p.click('#growthStartResearch');
-  await p.waitForSelector('#trackerNextAction',{timeout:60000});
-  assert.match(await p.textContent('#trackerNextAction'),/STEP 1 OF 3 · DO THIS NOW[^]*Choose what to add to your page/);
-  assert.match(await p.textContent('#researchStatus'),/^Research ready/);
-  assert.match(await p.textContent('#growthGapChoice h2'),/Step 1 · Choose what to add/);
-  assert.match(await p.textContent('#growthFinalActions h2'),/Step 2 · Write and prepare the CMS package/);
-  assert.match(await p.textContent('#growthFinalActions'),/Nothing written yet/);assert.equal(await p.locator('#growthEditorHandoff').isVisible(),false);
-  // The evidence is closed, in tabs; AI content topics go to the complete external-AI brief, while manual tasks need business/account action.
-  assert.equal(await p.locator('#growthEvidenceAll').evaluate(e=>e.open),false);
+  // No saved report: one visible start button after the setup (#489), and no CMS preparation before any research.
+  await p.waitForSelector('#growthFirstStart');assert.equal(await p.locator('#growthFinalActions').isVisible(),false);
+  await p.click('#growthFirstStart');
+  await p.waitForFunction(()=>/^Research ready/.test((document.getElementById('researchStatus')||{}).textContent||''),null,{timeout:60000});
+  // One complete brief with priorities and the full content inventory; nothing has to be ticked first (#489).
+  await p.waitForSelector('#growthAiContentTasks',{state:'visible'});
+  assert.match(await p.textContent('#growthAiContentTasks'),/Complete Growth AI Research & Writing Brief/);
+  assert.equal(await p.locator('#growthBriefPriorities').isVisible(),true);
+  assert.equal(await p.getByRole('button',{name:'Download full AI brief (.md)'}).count(),1);
+  assert.doesNotMatch(await p.textContent('body'),/STEP \d OF 3/,'no old three-step bar');
+  // Manual tasks need business or account action; the facts come from the research, not invented.
   await p.waitForFunction(()=>/Manual website \/ business actions \(\d+ open\)/.test(document.getElementById('growthSelfDo').textContent),null,{timeout:30000});
   const self=await p.textContent('#growthSelfDo');assert.match(self,/State on your page: a price or price range/);assert.match(self,/Get the page into Bing/);
-  assert.equal(await p.locator('#growthAiContentTasks').isVisible(),true);
-  assert.match(await p.textContent('#growthAiContentTasks'),/Complete Growth AI Research & Writing Brief/);
-  assert.equal(await p.getByRole('button',{name:'Download full AI brief (.md)'}).count(),1);
-  // Ticking a topic far down updates the next action, and the bar at the bottom carries it.
-  const pick=p.locator('#growthGapChoice input[type=checkbox]').first();await pick.scrollIntoViewIfNeeded();await pick.check();
-  assert.match(await p.textContent('#trackerActionTitle'),/1 chosen topic/);
-  await p.waitForFunction(()=>!document.getElementById('trNowBar').hidden);
-  const target=(await p.getAttribute('#trNowBar .tg-go','href')).slice(1);
-  assert.ok(await p.evaluate(t=>!!document.getElementById(t),target),'the next action never points at a missing element ('+target+')');
-  await p.click('#trNowBar .tg-go');await p.waitForTimeout(300);
-  assert.ok(Math.abs(await p.evaluate(t=>document.getElementById(t).getBoundingClientRect().top,target))<5,'the bar button scrolls to its target');
-  // AI research is visible BEFORE the topic list; no closed evidence tab is needed.
-  assert.equal(await p.locator('#growthAiCheck').isVisible(),true);
-  assert.ok(await p.locator('#growthAiCheck').evaluate(e=>!e.closest('#growthEvidenceAll')));
-  assert.equal(await p.locator('#growthAiCheck [role=progressbar]').count(),1);
-  await p.evaluate(()=>window.scrollTo(0,0));await p.click('.tg-found a[href="#growthEvidenceAll"]');
-  assert.equal(await p.locator('#growthEvidenceAll').evaluate(e=>e.open),true);
-  assert.ok(await p.locator('.tg-tabs button[data-tab=research]').count());
+  // AI research is visible before the brief, not hidden in a closed evidence tab.
+  assert.equal(await p.locator('#growthAiEarly').isVisible(),true);
+  assert.ok(await p.evaluate(()=>{const a=document.getElementById('growthAiEarly'),b=document.getElementById('growthAiContentTasks');
+   return !!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING)}),'AI research comes before the brief');
+  // CMS preparation is optional and nothing is written or published automatically; publishing and measuring follow.
+  assert.match(await p.textContent('#growthFinalActions h2'),/Optional CMS preparation/);
+  assert.equal(await p.locator('#growthEditorHandoff').isVisible(),false);
+  assert.equal(await p.locator('#growthPublishWizard').count(),1);
   assert.deepEqual(errs,[]);
  }finally{await b.close();srv.close()}
 });

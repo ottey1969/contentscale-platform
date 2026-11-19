@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../src/growth-free/routes.cjs'),'utf8');
+assert.match(source,/AI answers already saved.*no need to paste/i,'Saved AI answers must not invite duplicate manual pastes');
+assert.match(source,/Continue to the complete editor brief/i,'AI research must lead to the complete brief, not mandatory H2 choice');
+assert.match(source,/function automaticDraftIds\(/,'Approved suggested draft topics must be computed automatically');
+assert.match(source,/savedIds\.size===0.*automaticDraftIds/s,'Use automatic selection only when visitor has not made a selection');
+assert.match(source,/verified=blocked\|\|unchanged\?\[\]/,'A NO_CHANGE verdict must never offer H2s as verified additions');
+console.log('PASS Free Growth optional manual research and no-change safety flow');

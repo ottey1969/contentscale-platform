@@ -38,7 +38,7 @@ test('single Growth proposal workflow has no Advanced alternative and still requ
  assert.match(HTML,/#download:not\(:disabled\)\{background:#1d4ed8/);
  assert.match(HTML,/id="cmsUnlockHint"/);
  assert.match(JS,/if\(safe\.source===src&&\$\('query'\)\.value\.trim\(\)===exactQuestion\)review\.click\(\)/);
- assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&\$\('title'\)\.value\.trim\(\)/);
+ assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&safe\.proposalState==='READY'&&safe\.proposal&&\$\('title'\)\.value\.trim\(\)/); // since bd23ef7 the download also needs a ready proposal
  assert.match(JS,/\$\('approved'\)\.checked&&manualReady&&factsChecked/);
  assert.match(JS,/function fillSeoFromSavedProposal\(proposal\)/);
  assert.match(JS,/if\(!proposal\|\|!Array\.isArray\(proposal\.sections\)/);
@@ -81,7 +81,7 @@ test('CMS cannot silently load a different question or carry its old SEO metadat
  assert.doesNotMatch(JS,/if\(!\$\('meta'\)\.value&&x\.meta\)\$\('meta'\)\.value=x\.meta/);
  assert.match(JS,/\$\('title'\)\.value='';\$\('meta'\)\.value=''/);
  assert.match(JS,/\$\('existingMetadata'\)\.hidden=false/);
- assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&\$\('title'\)\.value\.trim\(\)/);
+ assert.match(JS,/safe\.savedQuestionConfirmed&&safe\.source&&safe\.proposalState==='READY'&&safe\.proposal&&\$\('title'\)\.value\.trim\(\)/); // since bd23ef7 the download also needs a ready proposal
  assert.match(JS,/\$\('title'\)\.value\.trim\(\)&&\$\('meta'\)\.value\.trim\(\)/);
  assert.match(JS,/Research question changed while loading/);
  assert.match(JS,/Open Growth research for this exact question/);

@@ -11,12 +11,17 @@ app.get('/track/TOK/growth/cms-export',(q,r)=>r.type('html').send(fs.readFileSyn
 const S='Our platform tracks every roof repair citation in ChatGPT every day.';
 const base='/api/tracker-client/TOK/growth/cms-export';
 app.get(base+'/source',(q,r)=>r.json({success:true,source_sha256:'x',page_url:'https://acme-roofing.example/',title:'TEST',meta_description:'TEST',headings:[]}));
-app.get(base+'/proposal',(q,r)=>r.json({success:true,proposal:{id:5,sections:[{h2:'How to read a repair estimate',text:'Ask for a written estimate before any work. '+S}],review:{flagged:[{sentence:S,reason:'Reason one'},{sentence:S,reason:'Reason two'},{sentence:S,reason:'Reason three'}]}}}));
+app.get(base+'/proposal',(q,r)=>r.json({success:true,proposal_id_matched:true,proposal:{id:5,focus_query:'roof repair estimate',sections:[{h2:'How to read a repair estimate',text:'Ask for a written estimate before any work. '+S}],review:{flagged:[{sentence:S,reason:'Reason one'},{sentence:S,reason:'Reason two'},{sentence:S,reason:'Reason three'}]}}}));
 app.get(base+'/removals',(q,r)=>r.json({success:true,removals:[]}));app.post(base+'/removals',(q,r)=>r.json({success:true}));
 app.use('/api',(q,r)=>r.json({success:false}));
-const srv=app.listen(0),u='http://127.0.0.1:'+srv.address().port;const b=await chromium.launch();const p=await b.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
-await p.goto(u+'/track/TOK/growth/cms-export?page_id=1');await p.waitForTimeout(3000);
+const srv=app.listen(0),u='http://127.0.0.1:'+srv.address().port;const b=await chromium.launch();
+// Always close the browser and the server: a failing assertion must not keep the test process (and CI) running.
+try{
+const p=await b.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
+// Since 1a2f29f Growth opens the CMS page with the exact question and the stored proposal id.
+await p.goto(u+'/track/TOK/growth/cms-export?page_id=1&query='+encodeURIComponent('roof repair estimate')+'&proposal_id=5');await p.waitForFunction(()=>document.querySelectorAll('.growth-flagged-remove').length>0,null,{timeout:20000});
 assert.equal(await p.locator('.growth-flagged-remove').count(),1,'one button for one sentence with three reasons');assert.equal(await p.locator('#growthFlaggedRemoveAll').count(),1);
-await p.click('#growthFlaggedRemoveAll');await p.waitForTimeout(500);assert.match(await p.textContent('#growthFlaggedRemoveAll'),/Removed 1 flagged sentence/);assert.equal(await p.inputValue('#copy'),'Ask for a written estimate before any work.','only the flagged sentence is removed');
-assert.deepEqual(errs,[]);await b.close();srv.close()
+await p.click('#growthFlaggedRemoveAll');await p.waitForTimeout(500);assert.match(await p.textContent('#growthFlaggedRemoveAll'),/Processing 1 sentence decision/);assert.equal(await p.inputValue('#copy'),'Ask for a written estimate before any work.','only the flagged sentence is removed');
+assert.deepEqual(errs,[]);
+}finally{await b.close();srv.close()}
 });

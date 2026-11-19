@@ -83,8 +83,12 @@ test('Cockpit: the best opportunity is the first thing the owner sees, with a li
  const imp=await call(posts['/api/tracker-client/:token/growth/gsc-country-import'],{params:{token:'owner-tok'},body:{}});
  assert.equal(imp.body.success,true);assert.equal(imp.body.rows,2);assert.equal(imp.body.countries,2);
  const page=await call(routes['/track/:token/growth'],{params:{token:'owner-tok'},query:{}});
- const html=page.html,best=html.indexOf('Best opportunity for potential customers — Opportunity Finder (an order, not a prediction)'),next=html.indexOf('Your next action');
- assert(best>0&&best<next,'the opportunity comes before the old next action');
+ // Since the page-first Cockpit (775ac9f, 2026-11-17) the page choice comes first and the Opportunity Finder sits under
+ // Advanced; there the best opportunity must still come before every other opportunity list.
+ const html=page.html,best=html.indexOf('Best opportunity for potential customers — Opportunity Finder (an order, not a prediction)');
+ const pageFirst=html.indexOf('Choose the page to improve'),lists=['Research opportunities without GSC','Top click opportunities','Prioritized page opportunities'].map(k=>html.indexOf(k));
+ assert(pageFirst>0&&best>pageFirst,'the page choice comes first, then the Opportunity Finder');
+ assert(lists.every(i=>i>0&&best<i),'the best opportunity comes before the other opportunity lists');
  // The Cockpit orders for qualified leads: the consultant term (wants to hire) comes first; the topic term with more
  // impressions is named and stays listed.
  assert.match(html,/“generative engine optimization consultant” in United States → https:\/\/contentscale\.site\/generative-engine-optimization-consultant\//);

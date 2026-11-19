@@ -102,7 +102,8 @@ test('1. owner research produces a checked edit and stores it as the proposal fo
  assert.equal(d.publish_allowed,false);
  assert.equal(searches.length<=2,true,'at most two paid search calls per run');
  assert.equal(r.body.cms_handoff.target_page_id,ids.page);
- assert.equal(r.body.cms_handoff.url,'/track/owner-tok/growth/cms-export?page_id='+ids.page);
+ // Since 1a2f29f every CMS link carries the exact question and the stored proposal id (no stale question is reused).
+ assert.equal(r.body.cms_handoff.url,'/track/owner-tok/growth/cms-export?page_id='+ids.page+'&query='+encodeURIComponent(r.body.editorial_decision_gate.focus_query)+'&proposal_id='+r.body.cms_handoff.proposal_id);
  const rows=(await pool.query('SELECT * FROM tracker_growth_proposals')).rows;
  assert.equal(rows.length,1);assert.equal(Number(rows[0].id),r.body.cms_handoff.proposal_id);
  assert.equal(rows[0].target_url,URL_);assert.equal(rows[0].decision,'IMPROVE_EXISTING');
@@ -124,12 +125,14 @@ test('2. a protected Case Study page gets research but never a stored proposal',
 
 test('3. the CMS page loads exactly that proposal (owner link only)',async()=>{
  assert.equal((await api('GET','/api/tracker-client/share-tok/growth/cms-export/proposal?page_id='+ids.page)).status,403);
- const page=await api('GET','/track/owner-tok/growth/cms-export?page_id='+ids.page);
+ const page=await api('GET',research.cms_handoff.url);
  assert.equal(page.status,200);assert.match(page.body,/id="growthProposal"/);assert.match(page.body,/id="publicationForm"/);
- const r=await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page);
- assert.equal(r.status,200);proposal=r.body.proposal;
- const newest=(await pool.query('SELECT max(id)::int id FROM tracker_growth_proposals WHERE target_page_id=$1',[ids.page])).rows[0].id;
- assert.equal(proposal.id,newest,'the newest checked proposal for this page and URL');
+ const r=await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal'+research.cms_handoff.url.slice(research.cms_handoff.url.indexOf('?')));
+ assert.equal(r.status,200);proposal=r.body.proposal;assert.equal(r.body.proposal_id_matched,true);
+ // A link without the question or proposal id never preselects a concept (1a2f29f).
+ assert.equal((await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body.proposal,null);
+ // Exactly the proposal in the link, even when research on another page stored a newer one for this page (1a2f29f).
+ assert.equal(proposal.id,research.cms_handoff.proposal_id,'exactly the proposal of this research');
  assert.equal(proposal.sections[0].text,research.editorial_decision_gate.proposed_text);
  assert.equal(proposal.focus_query,research.editorial_decision_gate.focus_query);
 });
@@ -288,9 +291,10 @@ test('10. hybrid: research without writing gives the full gap list; text only fo
  assert.equal(saved.status,200);assert.equal(saved.body.found,true,JSON.stringify(saved.body).slice(0,200));
  assert.equal(saved.body.report.gap_list.id,gl.id);
  assert.deepEqual(saved.body.report.gap_list.selected,pick.map(String));assert.deepEqual(saved.body.report.gap_list.written_ids,pick.map(String));
- assert.equal(saved.body.report.gap_list.cms_url,'/track/owner-tok/growth/cms-export?page_id='+ids.page);
- // The concept is the newest proposal for the CMS page, with the flagged sentence as a must-rewrite item.
- const prop=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body.proposal;
+ const cmsUrl=saved.body.report.gap_list.cms_url;
+ assert.equal(cmsUrl,'/track/owner-tok/growth/cms-export?page_id='+ids.page+'&query='+encodeURIComponent('roof repair lodi nj')+'&proposal_id='+w.body.cms_handoff.proposal_id);
+ // The concept in the CMS link is the written selection, with the flagged sentence as a must-rewrite item.
+ const prop=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal'+cmsUrl.slice(cmsUrl.indexOf('?')))).body.proposal;
  assert.equal(prop.id,w.body.cms_handoff.proposal_id);assert.equal(prop.evidence_label,'SELECTION_CONCEPT_WITH_FLAGGED_SENTENCES');
  assert(prop.review.flagged.some(f=>/68%/.test(f.sentence)));
  const exportWith=sections=>api('POST','/api/tracker-client/owner-tok/growth/cms-export',{page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
@@ -311,32 +315,15 @@ test('10. hybrid: research without writing gives the full gap list; text only fo
  const facts=pack.body.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
  assert.match(facts,/Flagged by Growth — resolved in this text \(checked\)[\s\S]*68%/);
  assert.equal(pack.body.manifest.review_items.flagged,1);
- // The concept for the selected task replaces the research proposal for that same task: the older wording is not offered
- // as another concept (owner 2026-11-01: nine "other concepts" were earlier versions of the same tasks).
- const listed=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body;
- assert.equal(listed.proposal.id,prop.id);
- assert(!listed.earlier.some(x=>x.id===proposal.id&&x.kind!=='EARLIER_RESEARCH_VERSION'),'the same task in older wording is not a separate concept');
- // A concept written later on ANOTHER topic becomes the newest; the estimate concept stays offered and can be added to the
- // same package (recorded per section and in the manifest).
- const {saveSelectionProposal}=require('../src/growth-proposal-store.cjs');
- const other=await saveSelectionProposal(pool,{clientId:ids.client,targetPageId:ids.page,targetUrl:URL_,focusQuery:prop.focus_query,
-  written:{sections:[{h2:'What to ask the crew before work starts',paragraphs:['Ask which parts of the roof they will inspect, what they will replace and how they will protect the gutters and the garden during the work.'],item_id:'q-task_crew_questions',item_title:'Questions for the crew'}]}});
- const listed2=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body;
- assert.equal(listed2.proposal.id,Number(other.id));
- const main=listed2.earlier.find(x=>x.id===prop.id);
- assert(main&&main.kind==='SELECTION_CONCEPT','the estimate concept is offered as another concept: '+JSON.stringify(listed2.earlier.map(x=>[x.id,x.kind])));
- const newest=listed2.proposal;
- const combinedBody=extra=>({page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
-  focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:newest.id,
-  review_notes:{...prop.review,needs_fact_check:[...(prop.review.needs_fact_check||[]),...(newest.review.needs_fact_check||[])]},
-  approved_changes:[...newest.sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+newest.id,html:sectionHtml(x),placement:x.placement})),
-   ...resolved.map(x=>({approved:true,evidence_ref:'growth_proposal:'+main.id,html:sectionHtml(x),placement:x.placement}))],format:'json',...extra});
- assert.equal((await api('POST','/api/tracker-client/owner-tok/growth/cms-export',combinedBody({added_growth_proposal_ids:[main.id+999]}))).status,409,'another page’s or an invented concept is refused');
- const both=await api('POST','/api/tracker-client/owner-tok/growth/cms-export',combinedBody({added_growth_proposal_ids:[main.id]}));
- assert.equal(both.status,200,JSON.stringify(both.body).slice(0,300));
- assert.deepEqual(both.body.manifest.growth_proposals_added,[main.id]);
- assert(both.body.manifest.change_evidence.includes('growth_proposal:'+main.id));
- assert.equal(both.body.manifest.change_evidence.length,newest.sections.length+resolved.length);
+ // Since #468 there are no "other concepts" any more: the CMS link loads exactly the written selection, the page lists the
+ // saved proposals only to choose from, and a package never combines concepts (owner 2026-11-01 / #468).
+ const listed=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal'+cmsUrl.slice(cmsUrl.indexOf('?')))).body;
+ assert.equal(listed.proposal.id,prop.id);assert.equal(listed.proposal_id_matched,true);
+ assert(listed.available_proposals.some(x=>x.id===prop.id),'the written selection is listed for choosing');
+ const combined=await exportWith(resolved).then(()=>api('POST','/api/tracker-client/owner-tok/growth/cms-export',{page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
+  focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:prop.id,review_notes:prop.review,
+  approved_changes:resolved.map(x=>({approved:true,evidence_ref:'growth_proposal:'+prop.id,html:sectionHtml(x),placement:x.placement})),format:'json',added_growth_proposal_ids:[proposal.id]}));
+ assert.equal(combined.status,409);assert.equal(combined.body.code,'LEGACY_PROPOSAL_ADDITIONS_NOT_SUPPORTED','a package never combines concepts');
  // The protected Case Study page never gets a gap list to write from.
  const locked=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.locked,{page_id:ids.locked,write:false});
  assert(locked.body.gap_list.id===null||locked.body.gap_list.target_page_id!==ids.locked);
@@ -457,7 +444,8 @@ test('13. new page from a Pre-Write brief: same research, overlap check, selecti
  const listPage=(await api('GET','/track/owner-tok/growth/new-page')).body;
  assert.match(listPage,/roof inspection lodi nj/);assert.match(listPage,new RegExp('new-page\\?brief_id='+nb));
  assert.doesNotMatch((await api('GET','/track/share-tok/growth/new-page')).body,/Research as a new page/,'owner only');
- assert.match((await api('GET','/track/owner-tok/growth')).body,/New page from a Pre-Write brief/,'reachable from the Growth Cockpit');
+ // The page-first Cockpit (775ac9f) links to it as "Need a new page? Use an existing Pre-Write brief".
+ assert.match((await api('GET','/track/owner-tok/growth')).body,/<a href="\/track\/owner-tok\/growth\/new-page">Use an existing Pre-Write brief<\/a>/,'reachable from the Growth Cockpit');
  assert.match((await api('GET','/track/owner-tok/growth/new-page?brief_id='+nb)).body,/id="newPageStatus"/);
  const before=searches.length,aiBefore=aiCalls.length,proposalsBefore=(await pool.query('SELECT count(*)::int n FROM tracker_growth_proposals')).rows[0].n;
  assert.equal((await api('POST','/api/tracker-client/share-tok/growth/new-page/research',{brief_id:nb})).status,403);

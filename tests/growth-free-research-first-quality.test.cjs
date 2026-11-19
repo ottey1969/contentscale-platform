@@ -17,7 +17,8 @@ test('The in-progress Free Growth screen shows only animated research steps, not
  assert.ok(!routes.includes("i<idx?'complete'"),'No stage should be marked complete based only on number of polling requests');
 });
 test('Evidence blocked means observations, not a recommendation to add unrelated general topics',()=>{
- assert.match(routes,/reviewOnly=!!\(d&&d\.summary&&d\.summary\.decision==='DATA_BLOCKED'\)/);
+ // DATA_BLOCKED and NO_CHANGE both make the topic list review-only (PR #502 added NO_CHANGE; DATA_BLOCKED must stay).
+ assert.match(routes,/reviewOnly=!!\(d&&d\.summary&&\['DATA_BLOCKED','NO_CHANGE'\]\.includes\(d\.summary\.decision\)\)/);
  assert.match(routes,/Research observations, not recommendations:/);
  assert.match(routes,/x\.recommended&&!reviewOnly/);
  assert.match(routes,/s\.decision!=='DATA_BLOCKED'&&s\.gaps/);

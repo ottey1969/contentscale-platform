@@ -134,6 +134,7 @@ function registerGrowthExecution(app,pool,deps={}){
    const mail=reminders.parseEmails(req.body&&req.body.reminder_emails);
    if(mail.invalid.length)return res.status(400).json({success:false,error:'Not an e-mail address: '+mail.invalid.slice(0,3).join(', ')});
    if(mail.too_many)return res.status(400).json({success:false,error:'At most 5 e-mail addresses for the reminder'});
+   const modified=String(notes)!==String(pub.notes)||Date.parse(publishedAt)!==Date.parse(pub.published_at);
    // A correction without any actual changed date, notes or reminder recipients
    // must not produce a second confirmation or a false "saved" event.
    if(!modified){
@@ -148,7 +149,6 @@ function registerGrowthExecution(app,pool,deps={}){
    const row=(await pool.query('UPDATE tracker_growth_publications SET notes=$3,published_at=$4 WHERE id=$1 AND tracker_client_id=$2 RETURNING id,published_at,notes',[id,c.id,notes,publishedAt])).rows[0];
    const reminder=req.body&&'reminder_emails' in req.body?await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:mail.emails,publishedAt}):await reminders.loadReminder(pool,{clientId:c.id,publicationId:id});
    if(reminder&&moved&&!(req.body&&'reminder_emails' in req.body))await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:reminder.emails,publishedAt});
-   const modified=String(notes)!==String(pub.notes)||Date.parse(publishedAt)!==Date.parse(pub.published_at);
    const wantsMail=!!(reminder&&(modified||(req.body&&'reminder_emails' in req.body)));
    const html=wantsMail?(await pool.query("SELECT to_jsonb(p)->>'html_content' AS html FROM tracker_pages p JOIN tracker_growth_publications g ON g.tracker_page_id=p.id AND g.tracker_client_id=p.tracker_client_id WHERE g.id=$1",[id]).catch(()=>({rows:[]}))).rows[0]?.html:null;
    const ctx=wantsMail?await reminders.publicationContext(pool,{clientId:c.id,publicationId:id}).catch(()=>null):null;

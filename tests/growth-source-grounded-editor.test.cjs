@@ -91,11 +91,14 @@ assert.equal(normalizeDraft(englishSection,spanishSource,'What is the best GEO t
   }});
  assert.equal(titleAttempts,2);
  assert.equal(fixedTitle.status,'AI_DRAFT_REVIEW_REQUIRED');
+ // Since cc23592 (2026-11-17) the CMS handoff has one Growth proposal and no "Advanced · Generate a different draft"
+ // button (tests/growth-cms-handoff-zero-statements.test.cjs forbids it). Editing still resets the approval, and only
+ // reviewed sections reach the package.
  const js=fs.readFileSync('public/growth-cms-neutral-handoff.js','utf8');
- assert(js.includes("base+'/editor-draft'"));
+ assert(!js.includes("base+'/editor-draft'"),'no second draft request from the CMS handoff');
  assert(js.includes("$('approved').checked=false"));
  assert(js.includes('reviewedSections.push'));
  const form=fs.readFileSync('public/growth-cms-neutral-handoff.html','utf8');
- assert(form.includes('generateEditorialDraft'));
+ assert(!form.includes('generateEditorialDraft'),'no Advanced alternative button');
  console.log('PASS optional source-grounded AI Growth drafts; no new facts, no auto-approval, no provider dependency');
 })().catch(e=>{console.error(e);process.exitCode=1});

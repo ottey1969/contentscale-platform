@@ -25,12 +25,13 @@ test('Tracker CMS page: show in the text, keep (stored), undo, and "Remove all" 
  const OTHER='Our platform tracks every roof repair citation in ChatGPT every day.';
  const base='/api/tracker-client/TOK/growth/cms-export',posts=[];
  app.get(base+'/source',(q,r)=>r.json({success:true,source_sha256:'x',page_url:'https://acme-roofing.example/',title:'TEST',meta_description:'TEST',headings:[]}));
- app.get(base+'/proposal',(q,r)=>r.json({success:true,proposal:{id:5,sections:[{h2:'What emergency roof repair costs',text:'Ask for a written estimate before any work. '+KEEP+' '+OTHER}],review:{flagged:[{sentence:KEEP,reason:'TEST figure in another context'},{sentence:OTHER,reason:'TEST unproven'}]}}}));
+ app.get(base+'/proposal',(q,r)=>r.json({success:true,proposal_id_matched:true,proposal:{id:5,focus_query:'what emergency roof repair costs',sections:[{h2:'What emergency roof repair costs',text:'Ask for a written estimate before any work. '+KEEP+' '+OTHER}],review:{flagged:[{sentence:KEEP,reason:'TEST figure in another context'},{sentence:OTHER,reason:'TEST unproven'}]}}}));
  app.get(base+'/removals',(q,r)=>r.json({success:true,removed:[]}));app.post(base+'/removals',(q,r)=>{posts.push(q.body);r.json({success:true})});
  app.use('/api',(q,r)=>r.json({success:false}));
  const srv=app.listen(0),u='http://127.0.0.1:'+srv.address().port;const b=await chromium.launch();
  try{const p=await b.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
-  await p.goto(u+'/track/TOK/growth/cms-export?page_id=1');await p.waitForFunction(()=>document.querySelectorAll('.growth-flag-keep').length===2,null,{timeout:20000});
+  // Since 1a2f29f Growth opens the CMS page with the exact question and the stored proposal id.
+  await p.goto(u+'/track/TOK/growth/cms-export?page_id=1&query='+encodeURIComponent('what emergency roof repair costs')+'&proposal_id=5');await p.waitForFunction(()=>document.querySelectorAll('.growth-flag-keep').length===2,null,{timeout:20000});
   const row=p.locator('.growth-flagged-remove[data-sentence="'+KEEP+'"]').first();
   await row.locator('.growth-flag-show').click();
   assert.equal(await p.evaluate(()=>document.activeElement&&document.activeElement.id),'copy','the text field with the sentence gets the focus');
