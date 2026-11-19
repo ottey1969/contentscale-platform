@@ -848,7 +848,7 @@ function growthBriefHtml(s,d){
    (evidence.length?'<details class="research-details"><summary>Source URLs and excerpts ('+evidence.length+')</summary><ul>'+evidence.map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site||e.url)+'</a> '+(e.heading?'· '+esc(e.heading):'')+(e.excerpt?'<p class="muted">'+esc(e.excerpt)+'</p>':'')+'</li>'}).join('')+'</ul></details>':'')+'</div>';
  }
  var h='<section class="growth-brief" id="growthOneBrief" aria-label="One research result and editorial brief">'+
-  '<div class="growth-brief-head"><small>ONE RESEARCH · ONE RESULT</small><h2>'+esc(s.headline||'Growth research result')+'</h2>'+
+  '<div class="growth-brief-head"><small>ONE RESEARCH · ONE RESULT</small><h2>'+esc(blocked?'No verified content change yet':unchanged?'Keep your current page':verified.length?verified.length+' improvements to review':'Research complete — no confirmed content change')+'</h2>'+
   '<p>'+esc(line)+'</p><p class="growth-brief-meta">Google comparison'+(fc&&fc.enabled?' · Firecrawl '+esc(fc.used)+'/'+esc(fc.attempted)+' pages':'')+
   ' · AI systems '+esc(aiN)+'/5 source answers (optional, not part of the Google ranking)</p>'+
   '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> '+
@@ -893,7 +893,7 @@ var NOW_CTX=null;
 function nowOf(c,chosen){var d=c.d,stage=c.published?3:c.hasConcepts?2:chosen&&c.canWrite?2:1;
  var now=c.published?{t:'Measure the effect',why:'You recorded the publication date. Upload a new Search Console export after about four weeks to compare before and after.',b:'Go to step 3',to:'stepPublish'}
   :c.hasConcepts?{t:'Check the text and download the CMS package',why:'AI wrote '+d.writing.last.sections.length+' section(s). Read them, keep what is true for your business, then download the package for your website.',b:'Check the text',to:'stepPrepare'}
-  :c.blocker?{t:'Look at what the competitor pages have',why:'There was too little evidence to propose new text, but you can still see what the ranking pages cover and you do not.',b:'See the comparison',to:'competitors'}
+  :c.blocker?{t:'Keep the page unchanged for now',why:'No content change passed the evidence check. The complete brief explains the reason and what can be checked next.',b:'Open the brief',to:'growthBriefDetails'}
   :!c.hasGaps?{t:'Nothing to add for this search',why:'Your page already covers what the ranking pages cover. See what was checked below.',b:'See what was checked',to:'stepResearch'}
   :chosen&&c.canWrite?{t:'Let AI write the '+chosen+' chosen topic(s)',why:'You chose what goes on your page. AI writes it now; you check everything before anything is downloaded.',b:'Go to step 2: write',to:'stepPrepare'}
   :chosen?{t:'Review the editor brief',why:'All findings and priorities are already included. Optional topic choices are only for automated writing.',b:'Open the brief',to:'growthBriefDetails'}
