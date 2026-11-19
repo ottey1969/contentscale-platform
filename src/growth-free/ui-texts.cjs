@@ -23,7 +23,6 @@ const ROWS = [
   ['What, where, how and why', 'Wat, waar, hoe en waarom', 'Qué, dónde, cómo y por qué'],
   ['Google comparison', 'Google-vergelijking', 'Comparación en Google'],
   ['pages read with Firecrawl', 'pagina’s gelezen met Firecrawl', 'páginas leídas con Firecrawl'],
-  ['AI answers:', 'AI-antwoorden:', 'Respuestas de IA:'],
   ['saved (optional)', 'opgeslagen (optioneel)', 'guardadas (opcional)'],
   ['AI research', 'AI-onderzoek', 'Investigación IA'],
   ['saved answers', 'opgeslagen antwoorden', 'respuestas guardadas'],
