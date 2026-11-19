@@ -18,7 +18,7 @@ function createFreeGrowthFirecrawlReader({
 }={}){
  const active=enabled(env);
  const cap=Math.max(1,Math.min(10,Number(maxPages)||DEFAULT_LIMIT));
- const stats={enabled:active,provider:'FIRECRAWL_HOSTED',attempted:0,used:0,fallbacks:0,cache_hits:0,limit:cap,errors:[]};
+ const stats={enabled:active,provider:'FIRECRAWL_HOSTED',attempted:0,used:0,fallbacks:0,cache_hits:0,limit:cap,errors:[],pages:[]};
  const cache=new Map();
  const limitedMessage=(url,code)=>{if(stats.errors.length<10)stats.errors.push({host:(()=>{try{return new URL(url).hostname}catch{return 'invalid'}})(),code})};
  const reader=async (raw,options=RESEARCH_FETCH)=>{
@@ -71,12 +71,15 @@ function createFreeGrowthFirecrawlReader({
     if(clean.length<300)throw Object.assign(Error('FIRECRAWL_UNREADABLE'),{code:'FIRECRAWL_UNREADABLE'});
     if(direct?.html&&clean.length<direct.html.length*0.5)throw Object.assign(Error('FIRECRAWL_LESS_COMPLETE'),{code:'FIRECRAWL_LESS_COMPLETE'});
     stats.used++;
+    const retrieved_at=new Date().toISOString();
+    stats.pages.push({url:url.href,final_url:final.href,provider:'FIRECRAWL_HOSTED_API',status:'USED',retrieved_at,readable_chars:clean.length,truncated:clean.length>limit});
     return {html:clean.slice(0,limit),truncated:clean.length>limit,final_url:final.href,
-     requested_url:url.href,status:200,retrieved_at:new Date().toISOString(),
+     requested_url:url.href,status:200,retrieved_at,
      source:'FIRECRAWL_HOSTED_API',capture:{cause:clean.length>limit?'READABLE_HTML_EXCEEDED_LIMIT':null,readable_chars:clean.length,readable_limit:limit}};
    }catch(err){
     const code=String(err?.code||err?.name||'FIRECRAWL_FAILED').slice(0,60);
     limitedMessage(url.href,code);stats.fallbacks++;
+    stats.pages.push({url:url.href,provider:'STANDARD_READER',status:'FIRECRAWL_FALLBACK',reason:code,retrieved_at:new Date().toISOString()});
     return direct||original(raw,options);
    }
   })();
