@@ -23,7 +23,11 @@ test('Five system answers are consolidated and their detail collapsed unless exp
 test('Brief only proposes evidence-supported topics, with source links and safe blocked-state messages',()=>{
  assert.match(ui,/x\.recommended&&x\.writable!==false/);
  assert.match(ui,/Do not publish new content based on these observations yet/);
- assert.match(ui,/Only evidence-supported changes are included/);
+ assert.match(ui,/Verified editorial priorities/);
+ assert.match(ui,/Other observations for editorial review/);
+ assert.match(ui,/Copy full editor \/ external AI brief/);
+ assert.match(ui,/wireCompleteBrief\(s\.gaps,s\)/);
+ assert.match(ui,/function gapBrief\(g,s,all\)/);
  assert.match(ui,/esc\(e\.url\)/);
  assert.match(ui,/No verified content improvement/);
 });
