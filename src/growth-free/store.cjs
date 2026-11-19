@@ -237,6 +237,15 @@ async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
  await pool.query(`INSERT INTO growth_free_ai_answers(check_id,engine,raw_text,parsed) VALUES ($1,$2,$3,$4::jsonb)
    ON CONFLICT (check_id,engine) DO UPDATE SET raw_text=EXCLUDED.raw_text,parsed=EXCLUDED.parsed,created_at=NOW()`,[checkId,engine,rawText,JSON.stringify(parsed)]);
 }
+// Transfer answers only when BOTH result capabilities are presented and the route
+// has confirmed the same page, explicit customer question, and market.
+// Keep original timestamps; never overwrite an answer already saved in the destination.
+async function importAiAnswersFromCheck(pool,{targetCheckId,sourceCheckId}){
+ const r=await pool.query(`INSERT INTO growth_free_ai_answers(check_id,engine,raw_text,parsed,created_at)
+  SELECT $1,engine,raw_text,parsed,created_at FROM growth_free_ai_answers WHERE check_id=$2
+  ON CONFLICT(check_id,engine) DO NOTHING RETURNING engine`,[targetCheckId,sourceCheckId]);
+ return {imported:r.rows.map(x=>x.engine),count:r.rows.length};
+}
 async function listAiAnswers(pool,checkId){
  return (await pool.query('SELECT engine,raw_text,parsed,created_at FROM growth_free_ai_answers WHERE check_id=$1 ORDER BY engine',[checkId])).rows;
 }
@@ -275,4 +284,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
