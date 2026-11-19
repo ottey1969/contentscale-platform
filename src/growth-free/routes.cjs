@@ -352,10 +352,11 @@ document.addEventListener('click',function(e){var s=e.target.closest('details.jo
 // Every jump to a step keeps the step header in view.
 function showStep(id,targetId){openJourney(id);requestAnimationFrame(function(){var el=document.getElementById(targetId||id);if(el)el.scrollIntoView({block:'start'})})}
 
-function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI systems <small>('+esc(x.checked)+' of 5 checked'+(x.checked===5?' · complete':'')+')</small></h3>'+
+function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI systems <small>('+esc(x.checked)+' of 5 stored answers'+(x.checked===5?' · all stored':'')+')</small></h3>'+
  '<div class="growth-ai-progress" role="progressbar" aria-label="AI systems checked" aria-valuemin="0" aria-valuemax="5" aria-valuenow="'+esc(x.checked)+'"><span style="width:'+esc(Math.round(Math.min(5,Number(x.checked)||0)*20))+'%"></span></div>';
  if(auto&&auto.gemini){var g=auto.gemini,status=g.status||'UNKNOWN';h+='<p class="note"><strong>Automatic AI research · Gemini with Google Search:</strong> '+(status==='SUCCESS'?'Completed and saved. See Gemini results below.':status==='NOT_CONFIGURED'?'Not configured on this server.':status==='NO_GROUNDED_ANSWER'?'No verifiable source-backed answer was returned.':status==='PROVIDER_UNAVAILABLE'?'The provider was unavailable.':status==='INCOMPLETE'?'The provider returned an incomplete answer.':'No verified automatic answer ('+esc(status)+').')+' This is not a Google AI Overview. ChatGPT, Claude, Perplexity and Copilot are only marked checked when their actual responses are supplied.</p>'}
  h+='<p class="muted"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
+ if(x.checked)h+='<p class="note"><strong>AI answer provenance:</strong> '+esc(x.checked)+' answer(s) are saved with this check. The historical record does not identify whether each answer was supplied at check creation, pasted later, or retrieved automatically. Firecrawl only reads public web pages; it did not independently question these AI systems. The source counts are not ranking positions. Review each original saved answer in the research JSON before treating its citations as verified.</p>';
  h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no source list pasted — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
   return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = sources the AI answer listed. Links inside its text are not counted.</p>';
  if(x.top_cited_sites.length)h+='<details class="research-details"><summary>Sources mentioned in the AI answers ('+esc(x.top_cited_sites.length)+')</summary><h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul></details>';
@@ -857,6 +858,11 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
  if(d.cached)h+='<p class="note"><strong>Result from earlier today.</strong> This page was checked for the same question and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString()):' in the last 24 hours')+', so that result is shown. A new check of this page is possible tomorrow.</p>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
+ if(d.research_reader){var rd=d.research_reader;
+  h+='<details class="research-details" id="firecrawlResearchStatus"><summary>Page reading · '+(rd.enabled?'Firecrawl pilot':'Standard reader')+'</summary>'+
+   '<p class="muted">'+(rd.enabled?'Hosted Firecrawl used on '+esc(rd.used)+' of '+esc(rd.attempted)+' attempted page(s); '+esc(rd.fallbacks)+' used the normal reader instead. Maximum '+esc(rd.limit)+' Firecrawl requests for this check.':'Firecrawl pilot is not enabled for this check. The normal ContentScale reader was used.')+'</p>'+
+   (rd.errors&&rd.errors.length?'<p class="muted">Fallback reasons: '+esc(rd.errors.map(function(e){return e.host+' ('+e.code+')'}).join(', '))+'</p>':'')+'</details>';
+ }
  if(d.sitemap_import){
   var sm=d.sitemap_import,used=Number(sm.urls_used||0);
   h+='<p class="note"><strong>Sitemap inventory:</strong> '+(used?used+' same-site URL candidate(s) imported':'No sitemap URLs imported')+
@@ -1445,6 +1451,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
+   research_reader:row.report?.research_reader||null,
    sitemap_import:row.report?.sitemap_import||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
