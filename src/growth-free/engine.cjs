@@ -61,6 +61,13 @@ async function runFreeGrowthResearch({url,query,market=null,gscRows=[],sitemapUr
  const route={};
  const options={retryDelayMs:deps.retryDelayMs??1500};
  for(const k of ['fetchLive','searchLive','renderOwn','judgeTasks','buildOverview'])if(typeof deps[k]==='function')options[k]=deps[k];
+ // Free-only pilot: leave Tracker's default research reader untouched.
+ // Explicit dependency injection wins in tests and integrations.
+ let firecrawl=null;
+ if(!options.fetchLive){
+  firecrawl=require('../growth-free-firecrawl-reader.cjs').createFreeGrowthFirecrawlReader();
+  if(firecrawl.stats.enabled)options.fetchLive=firecrawl.reader;
+ }
  if(market&&(market.countries?.length||market.language))options.loadPageMarkets=async()=>market;
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h}},readOnlySource(page,{gscRows,sitemapUrls}),(req,res,next)=>{
   req.growthTrackerClientId=FREE_CLIENT_ID;req.growth={can_edit:false,pages:[page]};next();
@@ -72,6 +79,9 @@ async function runFreeGrowthResearch({url,query,market=null,gscRows=[],sitemapUr
   const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};
   at(0);
  });
+ if(firecrawl&&res.body&&typeof res.body==='object'&&!Array.isArray(res.body)){
+  res.body.research_reader={...firecrawl.stats};
+ }
  return {statusCode:res.statusCode,report:res.body};
 }
 
