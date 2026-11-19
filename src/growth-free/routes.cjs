@@ -7,6 +7,7 @@ const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl,engineVersion}=require('./engine.cjs');
 const {groundedGeminiAnswer}=require('./auto-ai-answers.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
+const {statesIn,US:US_STATES}=require('../growth-serp-quality.cjs');
 const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const aiGap=require('./ai-gap.cjs');
@@ -170,6 +171,9 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <div class="free-simple-locale"><label for="market"><strong>3. ${esc(t.market)}</strong></label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="${esc(t.marketPh)}">
  <label for="language">${esc(t.language)}</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="${esc(t.languagePh)}">
  <small>${esc(t.marketHelp)}</small></div>
+ <label for="search_location"><strong>${esc(t.searchLocation)}</strong></label><input id="search_location" name="search_location" list="freeSearchLocationChoices" maxlength="120" autocomplete="off" placeholder="${esc(t.searchLocationPh)}">
+ <datalist id="freeSearchLocationChoices"><option value="New Jersey, United States"></option><option value="Newark, New Jersey, United States"></option><option value="Jersey City, New Jersey, United States"></option><option value="Paterson, New Jersey, United States"></option></datalist>
+ <small>${esc(t.searchLocationHelp)}</small>
  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(regionLabel(x,lang))+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(languageLabel(x,lang))+'">').join('')}</datalist>
 <details class="free-simple-optional" id="freeExtraSources"><summary><strong>${esc(t.simpleOptional)}</strong> <small class="muted">${esc(t.simpleOptionalHint)}</small></summary>
  ${aiStartBlock(!!owner.signedIn||!!invite,t,true)}
@@ -232,7 +236,7 @@ ${aiStartScript(t)}
  setTimeout(sync,0);sync();
 })();
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
-(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','search_location','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
 // A market or language filled in from a link ("es — Spain", "Spanish") is shown in the visitor's language.
 (function(){var L=${js(lang)};if(L==='en'||!window.Intl||!Intl.DisplayNames)return;try{var R=new Intl.DisplayNames([L],{type:'region'}),N=new Intl.DisplayNames([L],{type:'language'}),E=new Intl.DisplayNames(['en'],{type:'language'});
  var m=document.getElementById('market');if(m&&m.value)m.value=m.value.split(/\s*,\s*/).map(function(x){var c=(x.match(/^([a-z]{2})\s*[—–-]/i)||[])[1];return c?c.toLowerCase()+' — '+R.of(c.toUpperCase()):x}).join(', ');
@@ -256,7 +260,7 @@ function simpleFromTracker(d){try{
  var v=function(id){var el=document.getElementById(id);return el?el.value:''};
  var line=function(label,value){if(!value)return '';var d0=document.createElement('div');var b=document.createElement('strong');b.textContent=label+': ';d0.appendChild(b);d0.appendChild(document.createTextNode(value));return d0.outerHTML};
  var head=document.createElement('strong');head.style.cssText='display:block;margin-bottom:6px';head.textContent=FT.trTitle;var help=document.createElement('small');help.style.cssText='display:block;margin-top:6px';help.textContent=FT.trHelp;
- card.innerHTML=head.outerHTML+line(FT.trPage,v('url'))+line(FT.trKeyword,d.keyword||v('topic'))+line(FT.trMarket,[v('market'),v('language')].filter(Boolean).join(' · '))+line(FT.trTo,v('email'))+help.outerHTML;
+ card.innerHTML=head.outerHTML+line(FT.trPage,v('url'))+line(FT.trKeyword,d.keyword||v('topic'))+line(FT.trMarket,[v('market'),v('language'),v('search_location')].filter(Boolean).join(' · '))+line(FT.trTo,v('email'))+help.outerHTML;
  f.insertBefore(card,det);
  var st=document.createElement('style');st.textContent='#growthFreeReset{display:none!important}';document.head.appendChild(st);
  var lead=document.querySelector('.lead');if(lead)lead.textContent=FT.trLead;
@@ -267,7 +271,7 @@ var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
 // This browser remembers what was entered (page, search term, market, language, addresses), so the next check starts
 // filled in. Only in this browser; a link with values wins; works without storage too.
-var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm';
+var REMEMBER=['url','query','market','language','search_location','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}rememberAi()}
 // Pasted AI answers are kept in this browser too, with the customer question they answer: after a refresh or a failed start
@@ -300,7 +304,7 @@ if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER
 (function(){var b=document.getElementById('cqFind');if(!b)return;var st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
  b.addEventListener('click',async function(){var url=document.getElementById('url').value.trim(),kw=document.getElementById('query').value.trim();if(!url&&!kw){st.textContent='Enter a keyword (search term) first.';return}
   b.disabled=true;b.classList.add('is-working');st.textContent='Looking up how customers search…';list.innerHTML='';
-  try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value})});
+  try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value,search_location:document.getElementById('search_location').value})});
    var d=await r.json();if(!d.success)throw Error(d.error||'Not available right now.');
    st.textContent=d.questions.length?'Best observed Google match first; AI ideas only if no suitable Google question. Choose or edit any question.':'No suitable questions found; enter your own.';
    list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+(q.text===d.best_question?' · Best match':'')+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
@@ -319,7 +323,7 @@ try{
  if(APPROVED&&!f.query.value.trim()){
   s.textContent=FT.sFinding;
   try{
-   var qr=await fetch(${js(api)}+'/customer-questions',{signal:timeoutSignal(45000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
+   var qr=await fetch(${js(api)}+'/customer-questions',{signal:timeoutSignal(45000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value})});
    var qd=await qr.json();
    var qs=qd&&qd.success&&Array.isArray(qd.questions)?qd.questions:[];
    var chosen=qs.filter(function(q){return q.text===qd.best_question})[0]||qs.filter(function(q){return q.priority==='OBSERVED_GOOGLE'})[0]||qs.filter(function(q){return q.source==='AI_SUGGESTION'})[0];
@@ -329,7 +333,7 @@ try{
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -557,11 +561,11 @@ function gapBrief(g,s,all,d){var picked={};if(!all)document.querySelectorAll('.g
  var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
  var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Decision: '+(s.decision||'UNKNOWN'),'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
-  list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
+  list.forEach(function(x){L.push('### '+x.title+(x.recommended?' — editorial priority':' — research observation'), '');
    L.push('  - Editorial assessment: '+(x.recommended?'Verified research priority':'Observation only; not approved as content advice'));
-   L.push('  - Where: '+(x.placement&&x.placement.section_heading?'Near '+x.placement.section_heading:x.your_section?'Near '+x.your_section:'Confirm fit on the existing page'));
-   if(x.priority&&x.priority.suggested_action)L.push('  - How: '+x.priority.suggested_action);
-   if(x.priority&&x.priority.why)L.push('  - Why: '+x.priority.why.join(' · '));
+   L.push('  - Placement on the existing page: '+(x.placement&&x.placement.section_heading?'Near '+x.placement.section_heading:x.your_section?'Near '+x.your_section:'Confirm the relevant section before editing'));
+   L.push('  - Editor instruction: '+(x.recommended?(x.priority&&x.priority.suggested_action||'Write a source-supported answer in the existing relevant section; verify every business claim.'):'Do not publish this observation until intent, source evidence and business claims are confirmed.'));
+   if(x.priority&&x.priority.why)L.push('  - Supporting reasoning: '+x.priority.why.join(' · '));
    L.push('  - Potential ranking impact: '+(x.growth_potential&&x.growth_potential.search_demand&&x.growth_potential.search_demand.note||'Not measured; requires Search Console/position tracking'));
    L.push('  - Potential AI citation impact: Not measured for this topic unless actual AI source-backed answers establish a link');
    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'Google position #'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':'')+(e.url?' — Source: '+e.url:'')+(e.excerpt?' — Excerpt: '+e.excerpt:''))})});L.push('')});
@@ -859,7 +863,7 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
   try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
-// A single editorial brief: one decision, optional what/where/how/why, and real evidence.
+// One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
 function growthBriefHtml(s,d){
  var blocked=s.decision==='DATA_BLOCKED',unchanged=s.decision==='NO_CHANGE',
   list=(s.gaps&&s.gaps.items||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}),
@@ -877,12 +881,12 @@ function growthBriefHtml(s,d){
    proof=x.priority&&x.priority.why&&x.priority.why.length?x.priority.why.join(' · '):x.ai||x.status||'Only a competitor content difference observed',
    demand=x.growth_potential&&x.growth_potential.search_demand,impact=demand&&demand.status!=='NOT_MEASURED'?demand.note:'Ranking/traffic impact not measured',
    cite='AI citation impact unknown unless a current, source-backed AI answer supports it';
-  return '<div class="growth-brief-item"><h3>'+esc(i+1)+'. '+esc(x.title)+(confirmed?' · editorial priority':' · observation')+'</h3>'+
-   '<p><strong>What:</strong> '+esc(x.title)+'</p><p><strong>Where:</strong> '+esc(where)+'</p>'+
-   '<p><strong>How:</strong> '+esc(confirmed?(x.priority&&x.priority.suggested_action||'Add only a verified answer in the existing relevant section.'):'Do not add automatically. Check customer intent, overlap and business accuracy first.')+'</p>'+
-   '<p><strong>Why:</strong> '+esc(proof)+'</p>'+
-   '<p><strong>Potential impact:</strong> '+esc(impact)+' · '+esc(cite)+'. No improvement is guaranteed.</p>'+
-   '<p><strong>Evidence:</strong> '+esc(evidence.length)+' referenced page(s)'+(evidence.length?' · see exact URLs below':' · no independently verified source URLs recorded')+'</p>'+
+  return '<div class="growth-brief-item"><h3>'+esc(i+1)+'. '+esc(x.title)+(confirmed?' · ready for editorial review':' · research only')+'</h3>'+
+   '<p><strong>Instruction:</strong> '+esc(confirmed?(x.priority&&x.priority.suggested_action||'Improve the relevant existing section with a concise, verified answer to this customer question. Do not invent service claims.'):'Do not publish this finding yet. First confirm customer intent, whether the content already exists and whether the business can support the claim.')+'</p>'+
+   '<p><strong>Placement:</strong> '+esc(where)+'</p>'+
+   '<p><strong>Evidence behind this instruction:</strong> '+esc(proof)+'</p>'+
+   '<p><strong>Evaluation:</strong> '+esc(impact)+' · '+esc(cite)+'. Verify the effect after publication; no improvement is guaranteed.</p>'+
+   '<p><strong>References:</strong> '+esc(evidence.length)+' source page(s)'+(evidence.length?' · URLs below':' · no verified source URL recorded')+'</p>'+
    (evidence.length?'<details class="research-details"><summary>Source URLs and excerpts ('+evidence.length+')</summary><ul>'+evidence.map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site||e.url)+'</a> '+(e.heading?'· '+esc(e.heading):'')+(e.excerpt?'<p class="muted">'+esc(e.excerpt)+'</p>':'')+'</li>'}).join('')+'</ul></details>':'')+'</div>';
  }
  var h='<section class="growth-brief" id="growthOneBrief" aria-label="One research result and editorial brief">'+
@@ -891,7 +895,7 @@ function growthBriefHtml(s,d){
   ' · AI systems '+esc(aiN)+'/5 source answers (optional, not part of the Google ranking)</p>'+
   '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> '+
   '<button type="button" class="ghost" id="briefDownloadAll">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div>'+
-  '<details id="growthBriefDetails"><summary><strong>Open the Growth brief</strong> · What, where, how and why</summary><div class="growth-brief-body">'+
+  '<details id="growthBriefDetails"><summary><strong>Editorial instructions and sources</strong> · Priority, placement, verification</summary><div class="growth-brief-body">'+
   '<p class="muted">Complete editorial research: priorities, page placement, supporting sources and AI answers. No selection required. Drafting remains optional.</p>'+
   '<h3>Research decision</h3><p>'+esc(s.explanation||line)+'</p>';
  if(verified.length)h+='<h3>Verified editorial priorities ('+verified.length+')</h3>'+verified.map(function(x,i){return item(x,i,true)}).join('');
@@ -942,7 +946,7 @@ function cockpitInner(c,chosen){var x=nowOf(c,chosen),now=x.now,stage=x.stage;
 // When the "Do this now" card is scrolled out of view, the same action sits in a bar at the bottom of the screen,
 // so the next step is always one click away (no scrolling back up).
 function updateNow(chosen){if(!NOW_CTX)return;var card=document.getElementById('freeNextAction');if(card)card.innerHTML=cockpitInner(NOW_CTX,chosen);
- var x=nowOf(NOW_CTX,chosen),bar=document.getElementById('nowBar');if(!bar)return;
+ var x=nowOf(NOW_CTX,chosen),bar=document.getElementById('nowBar');if(!bar)return;if(!card){bar.hidden=true;return;}
  bar.innerHTML='<span><small>Step '+x.stage+' of 3 · do this now</small><strong>'+esc(x.now.t)+'</strong></span><a class="btn" href="#'+esc(x.now.to)+'">'+esc(x.now.b)+' →</a><a class="now-top" href="#freeNextAction" aria-label="Back to the top">↑ Top</a>'}
 var nowObs=null;
 function wireNowBar(){var card=document.getElementById('freeNextAction'),bar=document.getElementById('nowBar');if(!bar){bar=document.createElement('div');bar.id='nowBar';bar.className='now-bar';bar.hidden=true;bar.setAttribute('role','region');bar.setAttribute('aria-label','Next action');document.body.appendChild(bar)}
@@ -980,7 +984,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  var selfOpen=(function(){var dn=selfDone();return selfItems(s.gaps,d).filter(function(x){return !(dn[x.id]||x.auto)}).length})();
  NOW_CTX={d:d,canWrite:canWrite,hasConcepts:hasConcepts,hasGaps:hasGaps,published:published,blocker:blocker,selfOpen:selfOpen};
  h+=growthBriefHtml(s,d);
- h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle">'+cockpitInner(NOW_CTX,chosen)+'</section>';
+ if(published||hasConcepts||(chosen&&!blocker&&canWrite))h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle">'+cockpitInner(NOW_CTX,chosen)+'</section>';
  // What the check found, in three lines; the evidence is in the tabs below.
  var recN=hasGaps&&!blocker?s.gaps.items.filter(function(x){return x.recommended}).length:0;
  var ag=a&&a.gap,aiTopics=ag&&ag.missing_topics?ag.missing_topics.length:0,gItems=hasGaps?s.gaps.items.filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}).length:0;
@@ -1163,7 +1167,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(job.url);const html=String(live&&live.html||'');
    const country=job.market&&job.market.countries&&job.market.countries[0]||null,lang=job.market&&job.market.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
-   const out=await discoverCustomerQuestions({url:job.url,html,keyword:job.topic||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
+   const out=await discoverCustomerQuestions({url:job.url,html,keyword:job.topic||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,location:job.market?.location||'',
     ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:job.approved?(engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()):null});
    const best=(out.questions||[]).find(q=>q.text===out.best_question)||null;
    return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,
@@ -1281,9 +1285,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const kw=clean(b.query,300),hasUrl=!!String(b.url||'').trim(),v=hasUrl?validatePublicUrl(b.url):{error:'NO_URL'};
   if(v.error&&!kw)return res.status(400).json({success:false,error:hasUrl?v.error:'Enter a keyword (search term) or the page address first.'});
   const entries=String(b.market||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),country=validCountries(entries)[0]||null,lang=String(b.language||'').trim()?validLanguage(b.language):null;
+  const location=String(b.search_location||'').trim(),localStates=statesIn(location);
+  if(location&&(location.length>120||localStates.length!==1||!US_STATES[localStates[0]]||(country&&country!=='US')))return res.status(400).json({success:false,error:'Choose a valid US state or city, for example New Jersey, United States.'});
   let html='';if(!v.error){try{html=String((await (engineDeps.fetchLive||fetchPublicGrowthHtml)(v.url))?.html||'')}catch(e){if(!kw)return res.status(503).json({success:false,error:'Your page could not be read publicly. Enter the search term yourself.'})}}
   const pageLang=((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'').toLowerCase();
-  const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',
+  const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',location,
    ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()});
   res.set('Cache-Control','no-store').json({success:true,...out});
  });
@@ -1342,7 +1348,23 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const countries=validCountries(entries),language=String(b.language||'').trim()?validLanguage(b.language):null;
   if(entries.length&&countries.length<entries.length){res.status(400).json({success:false,error:'Choose the market from the list, for example nl — Netherlands (several separated by commas).'});return undefined}
   if(String(b.language||'').trim()&&!language){res.status(400).json({success:false,error:'Choose the language from the list, for example Dutch.'});return undefined}
-  return countries.length||language?{countries,language}:null;
+  const rawLocation=String(b.search_location||'').trim();
+  let location=null;
+  if(rawLocation){
+   if(rawLocation.length>120||/[<>\r\n]/.test(rawLocation)){
+    res.status(400).json({success:false,error:'Enter a state or city, for example New Jersey, United States.'});return undefined;
+   }
+   const matchedStates=statesIn(rawLocation),state=matchedStates[0];
+   if(matchedStates.length!==1||!state||!US_STATES[state]||/\b(?:Canada|United Kingdom|Netherlands|Australia)\b/i.test(rawLocation)){
+    res.status(400).json({success:false,error:'Choose one US state or city and state, for example New Jersey, United States.'});return undefined;
+   }
+   if(countries.length&&countries[0]!=='US'){
+    res.status(400).json({success:false,error:'A US state or city requires United States as the first target market.'});return undefined;
+   }
+   location=rawLocation;
+  }
+  const selected=location&&countries.length===0?['US']:countries;
+  return selected.length||language||location?{countries:selected,language,...(location?{location,location_source:'VISITOR_SELECTED'}:{})}:null;
  }
  // AI answers pasted before the start: at most one per AI system, checked like a paste on the result page.
  function readAiAnswers(b,res){

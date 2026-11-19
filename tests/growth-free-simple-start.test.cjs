@@ -15,6 +15,8 @@ test('Website Growth Check is page-first for existing, unknown URL with genuinel
  assert.match(routes,/id="query" name="query"/);
  assert.match(routes,/id="market" name="market"/);
  assert.match(routes,/id="language" name="language"/);
+ assert.match(routes,/id="search_location" name="search_location"/);
+ assert.match(routes,/search_location:f\.search_location\.value/);
  assert.match(routes,/<details class="free-simple-optional" id="freeExtraSources">/);
  assert.match(routes,/id="gscFile" name="gscFile"/);
  assert.match(routes,/id="freeSitemapUrl"/);
