@@ -362,6 +362,10 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI systems <small>('+esc(
  if(x.top_cited_sites.length)h+='<details class="research-details"><summary>Sources mentioned in the AI answers ('+esc(x.top_cited_sites.length)+')</summary><h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul></details>';
  h+=aiGapHtml(a.gap);
  h+='<p class="muted">These source mentions are AI visibility observations, not verified content gaps. Growth compares the readable ranking pages automatically and labels missing evidence separately.</p>';
+ h+='<details id="aiImport" class="research-details"><summary>Reuse previously saved AI answers (optional)</summary>'+
+  '<p class="muted">A fresh check has its own AI answers. To reuse answers from an earlier Free Growth result, paste its complete result link. The page, customer question and market must be identical. The original answers and dates remain unchanged; these are not new live AI responses.</p>'+
+  '<label>Earlier result link<input type="url" id="aiImportUrl" placeholder="https://app.contentscale.site/free-growth/r/..."></label>'+
+  '<p><button type="button" id="aiImportBtn" class="ghost">Restore saved AI answers</button> <small role="status" id="aiImportStatus"></small></p></details>';
  var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
   // Manual research is available directly below the visible five-system status, not under the technical evidence tabs.
  h+='<details id="aiRecheck" class="research-details growth-ai-manual"><summary>'+(x.checked===5?'Research another AI system · Recheck a real answer (optional)':'Research another AI system · Add a real answer ('+(5-x.checked)+' unchecked)')+'</summary><div class="card"><p class="muted">Only check another AI answer if you want to; this never blocks the Google research.</p><ol><li>Choose the AI system.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong>.</li><li>Paste the complete answer below, including the source links.</li></ol>'+
@@ -400,6 +404,23 @@ function wireAiGap(){if(aiGapPoll){clearTimeout(aiGapPoll);aiGapPoll=null}
   if(!box){st.textContent='This topic is not in the list of step 1.';return}if(!box.checked){box.checked=true;box.dispatchEvent(new Event('change',{bubbles:true}))}st.textContent='Added to your choice in step 1.';b.disabled=true}})}
 function aiDraftKey(eng){return 'growthFreeAiDraft:'+API+':'+eng}
 function wireAi(){wireAiGap();var b=document.getElementById('aiSave');if(!b)return;
+ var importBtn=document.getElementById('aiImportBtn');
+ if(importBtn)importBtn.onclick=async function(){
+  var field=document.getElementById('aiImportUrl'),st=document.getElementById('aiImportStatus'),link=String(field.value||'').trim(),match;
+  try{
+   var u=new URL(link);
+   if(u.protocol!=='https:'||u.origin!==location.origin)throw Error('Use the original Free Growth result URL on this website.');
+   match=u.pathname.match(/\/free-growth\/r\/([A-Za-z0-9_-]+)\/?$/);
+   if(!match||!u.searchParams.get('k'))throw Error('Paste a complete Free Growth result link, including its access key.');
+   importBtn.disabled=true;st.textContent='Restoring previously saved responses…';
+   var r=await fetch(API+'/import-ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_id:match[1],source_key:u.searchParams.get('k')})}),data=await r.json();
+   if(!r.ok||!data.success)throw Error(data.error||'Could not restore the earlier AI answers');
+   st.textContent=data.count?'Restored '+data.count+' earlier response(s), with original capture dates.':'No new responses copied; the answers may already be saved here.';
+   var refreshed=await (await fetch(API+Q,{cache:'no-store'})).json();if(refreshed.success&&refreshed.status==='DONE'){render(refreshed);var panel=document.getElementById('freeAiResearch');if(panel)panel.open=true;}
+  }catch(err){st.textContent=err.message}
+  finally{var current=document.getElementById('aiImportBtn');if(current)current.disabled=false}
+ };
+
  // The answer being pasted is kept in this browser per check and AI system until it is analysed (a refresh loses nothing).
  var ta=document.getElementById('aiText'),sel=document.getElementById('aiEngine');
  var load=function(){try{var v=localStorage.getItem(aiDraftKey(sel.value));if(v&&!ta.value)ta.value=v}catch(e){}};load();
