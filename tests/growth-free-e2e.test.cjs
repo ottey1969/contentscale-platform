@@ -105,7 +105,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForSelector('#google', { timeout: 60000 });
     assert.match(await p.textContent('h1'), /Your page in Google and in AI answers/);
     await p.waitForSelector('#freeNextAction .growth-next-btn');
-    assert.match(await p.textContent('#freeNextAction'), /STEP 1 OF 3 · DO THIS NOW[^]*Choose what to add to your page/);
+    assert.match(await p.textContent('#freeNextAction'), /STEP 1 OF 3 · DO THIS NOW[^]*Use the complete Growth brief/);
+    assert.equal(await p.locator('#stepReview').evaluate(el=>el.open), false, 'topic picking is optional and collapsed');
+    assert.equal(await p.locator('#briefCopyAll').isVisible(), true, 'complete editor brief requires no checkboxes');
     assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 3);
     assert.equal(await p.locator('#freeNextAction .growth-next-btn').isVisible(), true);
     assert.ok((await p.locator('#freeNextAction .growth-next-btn').getAttribute('href')).startsWith('#'));
@@ -297,7 +299,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // Completed AI research: five saved answers must not leave the large input form open.
     for (const engine of ['google_aio', 'chatgpt', 'claude', 'copilot']) {
       await evidence('ai');
-      if (!(await p.locator('#aiRecheck').evaluate(el => el.open))) await p.locator('#aiRecheck > summary').click();
+      if (!(await p.locator('#freeAiResearch').evaluate(el=>el.open))) await p.locator('#freeAiResearch > summary').click();
+      if (!(await p.locator('#aiRecheck').evaluate(el=>el.open))) await p.locator('#aiRecheck > summary').click();
       await p.selectOption('#aiEngine', engine);
       await p.fill('#aiText', 'ANSWER:\nRoof repair Lodi NJ advice includes checking written estimates and leak repair procedures.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
       await p.click('#aiSave');
