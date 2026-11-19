@@ -923,7 +923,7 @@ var RESEARCH_STEPS={en:['Reading your page','Searching Google for the customer q
  es:['Leyendo tu página','Buscando en Google la pregunta del cliente','Leyendo y comparando páginas competidoras','Comprobando las pruebas y preparando recomendaciones']};
 function updateResearchProgress(d,n){
  var o=document.getElementById('out');if(!o||o.getAttribute('data-progress-only')==='false')return;
- var steps=RESEARCH_STEPS[LANG]||RESEARCH_STEPS.en,idx=Math.min(3,Math.floor(Math.max(0,n)/4));
+ var steps=RESEARCH_STEPS[PAGE_LANG]||RESEARCH_STEPS.en,idx=Math.min(3,Math.floor(Math.max(0,n)/4));
  var existing=document.getElementById('freeResearchSteps');
  if(!existing){existing=document.createElement('ol');existing.id='freeResearchSteps';existing.className='free-research-steps';o.appendChild(existing)}
  existing.innerHTML=steps.map(function(step,i){return '<li class="'+(i<idx?'complete':i===idx?'active':'pending')+'"><span class="free-step-dot" aria-hidden="true">'+(i<idx?'✓':i===idx?'◌':'·')+'</span> '+esc(step)+'</li>'}).join('');
