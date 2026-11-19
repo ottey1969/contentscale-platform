@@ -106,7 +106,8 @@ function page(title,body,cfg){
  return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
 :root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
-.growth-brief{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:18px;margin:12px 0}.growth-brief-head>small{font-weight:700;letter-spacing:.06em;color:var(--muted)}.growth-brief-head h2{margin:.45em 0;font-size:22px}.growth-brief-head p{margin:.45em 0}.growth-brief-meta{font-size:13px;color:var(--muted)}.growth-brief details>summary{cursor:pointer}.growth-brief #growthBriefDetails{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.growth-brief-body{padding:12px 2px}.growth-brief-item{border-top:1px solid var(--line);padding:8px 0}.growth-brief-item p{margin:6px 0}.growth-brief-body h3{margin:12px 0 3px}.growth-ai-prominent>summary{font-weight:700;color:#1e40af;cursor:pointer}.growth-ai-prominent:not([open]){padding:14px 20px}.growth-ai-prominent:not([open])>summary small{font-weight:400}\n*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+.growth-brief{border:1px solid var(--line);border-left:4px solid #2563eb;background:var(--card);border-radius:16px;padding:22px;margin:16px 0;box-shadow:0 12px 35px rgba(15,23,42,.07)}.growth-brief-head{display:grid;gap:8px}.growth-brief-head>p{max-width:75ch}.growth-brief-head button{min-height:42px}.growth-brief-item{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:16px;margin:12px 0}.growth-brief-item h3{margin:0 0 10px}.growth-brief-body>h3{font-size:17px;margin-top:18px}.growth-brief-body details.research-details{border-radius:10px;padding:10px;margin-top:10px}@media(max-width:620px){.growth-brief{padding:14px}.growth-brief-head h2{font-size:20px}.growth-brief-head button{width:100%;margin:4px 0}}
+.growth-brief-head>small{font-weight:700;letter-spacing:.06em;color:var(--muted)}.growth-brief-head h2{margin:.45em 0;font-size:22px}.growth-brief-head p{margin:.45em 0}.growth-brief-meta{font-size:13px;color:var(--muted)}.growth-brief details>summary{cursor:pointer}.growth-brief #growthBriefDetails{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.growth-brief-body{padding:12px 2px}.growth-brief-item{border-top:1px solid var(--line);padding:8px 0}.growth-brief-item p{margin:6px 0}.growth-brief-body h3{margin:12px 0 3px}.growth-ai-prominent>summary{font-weight:700;color:#1e40af;cursor:pointer}.growth-ai-prominent:not([open]){padding:14px 20px}.growth-ai-prominent:not([open])>summary small{font-weight:400}\n*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 main{max-width:860px;margin:0 auto;padding:24px 16px 60px}h1{font-size:30px;line-height:1.2;margin:.4em 0}h2{font-size:21px;margin:1.6em 0 .5em}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}.lead{font-size:18px;color:var(--muted)}
 label{display:block;margin:12px 0 4px;font-weight:600}input,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
@@ -362,6 +363,10 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI systems <small>('+esc(
  if(x.top_cited_sites.length)h+='<details class="research-details"><summary>Sources mentioned in the AI answers ('+esc(x.top_cited_sites.length)+')</summary><h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul></details>';
  h+=aiGapHtml(a.gap);
  h+='<p class="muted">These source mentions are AI visibility observations, not verified content gaps. Growth compares the readable ranking pages automatically and labels missing evidence separately.</p>';
+ h+='<details id="aiImport" class="research-details"><summary>Reuse previously saved AI answers (optional)</summary>'+
+  '<p class="muted">A fresh check has its own AI answers. To reuse answers from an earlier Free Growth result, paste its complete result link. The page, customer question and market must be identical. The original answers and dates remain unchanged; these are not new live AI responses.</p>'+
+  '<label>Earlier result link<input type="url" id="aiImportUrl" placeholder="https://app.contentscale.site/free-growth/r/..."></label>'+
+  '<p><button type="button" id="aiImportBtn" class="ghost">Restore saved AI answers</button> <small role="status" id="aiImportStatus"></small></p></details>';
  var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
   // Manual research is available directly below the visible five-system status, not under the technical evidence tabs.
  h+='<details id="aiRecheck" class="research-details growth-ai-manual"><summary>'+(x.checked===5?'Research another AI system · Recheck a real answer (optional)':'Research another AI system · Add a real answer ('+(5-x.checked)+' unchecked)')+'</summary><div class="card"><p class="muted">Only check another AI answer if you want to; this never blocks the Google research.</p><ol><li>Choose the AI system.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong>.</li><li>Paste the complete answer below, including the source links.</li></ol>'+
@@ -400,6 +405,24 @@ function wireAiGap(){if(aiGapPoll){clearTimeout(aiGapPoll);aiGapPoll=null}
   if(!box){st.textContent='This topic is not in the list of step 1.';return}if(!box.checked){box.checked=true;box.dispatchEvent(new Event('change',{bubbles:true}))}st.textContent='Added to your choice in step 1.';b.disabled=true}})}
 function aiDraftKey(eng){return 'growthFreeAiDraft:'+API+':'+eng}
 function wireAi(){wireAiGap();var b=document.getElementById('aiSave');if(!b)return;
+ var importBtn=document.getElementById('aiImportBtn');
+ if(importBtn)importBtn.onclick=async function(){
+  var field=document.getElementById('aiImportUrl'),st=document.getElementById('aiImportStatus'),link=String(field.value||'').trim(),match;
+  try{
+   var u=new URL(link);
+   if(u.protocol!=='https:'||u.origin!==location.origin)throw Error('Use the original Free Growth result URL on this website.');
+   var parts=u.pathname.split('/').filter(Boolean);
+   match=parts.length===3&&parts[0]==='free-growth'&&parts[1]==='r'&&/^[A-Za-z0-9_-]+$/.test(parts[2])?[null,parts[2]]:null;
+   if(!match||!u.searchParams.get('k'))throw Error('Paste a complete Free Growth result link, including its access key.');
+   importBtn.disabled=true;st.textContent='Restoring previously saved responses…';
+   var r=await fetch(API+'/import-ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_id:match[1],source_key:u.searchParams.get('k')})}),data=await r.json();
+   if(!r.ok||!data.success)throw Error(data.error||'Could not restore the earlier AI answers');
+   st.textContent=data.count?'Restored '+data.count+' earlier response(s), with original capture dates.':'No new responses copied; the answers may already be saved here.';
+   var refreshed=await (await fetch(API+Q,{cache:'no-store'})).json();if(refreshed.success&&refreshed.status==='DONE'){render(refreshed);var panel=document.getElementById('freeAiResearch');if(panel)panel.open=true;}
+  }catch(err){st.textContent=err.message}
+  finally{var current=document.getElementById('aiImportBtn');if(current)current.disabled=false}
+ };
+
  // The answer being pasted is kept in this browser per check and AI system until it is analysed (a refresh loses nothing).
  var ta=document.getElementById('aiText'),sel=document.getElementById('aiEngine');
  var load=function(){try{var v=localStorage.getItem(aiDraftKey(sel.value));if(v&&!ta.value)ta.value=v}catch(e){}};load();
@@ -516,14 +539,14 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
  (r.unlinked_sections||[]).forEach(function(x){h+='<p class="muted">Not linked to a selected item and not used: “'+esc(x.h2)+'” — '+esc(x.reason)+'</p>'});
  if(r.reason&&!(r.sections||[]).length)h+='<p class="muted">'+esc(r.reason)+'</p>';
  return h}
-function wireCompleteBrief(g,s){
+function wireCompleteBrief(g,s,d){
  var copy=document.getElementById('briefCopyAll'),dl=document.getElementById('briefDownloadAll'),status=document.getElementById('briefExportStatus');
  if(!copy||!dl||!g)return;
- function full(){return gapBrief(g,s,true).text}
+ function full(){return gapBrief(g,s,true,d).text}
  copy.onclick=async function(){try{await navigator.clipboard.writeText(full());status.textContent='Complete editorial brief copied, including priorities, observations and sources.'}catch(e){status.textContent='Copy unavailable; use Download complete brief.'}};
  dl.onclick=function(){var text=full(),url=URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='growth-complete-editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);status.textContent='Complete brief downloaded. No topic selection required.'};
 }
-function gapBrief(g,s,all){var picked={};if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
+function gapBrief(g,s,all,d){var picked={};if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
  var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
  var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Decision: '+(s.decision||'UNKNOWN'),'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
@@ -538,6 +561,14 @@ function gapBrief(g,s,all){var picked={};if(!all)document.querySelectorAll('.gap
  if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  if((LAST_SELF||[]).length){var dn=selfDone();L.push('## To do yourself (not written by Growth)','');LAST_SELF.forEach(function(x){L.push('- ['+(dn[x.id]?'x':' ')+'] '+x.title+' — '+x.why)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
+ if(all){
+  var answers=d&&d.ai&&d.ai.saved_answers||[];
+  L.push('','## Saved AI answers and cited sources','');
+  L.push('These are the actual responses saved for this check (or explicitly reused from an earlier result). Their original capture dates are preserved. These are not fresh AI results, verified positions, or guarantees of citation.');
+  if(!answers.length)L.push('No AI answers are saved for this check. AI visibility is unknown.');
+  answers.forEach(function(a){L.push('','### '+a.engine+' — captured '+(a.created_at||'date unavailable'),'',a.raw_text||'(no saved answer text)','')});
+  L.push('','AI engines without saved answers are unchecked, not zero citations. Verify claims and source URLs independently before using them in publication.');
+ }
  return {count:items.length,text:L.join('\\n')}}
 // Pop-up before writing when no AI answer was analysed for this check: the editor checks AI first or continues without.
 function freeAiGate(d){var a=d&&d.ai;if(!a||(a.summary&&a.summary.checked>0))return Promise.resolve('WITH_AI');
@@ -854,7 +885,7 @@ function growthBriefHtml(s,d){
   '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> '+
   '<button type="button" class="ghost" id="briefDownloadAll">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div>'+
   '<details id="growthBriefDetails"><summary><strong>Open the Growth brief</strong> · What, where, how and why</summary><div class="growth-brief-body">'+
-  '<p class="muted">The editor receives the entire evidence dossier automatically. No topic selection is needed to receive or export it. Any checkboxes elsewhere are only optional controls for AI drafting.</p>'+
+  '<p class="muted">Complete editorial research: priorities, page placement, supporting sources and AI answers. No selection required. Drafting remains optional.</p>'+
   '<h3>Research decision</h3><p>'+esc(s.explanation||line)+'</p>';
  if(verified.length)h+='<h3>Verified editorial priorities ('+verified.length+')</h3>'+verified.map(function(x,i){return item(x,i,true)}).join('');
  else h+='<p><strong>No verified new section to publish.</strong> '+esc(blocked?'Evidence is insufficient for a safe content change.':'Current content may already meet the researched intent.')+'</p>';
@@ -971,7 +1002,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s);wireSideBySide(d.competitors);wirePub();wireSelf();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -1518,7 +1549,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(row.status==='DONE'){try{const map=await topicLang.topicTextsFor({pool,row,lang:row.ui_lang||'en',summary:row.summary,aiGap:aiPart&&aiPart.gap,model:reminders.modelFor(config.textModel!==undefined?config.textModel:config.mailModel)});
    shown=topicLang.applyTexts(row.summary,aiPart&&aiPart.gap,map)}catch(e){}}
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
-   ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap}:null,
+   ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap,saved_answers:(aiPart.answers||[]).map(function(x){return {engine:x.engine,raw_text:x.raw_text,created_at:x.created_at}})}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
    research_reader:row.report?.research_reader||null,
    sitemap_import:row.report?.sitemap_import||null,
@@ -1534,6 +1565,30 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    error_text:row.status==='FAILED'?(FAIL_TEXT[row.error_code]||'The check could not finish. Please try again later.'):null});
  });
  // Research-scoped selection, persisted independently of the browser.
+ // Explicit cross-check reuse: never infer identity from an unverified email address.
+ // Both result keys are required, and the page, question and market must match.
+ app.post(apiPath+'/checks/:id/import-ai',async(req,res)=>{
+  const target=await load(req,res);if(!target)return;
+  if(target.status!=='DONE')return res.status(409).json({success:false,error:'Finish the new research before importing earlier AI answers.'});
+  const sourceId=String(req.body&&req.body.source_id||'').slice(0,40),
+   sourceKey=String(req.body&&req.body.source_key||'').slice(0,100);
+  if(!sourceId||!sourceKey)return res.status(400).json({success:false,error:'Paste the complete earlier Free Growth result link.'});
+  const source=await storage.getCheck(pool,sourceId,sourceKey);
+  if(!source)return res.status(404).json({success:false,error:'Earlier result not found or its access key is invalid.'});
+  if(source.status!=='DONE'||source.id===target.id)return res.status(409).json({success:false,error:'Choose a different, completed earlier result.'});
+  const marketMatches=JSON.stringify(source.market||null)===JSON.stringify(target.market||null);
+  if(!target.query||source.url!==target.url||source.query!==target.query||!marketMatches)
+   return res.status(409).json({success:false,error:'For safety, AI answers can only be reused for the exact same page, customer question and market.'});
+  const oldQuestion=aiQuestionOf(source)?.text||null,newQuestion=aiQuestionOf(target)?.text||null;
+  if(oldQuestion&&newQuestion&&oldQuestion.trim().toLowerCase()!==newQuestion.trim().toLowerCase())
+   return res.status(409).json({success:false,error:'The AI research prompts used different customer questions. Research the actual AI answers for this check instead.'});
+  try{
+   const imported=await storage.importAiAnswersFromCheck(pool,{targetCheckId:target.id,sourceCheckId:source.id});
+   res.set('Cache-Control','no-store').json({success:true,...imported,source_checked_at:source.finished_at||null,
+    note:'Historical AI answers were copied with their original timestamps; this is not fresh AI research. Existing answers in this check were preserved.'});
+  }catch(e){console.warn('[free-growth] AI answer import failed',String(e?.code||'unknown'));
+   res.status(503).json({success:false,error:'Could not reuse the AI answers. Your existing results were not changed.'})}
+ });
  app.post(apiPath+'/checks/:id/selection',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});

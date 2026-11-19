@@ -41,6 +41,13 @@ const ROWS = [
   ['How:', 'Hoe:', 'Cómo:'],
   ['Why:', 'Waarom:', 'Por qué:'],
   ['The brief and source evidence belong to this one check. Unverified AI citations never become content recommendations by themselves.', 'Deze brief en bronnen horen bij één check. Onbevestigde AI-citaties zijn op zichzelf geen inhoudsaanbevelingen.', 'El informe y sus fuentes pertenecen a una sola comprobación. Las citas de IA no verificadas no son recomendaciones.'],
+  // Reuse existing AI answer evidence across explicitly authorized Free Growth results.
+  ['Reuse previously saved AI answers (optional)', 'Eerder opgeslagen AI-antwoorden hergebruiken (optioneel)', 'Reutilizar respuestas de IA guardadas (opcional)'],
+  ['Earlier result link', 'Link naar eerder resultaat', 'Enlace del resultado anterior'],
+  ['Restore saved AI answers', 'Opgeslagen AI-antwoorden herstellen', 'Recuperar respuestas de IA guardadas'],
+  ['A fresh check has its own AI answers. To reuse answers from an earlier Free Growth result, paste its complete result link. The page, customer question and market must be identical. The original answers and dates remain unchanged; these are not new live AI responses.',
+   'Een nieuwe check heeft eigen AI-antwoorden. Plak de volledige link naar een eerder Free Growth-resultaat om die te hergebruiken. Pagina, klantvraag en markt moeten gelijk zijn. De oorspronkelijke antwoorden en datums blijven behouden; dit zijn geen nieuwe live AI-antwoorden.',
+   'Cada comprobación nueva tiene sus propias respuestas de IA. Para reutilizar respuestas anteriores, pega el enlace completo del resultado anterior de Free Growth. La página, la pregunta y el mercado deben coincidir. Se conservan las respuestas y fechas originales; no son respuestas de IA obtenidas en directo.'],
   // Page frame
   ['Your Growth check result', 'Uitslag van je Growth-check', 'Resultado de tu análisis Growth'],
   ['← New check', '← Nieuwe check', '← Nuevo análisis'],

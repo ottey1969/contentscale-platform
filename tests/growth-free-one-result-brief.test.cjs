@@ -26,7 +26,7 @@ test('Brief only proposes evidence-supported topics, with source links and safe 
  assert.match(ui,/Verified editorial priorities/);
  assert.match(ui,/Other observations for editorial review/);
  assert.match(ui,/Copy full editor \/ external AI brief/);
- assert.match(ui,/wireCompleteBrief\(s\.gaps,s\)/);
+ assert.match(ui,/wireCompleteBrief\(s\.gaps,s,d\)/);
  assert.match(ui,/function gapBrief\(g,s,all\)/);
  assert.match(ui,/esc\(e\.url\)/);
  assert.match(ui,/No verified content improvement/);
