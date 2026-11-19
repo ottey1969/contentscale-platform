@@ -5,6 +5,18 @@
 // names of AI systems. Data (headings and words of your page or of other sites, search terms) is never translated.
 // [English, Dutch, Spanish]
 const ROWS = [
+  // Firecrawl research and evidence status (Free Growth only).
+  ['Page reading · Firecrawl pilot', 'Pagina-uitlezing · Firecrawl-test', 'Lectura de páginas · prueba Firecrawl'],
+  ['Page reading · Standard reader', 'Pagina-uitlezing · standaardlezer', 'Lectura de páginas · lector estándar'],
+  ['Source captures', 'Opgehaalde bronpagina’s', 'Páginas fuente obtenidas'],
+  ['Research observations, not recommendations:', 'Onderzoekswaarnemingen, geen aanbevelingen:', 'Observaciones de investigación, no recomendaciones:'],
+  ['Google and Firecrawl found differences, but the evidence gate did not verify a safe content change. Generic guides, warranty calculators, and payment offers should not be added merely because competitors mention them.',
+   'Google en Firecrawl vonden verschillen, maar de bewijscontrole bevestigde geen veilige inhoudswijziging. Voeg geen algemene gidsen, garantiecalculators of betaalopties toe alleen omdat concurrenten die noemen.',
+   'Google y Firecrawl encontraron diferencias, pero la evaluación de pruebas no confirmó un cambio seguro. No añadas guías genéricas, calculadoras de garantías ni opciones de pago solo porque las mencionen los competidores.'],
+  ['No verified improvement to write', 'Geen bewezen verbetering om te schrijven', 'No hay mejoras verificadas para redactar'],
+  ['Review observed differences and export the editor brief if useful. No new text is recommended by this check.',
+   'Bekijk de waargenomen verschillen en exporteer eventueel de redacteursbrief. Deze check adviseert geen nieuwe tekst.',
+   'Revisa las diferencias observadas y exporta el informe editorial si te sirve. Este análisis no recomienda texto nuevo.'],
   // Page frame
   ['Your Growth check result', 'Uitslag van je Growth-check', 'Resultado de tu análisis Growth'],
   ['← New check', '← Nieuwe check', '← Nuevo análisis'],
