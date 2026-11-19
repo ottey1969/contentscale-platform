@@ -61,7 +61,7 @@ test('real Growth engine on one URL gives a plain-language decision with sources
  assert.match(s.promises,/No ranking or traffic increase is promised/);
 });
 
-test('Free Growth applies an explicit New Jersey search location to Google's competitor discovery',async()=>{
+test('Free Growth applies the explicit New Jersey location to Google competitor discovery',async()=>{
  let searched=null;
  const out=await runFreeGrowthResearch({url:URL_,query:'roof repair lodi nj',
   market:{countries:['US'],language:'en',location:'New Jersey, United States',location_source:'VISITOR_SELECTED'}},
