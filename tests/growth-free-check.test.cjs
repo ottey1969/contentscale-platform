@@ -563,8 +563,8 @@ test('the AI check comes first: with an entered search term it is available whil
 test('AI answers can be supplied through API; start form remains simple and the result handles research',async t=>{
  const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
  const form=(await s.get('/free-growth?key=open-key-12345')).body;
- assert.doesNotMatch(form,/id="aiStartPrompt"/,'the first page contains no AI research editor');
- for(const e of ai.ENGINES)assert.doesNotMatch(form,new RegExp('data-engine="'+e.id+'"'));
+ assert.match(form,/id="aiStartPrompt"/,'AI answer input is available first in optional Advanced');
+ for(const e of ai.ENGINES)assert.match(form,new RegExp('data-engine="'+e.id+'"'));
  const ans=(src)=>'ANSWER: TEST roof repair estimates explained.\nRESOURCES:\n'+src;
  const five=ai.ENGINES.map((e,i)=>({engine:e.id,text:ans(i===0?'https://acme-roofing.example/roof-repair-lodi-nj/':'https://roofer-a.example/roof-repair-nj/')}));
  const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
