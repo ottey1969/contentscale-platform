@@ -106,7 +106,7 @@ function page(title,body,cfg){
  return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
 :root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
-*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+.growth-brief{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:18px;margin:12px 0}.growth-brief-head>small{font-weight:700;letter-spacing:.06em;color:var(--muted)}.growth-brief-head h2{margin:.45em 0;font-size:22px}.growth-brief-head p{margin:.45em 0}.growth-brief-meta{font-size:13px;color:var(--muted)}.growth-brief details>summary{cursor:pointer}.growth-brief #growthBriefDetails{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.growth-brief-body{padding:12px 2px}.growth-brief-item{border-top:1px solid var(--line);padding:8px 0}.growth-brief-item p{margin:6px 0}.growth-brief-body h3{margin:12px 0 3px}.growth-ai-prominent>summary{font-weight:700;color:#1e40af;cursor:pointer}.growth-ai-prominent:not([open]){padding:14px 20px}.growth-ai-prominent:not([open])>summary small{font-weight:400}\n*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 main{max-width:860px;margin:0 auto;padding:24px 16px 60px}h1{font-size:30px;line-height:1.2;margin:.4em 0}h2{font-size:21px;margin:1.6em 0 .5em}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}.lead{font-size:18px;color:var(--muted)}
 label{display:block;margin:12px 0 4px;font-weight:600}input,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
@@ -809,6 +809,38 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
   try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
+// A single editorial brief: one decision, optional what/where/how/why, and real evidence.
+function growthBriefHtml(s,d){
+ var block=s.decision==='DATA_BLOCKED',keep=s.decision==='NO_CHANGE',tasks=(s.tasks||[]).slice(0,4),
+  valid=(s.gaps&&s.gaps.items||[]).filter(function(x){return x.recommended&&x.writable!==false}).slice(0,4),
+  chosen=tasks.length?tasks:valid.map(function(x){return {title:x.title,where:x.placement&&x.placement.section_heading?'Near “'+x.placement.section_heading+'”':'In the existing page, only if it fits the customer question',
+    status:x.status,evidence:(x.examples||[]).filter(function(e){return e.url}).map(function(e){return {url:e.url,heading:e.heading,excerpt:e.excerpt,site:e.site}})}}),
+  line=block?'No verified content improvement. Review the sources before making changes.':keep?'No content change required for this question. Keep what already works.':s.explanation||'Review the verified content opportunities.';
+ var ai=d.ai&&d.ai.summary,aiN=ai?Number(ai.checked)||0:0,
+  sources=d.research_reader&&d.research_reader.used||0;
+ var h='<section class="growth-brief" id="growthOneBrief" aria-label="One research result and editorial brief">'+
+  '<div class="growth-brief-head"><small>ONE RESEARCH · ONE RESULT</small><h2>'+esc(s.headline||'Growth research result')+'</h2><p>'+esc(line)+'</p>'+
+  '<p class="growth-brief-meta">Google comparison'+(sources?' · '+esc(sources)+' pages read with Firecrawl':'')+' · AI answers: '+esc(aiN)+'/5 saved (optional)</p></div>'+
+  '<details id="growthBriefDetails"><summary><strong>Open the Growth brief</strong> · What, where, how and why</summary><div class="growth-brief-body">';
+ if(block||keep||!chosen.length){
+  h+='<h3>What</h3><p>'+esc(block?'Do not publish new content based on these observations yet.':keep?'Keep your current content.':'No specific content addition is verified in this research.')+'</p>'+
+    '<h3>Where</h3><p>On this existing page only; do not create a competing page from unverified topics.</p>'+
+    '<h3>How</h3><p>'+esc(block?'Compare the underlying evidence and rerun with a narrower customer question when necessary.':'Preserve the existing sections and check performance again after meaningful changes.')+'</p>'+
+    '<h3>Why</h3><p>'+esc(s.explanation||line)+'</p>';
+ }else{
+  h+='<p class="muted">Only evidence-supported changes are included. Each recommendation identifies the location and the supporting pages.</p>';
+  chosen.forEach(function(t,i){
+   h+='<div class="growth-brief-item"><h3>'+(i+1)+'. '+esc(t.title)+'</h3>'+
+    '<p><strong>What:</strong> '+esc(t.title)+'</p>'+
+    '<p><strong>Where:</strong> '+esc(t.where||'In the most relevant section of the existing page.')+'</p>'+
+    '<p><strong>How:</strong> Explain the answer in your own words, using only facts you can verify.</p>'+
+    '<p><strong>Why:</strong> '+esc(t.status||'Observed on relevant ranking pages and compared with your page.')+'</p>';
+   if((t.evidence||[]).length)h+='<details class="research-details"><summary>Sources and excerpts ('+t.evidence.length+')</summary><ul>'+t.evidence.slice(0,4).map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site||e.url)+'</a> '+(e.heading?'· '+esc(e.heading):'')+(e.excerpt?'<p class="muted">'+esc(e.excerpt)+'</p>':'')+'</li>'}).join('')+'</ul></details>';
+   h+='</div>';
+  });
+ }
+ return h+'<p class="muted">The brief and source evidence belong to this one check. Unverified AI citations never become content recommendations by themselves.</p></div></details></section>';
+}
 // What the competitor pages have and your page does not: every Google result, read or not, with the headings of the
 // pages that were read. Shown also when no advice is given (then as observations only).
 function competitorsHtml(c,s){if(!c||!(c.pages||[]).length)return '';var blocked=s&&s.decision==='DATA_BLOCKED';
@@ -885,6 +917,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  // One next action at a time: what to do now, why, and one button. Done steps close; their result stays one click away.
  var selfOpen=(function(){var dn=selfDone();return selfItems(s.gaps,d).filter(function(x){return !(dn[x.id]||x.auto)}).length})();
  NOW_CTX={d:d,canWrite:canWrite,hasConcepts:hasConcepts,hasGaps:hasGaps,published:published,blocker:blocker,selfOpen:selfOpen};
+ h+=growthBriefHtml(s,d);
  h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle">'+cockpitInner(NOW_CTX,chosen)+'</section>';
  // What the check found, in three lines; the evidence is in the tabs below.
  var recN=hasGaps&&!blocker?s.gaps.items.filter(function(x){return x.recommended}).length:0;
@@ -895,10 +928,10 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
   (d.gsc&&d.gsc.latest?'<li><strong>Search Console:</strong> export used <a href="#gsc">evidence</a></li>':'')+'</ul></div>';
  h+=${js("<style>\n.growth-ai-prominent{--ink:#172337;--muted:#475569;--accent:#1d4ed8;--accent-ink:#fff;--line:#cbd5e1;--bg:#f8fafc;--card:#fff;--warn:#fff7ed;--warn-line:#fed7aa;color:var(--ink)!important;border:2px solid #bfdbfe!important;background:linear-gradient(145deg,#eff6ff,#fff 60%)!important;box-shadow:0 9px 28px rgba(29,78,216,.09);animation:growthAiArrive .3s ease-out;scroll-margin-top:24px}\n.growth-ai-prominent h2,.growth-ai-prominent h3{color:#1e40af}.growth-ai-progress{height:9px;background:#dbeafe;border-radius:99px;overflow:hidden;margin:10px 0 14px}.growth-ai-progress span{display:block;background:#2563eb;height:100%;border-radius:99px;transition:width .4s ease}\n.growth-ai-manual{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:14px;margin:14px 0}.growth-ai-manual>summary{font-weight:700;cursor:pointer}.growth-ai-prominent:focus-within{outline-offset:3px}\n@keyframes growthAiArrive{from{opacity:.45;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.growth-ai-prominent{animation:none}.growth-ai-progress span{transition:none}}\n</style>")};
  // Free and Tracker have the same visible AI research step, before selecting the editorial changes.
- h+='<section class="card growth-ai-prominent" id="freeAiResearch" aria-label="AI systems research"><h2>AI systems research · optional</h2>'+
+ h+='<details class="card growth-ai-prominent" id="freeAiResearch" aria-label="AI systems research"><summary><strong>AI research · '+esc(as&&as.checked||0)+'/5 saved answers</strong> <small class="muted">Optional · Open sources and add responses</small></summary><h2>AI systems research · optional</h2>'+
     '<p class="muted">Review real AI-system answers for this question. Gemini uses Google Search grounding automatically where configured; the other systems require their own real answers. You can continue with Google research without checking all five.</p>'+
     (a?aiHtml(a,d.automatic_ai_answers):'<p>AI answers are not available for this check yet.</p>')+
-    '<p><a class="btn ghost" href="#stepReview">Continue to choose page improvements →</a></p></section>';
+    '<p><a class="btn ghost" href="#stepReview">Continue to choose page improvements →</a></p></details>';
  h+=gapsHtml(s.gaps,d.writing,d);
  if(!s.gaps||s.gaps.status!=='OBSERVED'){h+='<details id="stepReview" class="journey-section" open>'+stepSum(1,'Choose what to add','Evidence required before writing',false)+'<div class="journey-body"><h2 id="gaps">No verified content change</h2><p>'+esc(s.explanation)+'</p><p class="muted">AI citations and competitor headings alone do not establish a safe change. No automatic writing or publication is approved.</p><p><a href="#google">See the evidence</a></p></div></details><details id="stepPrepare" class="journey-section">'+stepSum(2,'Write the text','No approved content recommendation',false)+'<div class="journey-body"><p>No content is ready for a CMS package.</p></div></details>'}
  h+='<details id="stepPublish" class="journey-section"'+(published?' open':'')+'>'+stepSum(3,'Publish & measure',published?'Published on '+String(d.publication.published_on).slice(0,10)+' — compare before and after here':'After you put the text on your site: record the date',published)+'<div class="journey-body" id="pubBox">'+pubHtml(d.publication,d.gsc)+'</div></details>';
