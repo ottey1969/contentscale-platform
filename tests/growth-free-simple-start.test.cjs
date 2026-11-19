@@ -22,7 +22,11 @@ test('Website Growth Check is page-first for existing, unknown URL with genuinel
  assert.match(routes,/sitemap_file:sf/);
  assert.match(routes,/sitemap_url:\(document\.getElementById\('freeSitemapUrl'\)/);
  assert.match(routes,/id="freeSitemapOpen" disabled/);
- assert.doesNotMatch(routes,/\$\{aiStartBlock\(!!owner\.signedIn\|\|!!invite,t\)\}/);
+ assert.match(routes,/\$\{aiStartBlock\(!!owner\.signedIn\|\|!!invite,t,true\)\}/);
+ assert.match(routes,/id="freeSitemapSection"/);
+ assert.match(routes,/id="freeGscSection"/);
+ assert.match(routes,/id="aiStartPrompt"/);
+ assert.match(routes,/ai_answers:aiStartAnswers\(\)/);
  assert.match(routes,/gsc_file:gf/);
  assert.match(routes,/url:f\.url\.value/);
  assert.match(routes,/query:f\.query\.value/);
