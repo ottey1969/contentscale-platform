@@ -560,11 +560,11 @@ test('the AI check comes first: with an entered search term it is available whil
  assert.equal(auto.body.status,'DONE');assert.equal(auto.body.customer_question.chosen_automatically,true);
 });
 
-test('AI answers before the start: the prompt is on the form, up to 5 answers (one per AI system) are stored with the check',async t=>{
+test('AI answers can be supplied through API; start form remains simple and the result handles research',async t=>{
  const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
  const form=(await s.get('/free-growth?key=open-key-12345')).body;
- assert(form.indexOf('id="aiStartPrompt"')<form.indexOf('type="submit"'),'the AI prompt comes before the start button');
- for(const e of ai.ENGINES)assert.match(form,new RegExp('data-engine="'+e.id+'"'));
+ assert.doesNotMatch(form,/id="aiStartPrompt"/,'the first page contains no AI research editor');
+ for(const e of ai.ENGINES)assert.doesNotMatch(form,new RegExp('data-engine="'+e.id+'"'));
  const ans=(src)=>'ANSWER: TEST roof repair estimates explained.\nRESOURCES:\n'+src;
  const five=ai.ENGINES.map((e,i)=>({engine:e.id,text:ans(i===0?'https://acme-roofing.example/roof-repair-lodi-nj/':'https://roofer-a.example/roof-repair-nj/')}));
  const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
