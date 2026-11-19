@@ -66,7 +66,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.locator('#cqFind').count(), 0, 'no paid question-discovery button for an unapproved visitor');
     await p.fill('#url', URL_);
     await p.fill('#query', 'roof repair lodi nj');
-    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English'); await p.fill('#search_location', 'New Jersey, United States'); await p.fill('#search_location', 'New Jersey, United States');
+    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English'); await p.fill('#search_location', 'New Jersey, United States');
     const email = 'TEST-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example';
     await p.fill('#email', email);
     // Typed draft survives refresh without submitting a check or consuming provider credits.
@@ -84,7 +84,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.inputValue('#query'), '', 'reset query remains blank after refresh');
     await p.fill('#url', URL_);
     await p.fill('#query', 'roof repair lodi nj');
-    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
+    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English'); await p.fill('#search_location', 'New Jersey, United States');
     // Advanced: AI answers visible first; Sitemap and Search Console are collapsed individually.
     assert.equal(await p.locator('#freeExtraSources').evaluate(el=>el.open),false);
     await p.locator('#freeExtraSources > summary').click();
@@ -110,18 +110,14 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 });
     // 2. The result (Google research done by the real engine).
     await service.idle();
-    await p.waitForSelector('#freeNextAction', { timeout: 60000 });
+    await p.waitForSelector('#growthOneBrief', { timeout: 60000 });
     assert.equal(await p.locator('details.journey-section').count(), 3, 'three clear workflow steps: choose, write, publish & measure');
     await p.click('#stepResearch > summary');
     await p.waitForSelector('#google', { timeout: 60000 });
     assert.match(await p.textContent('h1'), /Your page in Google and in AI answers/);
-    await p.waitForSelector('#freeNextAction .growth-next-btn');
-    assert.match(await p.textContent('#freeNextAction'), /STEP 1 OF 3 · DO THIS NOW[^]*Use the complete Growth brief/);
-    assert.equal(await p.locator('#stepReview').evaluate(el=>el.open), false, 'topic picking is optional and collapsed');
-    assert.equal(await p.locator('#briefCopyAll').isVisible(), true, 'complete editor brief requires no checkboxes');
-    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 3);
-    assert.equal(await p.locator('#freeNextAction .growth-next-btn').isVisible(), true);
-    assert.ok((await p.locator('#freeNextAction .growth-next-btn').getAttribute('href')).startsWith('#'));
+    assert.equal(await p.locator('#freeNextAction').count(),0,'No duplicate brief action');
+    assert.equal(await p.locator('#briefCopyAll').isVisible(),true);
+    assert.equal(await p.locator('#growthBriefDetails > summary').count(),1);
 
     // Search Console: verified for this page, used in the research, the search term found in it.
     assert.match(await p.textContent('#gsc + p'), /^Verified for this page\./);
