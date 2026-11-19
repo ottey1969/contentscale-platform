@@ -787,8 +787,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   var manualChoice=false;try{manualChoice=localStorage.getItem(manualKey)==='1'}catch(e){}
   var autoIds=savedIds.size===0&&!manualChoice?new Set(automaticDraftIds(g,s)):new Set();
   document.querySelectorAll('.gapPick').forEach(function(el){el.checked=savedIds.has(el.value)||autoIds.has(el.value)});
-  // Persist the initial automatic choice only when the user opens optional drafting; the complete brief never depends on it.
-  if(autoIds.size)queueSelectionSave();
+  // Automatic suggestions stay client-side until the visitor actively edits a choice; never trigger a background save while AI answers are being updated.
  var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last){wr.innerHTML=writtenHtml(d.writing.last)}
 // "Write this H2 again": ticking a concept (or the automatic tick on a weak opening / team advice) makes the write button
 // write those concepts again, as long as the check has a round left.
