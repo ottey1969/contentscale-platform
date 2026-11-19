@@ -42,7 +42,7 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     await p.waitForSelector('#nextWrite', { state: 'attached', timeout: 60000 });
     const box = await p.textContent('#nextWrite');
     assert.match(box, /AI cannot write text for this check yet/);
-    assert.match(box, /It is not clear what people searching for this want/, 'the concrete reason, in plain words');
+    assert.match(box, /Only 1 Google result\(s\) could be used|It is not clear what people searching for this want/, 'the concrete reason, in plain words');
     assert.doesNotMatch(box, /data blocked|serp intent/i, 'no internal codes');
     assert.match(box, /at least 2 pages that Google ranks[^]*\(here: 1\)/);
     assert.match(box, /more specific search term/); assert.match(box, /editor brief/);
