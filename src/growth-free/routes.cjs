@@ -1167,7 +1167,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(job.url);const html=String(live&&live.html||'');
    const country=job.market&&job.market.countries&&job.market.countries[0]||null,lang=job.market&&job.market.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
-   const out=await discoverCustomerQuestions({url:job.url,html,keyword:job.topic||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
+   const out=await discoverCustomerQuestions({url:job.url,html,keyword:job.topic||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,location:job.market?.location||'',
     ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:job.approved?(engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()):null});
    const best=(out.questions||[]).find(q=>q.text===out.best_question)||null;
    return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,
@@ -1285,9 +1285,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const kw=clean(b.query,300),hasUrl=!!String(b.url||'').trim(),v=hasUrl?validatePublicUrl(b.url):{error:'NO_URL'};
   if(v.error&&!kw)return res.status(400).json({success:false,error:hasUrl?v.error:'Enter a keyword (search term) or the page address first.'});
   const entries=String(b.market||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),country=validCountries(entries)[0]||null,lang=String(b.language||'').trim()?validLanguage(b.language):null;
+  const location=String(b.search_location||'').trim(),localStates=statesIn(location);
+  if(location&&(location.length>120||localStates.length!==1||!US_STATES[localStates[0]]||(country&&country!=='US')))return res.status(400).json({success:false,error:'Choose a valid US state or city, for example New Jersey, United States.'});
   let html='';if(!v.error){try{html=String((await (engineDeps.fetchLive||fetchPublicGrowthHtml)(v.url))?.html||'')}catch(e){if(!kw)return res.status(503).json({success:false,error:'Your page could not be read publicly. Enter the search term yourself.'})}}
   const pageLang=((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'').toLowerCase();
-  const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',
+  const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',location,
    ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()});
   res.set('Cache-Control','no-store').json({success:true,...out});
  });
