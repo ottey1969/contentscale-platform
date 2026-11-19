@@ -84,12 +84,21 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.fill('#url', URL_);
     await p.fill('#query', 'roof repair lodi nj');
     await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
-    // The first page has no AI-answer editor: all AI research happens after the scan.
-    assert.equal(await p.locator('#aiStart').count(),0);
+    // Advanced: AI answers visible first; Sitemap and Search Console are collapsed individually.
+    assert.equal(await p.locator('#freeExtraSources').evaluate(el=>el.open),false);
+    await p.locator('#freeExtraSources > summary').click();
+    assert.equal(await p.locator('#aiStart').isVisible(),true);
+    assert.equal(await p.locator('#freeSitemapSection').evaluate(el=>el.open),false);
+    assert.equal(await p.locator('#freeGscSection').evaluate(el=>el.open),false);
+    assert.equal(await p.locator('textarea[data-engine]').count(),5);
+    const advancedHtml=await p.locator('#freeExtraSources').innerHTML();
+    assert.ok(advancedHtml.indexOf('id="aiStart"')<advancedHtml.indexOf('id="freeSitemapSection"'));
+    assert.ok(advancedHtml.indexOf('id="freeSitemapSection"')<advancedHtml.indexOf('id="freeGscSection"'));
     await p.reload();
     assert.equal(await p.inputValue('#query'),'roof repair lodi nj');
     await p.fill('#email', email); await p.check('input[name=consent]');
     // Optional Search Console export (TEST data), filtered on exactly this page.
+    await p.locator('#freeGscSection > summary').click();
     const { zip } = require('./helpers/zip.cjs');
     await p.setInputFiles('#gscFile', { name: 'Performance-export.zip', mimeType: 'application/zip', buffer: zip({
       'Queries.csv': 'Top queries,Clicks,Impressions,CTR,Position\nroof repair lodi nj,2,310,0.65%,14.2\nroof leak repair lodi,1,120,0.8%,9.5\n',
