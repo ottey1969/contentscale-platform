@@ -338,6 +338,7 @@
     var box=$('growthProposal');box.hidden=false;box.textContent='';
     var reason=document.createElement('strong');reason.textContent='Growth content proposal missing for this customer question';box.appendChild(reason);
     var note=document.createElement('p');note.textContent='This exact question has research, but no saved content proposal. In Growth, select the supported improvements and click “Write selected with AI (concepts for review)”. Once writing is saved, the matching CMS handoff becomes available automatically. No extra generation is started by opening this page.';box.appendChild(note);
+    var none=document.createElement('p');none.textContent='No placeholder content has been created.';box.appendChild(none);
     var act=document.createElement('a');act.textContent='Go to Growth writing → Select topics and prepare CMS';act.href=$('researchReviewLink').href+'#growthGapChoice';act.style.cssText='display:inline-block;margin:8px 0;color:#1d4ed8;font-weight:700';box.appendChild(act);
     ready();return;
    }

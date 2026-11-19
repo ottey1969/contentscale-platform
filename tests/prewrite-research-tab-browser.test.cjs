@@ -59,17 +59,22 @@ test('Pre-Write AI collection is one visible action, prompt stays behind the sce
       assert.equal(await page.isVisible('#cs-research-tabs'), false, 'No two-tab choice');
       assert.equal(await page.isVisible('#cs-research-prompt-panel'), false, 'Internal prompt not exposed');
       assert.equal(await page.isVisible('#pwbAioText'), true, 'Answer fields remain available');
-      assert.match(await page.textContent('#cs-research-ask .cs-ask-note'), /Copy the question.*Paste that system/);
+      // #458: three steps — copy the exact question, ask it in each AI system, paste each complete answer with its resources.
+      assert.match(await page.textContent('#cs-research-ask .cs-ask-note'), /Copy the exact customer question[\s\S]*Ask it in each AI system[\s\S]*Paste each complete ANSWER and RESOURCES/);
       // Outside a Tracker (no token) no customer question can be looked up: the keyword itself is the question to copy.
       await page.waitForFunction(() => document.getElementById('cs-ai-question').value === 'seo content optimalisatie', null, { timeout: 4000 });
       await page.fill('#pwbKeyword', 'seo content optimalisatie');
       assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /0 of 5 AI answers ready/);
       await page.click('#cs-research-ask-copy');
-      assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'seo content optimalisatie');
+      // #458: the exact question is copied with the source-check instructions; the question itself stays unchanged.
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      assert.match(copied, /^Answer this exact customer question as an independent user would receive it:/);
+      assert.match(copied, /\nQUERY:\n\nseo content optimalisatie\n/);
+      assert.match(copied, /Do not invent companies, citations, source URLs or unsupported facts\./);
       // Visible confirmation on each click (owner 2026-11-10): green "Copied ✓" with a short animation, then back.
       assert.equal(await page.textContent('#cs-research-ask-copy'), 'Copied ✓');
       assert.equal(await page.evaluate(() => document.getElementById('cs-research-ask-copy').classList.contains('cs-copied')), true);
-      await page.waitForFunction(() => document.getElementById('cs-research-ask-copy').textContent === 'Copy search question', null, { timeout: 4000 });
+      await page.waitForFunction(() => document.getElementById('cs-research-ask-copy').textContent === 'Copy AI research question + sources', null, { timeout: 4000 });
       await page.click('#cs-research-ask-copy');
       await page.waitForFunction(() => document.getElementById('cs-research-ask-copy').textContent === 'Copied ✓', null, { timeout: 4000 });
       await page.selectOption('#pwbGoogleSource', 'gemini');
