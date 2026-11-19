@@ -30,6 +30,8 @@ test('Brief only proposes evidence-supported topics, with source links and safe 
  assert.match(ui,/function gapBrief\(g,s,all\)/);
  assert.match(ui,/esc\(e\.url\)/);
  assert.match(ui,/No verified content improvement/);
+ assert.match(ui,/No verified content change yet/);
+ assert.match(ui,/Keep the page unchanged for now/);
 });
 test('Result brief labels have EN/NL/ES translations',()=>{
  const keys=['ONE RESEARCH · ONE RESULT','Open the Growth brief','What, where, how and why','AI research'];
