@@ -47520,7 +47520,7 @@ async function generatePrewriteBrief() {
   result.innerHTML = '';
 
   try {
-    var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
+    var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, searchLocation:String((document.getElementById('pwbLocation')||{}).value||'').trim().slice(0,100), manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
       existingSiteHtml:String((document.getElementById('pwbExistingHtml')||{}).value||'').slice(0,180000),
       manualAiEvidence:{ai_question:String((document.getElementById('cs-ai-question')||{}).value||'').trim().slice(0,300),ai_question_source:String(((document.getElementById('cs-ai-question')||{}).dataset||{}).source||''),google_source:String((document.getElementById('pwbGoogleSource')||{}).value||''),google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
       aiEvidenceExpectedCount:_NETWORK_PREWRITE_AUTHORIZED?5:0 };
@@ -60598,7 +60598,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // cannot stack multiple 10–30s retries and die as a gateway 502 before our JSON error arrives.
     _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
-    const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId } = req.body || {};
+    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -60624,7 +60624,12 @@ async function _handlePrewriteBriefGeneration(req, res) {
     }
 
     const serperKey = process.env.SERPAPI_KEY;
-    const glParam = (String(region || 'us').toLowerCase().match(/[a-z]{2}/) || ['us'])[0];
+    const _pwbLocalSerp=require('./prewrite-local-serp.cjs');
+    let _pwbSerpMarket;
+    try{_pwbSerpMarket=_pwbLocalSerp.googleMarket({region,language,location:searchLocation});}
+    catch(e){return res.status(400).json({success:false,code:String(e.message||'INVALID_SEARCH_LOCATION'),error:'Search location must match the selected country and be a valid state, province or city.'});}
+    const glParam=_pwbSerpMarket.gl;
+    const _pwbSerpLocation=_pwbSerpMarket.location;
 
     // ── AUTO INTERNAL LINK RESEARCH — sitemap discovery/import ─────────────
     _pwbStage='sitemap';
@@ -60773,7 +60778,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
           const r1 = await fetch('https://google.serper.dev/search', {
             method: 'POST',
             headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ q: keyword, num: 10, hl: glParam, gl: glParam }),
+            body: JSON.stringify(_pwbLocalSerp.serperParams(keyword,_pwbSerpMarket,10)),
             signal: ctrl1.signal
           });
           clearTimeout(_t1);
@@ -60790,7 +60795,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
             })).filter(r => r.url);
             peopleAlsoAsk = (d1.peopleAlsoAsk || []).slice(0, 8).map(function(q){ return { question: q.question || '', snippet: q.snippet || '' }; }).filter(function(q){ return q.question; });
             aioDetected = aioManualText ? true : !!(d1.answerBox || d1.knowledgeGraph);
-            console.log('[prewrite-brief] Serper.dev attempt',_attempt,'returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam, '| answerBox=' + !!d1.answerBox);
+            console.log('[prewrite-brief] Serper.dev attempt',_attempt,'returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam, '| location=' + (_pwbSerpLocation||'country default'), '| answerBox=' + !!d1.answerBox);
             if(!serpUrls.length)_pwbSerperError='Serper returned HTTP 200 but no organic results';
           } else {
             const err = await r1.text().catch(() => '');
@@ -60840,7 +60845,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
         const _er=await fetch('https://google.serper.dev/search',{
           method:'POST',
           headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},
-          body:JSON.stringify({q:keyword+' official source research guide statistics',num:10,hl:glParam,gl:glParam}),
+          body:JSON.stringify({q:keyword+' official source research guide statistics',num:10,hl:_pwbSerpMarket.hl,gl:glParam}),
           signal:_ec.signal
         });
         clearTimeout(_ect);
@@ -60855,7 +60860,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
         meta.attempted=true; meta.queries.push(query);
         try{
           const ctrl=new AbortController(); const tm=setTimeout(()=>ctrl.abort(),_pwbNetworkFastLane?9000:12000);
-          const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify({q:query,num:8,hl:glParam,gl:glParam}),signal:ctrl.signal});
+          const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify(_pwbLocalSerp.serperParams(query,_pwbSerpMarket,8)),signal:ctrl.signal});
           clearTimeout(tm);
           if(!rr.ok){meta.error=('HTTP '+rr.status).slice(0,180);return;}
           const dd=await rr.json(); meta.successful=true;
@@ -61119,7 +61124,7 @@ PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident
 Return ONLY valid JSON, no markdown, no preamble.
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, 140-160 chars, aim for 150-159, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<exact URL copied verbatim from AUTO INTERNAL LINK RESEARCH; [] if none>","why":"<topical-authority or user-journey purpose>"}],"external_link_targets":[{"anchor_text":"<natural descriptive anchor>","source_name":"<real source/page name>","exact_url":"<exact https:// URL copied verbatim from AUTO EXTERNAL SOURCE RESEARCH>","why":"<why this source is useful/authoritative>","supports_claim":"<the specific fact, definition, statistic or section this source can support>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
-    const finalPrompt = prompt + '\n\nPRE-PUBLICATION AI WRITING RESEARCH:\n' + _pwbAiWritingPrompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.'
+    const finalPrompt = prompt + '\n\nPRE-PUBLICATION AI WRITING RESEARCH:\n' + _pwbAiWritingPrompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.' + '\n\nACTUAL GOOGLE SERP REQUEST SCOPE: '+JSON.stringify({country:_pwbSerpMarket.gl,language:_pwbSerpMarket.hl,requested_location:_pwbSerpLocation||null,location_applied:!!_pwbSerpLocation})+'; observed SERP URLs are from this request, not verified rankings for every city. Do not claim a different locale was searched.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
       + '\n- Every supplied competitor must be represented in competitor_table.'
       + '\n- Every competitor exact_url must be the exact https:// URL copied from the supplied SERP data, or "insufficient_data".'
@@ -61950,7 +61955,7 @@ ${sourceText}`;
       const extraUrls=new Set();
       await Promise.all(queries.map(async function(query){
         _pwbEvidenceSearch.expert_quotes.attempted=true;_pwbEvidenceSearch.expert_quotes.queries.push(query);
-        try{const c=new AbortController(),tm=setTimeout(()=>c.abort(),10000);const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify({q:query,num:8,hl:glParam,gl:glParam}),signal:c.signal});clearTimeout(tm);if(!rr.ok)return;const dd=await rr.json();_pwbEvidenceSearch.expert_quotes.successful=true;(dd.organic||[]).slice(0,8).forEach(function(r){const u=String(r.link||'').trim();if(!u||/(reddit\.com|facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|pinterest\.|quora\.com|google\.com\/search)/i.test(u))return;try{const h=new URL(u).href;extraUrls.add(h);_pwbQuoteCandidateUrls.add(h);_pwbAddExternal(h,{title:r.title||'',snippet:r.snippet||'',source_type:'expert_quote_second_pass'});}catch(_e){}});}catch(e){_pwbEvidenceSearch.expert_quotes.error=String(e&&e.message||e).slice(0,220);}
+        try{const c=new AbortController(),tm=setTimeout(()=>c.abort(),10000);const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify({q:query,num:8,hl:_pwbSerpMarket.hl,gl:glParam}),signal:c.signal});clearTimeout(tm);if(!rr.ok)return;const dd=await rr.json();_pwbEvidenceSearch.expert_quotes.successful=true;(dd.organic||[]).slice(0,8).forEach(function(r){const u=String(r.link||'').trim();if(!u||/(reddit\.com|facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|pinterest\.|quora\.com|google\.com\/search)/i.test(u))return;try{const h=new URL(u).href;extraUrls.add(h);_pwbQuoteCandidateUrls.add(h);_pwbAddExternal(h,{title:r.title||'',snippet:r.snippet||'',source_type:'expert_quote_second_pass'});}catch(_e){}});}catch(e){_pwbEvidenceSearch.expert_quotes.error=String(e&&e.message||e).slice(0,220);}
       }));
       const newUrls=Array.from(extraUrls).filter(function(u){return !_pwbCorpusMap.has(u);}).slice(0,8);const newPages=await Promise.all(newUrls.map(function(u){return _pwbFetchEvidencePage(u,_pwbMetaForUrl(u));}));newPages.forEach(function(x){if(x)_pwbCorpusMap.set(x.url,x);});
       if(newPages.some(Boolean)){const ext=await _pwbExtractEvidence(newPages.filter(Boolean),'expert_pass2');if(ext.ok){_pwbVerifyExtraction(ext);_pwbEvidenceExtraction={ok:true,obj:{},error:''};}}
@@ -61964,7 +61969,7 @@ ${sourceText}`;
       if(!serperKey)return st;
       const nums=_pwbNumberSig(st.evidence_text),tokens=Array.from(new Set(_pwbEvidenceTokens(st.evidence_text))).slice(0,7);if(!nums.length)return st;
       const query=[nums[0],tokens.slice(0,5).join(' '),'original study report source'].filter(Boolean).join(' ');let results=[];
-      try{const c=new AbortController(),tm=setTimeout(()=>c.abort(),10000);const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify({q:query,num:6,hl:glParam,gl:glParam}),signal:c.signal});clearTimeout(tm);if(rr.ok){const d=await rr.json();results=(d.organic||[]).slice(0,6);}}catch(_e){}
+      try{const c=new AbortController(),tm=setTimeout(()=>c.abort(),10000);const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify({q:query,num:6,hl:_pwbSerpMarket.hl,gl:glParam}),signal:c.signal});clearTimeout(tm);if(rr.ok){const d=await rr.json();results=(d.organic||[]).slice(0,6);}}catch(_e){}
       const urls=[];for(const r of results){try{const u=new URL(String(r.link||'')).href;if(!urls.includes(u)&&u!==st.source_url&&!/(reddit|facebook|instagram|linkedin|twitter|x\.com|quora)/i.test(u))urls.push(u);}catch(_e){}}
       const pages=(await Promise.all(urls.slice(0,3).map(function(u){const r=results.find(function(x){return x.link===u;})||{};return _pwbFetchEvidencePage(u,{title:r.title||'',snippet:r.snippet||'',source_type:'provenance_search'});}))).filter(Boolean);
       let best=null,bestScore=srcGrade.authority_score;const claimTokens=new Set(_pwbEvidenceTokens(st.evidence_text));
@@ -62370,6 +62375,11 @@ ${sourceText}`;
     // if it is actually saved, and concurrent successful requests cannot exceed the allowance.
     let savedBriefId = null;
     let committedBriefsUsed = briefsUsed;
+    // Store exact search scope, never generated by the model.
+    brief.search_scope={provider:'SERPER_GOOGLE_ORGANIC',query:String(keyword),country:_pwbSerpMarket.gl,language:_pwbSerpMarket.hl,requested_location:_pwbSerpLocation||null,
+     location_parameter_sent:!!_pwbSerpLocation,serp_http_status:_pwbSerperStatus||null,serp_organic_results:serpUrls.length,
+     status:serpUrls.length?'SERP_RESULTS_RECEIVED':'NO_READABLE_SERP_RESULTS',
+     note:'This is the location requested from Serper, not independent proof of rankings across an entire state.'};
     _pwbStage='persistence';
     const _saveConn=await pool.connect();
     try {

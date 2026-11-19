@@ -239,6 +239,9 @@
   var unlocked=false;
   var editArea=node('div',null,form);
   var selector=node('select',null,editArea);
+  // The question the prompt asks: Google's own question for this search term, the best match (owner 2026-11-12).
+  if(c.ai_question&&c.ai_question.text){var qa=node('p',null,editArea);qa.id='growthAiQuestionAsked';node('strong','Question asked: ',qa);qa.appendChild(document.createTextNode('“'+c.ai_question.text+'” '));
+   node('small','· '+(c.ai_question.label||'Google')+' · the best real Google question for “'+c.search_term+'”',qa)}
   var promptArea=node('textarea',null,editArea);promptArea.rows=5;promptArea.readOnly=true;promptArea.value=c.prompt;promptArea.style.width='100%';
   var cp=node('button','Copy research prompt',editArea);cp.type='button';cp.addEventListener('click',function(){promptArea.select();if(navigator.clipboard)navigator.clipboard.writeText(promptArea.value);cp.textContent='Copied ✓'});
   var answer=node('textarea',null,editArea);answer.rows=6;answer.style.width='100%';answer.placeholder='Paste a new complete AI answer including RESOURCES';answer.maxLength=c.max_paste||20000;

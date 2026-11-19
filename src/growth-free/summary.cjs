@@ -161,7 +161,10 @@ function summarizeFreeGrowth(report,{url,query}={}){
  const gaps=buildGapList(report||{});
  // Free Growth must not call a topic 'recommended' while the actual editorial evidence decision is blocked.
  // Keep every source and heading available for manual review and export; disable automatic writing.
- if(decision==='DATA_BLOCKED'){
+ // Exception (owner case report 67): a block by the word-based task check after the pages were read keeps the topics that
+ // the gap list itself supports with competitor text from two ranking pages.
+ const taskCheckTopics=gaps.evidence&&gaps.evidence.status==='ENOUGH_EVIDENCE'&&(gaps.recommended||[]).length>0;
+ if(decision==='DATA_BLOCKED'&&!taskCheckTopics){
   gaps.items=(gaps.items||[]).map(item=>({...item,recommended:false}));
   gaps.recommended=[];
   gaps.writing_allowed=false;

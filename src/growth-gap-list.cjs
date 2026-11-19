@@ -115,7 +115,7 @@ function buildGapList(report={}){
  const gateBlocked=gate.decision==='DATA_BLOCKED'&&!taskCheckOnly;
  // No comparison (no overview, or not enough readable pages for one) is not evidence either.
  const insufficient=gateBlocked||ov?.status!=='OBSERVED'||readable<MIN_READABLE_PAGES;
- prioritise(items,focus,{newPage,insufficient,readable,gateBlocked});
+ prioritise(items,focus,{newPage,insufficient,readable,gateBlocked,taskCheckOnly:taskCheckOnly&&gate.decision==='DATA_BLOCKED'});
  growthPotential(items,report,qWords);
  const status=items.length||ov?.status==='OBSERVED'?'OBSERVED':(ov?.status||'NOT_AVAILABLE');
  const NEW_LABEL={MISSING_TOPIC:'Topics the ranking pages cover',UNMATCHED_TOPIC:'Other topics the ranking pages cover'};
@@ -151,7 +151,7 @@ function buildGapList(report={}){
 // Why an item is in the list, from what the research observed; no score is shown and nothing is estimated.
 // Blocks that come from the word-based task check after the ranking pages were read, not from missing data.
 const TASK_CHECK_BLOCKERS=new Set(['SHARED_COMPETITOR_REQUIREMENTS','TASK_MEANING_NOT_VERIFIED','SUBSTANTIVE_GAP_NOT_VERIFIED']);
-function prioritise(items,focus,{newPage=false,insufficient=false,readable=0,gateBlocked=false}={}){
+function prioritise(items,focus,{newPage=false,insufficient=false,readable=0,gateBlocked=false,taskCheckOnly=false}={}){
  const q=words(focus||'');
  const CONF={AI_CONFIRMED_SAME_QUESTION:2,AI_GROUPED:1,SHARED_WORDS_ONLY:0,NOT_GROUPED:0,AI_SAYS_DIFFERENT_QUESTIONS:-3};
  for(const it of items){
@@ -200,6 +200,9 @@ function prioritise(items,focus,{newPage=false,insufficient=false,readable=0,gat
  // Recommended: supported by at least two ranking pages, missing or partial, not contradicted by the AI. The link with the
  // search term is word-based, so it orders but never excludes.
  if(!insufficient)items.filter(it=>it.writable&&!it.relevance&&it.priority.sources>=2&&it.coverage!=='NOT_COMPARED'&&it.confidence!=='AI_SAYS_DIFFERENT_QUESTIONS')
+ // After a block by the word-based task check (report 67) a topic is recommended only with real competitor text to work
+ // from (2+ fragments): headings alone, such as navigation boilerplate ("Roofing guides"), are not evidence (#495).
+  .filter(it=>!taskCheckOnly||it.priority.competitor_text_fragments>=2)
   .sort((a,b)=>b.priority.rank-a.priority.rank).forEach(it=>{
    // Two items that may describe the same need are not both recommended: the better-supported one is.
    const n=items.filter(x=>x.recommended).length;
