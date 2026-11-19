@@ -42,6 +42,12 @@ test('Tracker Growth: do this now, three steps, do it yourself, evidence in tabs
   await p.waitForSelector('#growthAiContentTasks',{state:'visible'});
   assert.match(await p.textContent('#growthAiContentTasks'),/Complete Growth AI Research & Writing Brief/);
   assert.equal(await p.locator('#growthBriefPriorities').isVisible(),true);
+  // Same list as Free Growth (owner 2026-11-19), at the top of the complete brief, sorted by score.
+  assert.equal(await p.locator('#growthContentPriorities').isVisible(),true);
+  assert.match(await p.textContent('#growthContentPriorities h3'),/What to put in your content — most to least important/);
+  const scores=await p.$$eval('#growthContentPriorities li.tg-prio-item details > summary',s=>s.map(x=>Number((x.textContent.match(/score (\d+)/)||[])[1])));
+  assert.ok(scores.length>0);for(let i=1;i<scores.length;i++)assert.ok(scores[i-1]>=scores[i]);
+  assert.ok(await p.evaluate(()=>{const a=document.getElementById('growthContentPriorities'),b=document.getElementById('growthBriefPriorities');return !!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING)}),'the list comes before the coverage overview');
   assert.equal(await p.getByRole('button',{name:'Download full AI brief (.md)'}).count(),1);
   assert.doesNotMatch(await p.textContent('body'),/STEP \d OF 3/,'no old three-step bar');
   // Manual tasks need business or account action; the facts come from the research, not invented.

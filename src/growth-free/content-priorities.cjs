@@ -160,4 +160,12 @@ function buildContentPriorities({summary,aiGap,report}={}){
   items:scored.map(({rank,...x})=>({rank,...x})),trim,keep:(gaps.unique_content||[]).filter(x=>!trim.some(t=>t.heading===x.heading)).map(x=>({heading:x.heading}))};
 }
 
-module.exports={buildContentPriorities,WEIGHT};
+// Tracker Growth uses the same list from its own report (owner 2026-11-19: "Growth has the same set-up as Free").
+function prioritiesForTrackerReport(report){
+ if(!report||!report.gap_list||!Array.isArray(report.gap_list.items))return null;
+ const gate=report.editorial_decision_gate||{};
+ return buildContentPriorities({summary:{decision:gate.decision||null,query:report.gap_list.focus_query||gate.focus_query||null,gaps:report.gap_list},
+  aiGap:report.ai_check&&report.ai_check.gap||null,report});
+}
+
+module.exports={buildContentPriorities,prioritiesForTrackerReport,WEIGHT};
