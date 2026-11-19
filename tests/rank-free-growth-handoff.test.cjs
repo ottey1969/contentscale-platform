@@ -75,6 +75,10 @@ test('rank tracker → free Growth check: topic, e-mail, best customer question,
     assert.equal(await p.getAttribute('html', 'lang'), 'es');
     assert.equal(await p.locator('#moreFields').evaluate(el => el.open), false);assert.equal(await p.locator('#tipsBox').isHidden(), true);
     await p.check('input[name=consent]');
+    // Everything else came from the tracker; the Search Console choice is the one thing left, and it stays visible.
+    assert.equal(await p.locator('#f button[type=submit]').isDisabled(), true);
+    assert.equal(await p.isVisible('#noGsc'), true, 'the Search Console choice is not hidden under "Change details"');
+    await p.check('#noGsc');
     await p.click('#f button[type=submit]');
     await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 }).catch(async e => { throw Error('no result page; status: ' + await p.textContent('#s') + ' ' + errors.join(' ')); });
     // Tips: the choice made at the tracker sign-up (here: no tips), not a default of the Growth form.

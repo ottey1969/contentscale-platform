@@ -271,7 +271,8 @@ function simpleFromTracker(d){try{
  var f=document.getElementById('f'),url=document.getElementById('url'),consent=f&&f.querySelector('input[name=consent]');if(!f||!url||!consent)return;
  var tb=document.getElementById('tipsBox');if(tb)tb.hidden=true;
  var stop=consent.closest('label'),move=[],n=f.firstElementChild;
- while(n&&n!==stop){var next=n.nextElementSibling;if(!(n.tagName==='INPUT'&&n.type==='hidden'))move.push(n);n=next}
+ // The Search Console choice stays visible: the research cannot start without it (owner 2026-11-19).
+ while(n&&n!==stop){var next=n.nextElementSibling;if(!(n.tagName==='INPUT'&&n.type==='hidden')&&!(n.querySelector&&n.querySelector('#noGsc')))move.push(n);n=next}
  var det=document.createElement('details');det.id='moreFields';det.className='research-details';var sm=document.createElement('summary');sm.textContent=FT.trMore;det.appendChild(sm);
  move.forEach(function(x){det.appendChild(x)});f.insertBefore(det,stop);
  var card=document.createElement('div');card.id='trackerSummary';card.className='note';
