@@ -114,8 +114,12 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.textContent('#gsc + p'), /^Verified for this page\./);
     assert.match(await p.textContent('body'), /Your search term “roof repair lodi nj”: 310 impressions, 2 clicks, position 14\.2\./);
     await p.click('#stepResearch > summary'); // Close technical evidence before testing the post-save destination.
-    // 3. AI research is visibly above the topic list, without opening an evidence tab.
+    // 3. AI research is one optional detail within the combined result; the brief is above it.
+    assert.equal(await p.locator('#growthOneBrief').isVisible(), true);
+    assert.equal(await p.locator('#growthBriefDetails').evaluate(el=>el.open), false);
     assert.equal(await p.locator('#freeAiResearch').isVisible(), true);
+    assert.equal(await p.locator('#freeAiResearch').evaluate(el=>el.open), false);
+    await p.locator('#freeAiResearch > summary').click();
     assert.equal(await p.locator('#freeAiResearch').evaluate(el => !!el.closest('#stepResearch')), false);
     assert.equal(await p.locator('#freeAiResearch [role="progressbar"]').count(), 1);
     assert.ok(await p.evaluate(() => document.querySelector('#freeAiResearch').compareDocumentPosition(document.querySelector('#stepReview')) & Node.DOCUMENT_POSITION_FOLLOWING));
@@ -125,7 +129,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.fill('#aiText', 'ANSWER:\nTEST: For roof repair in Lodi NJ, ask for a written estimate and check the licence of the roofer.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
     // A refresh before "Analyse answer" keeps the pasted answer (per check and AI system).
     await p.reload(); await p.waitForSelector('#aiText', { state: 'attached', timeout: 30000 });
-    if (!(await p.locator('#aiText').isVisible())) { if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click(); await p.click('.rtabs button[data-tab="ai"]'); if (!(await p.locator('#aiText').isVisible())) await p.locator('#aiRecheck summary').click(); }
+    if (!(await p.locator('#aiText').isVisible())) { if (!(await p.locator('#freeAiResearch').evaluate(el=>el.open))) await p.locator('#freeAiResearch > summary').click(); if (!(await p.locator('#aiRecheck').evaluate(el=>el.open))) await p.locator('#aiRecheck > summary').click(); }
     await p.selectOption('#aiEngine', 'perplexity');
     assert.match(await p.inputValue('#aiText'), /TEST: For roof repair in Lodi NJ/, 'the pasted answer is still there after a refresh');
     await p.click('#aiSave');
