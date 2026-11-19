@@ -709,9 +709,8 @@ function questionLink(d,s,q){var b=(d&&d.new_check_url)||${js(base)};if(b.slice(
 function newCheckLink(d,s){var b=(d&&d.new_check_url)||${js(base)};if(b.slice(-6)==='/admin')b=${js(base)};var c=s&&s.checked||{};
  return b+(b.indexOf('?')>=0?'&':'?')+'url='+encodeURIComponent(s&&s.url||'')+'&query='+encodeURIComponent(c.search_term||'')}
 function nextWrite(g,w,n,d){var box=document.getElementById('nextWrite');if(!box)return;var r=null;
- if(d&&d.summary&&d.summary.decision==='DATA_BLOCKED'){box.innerHTML='<strong>No verified improvement to write</strong><p class="muted">Review observed differences and export the editor brief if useful. No new text is recommended by this check.</p>';return}
  if(g&&g.writing_allowed===false){var ev=g.evidence||{},read=Number(ev.readable_ranking_pages||0);
-  box.innerHTML='<strong>AI cannot write text for this check yet</strong><p>'+esc(ev.plain_reason||ev.reason||'The research found too little evidence to write new text safely.')+'</p>'+
+  box.innerHTML='<strong>AI cannot write text for this check yet</strong><p>'+esc(ev.plain_reason||(d&&d.summary&&d.summary.explanation)||ev.reason||'The research found too little evidence to write new text safely.')+'</p>'+
    '<p class="muted">AI only writes when at least 2 pages that Google ranks for your search term could be read and compared'+(read?' (here: '+read+')':'')+'. Otherwise the text would be guesswork about your business.</p>'+
    '<p><strong>What you can do</strong></p><ol><li>Run a new check for this page with a more specific search term, the way a customer types it in Google (for example with your service and town), or with the right country and language.</li><li>Or download the editor brief (Export your selection, below) and let someone write from it.</li></ol>'+
    '<p><a class="btn" id="nextWriteNewCheck" href="'+esc(newCheckLink(d,d&&d.summary))+'">New check for this page →</a></p>';return}
