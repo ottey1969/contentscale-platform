@@ -48,8 +48,10 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     assert.match(box, /more specific search term/); assert.match(box, /editor brief/);
     assert.equal(await p.locator('#nextWriteBtn').count(), 0, 'no write button without evidence');
     // Even without advice, what the competitor pages have that this page does not stays visible (the point of Growth).
-    assert.match(await p.textContent('#freeNextAction'), /Look at what the competitor pages have[^]*See the comparison/);
+    assert.match(await p.textContent('#freeNextAction'), /Keep the page unchanged for now[^]*Open the brief/);
     await p.click('#freeNextAction .growth-next-btn');
+    assert.equal(await p.locator('#growthBriefDetails').evaluate(el=>el.open), true, 'one next action opens the complete brief');
+    await p.locator('#stepResearch > summary').click();
     assert.equal(await p.isVisible('#competitors'), true);
     const comp = await p.evaluate(() => { const h = document.getElementById('competitors'); let t = h.textContent, n = h.nextElementSibling; for (let i = 0; i < 3 && n; i++, n = n.nextElementSibling) t += ' ' + n.textContent; return t.replace(/\s+/g, ' '); });
     assert.match(comp, /What the competitor pages have that your page does not \(1\)/);
