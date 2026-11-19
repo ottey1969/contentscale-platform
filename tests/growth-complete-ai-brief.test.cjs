@@ -122,7 +122,9 @@ test('AI observations and Google findings remain together even when no new gaps 
 test('complete brief is rendered even without a separate topic-picker',()=>{
  assert.match(ui,/function renderAiContentTasks\(d,choice\)\{/);
  assert.doesNotMatch(ui,/function renderAiContentTasks\(d,choice\)\{\s*if\(!choice\)return/);
- assert.match(ui,/renderAiContentTasks\(d,choice\);\s*if\(choice\)/);
+ // Rendered unconditionally, before the topic-picker check (#489 wraps the AI observations in between).
+ assert.match(ui,/\n  renderAiContentTasks\(d,choice\);\n[\s\S]{0,1500}?\n  if\(choice\)\{/);
+ assert.doesNotMatch(ui,/if\(choice\)\{?\s*renderAiContentTasks\(d,choice\)/);
  assert.match(ui,/GROWTH RESEARCH REPORT/);
  assert.doesNotMatch(ui,/STEP '\+x\.stage\+' OF 3/);
 });
