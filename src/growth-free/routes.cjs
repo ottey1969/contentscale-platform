@@ -516,13 +516,18 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
  (r.unlinked_sections||[]).forEach(function(x){h+='<p class="muted">Not linked to a selected item and not used: “'+esc(x.h2)+'” — '+esc(x.reason)+'</p>'});
  if(r.reason&&!(r.sections||[]).length)h+='<p class="muted">'+esc(r.reason)+'</p>';
  return h}
-function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
- var items=g.items.filter(function(x){return picked[x.id]});
- var L=['# Editor brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Chosen from the comparison with '+g.ranking_pages_read+' ranking page(s). Write in your own words with facts you can stand behind; do not copy the ranking pages.',''];
+function gapBrief(g,s,all){var picked={};if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
+ var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
+ var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Decision: '+(s.decision||'UNKNOWN'),'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
   list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
-   if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
-   x.examples.forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
+   L.push('  - Editorial assessment: '+(x.recommended?'Verified research priority':'Observation only; not approved as content advice'));
+   L.push('  - Where: '+(x.placement&&x.placement.section_heading?'Near '+x.placement.section_heading:x.your_section?'Near '+x.your_section:'Confirm fit on the existing page'));
+   if(x.priority&&x.priority.suggested_action)L.push('  - How: '+x.priority.suggested_action);
+   if(x.priority&&x.priority.why)L.push('  - Why: '+x.priority.why.join(' · '));
+   L.push('  - Potential ranking impact: '+(x.growth_potential&&x.growth_potential.search_demand&&x.growth_potential.search_demand.note||'Not measured; requires Search Console/position tracking'));
+   L.push('  - Potential AI citation impact: Not measured for this topic unless actual AI source-backed answers establish a link');
+   (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'Google position #'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':'')+(e.url?' — Source: '+e.url:'')+(e.excerpt?' — Excerpt: '+e.excerpt:''))})});L.push('')});
  if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  if((LAST_SELF||[]).length){var dn=selfDone();L.push('## To do yourself (not written by Growth)','');LAST_SELF.forEach(function(x){L.push('- ['+(dn[x.id]?'x':' ')+'] '+x.title+' — '+x.why)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
@@ -811,35 +816,47 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
 // A single editorial brief: one decision, optional what/where/how/why, and real evidence.
 function growthBriefHtml(s,d){
- var block=s.decision==='DATA_BLOCKED',keep=s.decision==='NO_CHANGE',tasks=(s.tasks||[]).slice(0,4),
-  valid=(s.gaps&&s.gaps.items||[]).filter(function(x){return x.recommended&&x.writable!==false}).slice(0,4),
-  chosen=tasks.length?tasks:valid.map(function(x){return {title:x.title,where:x.placement&&x.placement.section_heading?'Near “'+x.placement.section_heading+'”':'In the existing page, only if it fits the customer question',
-    status:x.status,evidence:(x.examples||[]).filter(function(e){return e.url}).map(function(e){return {url:e.url,heading:e.heading,excerpt:e.excerpt,site:e.site}})}}),
-  line=block?'No verified content improvement. Review the sources before making changes.':keep?'No content change required for this question. Keep what already works.':s.explanation||'Review the verified content opportunities.';
- var ai=d.ai&&d.ai.summary,aiN=ai?Number(ai.checked)||0:0,
-  sources=d.research_reader&&d.research_reader.used||0;
- var h='<section class="growth-brief" id="growthOneBrief" aria-label="One research result and editorial brief">'+
-  '<div class="growth-brief-head"><small>ONE RESEARCH · ONE RESULT</small><h2>'+esc(s.headline||'Growth research result')+'</h2><p>'+esc(line)+'</p>'+
-  '<p class="growth-brief-meta">Google comparison'+(sources?' · '+esc(sources)+' pages read with Firecrawl':'')+' · AI answers: '+esc(aiN)+'/5 saved (optional)</p></div>'+
-  '<details id="growthBriefDetails"><summary><strong>Open the Growth brief</strong> · What, where, how and why</summary><div class="growth-brief-body">';
- if(block||keep||!chosen.length){
-  h+='<h3>What</h3><p>'+esc(block?'Do not publish new content based on these observations yet.':keep?'Keep your current content.':'No specific content addition is verified in this research.')+'</p>'+
-    '<h3>Where</h3><p>On this existing page only; do not create a competing page from unverified topics.</p>'+
-    '<h3>How</h3><p>'+esc(block?'Compare the underlying evidence and rerun with a narrower customer question when necessary.':'Preserve the existing sections and check performance again after meaningful changes.')+'</p>'+
-    '<h3>Why</h3><p>'+esc(s.explanation||line)+'</p>';
- }else{
-  h+='<p class="muted">Only evidence-supported changes are included. Each recommendation identifies the location and the supporting pages.</p>';
-  chosen.forEach(function(t,i){
-   h+='<div class="growth-brief-item"><h3>'+(i+1)+'. '+esc(t.title)+'</h3>'+
-    '<p><strong>What:</strong> '+esc(t.title)+'</p>'+
-    '<p><strong>Where:</strong> '+esc(t.where||'In the most relevant section of the existing page.')+'</p>'+
-    '<p><strong>How:</strong> Explain the answer in your own words, using only facts you can verify.</p>'+
-    '<p><strong>Why:</strong> '+esc(t.status||'Observed on relevant ranking pages and compared with your page.')+'</p>';
-   if((t.evidence||[]).length)h+='<details class="research-details"><summary>Sources and excerpts ('+t.evidence.length+')</summary><ul>'+t.evidence.slice(0,4).map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site||e.url)+'</a> '+(e.heading?'· '+esc(e.heading):'')+(e.excerpt?'<p class="muted">'+esc(e.excerpt)+'</p>':'')+'</li>'}).join('')+'</ul></details>';
-   h+='</div>';
-  });
+ var blocked=s.decision==='DATA_BLOCKED',unchanged=s.decision==='NO_CHANGE',
+  list=(s.gaps&&s.gaps.items||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}),
+  ranked=list.slice().sort(function(a,b){return (b.recommended===true)-(a.recommended===true)||
+   Number(b.priority&&b.priority.sources||b.examples&&b.examples.length||0)-Number(a.priority&&a.priority.sources||a.examples&&a.examples.length||0)}),
+  verified=blocked?[]:ranked.filter(function(x){return x.recommended&&x.writable!==false}),
+  observations=ranked.filter(function(x){return !verified.some(function(y){return y.id===x.id})}),
+  ai=d.ai&&d.ai.summary,aiN=ai?Number(ai.checked)||0:0,fc=d.research_reader,
+  line=blocked?'No verified content improvement. The findings below are observations, not instructions to publish.':
+   unchanged?'No content change required for this question. Keep what already works.':
+   verified.length?verified.length+' evidence-supported content priorit'+(verified.length===1?'y':'ies')+' to review.':'No confirmed change to recommend.';
+ function item(x,i,confirmed){
+  var evidence=(x.examples||[]).filter(function(e){return !!e.url}),where=x.placement&&x.placement.section_heading?'Inside or after “'+x.placement.section_heading+'”':
+   x.your_section?'Near existing section “'+x.your_section+'”':'Only where it answers this page’s customer question',
+   proof=x.priority&&x.priority.why&&x.priority.why.length?x.priority.why.join(' · '):x.ai||x.status||'Only a competitor content difference observed',
+   demand=x.growth_potential&&x.growth_potential.search_demand,impact=demand&&demand.status!=='NOT_MEASURED'?demand.note:'Ranking/traffic impact not measured',
+   cite='AI citation impact unknown unless a current, source-backed AI answer supports it';
+  return '<div class="growth-brief-item"><h3>'+esc(i+1)+'. '+esc(x.title)+(confirmed?' · editorial priority':' · observation')+'</h3>'+
+   '<p><strong>What:</strong> '+esc(x.title)+'</p><p><strong>Where:</strong> '+esc(where)+'</p>'+
+   '<p><strong>How:</strong> '+esc(confirmed?(x.priority&&x.priority.suggested_action||'Add only a verified answer in the existing relevant section.'):'Do not add automatically. Check customer intent, overlap and business accuracy first.')+'</p>'+
+   '<p><strong>Why:</strong> '+esc(proof)+'</p>'+
+   '<p><strong>Potential impact:</strong> '+esc(impact)+' · '+esc(cite)+'. No improvement is guaranteed.</p>'+
+   '<p><strong>Evidence:</strong> '+esc(evidence.length)+' referenced page(s)'+(evidence.length?' · see exact URLs below':' · no independently verified source URLs recorded')+'</p>'+
+   (evidence.length?'<details class="research-details"><summary>Source URLs and excerpts ('+evidence.length+')</summary><ul>'+evidence.map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site||e.url)+'</a> '+(e.heading?'· '+esc(e.heading):'')+(e.excerpt?'<p class="muted">'+esc(e.excerpt)+'</p>':'')+'</li>'}).join('')+'</ul></details>':'')+'</div>';
  }
- return h+'<p class="muted">The brief and source evidence belong to this one check. Unverified AI citations never become content recommendations by themselves.</p></div></details></section>';
+ var h='<section class="growth-brief" id="growthOneBrief" aria-label="One research result and editorial brief">'+
+  '<div class="growth-brief-head"><small>ONE RESEARCH · ONE RESULT</small><h2>'+esc(s.headline||'Growth research result')+'</h2>'+
+  '<p>'+esc(line)+'</p><p class="growth-brief-meta">Google comparison'+(fc&&fc.enabled?' · Firecrawl '+esc(fc.used)+'/'+esc(fc.attempted)+' pages':'')+
+  ' · AI systems '+esc(aiN)+'/5 source answers (optional, not part of the Google ranking)</p>'+
+  '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> '+
+  '<button type="button" class="ghost" id="briefDownloadAll">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div>'+
+  '<details id="growthBriefDetails"><summary><strong>Open the Growth brief</strong> · What, where, how and why</summary><div class="growth-brief-body">'+
+  '<p class="muted">The editor receives the entire evidence dossier automatically. No topic selection is needed to receive or export it. Any checkboxes elsewhere are only optional controls for AI drafting.</p>'+
+  '<h3>Research decision</h3><p>'+esc(s.explanation||line)+'</p>';
+ if(verified.length)h+='<h3>Verified editorial priorities ('+verified.length+')</h3>'+verified.map(function(x,i){return item(x,i,true)}).join('');
+ else h+='<p><strong>No verified new section to publish.</strong> '+esc(blocked?'Evidence is insufficient for a safe content change.':'Current content may already meet the researched intent.')+'</p>';
+ if(observations.length)h+='<details class="research-details"><summary>Other observations for editorial review ('+observations.length+')</summary>'+
+  '<p>These topics are not approved recommendations, regardless of competitor headings or keyword overlap.</p>'+
+  observations.map(function(x,i){return item(x,i,false)}).join('')+'</details>';
+ if((s.gaps&&s.gaps.unique_content||[]).length)h+='<details class="research-details"><summary>Existing content to preserve ('+s.gaps.unique_content.length+')</summary><ul>'+
+  s.gaps.unique_content.map(function(x){return '<li>'+esc(x.heading)+'</li>'}).join('')+'</ul></details>';
+ return h+'<p class="muted">Ranking impact must be measured using Search Console or position tracking after publication. AI citation status requires actual AI answers with source lists. Firecrawl page reads alone prove neither.</p></div></details></section>';
 }
 // What the competitor pages have and your page does not: every Google result, read or not, with the headings of the
 // pages that were read. Shown also when no advice is given (then as observations only).
