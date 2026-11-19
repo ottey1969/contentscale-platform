@@ -7,6 +7,7 @@ const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl,engineVersion}=require('./engine.cjs');
 const {groundedGeminiAnswer}=require('./auto-ai-answers.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
+const {statesIn,US:US_STATES}=require('../growth-serp-quality.cjs');
 const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const aiGap=require('./ai-gap.cjs');
@@ -170,6 +171,9 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <div class="free-simple-locale"><label for="market"><strong>3. ${esc(t.market)}</strong></label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="${esc(t.marketPh)}">
  <label for="language">${esc(t.language)}</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="${esc(t.languagePh)}">
  <small>${esc(t.marketHelp)}</small></div>
+ <label for="search_location"><strong>${esc(t.searchLocation)}</strong></label><input id="search_location" name="search_location" list="freeSearchLocationChoices" maxlength="120" autocomplete="off" placeholder="${esc(t.searchLocationPh)}">
+ <datalist id="freeSearchLocationChoices"><option value="New Jersey, United States"></option><option value="Newark, New Jersey, United States"></option><option value="Jersey City, New Jersey, United States"></option><option value="Paterson, New Jersey, United States"></option></datalist>
+ <small>${esc(t.searchLocationHelp)}</small>
  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(regionLabel(x,lang))+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(languageLabel(x,lang))+'">').join('')}</datalist>
 <details class="free-simple-optional" id="freeExtraSources"><summary><strong>${esc(t.simpleOptional)}</strong> <small class="muted">${esc(t.simpleOptionalHint)}</small></summary>
  ${aiStartBlock(!!owner.signedIn||!!invite,t,true)}
@@ -232,7 +236,7 @@ ${aiStartScript(t)}
  setTimeout(sync,0);sync();
 })();
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
-(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','search_location','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
 // A market or language filled in from a link ("es — Spain", "Spanish") is shown in the visitor's language.
 (function(){var L=${js(lang)};if(L==='en'||!window.Intl||!Intl.DisplayNames)return;try{var R=new Intl.DisplayNames([L],{type:'region'}),N=new Intl.DisplayNames([L],{type:'language'}),E=new Intl.DisplayNames(['en'],{type:'language'});
  var m=document.getElementById('market');if(m&&m.value)m.value=m.value.split(/\s*,\s*/).map(function(x){var c=(x.match(/^([a-z]{2})\s*[—–-]/i)||[])[1];return c?c.toLowerCase()+' — '+R.of(c.toUpperCase()):x}).join(', ');
@@ -256,7 +260,7 @@ function simpleFromTracker(d){try{
  var v=function(id){var el=document.getElementById(id);return el?el.value:''};
  var line=function(label,value){if(!value)return '';var d0=document.createElement('div');var b=document.createElement('strong');b.textContent=label+': ';d0.appendChild(b);d0.appendChild(document.createTextNode(value));return d0.outerHTML};
  var head=document.createElement('strong');head.style.cssText='display:block;margin-bottom:6px';head.textContent=FT.trTitle;var help=document.createElement('small');help.style.cssText='display:block;margin-top:6px';help.textContent=FT.trHelp;
- card.innerHTML=head.outerHTML+line(FT.trPage,v('url'))+line(FT.trKeyword,d.keyword||v('topic'))+line(FT.trMarket,[v('market'),v('language')].filter(Boolean).join(' · '))+line(FT.trTo,v('email'))+help.outerHTML;
+ card.innerHTML=head.outerHTML+line(FT.trPage,v('url'))+line(FT.trKeyword,d.keyword||v('topic'))+line(FT.trMarket,[v('market'),v('language'),v('search_location')].filter(Boolean).join(' · '))+line(FT.trTo,v('email'))+help.outerHTML;
  f.insertBefore(card,det);
  var st=document.createElement('style');st.textContent='#growthFreeReset{display:none!important}';document.head.appendChild(st);
  var lead=document.querySelector('.lead');if(lead)lead.textContent=FT.trLead;
@@ -267,7 +271,7 @@ var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
 // This browser remembers what was entered (page, search term, market, language, addresses), so the next check starts
 // filled in. Only in this browser; a link with values wins; works without storage too.
-var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm';
+var REMEMBER=['url','query','market','language','search_location','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}rememberAi()}
 // Pasted AI answers are kept in this browser too, with the customer question they answer: after a refresh or a failed start
@@ -300,7 +304,7 @@ if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER
 (function(){var b=document.getElementById('cqFind');if(!b)return;var st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
  b.addEventListener('click',async function(){var url=document.getElementById('url').value.trim(),kw=document.getElementById('query').value.trim();if(!url&&!kw){st.textContent='Enter a keyword (search term) first.';return}
   b.disabled=true;b.classList.add('is-working');st.textContent='Looking up how customers search…';list.innerHTML='';
-  try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value})});
+  try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value,search_location:document.getElementById('search_location').value})});
    var d=await r.json();if(!d.success)throw Error(d.error||'Not available right now.');
    st.textContent=d.questions.length?'Best observed Google match first; AI ideas only if no suitable Google question. Choose or edit any question.':'No suitable questions found; enter your own.';
    list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+(q.text===d.best_question?' · Best match':'')+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
@@ -319,7 +323,7 @@ try{
  if(APPROVED&&!f.query.value.trim()){
   s.textContent=FT.sFinding;
   try{
-   var qr=await fetch(${js(api)}+'/customer-questions',{signal:timeoutSignal(45000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
+   var qr=await fetch(${js(api)}+'/customer-questions',{signal:timeoutSignal(45000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value})});
    var qd=await qr.json();
    var qs=qd&&qd.success&&Array.isArray(qd.questions)?qd.questions:[];
    var chosen=qs.filter(function(q){return q.text===qd.best_question})[0]||qs.filter(function(q){return q.priority==='OBSERVED_GOOGLE'})[0]||qs.filter(function(q){return q.source==='AI_SUGGESTION'})[0];
@@ -329,7 +333,7 @@ try{
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -1342,7 +1346,23 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const countries=validCountries(entries),language=String(b.language||'').trim()?validLanguage(b.language):null;
   if(entries.length&&countries.length<entries.length){res.status(400).json({success:false,error:'Choose the market from the list, for example nl — Netherlands (several separated by commas).'});return undefined}
   if(String(b.language||'').trim()&&!language){res.status(400).json({success:false,error:'Choose the language from the list, for example Dutch.'});return undefined}
-  return countries.length||language?{countries,language}:null;
+  const rawLocation=String(b.search_location||'').trim();
+  let location=null;
+  if(rawLocation){
+   if(rawLocation.length>120||/[<>\r\n]/.test(rawLocation)){
+    res.status(400).json({success:false,error:'Enter a state or city, for example New Jersey, United States.'});return undefined;
+   }
+   const matchedStates=statesIn(rawLocation),state=matchedStates[0];
+   if(matchedStates.length!==1||!state||!US_STATES[state]||/\b(?:Canada|United Kingdom|Netherlands|Australia)\b/i.test(rawLocation)){
+    res.status(400).json({success:false,error:'Choose one US state or city and state, for example New Jersey, United States.'});return undefined;
+   }
+   if(countries.length&&countries[0]!=='US'){
+    res.status(400).json({success:false,error:'A US state or city requires United States as the first target market.'});return undefined;
+   }
+   location=rawLocation;
+  }
+  const selected=location&&countries.length===0?['US']:countries;
+  return selected.length||language||location?{countries:selected,language,...(location?{location,location_source:'VISITOR_SELECTED'}:{})}:null;
  }
  // AI answers pasted before the start: at most one per AI system, checked like a paste on the result page.
  function readAiAnswers(b,res){
