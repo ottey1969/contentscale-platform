@@ -30,6 +30,8 @@ function ensureTables(pool){
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ)`);
   await addColumn('access_label','TEXT');
+  // The visitor said at the start that there is no Search Console for this page (owner 2026-11-19): do not ask again.
+  await addColumn('gsc_declined','BOOLEAN NOT NULL DEFAULT FALSE');
   await addColumn('invite_id','BIGINT');
   // Optional writing for the visitor's selection: the last result and how many times it was used for this check.
   await addColumn('written','JSONB');
@@ -126,7 +128,7 @@ async function recentResult(pool,{url,query,market=null,engineVersion=null}){
    WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND report->>'engine_version'=$4 AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion])).rows[0]||null;
 }
 
-async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null,uiLang=null}){
+async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null,uiLang=null,gscDeclined=false}){
  const row=(await pool.query(`INSERT INTO growth_free_checks
    (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market,emails)
    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb)
@@ -135,6 +137,7 @@ async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketi
    cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null),JSON.stringify(emails&&emails.length>1?emails:null)])).rows[0];
  if(row&&uiLang)await pool.query('UPDATE growth_free_checks SET ui_lang=$2 WHERE id=$1',[row.id,uiLang]);
  if(row&&uiLang)row.ui_lang=uiLang;
+ if(row&&gscDeclined){await pool.query('UPDATE growth_free_checks SET gsc_declined=TRUE WHERE id=$1',[row.id]);row.gsc_declined=true}
  return row;
 }
 

@@ -35,7 +35,7 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     await p.fill('#url', URL_); await p.fill('#query', 'roof repair lodi nj');
     // Two addresses (up to five are allowed).
     const emails = 'test-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example, test-second@acme-roofing.example';
-    await p.fill('#email', emails); await p.check('input[name=consent]');
+    await p.fill('#email', emails); await p.check('input[name=consent]'); await p.fill('#market', 'us — United States'); await p.check('#noGsc');
     await p.click('#f button[type=submit]');
     try { await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 }); } catch (e) { throw Error('form did not start: ' + (await p.textContent('#f'))); }
     await service.idle();
@@ -57,7 +57,7 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     assert.match(comp, /What the competitor pages have that your page does not \(1\)/);
     assert.match(comp, /Observations only: there was not enough evidence for advice/);
     assert.match(comp, /#1 roofer-a\.example · Read · 1 of 1 heading\(s\) not on your page/);
-    assert.match(comp, /How a repair estimate is built · Not on your page/);
+    assert.match(comp, /How a repair estimate is built · Not found on your page by heading words \(not compared by topic\)/);
     // The new check opens with this page and search term already filled in.
     const href = await p.getAttribute('#nextWriteNewCheck', 'href');
     await p.goto(new URL(href, base).href);

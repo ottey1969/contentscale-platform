@@ -152,3 +152,15 @@ test('report 67 (real, contentscale.site/content-scaling/): sections about conte
  assert.ok(heads.includes('E-commerce Blog (Home Goods, US): 78% Traffic Recovery in 90 Days'));
  assert.deepEqual(p.items.slice(0,2).map(x=>x.title),['Definition of content scaling','Why content scaling matters and its benefits']);
 });
+
+test('PRT emergency roof repair (real, owner 2026-11-19): core process sections are never proposed for trimming',()=>{
+ const f=require('./fixtures/free-growth-prt-emergency/check.json');
+ const p=buildContentPriorities({summary:f.summary,aiGap:f.ai_gap,report:f.report});
+ const heads=p.trim.map(x=>x.heading);
+ for(const core of ['What Happens After You Call','1. The call and dispatch','2. Rapid assessment','5. Documentation for insurance',
+  'Hail damage','Wind damage','Tree limb impact','Flashing failure','Waiting for the crew at night?','📑 In This Guide'])
+  assert.ok(!heads.includes(core),'not proposed: '+core);
+ assert.deepEqual(heads,[],'every section of this page relates to what ranking or AI-cited pages write about');
+ // The one topic the AI-cited page covers that this page only partly covers stays in the list.
+ assert.ok(p.items.some(x=>x.title==='Tracing leak entry points from the attic side'&&x.action==='IMPROVE'));
+});

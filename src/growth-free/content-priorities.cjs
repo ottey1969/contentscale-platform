@@ -10,7 +10,7 @@ const STOP=new Set(['about','after','again','also','and','any','are','before','b
  'such','than','that','the','their','them','then','there','these','they','this','those','through','under','very','was','were','what',
  'when','where','which','while','who','why','will','with','would','you','your']);
 const words=t=>new Set(String(t||'').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g,'').split(/[^a-z0-9]+/)
- .filter(w=>w.length>3&&!STOP.has(w)).map(w=>w.replace(/(ing|ings|es|s)$/,'')));
+ .filter(w=>w.length>3&&!STOP.has(w)).map(w=>w.replace(/ings?$/,'').replace(/([^s])s$/,'$1')));
 // Business facts the owner must confirm before they are written (never taken from competitors).
 const BUSINESS_FACT=/(service area|\bserv(?:e|es|ing)\b|all\s+\d+\s+counties|\bcounties\b|24\s*\/?\s*7|\blicen[sc]|\binsured\b|warrant|guarantee|years?\s+(?:of\s+)?experience|\bcosts?\b|\bprices?\b|\bpricing\b|[$€£]\s?\d|free\s+(?:quote|estimate|inspection)|response time|arrival time|within\s+\d+\s+(?:minutes|hours))/i;
 const WEIGHT={ranking_page:3,ai_cited_site:2,missing:2,partial:1,text_fragments:1,search_words:1,evidence_check:2,ai_confirmed:1,ai_disagrees:-3};
@@ -49,19 +49,32 @@ function sameNeed(a,b,queryWords){
 // long without answering the searcher. Proposed only from the page comparison: no ranking page and no AI-cited page
 // covers the section, and it shares no word with the search term. Introductions, trust and contact sections and page
 // furniture are never proposed. The advice is to shorten or move, never to delete without checking.
-const PROTECT=/(contact|about us|author|review|testimonial|customers? say|why choose|reviews?|call us|free quote|get (?:a )?quote|estimate|get started|book|schedule|table of contents|related|privacy|terms|want to|ready to|let us|talk to)/i;
+const PROTECT=/(contact|about us|author|review|testimonial|customers? say|why choose|reviews?|call us|free quote|get (?:a )?quote|estimate|get started|book|schedule|table of contents|related|privacy|terms|want to|ready to|let us|talk to|in this guide|in this article|contents|overview|summary|key takeaways)/i;
+// A numbered step belongs to a process the page explains; one step is never trimmed on its own.
+const STEP=/^\s*(?:step\s*)?\d+\s*[.):-]/i;
 function trimCandidates({report,aiGap,items,queryWords}){
  const ov=report&&report.competitor_overview;
  if(!ov||ov.status!=='OBSERVED'||!Array.isArray(ov.this_page_sections))return [];
  const covered=new Set();
  for(const t of ov.topics||[])if((t.this_page==='YES'||t.this_page==='PARTLY')&&t.this_page_heading)covered.add(t.this_page_heading);
  for(const it of items)for(const h of [it.your_section,it.placement&&it.placement.section_heading])if(h)covered.add(h);
+ const otherWords=new Set();
+ const addWords=t=>{for(const w of words(t))otherWords.add(w)};
+ for(const pg of ov.ranking_pages||[])for(const h of pg.content_headings||[])addWords(h);
+ for(const t of ov.topics||[]){addWords(t.topic);for(const sec of t.sections||[])addWords(sec.heading)}
+ for(const sec of ov.ungrouped_sections||[])addWords(sec.heading);
+ for(const pg of (aiGap&&aiGap.pages)||[])for(const h of pg.headings||[])addWords(h.text);
+ for(const t of (aiGap&&aiGap.missing_topics)||[])addWords(t.topic);
  const aiTexts=((aiGap&&aiGap.missing_topics)||[]).map(t=>({text:[t.topic,...(t.examples||[]).map(e=>e.heading)].join(' '),sites:[]}));
  const out=[];
  ov.this_page_sections.forEach((sec,i)=>{
   const h=String(sec.heading||'').trim();
-  if(!h||i===0||sec.furniture||covered.has(h)||PROTECT.test(h))return;
-  if([...words(h)].some(w=>queryWords.has(w)))return;
+  if(!h||i===0||sec.furniture||covered.has(h)||PROTECT.test(h)||STEP.test(h))return;
+  const hw=words(h);
+  if([...hw].some(w=>queryWords.has(w)))return;
+  // Something ranking or AI-cited pages also write about (any shared meaningful word in their headings) is in scope
+  // for this search; word matching is too crude to call it off-topic (owner 2026-11-19, PRT emergency page).
+  if([...hw].some(w=>otherWords.has(w)))return;
   if(aiTexts.some(a=>sameNeed({text:h,sites:[]},a,queryWords)))return;
   out.push({heading:h,words:Number(sec.words)||null,action:'SHORTEN_OR_MOVE',
    reason:'No ranking page or AI-cited page covers this, and it shares no word with the search term.',

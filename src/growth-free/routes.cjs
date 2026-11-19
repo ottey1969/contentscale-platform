@@ -191,12 +191,13 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <small>${esc(t.gscHelp)}</small>
  </details>
  </details>
+ <label class="check" for="noGsc"><input type="checkbox" id="noGsc" name="no_gsc"> <span>${esc(t.noGsc)}</span></label>
  <label for="email">${esc(t.email)}</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="${esc(t.emailPh)}"><small>${esc(t.emailHelp)}</small>
- <label class="check"><input type="checkbox" name="consent" required> <span>${esc(t.consent)}${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':' '+esc(t.perDay.replace('§',cfg.perEmail))}`}</span></label>
+ <label class="check"><input type="checkbox" id="consent" name="consent" required> <span>${esc(t.consent)}${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':' '+esc(t.perDay.replace('§',cfg.perEmail))}`}</span></label>
  <div id="tipsBox"><p class="muted" style="font-size:14px;margin:10px 0 2px">${esc(t.tips)}</p>
  <label class="check"><input type="checkbox" name="notips"> <span>${esc(t.noTips)}</span></label></div>
  ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
- <input type="hidden" name="lang" value="${esc(lang)}"><p><button type="submit" id="freePrimaryRun" disabled>${esc(t.simpleChooseUrl)}</button> <small id="s" role="status"></small></p>
+ <input type="hidden" name="lang" value="${esc(lang)}"><p class="muted" id="freeStartMissing" role="status" aria-live="polite"></p><p><button type="submit" id="freePrimaryRun" disabled>${esc(t.simpleChooseUrl)}</button> <small id="s" role="status"></small></p>
 </form>
 ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p class="muted">Signed in with your admin key: no daily limit, and AI writes the chosen H2s in your checks${cfg.writing==='off'?' (AI writing is switched off on the server: GROWTH_FREE_WRITING=off)':''}. Visitors keep their normal limits.</p><p><button type="button" class="ghost" id="ownerOut">Sign out</button></p></div>`:owner.available?`<details class="card" id="ownerBox"><summary class="owner-sum"><span class="owner-btn">🔑 Owner? Sign in</span> <small class="muted">no daily limit, AI writing on</small></summary><form id="ownerIn" autocomplete="off"><label for="ownerKey">Admin key (GROWTH_FREE_ADMIN_KEY in Railway)</label><input id="ownerKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit">Sign in as owner</button> <small id="ownerSt" role="status"></small></p></form></details>`:''}
 <details class="card free-simple-details"><summary><strong>${esc(t.getTitle)}</strong></summary><ul>
@@ -218,7 +219,21 @@ ${aiStartScript(t)}
   }catch(e){return null}
  }
  function sync(){
-  var valid=!!normalized();btn.disabled=!valid;btn.textContent=valid?(typeof OWNER!=='undefined'&&OWNER?'Run the check (owner)':FT.submit):FT.simpleChooseUrl;
+  var valid=!!normalized();
+  // Owner 2026-11-19: the research starts only when everything it needs is entered, so the brief is complete in one run.
+  var val=function(id){var el=document.getElementById(id);return el?String(el.value||'').trim():''};
+  var gscFile=document.getElementById('gscFile'),noGsc=document.getElementById('noGsc'),consent=document.getElementById('consent');
+  var missing=[];
+  if(!valid)missing.push(FT.needUrl);
+  if(!val('query')&&!val('topic'))missing.push(FT.needQuery);
+  if(!val('market'))missing.push(FT.needMarket);
+  if(!/^[^\\s@,]+@[^\\s@,]+\\.[^\\s@,]+/.test(val('email')))missing.push(FT.needEmail);
+  if(consent&&!consent.checked)missing.push(FT.needConsent);
+  if(!(gscFile&&gscFile.files&&gscFile.files.length)&&!(noGsc&&noGsc.checked))missing.push(FT.needGsc);
+  var ready=!missing.length;btn.disabled=!ready;
+  btn.textContent=ready?(typeof OWNER!=='undefined'&&OWNER?'Run the check (owner)':FT.submit):!valid?FT.simpleChooseUrl:FT.needButton;
+  var need=document.getElementById('freeStartMissing');if(need)need.textContent=ready?'':FT.needPrefix+' '+missing.join(' · ');
+  if(noGsc&&gscFile){if(gscFile.files&&gscFile.files.length){noGsc.checked=false;noGsc.disabled=true}else noGsc.disabled=false}
   st.textContent=valid?FT.simpleUrlReady:FT.simpleUrlStatus;
   if(open)open.disabled=!((s&&s.value.trim())||valid);
  }
@@ -234,6 +249,7 @@ ${aiStartScript(t)}
  });
  if(s)s.addEventListener('input',sync);
  u.addEventListener('input',sync);u.addEventListener('change',sync);
+ var form=document.getElementById('f');if(form){form.addEventListener('input',sync);form.addEventListener('change',sync)}
  document.addEventListener('DOMContentLoaded',sync);
  setTimeout(sync,0);sync();
 })();
@@ -335,7 +351,7 @@ try{
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -446,7 +462,7 @@ function wireAi(){wireAiGap();var b=document.getElementById('aiSave');if(!b)retu
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
    try{localStorage.removeItem(aiDraftKey(eng))}catch(e){}
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE'){render(d);showStep('freeAiResearch','freeAiResearch')}else{showAiFirst(d,true);showStep('aiFirst','aiFirst')}}catch(err){st.textContent=err.message;b.disabled=false}}}
-function gscHtml(g){var h='<h3 id="gsc">Search Console <small>(optional)</small></h3>';
+function gscHtml(g,declined){var h='<h3 id="gsc">Search Console <small>(optional)</small></h3>';
  if(g&&g.latest){var L=g.latest,T=L.totals||{};
   h+='<p class="lead"><strong>'+(L.status==='VERIFIED_FOR_PAGE'?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+(L.status==='VERIFIED_FOR_PAGE'&&!L.used_in_research?' This export was uploaded after the research (or belongs to a reused result), so it was not used to decide the page improvements. Start a new check and upload it before research to include its search queries.':'')+'</p>';
   h+='<div class="grid"><div><small>Period</small><strong>'+(L.period?esc(L.period.start)+' – '+esc(L.period.end):'not in the export')+'</strong></div><div><small>Clicks</small><strong>'+esc(T.clicks)+'</strong></div><div><small>Impressions</small><strong>'+esc(T.impressions)+'</strong></div><div><small>Average position</small><strong>'+(T.position==null?'–':esc(T.position))+'</strong></div></div>';
@@ -454,7 +470,8 @@ function gscHtml(g){var h='<h3 id="gsc">Search Console <small>(optional)</small>
   if(L.search_term)h+='<p>'+(L.search_term_row?'Your search term “'+esc(L.search_term)+'”: '+esc(L.search_term_row.impressions)+' impressions, '+esc(L.search_term_row.clicks)+' clicks, position '+esc(L.search_term_row.position==null?'–':L.search_term_row.position)+'.':'Your search term “'+esc(L.search_term)+'” is not in this export (no impressions in this period, or too rare to be listed).')+'</p>';
   if((L.top_queries||[]).length)h+='<h3>Search terms with the most impressions</h3><ol>'+L.top_queries.map(function(q){return '<li>'+esc(q.query)+' <small>— '+esc(q.impressions)+' impressions, '+esc(q.clicks)+' clicks'+(q.position==null?'':', position '+esc(q.position))+'</small></li>'}).join('')+'</ol>';
   if(g.uploads>1)h+='<p class="muted">'+esc(g.uploads)+' exports uploaded for this check; the latest is shown. All are kept for the comparison after publication.</p>';
- }else h+='<p>No Search Console export uploaded. The check works without it; with an export filtered on exactly this page, the research also uses your real search terms.</p>';
+ }else if(declined)h+='<p>You indicated at the start that this page has no Search Console data. The research ran without it; nothing else is needed.</p>';
+ else h+='<p>No Search Console export uploaded. The check works without it; with an export filtered on exactly this page, the research also uses your real search terms.</p>';
  h+='<details class="research-details" id="gscUpload"><summary>Upload another Search Console export (optional)</summary><div class="card"><label>Upload a Search Console export (ZIP or CSV)<input id="gscLater" type="file" accept=".zip,.csv,text/csv,application/zip"></label><p class="muted">Performance → filter Page → "Exact URL" → this page → Export → Download CSV. Stored with this check only. The Google research is not run again.</p><p><button type="button" id="gscSave">Upload export</button> <small role="status" id="gscStatus"></small></p></div></details>';
  return h}
 function wireGsc(){var b=document.getElementById('gscSave');if(!b)return;
@@ -1052,7 +1069,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  var ag=a&&a.gap,aiTopics=ag&&ag.missing_topics?ag.missing_topics.length:0,gItems=hasGaps?s.gaps.items.filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}).length:0;
  h+='<div class="card found"><strong>What the check found</strong><ul>'+
   '<li><strong>Google:</strong> '+(gItems?gItems+' topic(s) observed on ranking pages'+(recN?' ('+recN+' recommended)':'')+(blocker?' (no verified recommendation)':''):esc(s.headline))+' <a href="#google">evidence</a></li>'+
-  '<li><strong>AI answers:</strong> '+(as&&as.checked?esc(as.headline)+(aiTopics?' · '+aiTopics+' topic(s) on the pages AI cites that your page does not cover':ag&&ag.status==='RUNNING'?' · the pages AI cites are being compared':''):'not checked yet')+' <a href="#freeAiResearch">Open AI research</a></li>'+
+  '<li><strong>AI answers:</strong> '+(as&&as.checked?esc(as.headline)+(aiTopics?' · '+aiTopics+' topic(s) on the pages AI cites that your page does not cover':ag&&ag.status==='RUNNING'?' · the pages AI cites are being compared':''):'not checked yet')+'</li>'+
   (d.gsc&&d.gsc.latest?'<li><strong>Search Console:</strong> export used <a href="#gsc">evidence</a></li>':'')+'</ul></div>';
  h+=${js("<style>\n.growth-ai-prominent{--ink:#172337;--muted:#475569;--accent:#1d4ed8;--accent-ink:#fff;--line:#cbd5e1;--bg:#f8fafc;--card:#fff;--warn:#fff7ed;--warn-line:#fed7aa;color:var(--ink)!important;border:2px solid #bfdbfe!important;background:linear-gradient(145deg,#eff6ff,#fff 60%)!important;box-shadow:0 9px 28px rgba(29,78,216,.09);animation:growthAiArrive .3s ease-out;scroll-margin-top:24px}\n.growth-ai-prominent h2,.growth-ai-prominent h3{color:#1e40af}.growth-ai-progress{height:9px;background:#dbeafe;border-radius:99px;overflow:hidden;margin:10px 0 14px}.growth-ai-progress span{display:block;background:#2563eb;height:100%;border-radius:99px;transition:width .4s ease}\n.growth-ai-manual{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:14px;margin:14px 0}.growth-ai-manual>summary{font-weight:700;cursor:pointer}.growth-ai-prominent:focus-within{outline-offset:3px}\n@keyframes growthAiArrive{from{opacity:.45;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.growth-ai-prominent{animation:none}.growth-ai-progress span{transition:none}}\n</style>")};
  // Free and Tracker have the same visible AI research step, before selecting the editorial changes.
@@ -1069,7 +1086,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  h+=competitorsHtml(d.competitors,s);
  h+='<details class="research-details"><summary>Research limitations and next research options</summary><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol></details>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
- h+='</div><div class="rtab-pane" data-tab="ai" hidden>'+'<p>AI systems research is now visible before the topic list. <a href="#freeAiResearch">Open AI research →</a></p>'+'</div><div class="rtab-pane" data-tab="gsc" hidden>'+gscHtml(d.gsc)+'</div></details>';
+ h+='</div><div class="rtab-pane" data-tab="ai" hidden>'+'<p>AI systems research is now visible before the topic list. <a href="#freeAiResearch">Open AI research →</a></p>'+'</div><div class="rtab-pane" data-tab="gsc" hidden>'+gscHtml(d.gsc,d.gsc_declined)+'</div></details>';
  var c=s.checked;h+='<details class="research-details" id="checkedScope"><summary>Search details (term, market, pages read)</summary><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small>'+(c.google_searched_with?'<small>Google searched with “'+esc(c.google_searched_with)+'”: the full question is too long for one Google search.</small>':'')+'</div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong>'+(c.google_results_received!=null?'<small>of '+esc(c.google_results_received)+' Google results received</small>':'')+(c.results_not_used&&c.results_not_used.length?'<small>not used: '+esc(c.results_not_used.map(function(x){return x.count+' × '+x.text}).join(', '))+'</small>':'')+'</div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div>'+(c.search_market?'<div><small>Searched in</small><strong>'+esc(c.search_market.join(' + '))+'</strong>'+(c.markets_not_searched&&c.markets_not_searched.length?'<small>not researched: '+esc(c.markets_not_searched.join(', '))+' (partial market research)</small>':'')+(c.market_derived_not_confirmed?'<small>market derived from your page, not confirmed</small>':'')+'</div>':'')+'</div></details>';
  h+='<details class="research-details" id="limits"><summary>Research scope and limitations</summary><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p></details>';
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
@@ -1210,6 +1227,45 @@ const FAIL_TEXT={
  AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE:'The research service is temporarily unavailable. Please try again later.',
  PAGE_IDENTITY_CHANGED:'The page changed while it was being checked. Please try again.'
 };
+
+// What the competitor pages have (owner 2026-11-08: "the point of Growth is seeing what others have that I don't"):
+// every Google result, whether it could be read, and the headings of the pages that were read, each marked as on your
+// page or not. Shown on every result, also when the research is blocked: an observation, not advice.
+function competitorsOf(report,gaps){
+ if(!report)return null;
+ const sd=report.search_discovery||{},ov=report.competitor_overview||{};
+ const leads=(sd.leads||[]).slice(0,10),log=new Map((sd.competitor_fetch_log||[]).map(x=>[x.url,x])),read=new Map((ov.ranking_pages||[]).map(x=>[x.url,x]));
+ const own=report.page_content&&report.page_content.headings||{},ownHeadings=[...(own.h1||[]),...(own.h2||[]),...(own.h3||[])].map(String);
+ const words=t=>new Set((String(t).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).filter(w=>!/^(the|and|for|with|your|you|how|what|why|are|our|van|het|een|voor|met|wat|hoe|die|dat)$/.test(w)).map(w=>w.slice(0,5)));
+ const ownSets=ownHeadings.map(words);
+ // The gap list decided per heading (better than words alone); otherwise compare heading words with your headings.
+ const byHeading=new Map();for(const it of (gaps&&gaps.items)||[])for(const e of it.examples||[])if(e.heading)byHeading.set(String(e.heading).toLowerCase(),it.status);
+ // "Not compared" (a blocked research skips the comparison) falls back to comparing the heading words with your headings.
+ // The topic comparison of the same research (by meaning, owner 2026-11-19) decides first: a heading in a topic found on
+ // this page is not "missing" because its words differ from yours.
+ const byTopic=new Map();for(const t of ov.topics||[])for(const sec of t.sections||[])if(sec.heading)byTopic.set(String(sec.heading).toLowerCase(),t);
+ const mark=h=>{const t=byTopic.get(String(h).toLowerCase());
+  if(t&&t.this_page==='YES')return {status:'ON_YOUR_PAGE',basis:'TOPIC_COMPARISON',label:'On your page (topic comparison'+(t.this_page_heading?': “'+t.this_page_heading+'”':'')+')'};
+  if(t&&t.this_page==='PARTLY')return {status:'PARTLY',basis:'TOPIC_COMPARISON',label:'Partly on your page (topic comparison'+(t.this_page_heading?': “'+t.this_page_heading+'”':'')+')'};
+  if(t&&t.this_page==='NO')return {status:'MISSING',basis:'TOPIC_COMPARISON',label:'Not on your page (topic comparison)'};
+  const st=byHeading.get(String(h).toLowerCase());if(st&&!/not compared|not matched/i.test(st))return {status:/not on your page|not found/i.test(st)?'MISSING':/partly/i.test(st)?'PARTLY':'ON_YOUR_PAGE',basis:'GAP_LIST',label:st};
+  const w=words(h);if(!w.size)return {status:'NOT_COMPARED',basis:'NONE',label:'Not compared'};const best=Math.max(0,...ownSets.map(o=>[...w].filter(x=>o.has(x)).length/w.size));
+  return best>=0.6?{status:'ON_YOUR_PAGE',basis:'HEADING_WORDS',label:'Similar heading on your page'}:{status:'MISSING',basis:'HEADING_WORDS',label:'Not found on your page by heading words (not compared by topic)'}};
+ const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return u}};
+ const pages=leads.map(l=>{const f=log.get(l.url),r=read.get(l.url);
+  return {position:l.serp_position||null,url:l.url,site:host(l.url),title:l.title||null,
+   read:!!r,status:r?'Read':f&&f.outcome==='NOT_READABLE'?'Opened, but too little readable text':f&&f.outcome==='FETCH_FAILED'?'Could not be opened'+(f.explanation?' ('+String(f.explanation).slice(0,80)+')':''):'Not read',
+   headings:r?(r.content_headings||[]).slice(0,15).map(h=>({text:String(h).slice(0,160),...mark(h)})):[]}});
+ // Side by side, as in Tracker Growth: what a competitor section says next to your closest section, and what to do. A pair
+ // whose heading is one of the topics in step 2 can be added to the visitor's choice from here.
+ const itemOf=new Map();for(const it of (gaps&&gaps.items)||[])for(const e of it.examples||[])if(e.heading)itemOf.set(String(e.heading).toLowerCase(),String(it.id));
+ const pairs=((report.practical_growth_plan&&report.practical_growth_plan.competitors&&report.practical_growth_plan.competitors.side_by_side)||[]).slice(0,8).map(x=>({
+  competitor_section:String(x.competitor_section||'').slice(0,200),competitor_excerpt:String(x.competitor_excerpt||'').slice(0,700),competitor_url:x.competitor_url||null,site:x.competitor_url?host(x.competitor_url):null,
+  your_section:x.tracked_page_section?String(x.tracked_page_section).slice(0,200):null,your_excerpt:x.tracked_page_excerpt?String(x.tracked_page_excerpt).slice(0,500):null,
+  interpretation:x.interpretation?String(x.interpretation).slice(0,300):null,action:x.editorial_action?String(x.editorial_action).slice(0,300):null,
+  item_id:itemOf.get(String(x.competitor_section||'').toLowerCase())||null})).filter(x=>x.competitor_section&&x.competitor_excerpt);
+ return {pages,side_by_side:pairs,missing:pages.reduce((n,p)=>n+p.headings.filter(h=>h.status==='MISSING').length,0),your_headings:ownHeadings.slice(0,20)};
+}
 
 function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store,sendEmail=null,rankHandoff=null}={}){
  // Every message to a visitor in the visitor's language (owner 2026-11-12: "Spanish is Spanish"): the check's language,
@@ -1395,7 +1451,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
@@ -1488,7 +1544,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
    const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return null;
   const query=clean(b.query,300);
-  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,sitemap,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
+  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,gscDeclined:b.no_gsc===true&&!gsc,sitemap,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
@@ -1497,7 +1553,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const cached=fresh||withGsc||input.sitemap||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
-  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null});
+  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null,gscDeclined:!!input.gscDeclined});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
@@ -1580,37 +1636,6 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {...summary,limitations:[...(summary.limitations||[]).filter(x=>!/^Google Search Console was not used/.test(x)),line]};
  }
  const writerReason=explainWriterFailure;
- // What the competitor pages have (owner 2026-11-08: "the point of Growth is seeing what others have that I don't"):
- // every Google result, whether it could be read, and the headings of the pages that were read, each marked as on your
- // page or not. Shown on every result, also when the research is blocked: an observation, not advice.
- function competitorsOf(report,gaps){
-  if(!report)return null;
-  const sd=report.search_discovery||{},ov=report.competitor_overview||{};
-  const leads=(sd.leads||[]).slice(0,10),log=new Map((sd.competitor_fetch_log||[]).map(x=>[x.url,x])),read=new Map((ov.ranking_pages||[]).map(x=>[x.url,x]));
-  const own=report.page_content&&report.page_content.headings||{},ownHeadings=[...(own.h1||[]),...(own.h2||[]),...(own.h3||[])].map(String);
-  const words=t=>new Set((String(t).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).filter(w=>!/^(the|and|for|with|your|you|how|what|why|are|our|van|het|een|voor|met|wat|hoe|die|dat)$/.test(w)).map(w=>w.slice(0,5)));
-  const ownSets=ownHeadings.map(words);
-  // The gap list decided per heading (better than words alone); otherwise compare heading words with your headings.
-  const byHeading=new Map();for(const it of (gaps&&gaps.items)||[])for(const e of it.examples||[])if(e.heading)byHeading.set(String(e.heading).toLowerCase(),it.status);
-  // "Not compared" (a blocked research skips the comparison) falls back to comparing the heading words with your headings.
-  const mark=h=>{const st=byHeading.get(String(h).toLowerCase());if(st&&!/not compared|not matched/i.test(st))return {status:/not on your page|not found/i.test(st)?'MISSING':/partly/i.test(st)?'PARTLY':'ON_YOUR_PAGE',label:st};
-   const w=words(h);if(!w.size)return {status:'NOT_COMPARED',label:'Not compared'};const best=Math.max(0,...ownSets.map(o=>[...w].filter(x=>o.has(x)).length/w.size));
-   return best>=0.6?{status:'ON_YOUR_PAGE',label:'Similar heading on your page'}:{status:'MISSING',label:'Not on your page (heading words)'}};
-  const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return u}};
-  const pages=leads.map(l=>{const f=log.get(l.url),r=read.get(l.url);
-   return {position:l.serp_position||null,url:l.url,site:host(l.url),title:l.title||null,
-    read:!!r,status:r?'Read':f&&f.outcome==='NOT_READABLE'?'Opened, but too little readable text':f&&f.outcome==='FETCH_FAILED'?'Could not be opened'+(f.explanation?' ('+String(f.explanation).slice(0,80)+')':''):'Not read',
-    headings:r?(r.content_headings||[]).slice(0,15).map(h=>({text:String(h).slice(0,160),...mark(h)})):[]}});
-  // Side by side, as in Tracker Growth: what a competitor section says next to your closest section, and what to do. A pair
-  // whose heading is one of the topics in step 2 can be added to the visitor's choice from here.
-  const itemOf=new Map();for(const it of (gaps&&gaps.items)||[])for(const e of it.examples||[])if(e.heading)itemOf.set(String(e.heading).toLowerCase(),String(it.id));
-  const pairs=((report.practical_growth_plan&&report.practical_growth_plan.competitors&&report.practical_growth_plan.competitors.side_by_side)||[]).slice(0,8).map(x=>({
-   competitor_section:String(x.competitor_section||'').slice(0,200),competitor_excerpt:String(x.competitor_excerpt||'').slice(0,700),competitor_url:x.competitor_url||null,site:x.competitor_url?host(x.competitor_url):null,
-   your_section:x.tracked_page_section?String(x.tracked_page_section).slice(0,200):null,your_excerpt:x.tracked_page_excerpt?String(x.tracked_page_excerpt).slice(0,500):null,
-   interpretation:x.interpretation?String(x.interpretation).slice(0,300):null,action:x.editorial_action?String(x.editorial_action).slice(0,300):null,
-   item_id:itemOf.get(String(x.competitor_section||'').toLowerCase())||null})).filter(x=>x.competitor_section&&x.competitor_excerpt);
-  return {pages,side_by_side:pairs,missing:pages.reduce((n,p)=>n+p.headings.filter(h=>h.status==='MISSING').length,0),your_headings:ownHeadings.slice(0,20)};
- }
  // Why AI cannot write, in plain words (also for checks stored before this text existed): the research blocker of the
  // report, as the visitor reads it elsewhere on the result, instead of the internal code.
  function withPlainEvidence(summary,row){
@@ -1639,7 +1664,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   let shown={summary:row.summary,aiGap:aiPart&&aiPart.gap};
   if(row.status==='DONE'){try{const map=await topicLang.topicTextsFor({pool,row,lang:row.ui_lang||'en',summary:row.summary,aiGap:aiPart&&aiPart.gap,model:reminders.modelFor(config.textModel!==undefined?config.textModel:config.mailModel)});
    shown=topicLang.applyTexts(row.summary,aiPart&&aiPart.gap,map)}catch(e){}}
-  res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
+  res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,gsc_declined:!!row.gsc_declined&&!(gscPart&&gscPart.latest),
    ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap,saved_answers:(aiPart.answers||[]).map(function(x){return {engine:x.engine,raw_text:x.raw_text,created_at:x.created_at}})}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
    research_reader:row.report?.research_reader||null,
@@ -2095,4 +2120,4 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  return {config,idle:()=>Promise.all([...jobs]),queueLength:()=>queue.length,sendDueReminders:sendDue};
 }
 
-module.exports={registerFreeGrowth,freeGrowthConfig,parseAccessKeys};
+module.exports={registerFreeGrowth,freeGrowthConfig,parseAccessKeys,competitorsOf};
