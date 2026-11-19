@@ -159,6 +159,14 @@ function summarizeFreeGrowth(report,{url,query}={}){
  ];
  if(scopeNote)limitations.push('Google shows more than one kind of page for this search. Your page was compared only with the '+gate.intent_scope.compared_with+' ('+gate.intent_scope.results_of_this_type+' of '+gate.intent_scope.of+'). '+scopeNote);
  const gaps=buildGapList(report||{});
+ // Free Growth must not call a topic 'recommended' while the actual editorial evidence decision is blocked.
+ // Keep every source and heading available for manual review and export; disable automatic writing.
+ if(decision==='DATA_BLOCKED'){
+  gaps.items=(gaps.items||[]).map(item=>({...item,recommended:false}));
+  gaps.recommended=[];
+  gaps.writing_allowed=false;
+  gaps.evidence={status:'INSUFFICIENT_EVIDENCE',readable_ranking_pages:checked.ranking_pages_read,reason:'The final editorial evidence gate did not verify a content change. Differences remain research observations only.'};
+ }
  // One outcome: no required change, but topics on 2+ ranking pages missing here are named, not hidden behind "no change".
  const context=reconcileOutcome({decision:gate,gapList:gaps});
  if(context){headline=context.headline;explanation=context.note;
