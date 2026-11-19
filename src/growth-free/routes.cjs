@@ -537,14 +537,14 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
  (r.unlinked_sections||[]).forEach(function(x){h+='<p class="muted">Not linked to a selected item and not used: “'+esc(x.h2)+'” — '+esc(x.reason)+'</p>'});
  if(r.reason&&!(r.sections||[]).length)h+='<p class="muted">'+esc(r.reason)+'</p>';
  return h}
-function wireCompleteBrief(g,s){
+function wireCompleteBrief(g,s,d){
  var copy=document.getElementById('briefCopyAll'),dl=document.getElementById('briefDownloadAll'),status=document.getElementById('briefExportStatus');
  if(!copy||!dl||!g)return;
- function full(){return gapBrief(g,s,true).text}
+ function full(){return gapBrief(g,s,true,d).text}
  copy.onclick=async function(){try{await navigator.clipboard.writeText(full());status.textContent='Complete editorial brief copied, including priorities, observations and sources.'}catch(e){status.textContent='Copy unavailable; use Download complete brief.'}};
  dl.onclick=function(){var text=full(),url=URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='growth-complete-editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);status.textContent='Complete brief downloaded. No topic selection required.'};
 }
-function gapBrief(g,s,all){var picked={};if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
+function gapBrief(g,s,all,d){var picked={};if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
  var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
  var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Decision: '+(s.decision||'UNKNOWN'),'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
@@ -559,6 +559,14 @@ function gapBrief(g,s,all){var picked={};if(!all)document.querySelectorAll('.gap
  if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  if((LAST_SELF||[]).length){var dn=selfDone();L.push('## To do yourself (not written by Growth)','');LAST_SELF.forEach(function(x){L.push('- ['+(dn[x.id]?'x':' ')+'] '+x.title+' — '+x.why)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
+ if(all){
+  var answers=d&&d.ai&&d.ai.saved_answers||[];
+  L.push('','## Saved AI answers and cited sources','');
+  L.push('These are the actual responses saved for this check (or explicitly reused from an earlier result). Their original capture dates are preserved. These are not fresh AI results, verified positions, or guarantees of citation.');
+  if(!answers.length)L.push('No AI answers are saved for this check. AI visibility is unknown.');
+  answers.forEach(function(a){L.push('','### '+a.engine+' — captured '+(a.created_at||'date unavailable'),'',a.raw_text||'(no saved answer text)','')});
+  L.push('','AI engines without saved answers are unchecked, not zero citations. Verify claims and source URLs independently before using them in publication.');
+ }
  return {count:items.length,text:L.join('\\n')}}
 // Pop-up before writing when no AI answer was analysed for this check: the editor checks AI first or continues without.
 function freeAiGate(d){var a=d&&d.ai;if(!a||(a.summary&&a.summary.checked>0))return Promise.resolve('WITH_AI');
@@ -992,7 +1000,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s);wireSideBySide(d.competitors);wirePub();wireSelf();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -1539,7 +1547,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(row.status==='DONE'){try{const map=await topicLang.topicTextsFor({pool,row,lang:row.ui_lang||'en',summary:row.summary,aiGap:aiPart&&aiPart.gap,model:reminders.modelFor(config.textModel!==undefined?config.textModel:config.mailModel)});
    shown=topicLang.applyTexts(row.summary,aiPart&&aiPart.gap,map)}catch(e){}}
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
-   ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap}:null,
+   ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap,saved_answers:(aiPart.answers||[]).map(function(x){return {engine:x.engine,raw_text:x.raw_text,created_at:x.created_at}})}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
    research_reader:row.report?.research_reader||null,
    sitemap_import:row.report?.sitemap_import||null,
