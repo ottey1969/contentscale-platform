@@ -1,4 +1,5 @@
 'use strict';
+const {prioritiesForTrackerReport}=require('./growth-free/content-priorities.cjs');
 const {assetVersion}=require('./growth-asset-version.cjs');
 const {observeSerpTitles}=require('./growth-serp-titles.cjs');
 const {spokeCandidates,readerFunnel}=require('./growth-next-pages.cjs');
@@ -562,16 +563,18 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  }
  // The AI check for the research's search term, read fresh on every response (pasting an answer never re-runs the paid
  // Google research). Answers count as AI visibility for this search only when at most 14 days old.
+ // Same list as Free Growth (owner 2026-11-19): what to put in the content, most to least important, and what can go.
+ const withPriorities=r=>r&&r.gap_list?{...r,content_priorities:prioritiesForTrackerReport(r)}:r;
  async function withAiCheck(result,v){
   const term=String(result?.editorial_decision_gate?.focus_query||result?.intent_resolution?.query||'').trim();
   if(!result||result.success===false||!term||typeof loadAiAnswers!=='function')return result;
   const check=await aiCheckFor({v,term,target:result.destination_gsc_evidence?.target_url||result.url,
    googleUrls:(result.search_discovery?.leads||[]).map(l=>l&&l.url).filter(Boolean)}).catch(()=>null);
-  if(!check)return result;
+  if(!check)return withPriorities(result);
   const ai=result.ai_visibility&&typeof result.ai_visibility==='object'?{...result.ai_visibility,
    usable_for_this_search:(Number(result.ai_visibility.usable_for_this_search)||0)+check.summary.checked,
    pasted_for_this_search:check.summary.checked}:result.ai_visibility;
-  return {...result,ai_visibility:ai,ai_check:check};
+  return withPriorities({...result,ai_visibility:ai,ai_check:check});
  }
  // The question asked to the AI systems for a search term (owner 2026-11-12: "the keyword must be a real search question,
  // the best match"): Google's own question for the page's market, else null and the term itself is asked. The answers stay
@@ -652,7 +655,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    }
    if(typeof loadAiAnswers==='function'){const term=String(v.queryOverride||v.page.keyword||'').trim();
     if(term)report.ai_check=await aiCheckFor({v,term,target:v.page.url}).catch(()=>report.ai_check)}
-   return res.set('Cache-Control','private, no-store').json({success:true,found:true,report});
+   return res.set('Cache-Control','private, no-store').json({success:true,found:true,report:withPriorities(report)});
   }catch(e){return res.status(503).json({success:false,code:'SAVED_REPORT_UNAVAILABLE'})}
  });
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
@@ -886,7 +889,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Persist before responding, so closing the browser never loses the completed owner report.
   try{await (typeof saveCompletedReport==='function'?saveCompletedReport({v,report:completedReport}):storedResearch.save(pool,v,completedReport))}
   catch(e){return res.status(503).set('Cache-Control','private, no-store').json({success:false,code:'GROWTH_REPORT_NOT_SAVED'})}
-  return res.set('Cache-Control','private, no-store').json(completedReport);
+  return res.set('Cache-Control','private, no-store').json(withPriorities(completedReport));
  });
  // The owner sets the page's target markets (ordered, the first is the main one). An empty list removes the setting.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/markets',data,async(req,res)=>{

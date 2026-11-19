@@ -1128,6 +1128,34 @@
   return window.GrowthCompleteAiBrief.build(d,{topics:topics,query:runQuery||d.ai_check?.search_term||d.gap_list?.focus_query||''});
  }
 
+
+ var PRIO_TIER={MOST_IMPORTANT:'Most important',IMPORTANT:'Important',USEFUL:'Useful',OPTIONAL:'Optional'};
+ var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact'};
+ function renderContentPriorities(cp,box){
+  if(!cp||!((cp.items||[]).length||(cp.trim||[]).length))return;
+  var sec=node('section',null,box);sec.id='growthContentPriorities';sec.className='tg-priorities';
+  node('h3','What to put in your content — most to least important',sec);
+  node('p',cp.status==='RESEARCH_ONLY'?'Research only: the evidence check did not confirm a content change. Use this order to review, not to publish.':
+   'Ordered by what the research observed. Review every point and check the facts; nothing is published automatically.',sec).className='muted';
+  var ol=node('ol',null,sec);
+  (cp.items||[]).slice(0,25).forEach(function(x){
+   var li=node('li',null,ol);li.className='tg-prio-item';
+   var head=node('div',null,li);node('strong',x.title,head);head.appendChild(document.createTextNode(' '));
+   node('span',PRIO_TIER[x.tier]||x.tier,head).className='tg-prio-tier';head.appendChild(document.createTextNode(' '));node('span',PRIO_ACTION[x.action]||x.action,head).className='tg-prio-action';
+   node('small',x.where,li).style.display='block';
+   var p=node('p',null,li);(x.instruction_parts||[x.instruction]).forEach(function(t){node('span',t+' ',p)});
+   if(x.needs_business_fact)node('p','Needs your own confirmed fact.',li).className='tg-prio-fact';
+   var det=node('details',null,li);node('summary','Why this position · score '+x.score,det);
+   var ul=node('ul',null,det);(x.why||[]).forEach(function(w){node('li',w,ul)});
+   (x.evidence||[]).slice(0,5).forEach(function(e){var a=node('a',e.heading||e.site||e.url,node('li',null,ul));a.href=e.url;a.target='_blank';a.rel='noopener noreferrer'});
+  });
+  if((cp.trim||[]).length){
+   node('h3','What could be shorter or moved — does not answer this search',sec);
+   node('p','Not deleted automatically. Check each section against what the searcher wants.',sec).className='muted';
+   var tl=node('ol',null,sec);cp.trim.forEach(function(t){var li=node('li',null,tl);node('strong',t.heading,li);node('small',' · '+t.reason,li);node('p',t.instruction,li)});
+  }
+  var how=node('details',null,sec);node('summary','How the order is calculated',how);node('p',cp.method,how).className='muted';
+ }
  function renderAiContentTasks(d,choice){
   var topics=aiContentTasks(d),box=document.getElementById('growthAiContentTasks');
   if(!box){box=document.createElement('section');box.id='growthAiContentTasks';box.className='tg-self';
@@ -1139,6 +1167,8 @@
   node('h3','Complete Growth AI Research & Writing Brief · '+topics.length+' AI-source topics',box);
   if(!topics.length)node('p','No AI-cited content gaps were identified or verified in this run. The complete research brief is still available, including Google research, current-page evidence, missing information, and the NO CHANGE option.',box).className='info';
   node('p','Pre-Write-grade work package: exact customer question and URL, current-page structure, ranked competitors, AI answer evidence, observed gaps, FAQ/PAA leads, entities, sources, statistics and quote verification, internal links, SEO metadata, CMS HTML output, editorial QA and measurement instructions. Missing research is clearly marked — it is never invented.',box).className='info';
+  // Same list as Free Growth (owner 2026-11-19): what to put in the content, most to least important, and what can go.
+  renderContentPriorities(d.content_priorities,box);
   // The complete editorial inventory is displayed in the brief itself, not only in its download.
   var builder=window.GrowthCompleteAiBrief;
   var inventory=builder&&typeof builder.contentInventory==='function'?builder.contentInventory(d):[];

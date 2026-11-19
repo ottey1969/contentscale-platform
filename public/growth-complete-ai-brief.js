@@ -34,15 +34,17 @@
  // Editorial coverage and evidence verification are separate axes.
  function contentInventory(d){
   var gap=d.gap_list||{},ai=d.ai_check?.gap||{},plan=d.practical_growth_plan||{};
-  var ownReadable=d.page_content?.signals?.available===true;
+  // The page was read when the live signals say so, or when the comparison read its sections.
+  var ownReadable=d.page_content?.signals?.available===true||list(d.competitor_overview?.this_page_sections).length>0;
   var rows=[],index=new Map();
   function record(topic,coverage,source,data){
    topic=str(topic,500);if(!topic)return;
    var key=topic.toLocaleLowerCase().trim();
    var status=String(coverage||'UNKNOWN').toUpperCase().replace(/[ -]+/g,'_');
-   if(['PRESENT','COVERED','ALREADY_PRESENT','FULL','COMPLETE'].includes(status))status='COMPLETE';
-   else if(['PARTIAL','PARTIALLY_PRESENT','INCOMPLETE'].includes(status))status='PARTIAL';
-   else if(['MISSING','ABSENT','NOT_PRESENT'].includes(status))status='MISSING';
+   // The topic and AI comparisons say YES / PARTLY / NO (or ON_YOUR_PAGE): the same three states, never UNKNOWN.
+   if(['PRESENT','COVERED','ALREADY_PRESENT','FULL','COMPLETE','YES','ON_YOUR_PAGE'].includes(status))status='COMPLETE';
+   else if(['PARTIAL','PARTIALLY_PRESENT','INCOMPLETE','PARTLY'].includes(status))status='PARTIAL';
+   else if(['MISSING','ABSENT','NOT_PRESENT','NO'].includes(status))status='MISSING';
    else status='UNKNOWN';
    // Without a readable target page, never assert that content is missing or complete.
    if(!ownReadable)status='UNKNOWN';
@@ -53,6 +55,8 @@
    found.observations.push({source:source,reported_coverage:coverage||'UNKNOWN',details:data||{}});
   }
   list(gap.items).forEach(x=>record(x.title||x.topic||x.heading,x.coverage,'GOOGLE_COMPETITOR_COMPARISON',x));
+  // Topics the ranking pages teach, with the comparison's verdict for this page (also those already on it).
+  list(d.competitor_overview?.topics).forEach(t=>record(t.topic,t.this_page,'GOOGLE_TOPIC_COMPARISON',{this_page_heading:t.this_page_heading||null,sites:list(t.sections).map(x=>x.host)}));
   list(ai.missing_topics).forEach(x=>record(x.topic||x.title,x.coverage,'AI_CITED_PAGE_COMPARISON',x));
   list(plan.competitors?.side_by_side).forEach(x=>record(x.competitor_section||x.observed_heading||x.competitor_heading,'UNKNOWN','COMPETITOR_SIDE_BY_SIDE',x));
   // Existing headings are explicitly visible even if competitor extraction has no gap.
@@ -69,8 +73,10 @@
    plan=d.practical_growth_plan||{},pre=d.prewrite_match||d.prewrite_brief||{},
    topics=list(opts.topics).length?opts.topics:list(aig.missing_topics),
    own=String(d.url||gap.target_url||''),query=str(opts.query||ai.search_term||editor.focus_query||gap.focus_query||search.target_query,300),
-   market=str(opts.market||locale.country||gap.research?.market?.country||'',80),
-   language=str(opts.language||locale.hl||gap.research?.market?.language||'',80);
+   scope=search.scope||{},
+   market=str(opts.market||locale.country||scope.country||gap.research?.market?.country||'',80),
+   language=str(opts.language||locale.hl||scope.language||gap.research?.market?.language||'',80),
+   location=str(opts.location||scope.location||locale.location||'',120);
   var lines=['# CONTENTSCALE GROWTH — COMPLETE EXTERNAL AI RESEARCH & WRITING BRIEF',
    'Status: EDITORIAL RESEARCH INPUT ONLY · NOT PUBLICATION-READY',
    'Generated from the current saved Growth report. Missing fields are explicitly marked; they are NOT AI research or verified evidence.',
@@ -83,11 +89,24 @@
    sourceSites=list(aig.pages).filter(x=>x&&x.read),
    searchRank=list(search.leads),
    reviewSources=sourceUrls([...list(gap.ranking_pages),...list(competitor.ranking_pages),...searchRank,...sourceSites]);
+  // Same list as Free Growth (owner 2026-11-19): what to put in the content, most to least important, and what can go.
+  var cp=d.content_priorities;
+  if(cp&&(list(cp.items).length||list(cp.trim).length)){
+   var tierText={MOST_IMPORTANT:'Most important',IMPORTANT:'Important',USEFUL:'Useful',OPTIONAL:'Optional'},actText={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact'};
+   var P=[cp.status==='RESEARCH_ONLY'?'Research only: the evidence check did not confirm a content change.':'Review every point and check the facts; nothing is published automatically.'];
+   list(cp.items).forEach(x=>{P.push(x.rank+'. '+x.title+' — '+(tierText[x.tier]||x.tier)+' · '+(actText[x.action]||x.action)+' · score '+x.score);
+    P.push('   - Where: '+x.where);P.push('   - Instruction: '+x.instruction);if(x.needs_business_fact)P.push('   - Needs your own confirmed fact.');
+    P.push('   - Why: '+list(x.why).join(' · '));list(x.evidence).slice(0,5).forEach(e=>P.push('   - Source: '+e.url))});
+   if(list(cp.trim).length){P.push('','What could be shorter or moved — does not answer this search:');list(cp.trim).forEach(t=>P.push('- '+t.heading+' — '+t.reason+' '+t.instruction))}
+   P.push('','How the order is calculated: '+cp.method);
+   add('WHAT TO PUT IN YOUR CONTENT — MOST TO LEAST IMPORTANT',P.join('\n'));
+  }
   add('1. TASK IDENTITY AND EXACT SEARCH INTENT',[
    'Existing page URL: '+value(own),
    'Exact customer question — KEEP UNCHANGED: '+value(query),
    'Tracked seed keyword: '+value(d.tracked_seed_keyword||d.tracked_keyword||gap.seed_keyword),
    'Target market: '+value(market),
+   'Search location: '+(location||'country-wide (no state or city requested)'),
    'Language: '+value(language),
    'Research completed / saved: '+value(d.saved_at||d.generated_at||gap.research?.researched_at),
    'Research stage: existing-page improvement, NOT a new page unless explicitly approved.',
@@ -145,7 +164,9 @@
   ].join('\n'));
   add('3. RESEARCH COMPLETENESS AND EVIDENCE QUALITY',[
    'Google discovery: '+value(search.source)+' · status '+value(search.status),
-   'Readable ranking pages: '+value(gap.evidence?.readable_ranking_pages??gap.ranking_pages_read),
+   // What was fetched and what was compared are different counts (owner 2026-11-19: "0 readable" while pages were read).
+   'Ranking pages fetched and readable: '+(list(search.competitor_fetch_log).length?list(search.competitor_fetch_log).filter(x=>x&&x.outcome==='READABLE').length+' of '+list(search.competitor_fetch_log).length:'NOT AVAILABLE IN SAVED RESEARCH')+(typeof search.competitor_fetch_summary==='string'?' ('+str(search.competitor_fetch_summary,300)+')':''),
+   'Ranking pages compared section by section: '+value(competitor.ranking_pages_read??gap.evidence?.readable_ranking_pages??gap.ranking_pages_read),
    'Growth writing permission based on evidence: '+(gap.writing_allowed===true?'YES · still requires editor approval':gap.writing_allowed===false?'NO · EVIDENCE INSUFFICIENT':'UNKNOWN'),
    'Reason / limitation: '+value(gap.evidence?.reason||search.reason),
    'AI cited-page reading: '+value(aig.status)+' · '+sourceSites.length+' readable of '+list(aig.pages).length+' checked',
