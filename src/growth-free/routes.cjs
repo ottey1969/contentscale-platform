@@ -15,6 +15,7 @@ const contacts=require('./contacts.cjs');
 const {FORM_TEXTS,FORM_LANGS,formLang}=require('./form-texts.cjs');
 const {translateError}=require('./error-texts.cjs');
 const uiTexts=require('./ui-texts.cjs');
+const {buildContentPriorities}=require('./content-priorities.cjs');
 const schemaHelp=require('./schema-help.cjs');
 // Tips by e-mail (owner 2026-11-12): on by default, announced at sign-up, with "Don't send me tips" to opt out
 // (soft opt-in). Older forms still send marketing_consent (ticked = yes).
@@ -107,6 +108,7 @@ function page(title,body,cfg){
  return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
 :root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
+.growth-priorities{border-left:4px solid #15803d}.prio-list{padding-left:22px;margin:10px 0}.prio-item{margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}.prio-item p{margin:6px 0}.prio-head{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline}.prio-tier,.prio-action{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--card);border:1px solid var(--line)}.prio-most_important .prio-tier{background:#dcfce7;color:#14532d;border-color:#86efac}.prio-important .prio-tier{background:#dbeafe;color:#1e3a8a;border-color:#93c5fd}.prio-fact{color:var(--blocked)}.prio-item details>summary{cursor:pointer;font-size:14px;color:var(--muted)}
 .growth-brief{border:1px solid var(--line);border-left:4px solid #2563eb;background:var(--card);border-radius:16px;padding:22px;margin:16px 0;box-shadow:0 12px 35px rgba(15,23,42,.07)}.growth-brief-head{display:grid;gap:8px}.growth-brief-head>p{max-width:75ch}.growth-brief-head button{min-height:42px}.growth-brief-item{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:16px;margin:12px 0}.growth-brief-item h3{margin:0 0 10px}.growth-brief-body>h3{font-size:17px;margin-top:18px}.growth-brief-body details.research-details{border-radius:10px;padding:10px;margin-top:10px}@media(max-width:620px){.growth-brief{padding:14px}.growth-brief-head h2{font-size:20px}.growth-brief-head button{width:100%;margin:4px 0}}
 .growth-brief-head>small{font-weight:700;letter-spacing:.06em;color:var(--muted)}.growth-brief-head h2{margin:.45em 0;font-size:22px}.growth-brief-head p{margin:.45em 0}.growth-brief-meta{font-size:13px;color:var(--muted)}.growth-brief details>summary{cursor:pointer}.growth-brief #growthBriefDetails{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.growth-brief-body{padding:12px 2px}.growth-brief-item{border-top:1px solid var(--line);padding:8px 0}.growth-brief-item p{margin:6px 0}.growth-brief-body h3{margin:12px 0 3px}.growth-ai-prominent>summary{font-weight:700;color:#1e40af;cursor:pointer}.growth-ai-prominent:not([open]){padding:14px 20px}.growth-ai-prominent:not([open])>summary small{font-weight:400}\n*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 main{max-width:860px;margin:0 auto;padding:24px 16px 60px}h1{font-size:30px;line-height:1.2;margin:.4em 0}h2{font-size:21px;margin:1.6em 0 .5em}
@@ -560,6 +562,7 @@ function wireCompleteBrief(g,s,d){
 function gapBrief(g,s,all,d){var picked={};if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
  var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
  var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Decision: '+(s.decision||'UNKNOWN'),'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.',''];
+ if(all&&d&&d.content_priorities)prioritiesText(d.content_priorities).forEach(function(l){L.push(l)});
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
   list.forEach(function(x){L.push('### '+x.title+(x.recommended?' — editorial priority':' — research observation'), '');
    L.push('  - Editorial assessment: '+(x.recommended?'Verified research priority':'Observation only; not approved as content advice'));
@@ -883,6 +886,44 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
   try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
 // One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
+// One list for the editor: what to put into the content, from most to least important (owner 2026-11-19).
+var PRIO_TIER={MOST_IMPORTANT:'Most important',IMPORTANT:'Important',USEFUL:'Useful',OPTIONAL:'Optional'};
+var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact'};
+function prioritiesHtml(cp){
+ if(!cp||!((cp.items||[]).length||(cp.trim||[]).length))return '';
+ var research=cp.status==='RESEARCH_ONLY';
+ var h='<section class="card growth-priorities" id="growthPriorities" aria-labelledby="growthPrioritiesTitle"><h2 id="growthPrioritiesTitle">What to put in your content — most to least important</h2>'+
+  '<p class="muted">'+esc(research?'Research only: the evidence check did not confirm a content change. Use this order to review, not to publish.':'Ordered by what the research observed. Review every point and check the facts; nothing is published automatically.')+'</p><ol class="prio-list">';
+ cp.items.slice(0,25).forEach(function(x){
+  var ev=(x.evidence||[]).slice(0,5);
+  h+='<li class="prio-item prio-'+esc(String(x.tier).toLowerCase())+'"><div class="prio-head"><strong>'+esc(x.title)+'</strong> <span class="prio-tier">'+esc(PRIO_TIER[x.tier]||x.tier)+'</span> <span class="prio-action">'+esc(PRIO_ACTION[x.action]||x.action)+'</span></div>'+
+   '<p><small>'+esc(x.where)+'</small></p><p>'+(x.instruction_parts||[x.instruction]).map(function(t){return '<span>'+esc(t)+'</span>'}).join(' ')+'</p>'+
+   (x.needs_business_fact?'<p class="prio-fact"><strong>Needs your own confirmed fact.</strong></p>':'')+
+   '<details><summary><span>Why this position · score '+esc(x.score)+'</span></summary><ul>'+(x.why||[]).map(function(w){return '<li>'+esc(w)+'</li>'}).join('')+'</ul>'+
+   (ev.length?'<p><small>Sources:</small></p><ul>'+ev.map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer">'+esc(e.heading||e.site||e.url)+'</a></li>'}).join('')+'</ul>':'')+'</details></li>';
+ });
+ h+='</ol>';
+ if((cp.trim||[]).length)h+='<h3>What could be shorter or moved — does not answer this search</h3><p class="muted">Not deleted automatically. Check each section against what the searcher wants.</p><ol class="prio-list">'+
+  cp.trim.map(function(t){return '<li class="prio-item prio-trim"><div class="prio-head"><strong>'+esc(t.heading)+'</strong> <span class="prio-action">Shorten or move</span>'+(t.words?' <small>'+esc(t.words)+' words</small>':'')+'</div><p><small>'+esc(t.reason)+'</small></p><p>'+esc(t.instruction)+'</p></li>'}).join('')+'</ol>';
+ if((cp.keep||[]).length)h+='<details><summary>Keep as it is ('+cp.keep.length+')</summary><p class="muted">Only on your page; do not remove it while editing.</p><ul>'+cp.keep.map(function(k){return '<li>'+esc(k.heading)+'</li>'}).join('')+'</ul></details>';
+ h+='<details><summary>How the order is calculated</summary><p class="muted">'+esc(cp.method)+'</p></details></section>';
+ return h;
+}
+function prioritiesText(cp){
+ if(!cp||!((cp.items||[]).length||(cp.trim||[]).length))return [];
+ var L=['## What to put in your content — most to least important','',cp.status==='RESEARCH_ONLY'?'Research only: the evidence check did not confirm a content change.':'Review every point and check the facts; nothing is published automatically.',''];
+ cp.items.forEach(function(x){
+  L.push(x.rank+'. '+x.title+' — '+(PRIO_TIER[x.tier]||x.tier)+' · '+(PRIO_ACTION[x.action]||x.action)+' · score '+x.score);
+  L.push('   - Where: '+x.where);L.push('   - Instruction: '+x.instruction);
+  if(x.needs_business_fact)L.push('   - Needs your own confirmed fact.');
+  L.push('   - Why: '+(x.why||[]).join(' · '));
+  (x.evidence||[]).slice(0,5).forEach(function(e){L.push('   - Source: '+e.url)});
+ });
+ if((cp.trim||[]).length){L.push('','## What could be shorter or moved — does not answer this search','');cp.trim.forEach(function(t){L.push('- '+t.heading+(t.words?' ('+t.words+' words)':'')+' — '+t.reason+' '+t.instruction)})}
+ if((cp.keep||[]).length){L.push('','Keep as it is:');cp.keep.forEach(function(k){L.push('- '+k.heading)})}
+ L.push('','How the order is calculated: '+cp.method,'');
+ return L;
+}
 function growthBriefHtml(s,d){
  var blocked=s.decision==='DATA_BLOCKED',unchanged=s.decision==='NO_CHANGE',
   list=(s.gaps&&s.gaps.items||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}),
@@ -914,6 +955,7 @@ function growthBriefHtml(s,d){
   ' · AI systems '+esc(aiN)+'/5 source answers (optional, not part of the Google ranking)</p>'+
   '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> '+
   '<button type="button" class="ghost" id="briefDownloadAll">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div>'+
+  prioritiesHtml(d.content_priorities)+
   '<details id="growthBriefDetails"><summary><strong>Editorial instructions and sources</strong> · Priority, placement, verification</summary><div class="growth-brief-body">'+
   '<p class="muted">Complete editorial research: priorities, page placement, supporting sources and AI answers. No selection required. Drafting remains optional.</p>'+
   '<h3>Research decision</h3><p>'+esc(s.explanation||line)+'</p>';
@@ -1603,6 +1645,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    research_reader:row.report?.research_reader||null,
    sitemap_import:row.report?.sitemap_import||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
+   // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
+   content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
@@ -1657,6 +1701,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     disclaimer:'Research data only. No ranking or traffic increase is promised. '+(gscPart.latest?(gscPart.latest.used_in_research?'A Search Console export verified for this exact page was used.':gscPart.latest.status==='VERIFIED_FOR_PAGE'?'The latest page-verified Search Console export was not used in the original research.':'A Search Console export was uploaded but is not verified for this exact page; it was not used as evidence.'):'Google Search Console data was not used.'),
     search_console:gscPart,
     selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart),
+    content_priorities:buildContentPriorities({summary:row.summary,aiGap:aiPart&&aiPart.gap,report:row.report}),
     ai_answers:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,summary:aiPart.summary,
      answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
     report:row.report});
