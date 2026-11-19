@@ -559,9 +559,9 @@ function gapBrief(g,s,all,d){var picked={};if(!all)document.querySelectorAll('.g
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
   list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
    L.push('  - Editorial assessment: '+(x.recommended?'Verified research priority':'Observation only; not approved as content advice'));
-   L.push('  - Where: '+(x.placement&&x.placement.section_heading?'Near '+x.placement.section_heading:x.your_section?'Near '+x.your_section:'Confirm fit on the existing page'));
-   if(x.priority&&x.priority.suggested_action)L.push('  - How: '+x.priority.suggested_action);
-   if(x.priority&&x.priority.why)L.push('  - Why: '+x.priority.why.join(' · '));
+   L.push('  - Placement on the existing page: '+(x.placement&&x.placement.section_heading?'Near '+x.placement.section_heading:x.your_section?'Near '+x.your_section:'Confirm the relevant section before editing'));
+   L.push('  - Editor instruction: '+(x.recommended?(x.priority&&x.priority.suggested_action||'Write a source-supported answer in the existing relevant section; verify every business claim.'):'Do not publish this observation until intent, source evidence and business claims are confirmed.'));
+   if(x.priority&&x.priority.why)L.push('  - Supporting reasoning: '+x.priority.why.join(' · '));
    L.push('  - Potential ranking impact: '+(x.growth_potential&&x.growth_potential.search_demand&&x.growth_potential.search_demand.note||'Not measured; requires Search Console/position tracking'));
    L.push('  - Potential AI citation impact: Not measured for this topic unless actual AI source-backed answers establish a link');
    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'Google position #'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':'')+(e.url?' — Source: '+e.url:'')+(e.excerpt?' — Excerpt: '+e.excerpt:''))})});L.push('')});
@@ -859,7 +859,7 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
   try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
-// A single editorial brief: one decision, optional what/where/how/why, and real evidence.
+// One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
 function growthBriefHtml(s,d){
  var blocked=s.decision==='DATA_BLOCKED',unchanged=s.decision==='NO_CHANGE',
   list=(s.gaps&&s.gaps.items||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}),
@@ -877,12 +877,12 @@ function growthBriefHtml(s,d){
    proof=x.priority&&x.priority.why&&x.priority.why.length?x.priority.why.join(' · '):x.ai||x.status||'Only a competitor content difference observed',
    demand=x.growth_potential&&x.growth_potential.search_demand,impact=demand&&demand.status!=='NOT_MEASURED'?demand.note:'Ranking/traffic impact not measured',
    cite='AI citation impact unknown unless a current, source-backed AI answer supports it';
-  return '<div class="growth-brief-item"><h3>'+esc(i+1)+'. '+esc(x.title)+(confirmed?' · editorial priority':' · observation')+'</h3>'+
-   '<p><strong>What:</strong> '+esc(x.title)+'</p><p><strong>Where:</strong> '+esc(where)+'</p>'+
-   '<p><strong>How:</strong> '+esc(confirmed?(x.priority&&x.priority.suggested_action||'Add only a verified answer in the existing relevant section.'):'Do not add automatically. Check customer intent, overlap and business accuracy first.')+'</p>'+
-   '<p><strong>Why:</strong> '+esc(proof)+'</p>'+
-   '<p><strong>Potential impact:</strong> '+esc(impact)+' · '+esc(cite)+'. No improvement is guaranteed.</p>'+
-   '<p><strong>Evidence:</strong> '+esc(evidence.length)+' referenced page(s)'+(evidence.length?' · see exact URLs below':' · no independently verified source URLs recorded')+'</p>'+
+  return '<div class="growth-brief-item"><h3>'+esc(i+1)+'. '+esc(x.title)+(confirmed?' · ready for editorial review':' · research only')+'</h3>'+
+   '<p><strong>Instruction:</strong> '+esc(confirmed?(x.priority&&x.priority.suggested_action||'Improve the relevant existing section with a concise, verified answer to this customer question. Do not invent service claims.'):'Do not publish this finding yet. First confirm customer intent, whether the content already exists and whether the business can support the claim.')+'</p>'+
+   '<p><strong>Placement:</strong> '+esc(where)+'</p>'+
+   '<p><strong>Evidence behind this instruction:</strong> '+esc(proof)+'</p>'+
+   '<p><strong>Evaluation:</strong> '+esc(impact)+' · '+esc(cite)+'. Verify the effect after publication; no improvement is guaranteed.</p>'+
+   '<p><strong>References:</strong> '+esc(evidence.length)+' source page(s)'+(evidence.length?' · URLs below':' · no verified source URL recorded')+'</p>'+
    (evidence.length?'<details class="research-details"><summary>Source URLs and excerpts ('+evidence.length+')</summary><ul>'+evidence.map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site||e.url)+'</a> '+(e.heading?'· '+esc(e.heading):'')+(e.excerpt?'<p class="muted">'+esc(e.excerpt)+'</p>':'')+'</li>'}).join('')+'</ul></details>':'')+'</div>';
  }
  var h='<section class="growth-brief" id="growthOneBrief" aria-label="One research result and editorial brief">'+
@@ -891,7 +891,7 @@ function growthBriefHtml(s,d){
   ' · AI systems '+esc(aiN)+'/5 source answers (optional, not part of the Google ranking)</p>'+
   '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> '+
   '<button type="button" class="ghost" id="briefDownloadAll">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div>'+
-  '<details id="growthBriefDetails"><summary><strong>Open the Growth brief</strong> · What, where, how and why</summary><div class="growth-brief-body">'+
+  '<details id="growthBriefDetails"><summary><strong>Editorial instructions and sources</strong> · Priority, placement, verification</summary><div class="growth-brief-body">'+
   '<p class="muted">Complete editorial research: priorities, page placement, supporting sources and AI answers. No selection required. Drafting remains optional.</p>'+
   '<h3>Research decision</h3><p>'+esc(s.explanation||line)+'</p>';
  if(verified.length)h+='<h3>Verified editorial priorities ('+verified.length+')</h3>'+verified.map(function(x,i){return item(x,i,true)}).join('');
@@ -942,7 +942,7 @@ function cockpitInner(c,chosen){var x=nowOf(c,chosen),now=x.now,stage=x.stage;
 // When the "Do this now" card is scrolled out of view, the same action sits in a bar at the bottom of the screen,
 // so the next step is always one click away (no scrolling back up).
 function updateNow(chosen){if(!NOW_CTX)return;var card=document.getElementById('freeNextAction');if(card)card.innerHTML=cockpitInner(NOW_CTX,chosen);
- var x=nowOf(NOW_CTX,chosen),bar=document.getElementById('nowBar');if(!bar)return;
+ var x=nowOf(NOW_CTX,chosen),bar=document.getElementById('nowBar');if(!bar)return;if(!card){bar.hidden=true;return;}
  bar.innerHTML='<span><small>Step '+x.stage+' of 3 · do this now</small><strong>'+esc(x.now.t)+'</strong></span><a class="btn" href="#'+esc(x.now.to)+'">'+esc(x.now.b)+' →</a><a class="now-top" href="#freeNextAction" aria-label="Back to the top">↑ Top</a>'}
 var nowObs=null;
 function wireNowBar(){var card=document.getElementById('freeNextAction'),bar=document.getElementById('nowBar');if(!bar){bar=document.createElement('div');bar.id='nowBar';bar.className='now-bar';bar.hidden=true;bar.setAttribute('role','region');bar.setAttribute('aria-label','Next action');document.body.appendChild(bar)}
@@ -980,7 +980,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  var selfOpen=(function(){var dn=selfDone();return selfItems(s.gaps,d).filter(function(x){return !(dn[x.id]||x.auto)}).length})();
  NOW_CTX={d:d,canWrite:canWrite,hasConcepts:hasConcepts,hasGaps:hasGaps,published:published,blocker:blocker,selfOpen:selfOpen};
  h+=growthBriefHtml(s,d);
- h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle">'+cockpitInner(NOW_CTX,chosen)+'</section>';
+ if(published||hasConcepts||(chosen&&!blocker&&canWrite))h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle">'+cockpitInner(NOW_CTX,chosen)+'</section>';
  // What the check found, in three lines; the evidence is in the tabs below.
  var recN=hasGaps&&!blocker?s.gaps.items.filter(function(x){return x.recommended}).length:0;
  var ag=a&&a.gap,aiTopics=ag&&ag.missing_topics?ag.missing_topics.length:0,gItems=hasGaps?s.gaps.items.filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}).length:0;
