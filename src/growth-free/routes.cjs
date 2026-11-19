@@ -1534,6 +1534,30 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    error_text:row.status==='FAILED'?(FAIL_TEXT[row.error_code]||'The check could not finish. Please try again later.'):null});
  });
  // Research-scoped selection, persisted independently of the browser.
+ // Explicit cross-check reuse: never infer identity from an unverified email address.
+ // Both result keys are required, and the page, question and market must match.
+ app.post(apiPath+'/checks/:id/import-ai',async(req,res)=>{
+  const target=await load(req,res);if(!target)return;
+  if(target.status!=='DONE')return res.status(409).json({success:false,error:'Finish the new research before importing earlier AI answers.'});
+  const sourceId=String(req.body&&req.body.source_id||'').slice(0,40),
+   sourceKey=String(req.body&&req.body.source_key||'').slice(0,100);
+  if(!sourceId||!sourceKey)return res.status(400).json({success:false,error:'Paste the complete earlier Free Growth result link.'});
+  const source=await storage.getCheck(pool,sourceId,sourceKey);
+  if(!source)return res.status(404).json({success:false,error:'Earlier result not found or its access key is invalid.'});
+  if(source.status!=='DONE'||source.id===target.id)return res.status(409).json({success:false,error:'Choose a different, completed earlier result.'});
+  const marketMatches=JSON.stringify(source.market||null)===JSON.stringify(target.market||null);
+  if(!target.query||source.url!==target.url||source.query!==target.query||!marketMatches)
+   return res.status(409).json({success:false,error:'For safety, AI answers can only be reused for the exact same page, customer question and market.'});
+  const oldQuestion=aiQuestionOf(source)?.text||null,newQuestion=aiQuestionOf(target)?.text||null;
+  if(oldQuestion&&newQuestion&&oldQuestion.trim().toLowerCase()!==newQuestion.trim().toLowerCase())
+   return res.status(409).json({success:false,error:'The AI research prompts used different customer questions. Research the actual AI answers for this check instead.'});
+  try{
+   const imported=await storage.importAiAnswersFromCheck(pool,{targetCheckId:target.id,sourceCheckId:source.id});
+   res.set('Cache-Control','no-store').json({success:true,...imported,source_checked_at:source.finished_at||null,
+    note:'Historical AI answers were copied with their original timestamps; this is not fresh AI research. Existing answers in this check were preserved.'});
+  }catch(e){console.warn('[free-growth] AI answer import failed',String(e?.code||'unknown'));
+   res.status(503).json({success:false,error:'Could not reuse the AI answers. Your existing results were not changed.'})}
+ });
  app.post(apiPath+'/checks/:id/selection',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});
