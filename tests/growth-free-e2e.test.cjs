@@ -66,7 +66,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.locator('#cqFind').count(), 0, 'no paid question-discovery button for an unapproved visitor');
     await p.fill('#url', URL_);
     await p.fill('#query', 'roof repair lodi nj');
-    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
+    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English'); await p.fill('#search_location', 'New Jersey, United States'); await p.fill('#search_location', 'New Jersey, United States');
     const email = 'TEST-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example';
     await p.fill('#email', email);
     // Typed draft survives refresh without submitting a check or consuming provider credits.
@@ -74,6 +74,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.inputValue('#url'), URL_);
     assert.equal(await p.inputValue('#query'), 'roof repair lodi nj');
     assert.equal(await p.inputValue('#market'), 'us — United States');
+    assert.equal(await p.inputValue('#search_location'), 'New Jersey, United States');
     assert.equal(await p.inputValue('#language'), 'English');
     assert.equal(await p.inputValue('#email'), email);
     // Reset clears the saved draft, then the user can enter another question immediately.
