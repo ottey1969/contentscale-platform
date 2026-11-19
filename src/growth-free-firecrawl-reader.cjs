@@ -23,6 +23,11 @@ function createFreeGrowthFirecrawlReader({
  const limitedMessage=(url,code)=>{if(stats.errors.length<10)stats.errors.push({host:(()=>{try{return new URL(url).hostname}catch{return 'invalid'}})(),code})};
  const reader=async (raw,options=RESEARCH_FETCH)=>{
   if(!active)return original(raw,options);
+  // Preserve refusals from publishers: Firecrawl must never be used to bypass a 401/403/406/429.
+  // The pilot still tries Firecrawl on readable public pages to compare capture quality.
+  let direct=null;
+  try{direct=await original(raw,options)}
+  catch(e){if(/^HTTP_(401|403|406|429)$/.test(String(e?.code||'')))throw e}
   // The normal reader checks each actual redirect. We also validate the supplied hostname
   // before giving it to an external service. Never send internal/private hosts to Firecrawl.
   let url;
@@ -30,10 +35,10 @@ function createFreeGrowthFirecrawlReader({
    url=validateUrl(raw);
    const addresses=await lookup(url.hostname,{family:4,all:true,verbatim:true});
    if(!addresses?.some(a=>publicV4(a.address)))throw Object.assign(Error('PUBLIC_IPV4_UNAVAILABLE'),{code:'PUBLIC_IPV4_UNAVAILABLE'});
-  }catch(e){return original(raw,options)}
+  }catch(e){if(direct)return direct;return original(raw,options)}
   const cacheKey=url.href;
   if(cache.has(cacheKey)){stats.cache_hits++;return cache.get(cacheKey)}
-  if(stats.attempted>=cap)return original(raw,options);
+  if(stats.attempted>=cap)return direct||original(raw,options);
   stats.attempted++;
   const task=(async()=>{
    try{
@@ -64,6 +69,7 @@ function createFreeGrowthFirecrawlReader({
     const {compactPublicHtml}=require('./growth-public-html-reader.cjs');
     const clean=options?.compact===true?compactPublicHtml(html):html;
     if(clean.length<300)throw Object.assign(Error('FIRECRAWL_UNREADABLE'),{code:'FIRECRAWL_UNREADABLE'});
+    if(direct?.html&&clean.length<direct.html.length*0.5)throw Object.assign(Error('FIRECRAWL_LESS_COMPLETE'),{code:'FIRECRAWL_LESS_COMPLETE'});
     stats.used++;
     return {html:clean.slice(0,limit),truncated:clean.length>limit,final_url:final.href,
      requested_url:url.href,status:200,retrieved_at:new Date().toISOString(),
@@ -71,7 +77,7 @@ function createFreeGrowthFirecrawlReader({
    }catch(err){
     const code=String(err?.code||err?.name||'FIRECRAWL_FAILED').slice(0,60);
     limitedMessage(url.href,code);stats.fallbacks++;
-    return original(raw,options);
+    return direct||original(raw,options);
    }
   })();
   cache.set(cacheKey,task);
