@@ -61,6 +61,17 @@ test('real Growth engine on one URL gives a plain-language decision with sources
  assert.match(s.promises,/No ranking or traffic increase is promised/);
 });
 
+test('Free Growth applies an explicit New Jersey search location to Google's competitor discovery',async()=>{
+ let searched=null;
+ const out=await runFreeGrowthResearch({url:URL_,query:'roof repair lodi nj',
+  market:{countries:['US'],language:'en',location:'New Jersey, United States',location_source:'VISITOR_SELECTED'}},
+  {...engineDeps,searchLive:async(args)=>{searched=args.market;return engineDeps.searchLive(args)}});
+ assert.equal(out.statusCode,200);
+ assert.equal(searched.location,'New Jersey, United States');
+ assert.deepEqual(searched.states,['NJ']);
+ assert.equal(searched.country,'us');
+});
+
 test('every decision has an honest plain-language summary',()=>{
  const no=summarizeFreeGrowth({editorial_decision_gate:{decision:'NO_CHANGE'}});
  assert.equal(no.headline,'No change needed right now');assert.match(no.steps[0],/Leave the page/);
@@ -724,6 +735,22 @@ test('free check: target market and language like the Tracker (choice, validatio
  assert.equal(s.calls.length,n+1,'same market: cached');assert.equal(again.status,202);
 });
 
+test('Free Growth validates and retains the chosen service-business location with the saved check',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const page=(await s.get('/free-growth?key=open-key-12345')).body;
+ assert.match(page,/id="search_location" name="search_location"/);
+ assert.match(page,/New Jersey, United States/);
+ const wrong=await s.post('/api/free-growth/checks',{...ok,market:'nl — Netherlands',search_location:'New Jersey, United States'});
+ assert.equal(wrong.status,400);
+ const invalid=await s.post('/api/free-growth/checks',{...ok,search_location:'Unknown Region'});
+ assert.equal(invalid.status,400);
+ const chosen=await s.post('/api/free-growth/checks',{...ok,market:'us — United States',search_location:'New Jersey, United States'});
+ assert.equal(chosen.status,202);await s.service.idle();
+ assert.deepEqual(s.calls.at(-1).market,{countries:['US'],language:null,location:'New Jersey, United States',location_source:'VISITOR_SELECTED'});
+ const count=s.calls.length;
+ await s.post('/api/free-growth/checks',{...ok,market:'us — United States'});await s.service.idle();
+ assert.equal(s.calls.length,count+1,'country-wide scan is not the same cached check as local New Jersey');
+});
 test('free check: a cached result made by older research code is not reused (a fix shows on the next check)',async t=>{
  const s=await server();t.after(()=>s.srv.close());
  const a=await s.post('/api/free-growth/checks',ok);await s.service.idle();assert.equal(a.status,202);
