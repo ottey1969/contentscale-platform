@@ -118,6 +118,18 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.locator('#freeNextAction').count(),0,'No duplicate brief action');
     assert.equal(await p.locator('#briefCopyAll').isVisible(),true);
     assert.equal(await p.locator('#growthBriefDetails > summary').count(),1);
+    // Owner 2026-11-19: one list of what to put in the content, most to least important, visible in the brief,
+    // every item with its position, action and the signals that placed it there; nothing is published automatically.
+    assert.equal(await p.locator('#growthPriorities').isVisible(),true);
+    assert.match(await p.textContent('#growthPrioritiesTitle'),/What to put in your content — most to least important/);
+    const prio=await p.evaluate(()=>[...document.querySelectorAll('#growthPriorities > ol.prio-list > li.prio-item:not(.prio-trim)')].map(li=>({
+     title:li.querySelector('.prio-head strong').textContent,tier:li.querySelector('.prio-tier').textContent,
+     score:Number((li.querySelector('details > summary').textContent.match(/score (\d+)/)||[])[1])})));
+    assert.ok(prio.length>0,'at least one item');
+    for(let i=1;i<prio.length;i++)assert.ok(prio[i-1].score>=prio[i].score,'sorted from most to least important');
+    const api=await p.evaluate(async()=>(await fetch(API+Q,{cache:'no-store'})).json());
+    assert.equal(api.content_priorities.publish_allowed,false);
+    assert.deepEqual(prio.map(x=>x.title),api.content_priorities.items.slice(0,25).map(x=>x.title),'the page shows the server list in the same order');
 
     // Search Console: verified for this page, used in the research, the search term found in it.
     assert.match(await p.textContent('#gsc + p'), /^Verified for this page\./);
