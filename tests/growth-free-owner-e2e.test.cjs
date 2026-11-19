@@ -44,7 +44,7 @@ test('Free Growth: the owner signs in on the form — no daily limit, AI writing
     const errors = []; p.on('pageerror', e => errors.push(e.message));
     const email = 'TEST-owner-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example';
     const run = async q => { await p.goto(base + '/free-growth?key=e2e-owner-key-1'); await p.fill('#url', URL_); await p.fill('#query', q);
-      await p.fill('#email', email); await p.check('input[name=consent]'); await p.click('#f button[type=submit]'); };
+      await p.fill('#email', email); await p.check('input[name=consent]'); await p.fill('#market', 'us — United States'); await p.check('#noGsc'); await p.click('#f button[type=submit]'); };
     // Visitor: the second check of the day is refused.
     await run('roof repair lodi nj'); await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 }); await service.idle();
     await run('roof repair lodi new jersey'); await p.waitForFunction(() => { const el = document.getElementById('s'); return el && /checks per day|limit|today/i.test(el.textContent); }, null, { timeout: 30000 });
@@ -57,7 +57,7 @@ test('Free Growth: the owner signs in on the form — no daily limit, AI writing
     await p.waitForFunction(() => /Owner mode/.test((document.getElementById('ownerBox') || {}).textContent || ''), null, { timeout: 30000 });
     assert.match(await p.textContent('#f'), /Owner mode: no daily limit/); assert.doesNotMatch(await p.textContent('#f'), /Max 1 free checks per day/);
     // The same e-mail, past the visitor limit: the owner's check starts, and AI writing is offered.
-    await p.fill('#url', URL_); await p.fill('#query', 'roof repair lodi new jersey'); await p.fill('#email', email); await p.check('input[name=consent]');
+    await p.fill('#url', URL_); await p.fill('#query', 'roof repair lodi new jersey'); await p.fill('#email', email); await p.check('input[name=consent]'); await p.fill('#market', 'us — United States'); await p.check('#noGsc');
     await p.click('#f button[type=submit]'); await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 }); await service.idle();
     await p.waitForSelector('.gapPick', { state: 'attached', timeout: 60000 });
     if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();

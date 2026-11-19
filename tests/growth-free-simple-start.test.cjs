@@ -6,7 +6,8 @@ function inlineStart(){
  const st=routes.indexOf("(function(){\n var u=document.getElementById('url'),btn=document.getElementById('freePrimaryRun')");
  const end=routes.indexOf('// A "new check for this page" link',st);
  assert.ok(st>0&&end>st,'Free Growth public start UI script must be present');
- return routes.slice(st,end);
+ // The script sits inside a template literal: evaluate its escapes, so the test runs what the browser receives.
+ return eval('`'+routes.slice(st,end).replace(/`/g,'\\`').replace(/\$\{/g,'\\${')+'`');
 }
 test('Website Growth Check is page-first for existing, unknown URL with genuinely optional extras',()=>{
  assert.match(routes,/id="url" name="url"/);
@@ -60,6 +61,10 @@ test('URL entry controls enablement, prefilled page handling and honest sitemap 
  elements.freeSitemapUrl=element('freeSitemapUrl');
  elements.freeSitemapOpen=element('freeSitemapOpen',{disabled:true});
  elements.freeSitemapStatus=element('freeSitemapStatus');
+ // Owner 2026-11-19: everything needed is entered before the research can start.
+ for(const id of ['query','topic','market','email','freeStartMissing'])elements[id]=element(id);
+ elements.consent=element('consent',{checked:false});elements.noGsc=element('noGsc',{checked:false});elements.gscFile=element('gscFile',{files:[]});
+ elements.f=element('f');
  const document={getElementById:id=>elements[id],addEventListener(type,fn){callbacks['document:'+type]=fn}};
  let opened=null;
  const window={open:(url,target,features)=>{opened={url,target,features}}};
@@ -68,8 +73,18 @@ test('URL entry controls enablement, prefilled page handling and honest sitemap 
  assert.equal(elements.freePrimaryRun.disabled,true);
  elements.url.value='https://example.com/roof-repair/';
  callbacks['url:input']();
+ // A valid page alone is not enough: the question, country, e-mail, consent and the Search Console choice are still needed.
+ assert.equal(elements.freePrimaryRun.disabled,true);
+ assert.equal(elements.freePrimaryRun.textContent,FT.needButton);
+ assert.equal(elements.freeStartMissing.textContent,FT.needPrefix+' '+[FT.needQuery,FT.needMarket,FT.needEmail,FT.needConsent,FT.needGsc].join(' · '));
+ elements.query.value='Who repairs a roof leak in Paterson, NJ?';elements.market.value='us — United States';elements.email.value='owner@example.com';elements.consent.checked=true;
+ callbacks['f:change']();
+ assert.equal(elements.freePrimaryRun.disabled,true,'Search Console: an export or the tick is still needed');
+ assert.equal(elements.freeStartMissing.textContent,FT.needPrefix+' '+FT.needGsc);
+ elements.noGsc.checked=true;callbacks['f:change']();
  assert.equal(elements.freePrimaryRun.disabled,false);
  assert.equal(elements.freePrimaryRun.textContent,FT.submit);
+ assert.equal(elements.freeStartMissing.textContent,'');
  callbacks['freeSitemapOpen:click']();
  assert.equal(opened.url,'https://example.com/sitemap.xml');
  assert.equal(elements.freeSitemapStatus.textContent,FT.simpleSitemapUnverified);

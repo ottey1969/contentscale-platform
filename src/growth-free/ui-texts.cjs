@@ -5,6 +5,12 @@
 // names of AI systems. Data (headings and words of your page or of other sites, search terms) is never translated.
 // [English, Dutch, Spanish]
 const ROWS = [
+  ['You indicated at the start that this page has no Search Console data. The research ran without it; nothing else is needed.', 'Je gaf bij de start aan dat er voor deze pagina geen Search Console-gegevens zijn. Het onderzoek is zonder gedaan; je hoeft verder niets te doen.', 'Indicaste al empezar que esta página no tiene datos de Search Console. La investigación se hizo sin ellos; no hace falta nada más.'],
+  ['On your page (topic comparison: {q})', 'Op je pagina (onderwerpvergelijking: {q})', 'En tu página (comparación de temas: {q})'],
+  ['Partly on your page (topic comparison: {q})', 'Deels op je pagina (onderwerpvergelijking: {q})', 'En parte en tu página (comparación de temas: {q})'],
+  ['On your page (topic comparison)', 'Op je pagina (onderwerpvergelijking)', 'En tu página (comparación de temas)'],
+  ['Not on your page (topic comparison)', 'Niet op je pagina (onderwerpvergelijking)', 'No está en tu página (comparación de temas)'],
+  ['Not found on your page by heading words (not compared by topic)', 'Niet gevonden op je pagina via woorden in koppen (niet per onderwerp vergeleken)', 'No encontrado en tu página por palabras de encabezados (sin comparar por tema)'],
   // Content priorities: what to put in the content, most to least important (owner 2026-11-19).
   ['What to put in your content — most to least important', 'Wat in je content moet — van belangrijkst naar minst belangrijk', 'Qué poner en tu contenido — de lo más a lo menos importante'],
   ['Research only: the evidence check did not confirm a content change. Use this order to review, not to publish.', 'Alleen onderzoek: de bewijscheck heeft geen wijziging van de content bevestigd. Gebruik deze volgorde om te beoordelen, niet om te publiceren.', 'Solo investigación: la comprobación de pruebas no confirmó ningún cambio de contenido. Usa este orden para revisar, no para publicar.'],
