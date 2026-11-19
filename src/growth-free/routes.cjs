@@ -106,7 +106,7 @@ function page(title,body,cfg){
  return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
 :root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
-*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+.growth-brief{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:18px;margin:12px 0}.growth-brief-head>small{font-weight:700;letter-spacing:.06em;color:var(--muted)}.growth-brief-head h2{margin:.45em 0;font-size:22px}.growth-brief-head p{margin:.45em 0}.growth-brief-meta{font-size:13px;color:var(--muted)}.growth-brief details>summary{cursor:pointer}.growth-brief #growthBriefDetails{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.growth-brief-body{padding:12px 2px}.growth-brief-item{border-top:1px solid var(--line);padding:8px 0}.growth-brief-item p{margin:6px 0}.growth-brief-body h3{margin:12px 0 3px}.growth-ai-prominent>summary{font-weight:700;color:#1e40af;cursor:pointer}.growth-ai-prominent:not([open]){padding:14px 20px}.growth-ai-prominent:not([open])>summary small{font-weight:400}\n*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 main{max-width:860px;margin:0 auto;padding:24px 16px 60px}h1{font-size:30px;line-height:1.2;margin:.4em 0}h2{font-size:21px;margin:1.6em 0 .5em}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}.lead{font-size:18px;color:var(--muted)}
 label{display:block;margin:12px 0 4px;font-weight:600}input,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
@@ -340,7 +340,7 @@ var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVIC
 function langRedirect(d){try{if(d&&d.ui_lang&&d.ui_lang!==PAGE_LANG){var u=new URL(location.href);u.searchParams.set('lang',d.ui_lang);location.replace(u.toString());return true}}catch(e){}return false}
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var ENG_STATE={};
-function openJourney(id){var el=document.getElementById(id);if(!el)return;var root=el.closest('details.journey-section')||(el.matches('details.journey-section')?el:null);if(root){document.querySelectorAll('details.journey-section').forEach(function(x){if(x!==root)x.open=false});root.open=true}var rt=el.id==='stepResearch'?el:el.closest('#stepResearch');if(rt){rt.open=true;var pane=el.closest('.rtab-pane');if(pane)rtab(pane.getAttribute('data-tab'))}var inner=el.closest('details.research-details');if(inner)inner.open=true}
+function openJourney(id){var el=document.getElementById(id);if(!el)return;if(el.matches('details'))el.open=true;var aiPanel=el.closest('#freeAiResearch');if(aiPanel)aiPanel.open=true;var root=el.closest('details.journey-section')||(el.matches('details.journey-section')?el:null);if(root){document.querySelectorAll('details.journey-section').forEach(function(x){if(x!==root)x.open=false});root.open=true}var rt=el.id==='stepResearch'?el:el.closest('#stepResearch');if(rt){rt.open=true;var pane=el.closest('.rtab-pane');if(pane)rtab(pane.getAttribute('data-tab'))}var inner=el.closest('details.research-details');if(inner)inner.open=true}
 // Evidence tabs (Google · AI answers · Search Console): one pane visible at a time.
 function rtab(name){document.querySelectorAll('.rtab-pane').forEach(function(p){p.hidden=p.getAttribute('data-tab')!==name});document.querySelectorAll('.rtabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===name))})}
 document.addEventListener('click',function(e){var b=e.target.closest('.rtabs button');if(b)rtab(b.getAttribute('data-tab'))});
@@ -474,7 +474,7 @@ function gapCard(x,aiOn,reviewOnly){var why=[];
 function gapsHtml(g,w,d){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.groups||[]).map(function(x){return [x.id,x.label]});
  var reviewOnly=!!(d&&d.summary&&d.summary.decision==='DATA_BLOCKED');
  var chosen=(d&&d.selected_item_ids||[]).length,aiIds={};((d&&d.ai&&d.ai.gap&&d.ai.gap.missing_topics)||[]).forEach(function(t){if(t.item_id)aiIds[t.item_id]=1});
- var h='<details id="stepReview" class="journey-section" open>'+stepSum(1,'Choose what to add',chosen?chosen+' topic(s) chosen — change your choice here':'Tick the topics you want on your page',chosen>0)+'<div class="journey-body"><h2 id="gaps">Choose what goes on your page</h2><p class="muted">What pages Google ranks'+(Object.keys(aiIds).length?' and pages AI cites':'')+' have and your page does not. Tick what fits your business; AI writes only what you tick, in step 2.</p>';
+ var h='<details id="stepReview" class="journey-section">'+stepSum(1,'Optional: choose topics for AI drafting',chosen?chosen+' topic(s) chosen for drafting':'Not required for the complete editor brief',chosen>0)+'<div class="journey-body"><h2 id="gaps">Optional: select topics for automatic drafting</h2><p class="muted">The complete editorial brief above already contains every relevant finding, priority and source without ticking anything. Select a topic here only when requesting automatic content drafts. All proposed text still requires editor approval.</p>';
  if(g.writing_allowed===false&&g.evidence)h+='<p class="note"><strong>No section is proposed or written:</strong> '+esc(g.evidence.plain_reason||g.evidence.reason)+'</p>';
  LAST_SELF=selfItems(g,d);
  if(!g.items.length)return h+selfHtml(LAST_SELF)+'</div></details><details id="stepPrepare" class="journey-section">'+stepSum(2,'Write the text','Nothing to write: no content differences',false)+'<div class="journey-body"><p class="muted">No editable content differences are available.</p></div></details>';
@@ -488,7 +488,7 @@ function gapsHtml(g,w,d){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.gr
  h+='<p><strong id="gapCount">0 selected</strong> <small>· choices saved, not automatically approved or verified</small></p><p><button type="button" id="gapAll" class="ghost">Include all H2 topics</button> <button type="button" id="gapNone" class="ghost">Clear</button> <small>A CMS package is limited to 12 reviewed text sections.</small></p>';
  // The next action sits right under the choice: write the chosen H2s with AI, or the exact reason why that is not possible.
  h+='<div id="nextWrite" class="card" aria-live="polite"></div>';
- h+='<details class="research-details"><summary>Export your selection (optional)</summary><p class="muted">The editor brief contains your selected observations, not a verified content recommendation.</p>';
+ h+='<details class="research-details"><summary>Export only selected topics (optional)</summary><p class="muted">The complete editor brief above includes all research automatically. This optional export includes only the items selected for drafting.</p>';
  h+='<p><button type="button" id="gapDownload" class="action-muted">Download editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p></details>';
  h+=selfHtml(LAST_SELF);
  // Seen, but nothing to do now: unique content to keep, and topics that probably do not fit this search.
@@ -516,13 +516,25 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
  (r.unlinked_sections||[]).forEach(function(x){h+='<p class="muted">Not linked to a selected item and not used: “'+esc(x.h2)+'” — '+esc(x.reason)+'</p>'});
  if(r.reason&&!(r.sections||[]).length)h+='<p class="muted">'+esc(r.reason)+'</p>';
  return h}
-function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
- var items=g.items.filter(function(x){return picked[x.id]});
- var L=['# Editor brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Chosen from the comparison with '+g.ranking_pages_read+' ranking page(s). Write in your own words with facts you can stand behind; do not copy the ranking pages.',''];
+function wireCompleteBrief(g,s){
+ var copy=document.getElementById('briefCopyAll'),dl=document.getElementById('briefDownloadAll'),status=document.getElementById('briefExportStatus');
+ if(!copy||!dl||!g)return;
+ function full(){return gapBrief(g,s,true).text}
+ copy.onclick=async function(){try{await navigator.clipboard.writeText(full());status.textContent='Complete editorial brief copied, including priorities, observations and sources.'}catch(e){status.textContent='Copy unavailable; use Download complete brief.'}};
+ dl.onclick=function(){var text=full(),url=URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='growth-complete-editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);status.textContent='Complete brief downloaded. No topic selection required.'};
+}
+function gapBrief(g,s,all){var picked={};if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
+ var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
+ var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Decision: '+(s.decision||'UNKNOWN'),'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
   list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
-   if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
-   x.examples.forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
+   L.push('  - Editorial assessment: '+(x.recommended?'Verified research priority':'Observation only; not approved as content advice'));
+   L.push('  - Where: '+(x.placement&&x.placement.section_heading?'Near '+x.placement.section_heading:x.your_section?'Near '+x.your_section:'Confirm fit on the existing page'));
+   if(x.priority&&x.priority.suggested_action)L.push('  - How: '+x.priority.suggested_action);
+   if(x.priority&&x.priority.why)L.push('  - Why: '+x.priority.why.join(' · '));
+   L.push('  - Potential ranking impact: '+(x.growth_potential&&x.growth_potential.search_demand&&x.growth_potential.search_demand.note||'Not measured; requires Search Console/position tracking'));
+   L.push('  - Potential AI citation impact: Not measured for this topic unless actual AI source-backed answers establish a link');
+   (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'Google position #'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':'')+(e.url?' — Source: '+e.url:'')+(e.excerpt?' — Excerpt: '+e.excerpt:''))})});L.push('')});
  if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  if((LAST_SELF||[]).length){var dn=selfDone();L.push('## To do yourself (not written by Growth)','');LAST_SELF.forEach(function(x){L.push('- ['+(dn[x.id]?'x':' ')+'] '+x.title+' — '+x.why)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
@@ -809,6 +821,50 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
   try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
+// A single editorial brief: one decision, optional what/where/how/why, and real evidence.
+function growthBriefHtml(s,d){
+ var blocked=s.decision==='DATA_BLOCKED',unchanged=s.decision==='NO_CHANGE',
+  list=(s.gaps&&s.gaps.items||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'}),
+  ranked=list.slice().sort(function(a,b){return (b.recommended===true)-(a.recommended===true)||
+   Number(b.priority&&b.priority.sources||b.examples&&b.examples.length||0)-Number(a.priority&&a.priority.sources||a.examples&&a.examples.length||0)}),
+  verified=blocked?[]:ranked.filter(function(x){return x.recommended&&x.writable!==false}),
+  observations=ranked.filter(function(x){return !verified.some(function(y){return y.id===x.id})}),
+  ai=d.ai&&d.ai.summary,aiN=ai?Number(ai.checked)||0:0,fc=d.research_reader,
+  line=blocked?'No verified content improvement. The findings below are observations, not instructions to publish.':
+   unchanged?'No content change required for this question. Keep what already works.':
+   verified.length?verified.length+' evidence-supported content priorit'+(verified.length===1?'y':'ies')+' to review.':'No confirmed change to recommend.';
+ function item(x,i,confirmed){
+  var evidence=(x.examples||[]).filter(function(e){return !!e.url}),where=x.placement&&x.placement.section_heading?'Inside or after “'+x.placement.section_heading+'”':
+   x.your_section?'Near existing section “'+x.your_section+'”':'Only where it answers this page’s customer question',
+   proof=x.priority&&x.priority.why&&x.priority.why.length?x.priority.why.join(' · '):x.ai||x.status||'Only a competitor content difference observed',
+   demand=x.growth_potential&&x.growth_potential.search_demand,impact=demand&&demand.status!=='NOT_MEASURED'?demand.note:'Ranking/traffic impact not measured',
+   cite='AI citation impact unknown unless a current, source-backed AI answer supports it';
+  return '<div class="growth-brief-item"><h3>'+esc(i+1)+'. '+esc(x.title)+(confirmed?' · editorial priority':' · observation')+'</h3>'+
+   '<p><strong>What:</strong> '+esc(x.title)+'</p><p><strong>Where:</strong> '+esc(where)+'</p>'+
+   '<p><strong>How:</strong> '+esc(confirmed?(x.priority&&x.priority.suggested_action||'Add only a verified answer in the existing relevant section.'):'Do not add automatically. Check customer intent, overlap and business accuracy first.')+'</p>'+
+   '<p><strong>Why:</strong> '+esc(proof)+'</p>'+
+   '<p><strong>Potential impact:</strong> '+esc(impact)+' · '+esc(cite)+'. No improvement is guaranteed.</p>'+
+   '<p><strong>Evidence:</strong> '+esc(evidence.length)+' referenced page(s)'+(evidence.length?' · see exact URLs below':' · no independently verified source URLs recorded')+'</p>'+
+   (evidence.length?'<details class="research-details"><summary>Source URLs and excerpts ('+evidence.length+')</summary><ul>'+evidence.map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site||e.url)+'</a> '+(e.heading?'· '+esc(e.heading):'')+(e.excerpt?'<p class="muted">'+esc(e.excerpt)+'</p>':'')+'</li>'}).join('')+'</ul></details>':'')+'</div>';
+ }
+ var h='<section class="growth-brief" id="growthOneBrief" aria-label="One research result and editorial brief">'+
+  '<div class="growth-brief-head"><small>ONE RESEARCH · ONE RESULT</small><h2>'+esc(s.headline||'Growth research result')+'</h2>'+
+  '<p>'+esc(line)+'</p><p class="growth-brief-meta">Google comparison'+(fc&&fc.enabled?' · Firecrawl '+esc(fc.used)+'/'+esc(fc.attempted)+' pages':'')+
+  ' · AI systems '+esc(aiN)+'/5 source answers (optional, not part of the Google ranking)</p>'+
+  '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> '+
+  '<button type="button" class="ghost" id="briefDownloadAll">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div>'+
+  '<details id="growthBriefDetails"><summary><strong>Open the Growth brief</strong> · What, where, how and why</summary><div class="growth-brief-body">'+
+  '<p class="muted">The editor receives the entire evidence dossier automatically. No topic selection is needed to receive or export it. Any checkboxes elsewhere are only optional controls for AI drafting.</p>'+
+  '<h3>Research decision</h3><p>'+esc(s.explanation||line)+'</p>';
+ if(verified.length)h+='<h3>Verified editorial priorities ('+verified.length+')</h3>'+verified.map(function(x,i){return item(x,i,true)}).join('');
+ else h+='<p><strong>No verified new section to publish.</strong> '+esc(blocked?'Evidence is insufficient for a safe content change.':'Current content may already meet the researched intent.')+'</p>';
+ if(observations.length)h+='<details class="research-details"><summary>Other observations for editorial review ('+observations.length+')</summary>'+
+  '<p>These topics are not approved recommendations, regardless of competitor headings or keyword overlap.</p>'+
+  observations.map(function(x,i){return item(x,i,false)}).join('')+'</details>';
+ if((s.gaps&&s.gaps.unique_content||[]).length)h+='<details class="research-details"><summary>Existing content to preserve ('+s.gaps.unique_content.length+')</summary><ul>'+
+  s.gaps.unique_content.map(function(x){return '<li>'+esc(x.heading)+'</li>'}).join('')+'</ul></details>';
+ return h+'<p class="muted">Ranking impact must be measured using Search Console or position tracking after publication. AI citation status requires actual AI answers with source lists. Firecrawl page reads alone prove neither.</p></div></details></section>';
+}
 // What the competitor pages have and your page does not: every Google result, read or not, with the headings of the
 // pages that were read. Shown also when no advice is given (then as observations only).
 function competitorsHtml(c,s){if(!c||!(c.pages||[]).length)return '';var blocked=s&&s.decision==='DATA_BLOCKED';
@@ -840,8 +896,8 @@ function nowOf(c,chosen){var d=c.d,stage=c.published?3:c.hasConcepts?2:chosen&&c
   :c.blocker?{t:'Look at what the competitor pages have',why:'There was too little evidence to propose new text, but you can still see what the ranking pages cover and you do not.',b:'See the comparison',to:'competitors'}
   :!c.hasGaps?{t:'Nothing to add for this search',why:'Your page already covers what the ranking pages cover. See what was checked below.',b:'See what was checked',to:'stepResearch'}
   :chosen&&c.canWrite?{t:'Let AI write the '+chosen+' chosen topic(s)',why:'You chose what goes on your page. AI writes it now; you check everything before anything is downloaded.',b:'Go to step 2: write',to:'stepPrepare'}
-  :chosen?{t:'Download the editor brief',why:'You chose '+chosen+' topic(s). AI writing is not available for this check, so hand the brief to whoever writes your page.',b:'Go to the brief',to:'gapDownload'}
-  :{t:'Choose what to add to your page',why:'Start with the topics marked Recommended or “AI cites this too”. Tick what fits your business.',b:'Choose topics',to:'stepReview'};
+  :chosen?{t:'Review the editor brief',why:'All findings and priorities are already included. Optional topic choices are only for automated writing.',b:'Open the brief',to:'growthBriefDetails'}
+  :{t:'Use the complete Growth brief',why:'One brief includes all evidence-backed priorities, observed differences, sources and next steps. Nothing needs ticking.',b:'Open the brief',to:'growthBriefDetails'};
  return {stage:stage,now:now}}
 function cockpitInner(c,chosen){var x=nowOf(c,chosen),now=x.now,stage=x.stage;
  return '<span class="growth-eyebrow">STEP '+stage+' OF 3 · DO THIS NOW</span><h2 id="freeActionTitle">'+esc(now.t)+'</h2><p>'+esc(now.why)+'</p><a class="growth-next-btn" href="#'+esc(now.to)+'">'+esc(now.b)+' <span aria-hidden="true">→</span></a>'+(c.selfOpen?'<p class="growth-subline">Also: <a href="#selfDo" style="color:inherit">'+c.selfOpen+' thing(s) to do yourself</a> (schema, Bing, listings, facts) — Growth does not write these.</p>':'')+'<div class="growth-flow" aria-label="Workflow progress">'+[['Choose','stepReview'],['Write','stepPrepare'],['Publish & measure','stepPublish']].map(function(st,i){var cls=i+1<stage?'complete':i+1===stage?'active':'';return '<span class="'+cls+'"><a href="#'+st[1]+'">'+(i+1<stage?'✓ ':(i+1)+'. ')+esc(st[0])+'</a></span>'}).join('')+'</div>'}
@@ -885,6 +941,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  // One next action at a time: what to do now, why, and one button. Done steps close; their result stays one click away.
  var selfOpen=(function(){var dn=selfDone();return selfItems(s.gaps,d).filter(function(x){return !(dn[x.id]||x.auto)}).length})();
  NOW_CTX={d:d,canWrite:canWrite,hasConcepts:hasConcepts,hasGaps:hasGaps,published:published,blocker:blocker,selfOpen:selfOpen};
+ h+=growthBriefHtml(s,d);
  h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle">'+cockpitInner(NOW_CTX,chosen)+'</section>';
  // What the check found, in three lines; the evidence is in the tabs below.
  var recN=hasGaps&&!blocker?s.gaps.items.filter(function(x){return x.recommended}).length:0;
@@ -895,10 +952,10 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
   (d.gsc&&d.gsc.latest?'<li><strong>Search Console:</strong> export used <a href="#gsc">evidence</a></li>':'')+'</ul></div>';
  h+=${js("<style>\n.growth-ai-prominent{--ink:#172337;--muted:#475569;--accent:#1d4ed8;--accent-ink:#fff;--line:#cbd5e1;--bg:#f8fafc;--card:#fff;--warn:#fff7ed;--warn-line:#fed7aa;color:var(--ink)!important;border:2px solid #bfdbfe!important;background:linear-gradient(145deg,#eff6ff,#fff 60%)!important;box-shadow:0 9px 28px rgba(29,78,216,.09);animation:growthAiArrive .3s ease-out;scroll-margin-top:24px}\n.growth-ai-prominent h2,.growth-ai-prominent h3{color:#1e40af}.growth-ai-progress{height:9px;background:#dbeafe;border-radius:99px;overflow:hidden;margin:10px 0 14px}.growth-ai-progress span{display:block;background:#2563eb;height:100%;border-radius:99px;transition:width .4s ease}\n.growth-ai-manual{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:14px;margin:14px 0}.growth-ai-manual>summary{font-weight:700;cursor:pointer}.growth-ai-prominent:focus-within{outline-offset:3px}\n@keyframes growthAiArrive{from{opacity:.45;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.growth-ai-prominent{animation:none}.growth-ai-progress span{transition:none}}\n</style>")};
  // Free and Tracker have the same visible AI research step, before selecting the editorial changes.
- h+='<section class="card growth-ai-prominent" id="freeAiResearch" aria-label="AI systems research"><h2>AI systems research · optional</h2>'+
+ h+='<details class="card growth-ai-prominent" id="freeAiResearch" aria-label="AI systems research"><summary><strong>AI research · '+esc(as&&as.checked||0)+'/5 saved answers</strong> <small class="muted">Optional · Open sources and add responses</small></summary><h2>AI systems research · optional</h2>'+
     '<p class="muted">Review real AI-system answers for this question. Gemini uses Google Search grounding automatically where configured; the other systems require their own real answers. You can continue with Google research without checking all five.</p>'+
     (a?aiHtml(a,d.automatic_ai_answers):'<p>AI answers are not available for this check yet.</p>')+
-    '<p><a class="btn ghost" href="#stepReview">Continue to choose page improvements →</a></p></section>';
+    '<p><a class="btn ghost" href="#stepReview">Continue to choose page improvements →</a></p></details>';
  h+=gapsHtml(s.gaps,d.writing,d);
  if(!s.gaps||s.gaps.status!=='OBSERVED'){h+='<details id="stepReview" class="journey-section" open>'+stepSum(1,'Choose what to add','Evidence required before writing',false)+'<div class="journey-body"><h2 id="gaps">No verified content change</h2><p>'+esc(s.explanation)+'</p><p class="muted">AI citations and competitor headings alone do not establish a safe change. No automatic writing or publication is approved.</p><p><a href="#google">See the evidence</a></p></div></details><details id="stepPrepare" class="journey-section">'+stepSum(2,'Write the text','No approved content recommendation',false)+'<div class="journey-body"><p>No content is ready for a CMS package.</p></div></details>'}
  h+='<details id="stepPublish" class="journey-section"'+(published?' open':'')+'>'+stepSum(3,'Publish & measure',published?'Published on '+String(d.publication.published_on).slice(0,10)+' — compare before and after here':'After you put the text on your site: record the date',published)+'<div class="journey-body" id="pubBox">'+pubHtml(d.publication,d.gsc)+'</div></details>';
@@ -914,7 +971,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':'stepReview';document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s);wireSideBySide(d.competitors);wirePub();wireSelf();
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
