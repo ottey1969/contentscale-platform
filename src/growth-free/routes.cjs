@@ -519,7 +519,7 @@ function gapsHtml(g,w,d){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.gr
  if(rec.length){h+='<h3>Start here ('+rec.length+')</h3>';rec.forEach(function(x){h+=gapCard(x,!!aiIds[x.id])})}
  GAP_GROUPS.forEach(function(gr){var list=rest.filter(function(x){return x.group===gr[0]});if(!list.length)return;
   h+='<h3>'+esc(gr[1])+' ('+list.length+')</h3>';list.forEach(function(x){h+=gapCard(x,false,reviewOnly)})});
- h+='<p><strong id="gapCount">0 selected</strong> <small>· choices saved, not automatically approved or verified</small></p><p><button type="button" id="gapAll" class="ghost">Include all H2 topics</button> <button type="button" id="gapNone" class="ghost">Clear</button> <small>A CMS package is limited to 12 reviewed text sections.</small></p>';
+ h+='<p><strong id="gapCount">0 selected</strong> <small>· choices saved, not automatically approved or verified</small></p><p>'+(w&&w.allowed&&w.remaining>0&&!reviewOnly&&g.writing_allowed!==false?'<button type="button" id="gapAutoDraft" class="action-blue">Automatically prepare verified H2 drafts (optional)</button> ':'')+'<button type="button" id="gapAll" class="ghost">Include all H2 topics</button> <button type="button" id="gapNone" class="ghost">Clear</button> <small>A CMS package is limited to 12 reviewed text sections.</small></p>';
  // The next action sits right under the choice: write the chosen H2s with AI, or the exact reason why that is not possible.
  h+='<div id="nextWrite" class="card" aria-live="polite"></div>';
  h+='<details class="research-details"><summary>Export only selected topics (optional)</summary><p class="muted">The complete editor brief above includes all research automatically. This optional export includes only the items selected for drafting.</p>';
@@ -843,12 +843,15 @@ function syncRewrite(){var left=Number(d.writing&&d.writing.remaining||0);
  };
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;updateNow(n);document.getElementById('gapCount').textContent=n+' selected';nextWrite(g,d&&d.writing,n,d);pkgCount(n);if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}if(count.initialized)queueSelectionSave();var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
  function rememberManualChoice(){try{localStorage.setItem(manualKey,'1')}catch(e){}}
- var draftDetails=document.getElementById('stepReview');
- if(draftDetails&&autoIds.size)draftDetails.addEventListener('toggle',function(){
-  if(!draftDetails.open||!autoIds.size)return;
-  document.querySelectorAll('.gapPick').forEach(function(c){if(autoIds.has(c.value))c.checked=true});
-  autoIds.clear();count();
- },{once:true});
+ var autoDraftButton=document.getElementById('gapAutoDraft');
+ if(autoDraftButton)autoDraftButton.onclick=function(){
+  if(!autoIds.size){autoIds=new Set(automaticDraftIds(g,s))}
+  document.querySelectorAll('.gapPick').forEach(function(c){c.checked=autoIds.has(c.value)});
+  autoIds.clear();
+  count();
+  var write=document.getElementById('gapWrite');
+  if(write&&!write.disabled)write.click();
+ };
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',function(){rememberManualChoice();count()})});
  document.getElementById('gapAll').onclick=function(){rememberManualChoice();document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
  document.getElementById('gapNone').onclick=function(){rememberManualChoice();document.querySelectorAll('.gapPick').forEach(function(c){c.checked=false});count()};
