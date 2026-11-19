@@ -48,8 +48,8 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     assert.match(box, /more specific search term/); assert.match(box, /editor brief/);
     assert.equal(await p.locator('#nextWriteBtn').count(), 0, 'no write button without evidence');
     // Even without advice, what the competitor pages have that this page does not stays visible (the point of Growth).
-    assert.match(await p.textContent('#freeNextAction'), /Keep the page unchanged for now[^]*Open the brief/);
-    await p.click('#freeNextAction .growth-next-btn');
+    assert.equal(await p.locator('#freeNextAction').count(),0,'No duplicate brief action for a blocked result');
+    await p.click('#growthBriefDetails > summary');
     assert.equal(await p.locator('#growthBriefDetails').evaluate(el=>el.open), true, 'one next action opens the complete brief');
     await p.locator('#stepResearch > summary').click();
     assert.equal(await p.isVisible('#competitors'), true);
