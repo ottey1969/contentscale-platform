@@ -786,8 +786,8 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   var manualKey='free-growth-manual-selection:'+location.pathname;
   var manualChoice=false;try{manualChoice=localStorage.getItem(manualKey)==='1'}catch(e){}
   var autoIds=savedIds.size===0&&!manualChoice?new Set(automaticDraftIds(g,s)):new Set();
-  document.querySelectorAll('.gapPick').forEach(function(el){el.checked=savedIds.has(el.value)||autoIds.has(el.value)});
-  // Automatic suggestions stay client-side until the visitor actively edits a choice; never trigger a background save while AI answers are being updated.
+  document.querySelectorAll('.gapPick').forEach(function(el){el.checked=savedIds.has(el.value)});
+  // Auto-selection is strictly lazy: opening optional drafting never interferes with saving AI answers.
  var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last){wr.innerHTML=writtenHtml(d.writing.last)}
 // "Write this H2 again": ticking a concept (or the automatic tick on a weak opening / team advice) makes the write button
 // write those concepts again, as long as the check has a round left.
@@ -843,6 +843,12 @@ function syncRewrite(){var left=Number(d.writing&&d.writing.remaining||0);
  };
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;updateNow(n);document.getElementById('gapCount').textContent=n+' selected';nextWrite(g,d&&d.writing,n,d);pkgCount(n);if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}if(count.initialized)queueSelectionSave();var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
  function rememberManualChoice(){try{localStorage.setItem(manualKey,'1')}catch(e){}}
+ var draftDetails=document.getElementById('stepReview');
+ if(draftDetails&&autoIds.size)draftDetails.addEventListener('toggle',function(){
+  if(!draftDetails.open||!autoIds.size)return;
+  document.querySelectorAll('.gapPick').forEach(function(c){if(autoIds.has(c.value))c.checked=true});
+  autoIds.clear();count();
+ },{once:true});
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',function(){rememberManualChoice();count()})});
  document.getElementById('gapAll').onclick=function(){rememberManualChoice();document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
  document.getElementById('gapNone').onclick=function(){rememberManualChoice();document.querySelectorAll('.gapPick').forEach(function(c){c.checked=false});count()};
