@@ -92,6 +92,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.inputValue('#query'), 'roof repair lodi nj');
     assert.match(await p.inputValue('textarea[data-engine="copilot"]'), /TEST pasted on the form/, 'the AI answer is restored');
     assert.match(await p.textContent('#aiRestored'), /1 pasted AI answer\(s\) restored/);
+    // After reload the optional AI editor is collapsed. Reopen it before clearing the draft.
+    if (!(await p.locator('#freeExtraSources').evaluate(el=>el.open))) await p.locator('#freeExtraSources > summary').click();
+    if (!(await p.locator('#aiStart').evaluate(el=>el.open))) await p.locator('#aiStart > summary').click();
     await p.fill('textarea[data-engine="copilot"]', '');
     await p.fill('#email', email); await p.check('input[name=consent]');
     // Optional Search Console export (TEST data), filtered on exactly this page.
