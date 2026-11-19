@@ -921,6 +921,7 @@ function growthBriefHtml(s,d){
  else h+='<p><strong>No verified new section to publish.</strong> '+esc(blocked?'Evidence is insufficient for a safe content change.':'Current content may already meet the researched intent.')+'</p>';
  if(observations.length)h+='<details class="research-details"><summary>Other observations for editorial review ('+observations.length+')</summary>'+
   '<p>These topics are not approved recommendations, regardless of competitor headings or keyword overlap.</p>'+
+  (blocked||!verified.length?'<p><strong>Do not publish new content based on these observations yet.</strong></p>':'')+
   observations.map(function(x,i){return item(x,i,false)}).join('')+'</details>';
  if((s.gaps&&s.gaps.unique_content||[]).length)h+='<details class="research-details"><summary>Existing content to preserve ('+s.gaps.unique_content.length+')</summary><ul>'+
   s.gaps.unique_content.map(function(x){return '<li>'+esc(x.heading)+'</li>'}).join('')+'</ul></details>';
