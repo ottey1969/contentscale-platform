@@ -928,8 +928,8 @@ function updateResearchProgress(d,n){
  var steps=RESEARCH_STEPS[PAGE_LANG]||RESEARCH_STEPS.en,idx=Math.min(3,Math.floor(Math.max(0,n)/4));
  var existing=document.getElementById('freeResearchSteps');
  if(!existing){existing=document.createElement('ol');existing.id='freeResearchSteps';existing.className='free-research-steps';o.appendChild(existing)}
- existing.innerHTML=steps.map(function(step,i){return '<li class="'+(i<idx?'complete':i===idx?'active':'pending')+'"><span class="free-step-dot" aria-hidden="true">'+(i<idx?'✓':i===idx?'◌':'·')+'</span> '+esc(step)+'</li>'}).join('');
- var label=document.getElementById('freeResearchLiveStatus');if(label)label.textContent=steps[idx];
+ existing.innerHTML=steps.map(function(step,i){return '<li class="'+(i===idx?'active':'pending')+'"><span class="free-step-dot" aria-hidden="true">'+(i===idx?'◌':'·')+'</span> '+esc(step)+'</li>'}).join('');
+ var label=document.getElementById('freeResearchLiveStatus');if(label)label.textContent=steps[idx]+' · research in progress';
 }
 async function poll(n){try{var r=await fetch(API+Q,{cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error||'Not found');
  if(d.status==='DONE'||d.status==='FAILED'){render(d);
