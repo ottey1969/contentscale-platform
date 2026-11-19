@@ -96,7 +96,27 @@
    'This exact user question controls intent, entities, examples, calls to action and page sections.',
    'DO NOT broaden an informational question into a provider recommendation or vice versa.'
   ].join('\n'));
+  // A conservative editorial reconciliation: a saved NO_CHANGE verdict and later draft
+  // proposals are not evidence that additions are needed. Preserve the proposals as research,
+  // but require a fresh evidence-backed decision before allowing them into a CMS package.
   var inventory=contentInventory(d);
+  var suggestedAdditions=inventory.filter(x=>x.coverage==='MISSING'||x.coverage==='PARTIAL');
+  var gateVerdict=String(editor.decision||'').toUpperCase();
+  var noChangeConflict=gateVerdict==='NO_CHANGE'&&suggestedAdditions.length>0;
+  var claimedBusinessLocation=/(?:service area|service coverage|serves|serving|dispatch|arrival|response time|all\\s+\\d+\\s+counties|licensed|insured|24\\s*\\/?\\s*7|immediate)/i;
+  var riskyLocations=inventory.filter(x=>claimedBusinessLocation.test(x.topic));
+  add('1A. EDITORIAL VERDICT RECONCILIATION & BUSINESS FACT SAFETY',[
+   'Stored editorial verdict: '+value(gateVerdict),
+   noChangeConflict?'CONFLICT: NO_CHANGE is saved, yet '+suggestedAdditions.length+' topics are marked missing/partial. Those are research leads, NOT approved changes. The editor must reconcile the decision using the original page, two independent relevant competitor answers and the exact customer question. Until then: NO NEW H2 IS PUBLICATION-READY.':
+    'No contradiction between the stored verdict and the coverage inventory was established by this check. This does NOT make a draft publication-ready.',
+   'The complete inventory is preserved below; do not require the owner to choose topics before external AI reviews relevance.',
+   'Business service-area, geographic coverage, 24-hour staffing, response or arrival times, emergency dispatch, license/insurance, warranties, prices and cleanup promises require evidence from the business or authoritative primary documentation.',
+   'A competitor statement about answering enquiries within 24–48 hours is NOT proof of arrival time for emergency roofing. Never infer dispatch or arrival times from support response time.',
+   'Do not turn the customer question or market New Jersey into a claim that the business operates in all 21 counties. Verify individual cities/counties, including Hoboken and Hudson County, before any proposed service-area copy.',
+   'Location or capability claims present in research headings (review, not approval): '+(riskyLocations.length?riskyLocations.map(x=>x.topic).join('; '):'none identified in heading text; paragraph-level fact review still required'),
+   'Publication blocked for all proposed copy containing an unverified business fact, even when the user ticked include or a model drafted polished text. Keep the original published page unchanged.',
+   'Output one final editorial choice: KEEP unchanged, IMPROVE a verified existing answer, ADD a verified distinct answer, or BLOCK until evidence is available.'
+  ].join('\\n'));
   add('1A. EDITORIAL PRIORITIES — WITHOUT HIDING OTHER USEFUL FINDINGS',[
    'Priorities are a navigational summary, NOT a filter. The complete inventory follows.',
    'Coverage counts: '+['COMPLETE','PARTIAL','MISSING','UNKNOWN','REVIEW_CONFLICT'].map(status=>status+'='+inventory.filter(x=>x.coverage===status).length).join(' | '),
