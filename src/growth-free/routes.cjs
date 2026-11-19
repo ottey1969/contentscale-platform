@@ -561,7 +561,7 @@ function gapBrief(g,s,all,d){var picked={};if(!all)document.querySelectorAll('.g
  var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
  var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Decision: '+(s.decision||'UNKNOWN'),'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
-  list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
+  list.forEach(function(x){L.push('### '+x.title+(x.recommended?' — editorial priority':' — research observation'), '');
    L.push('  - Editorial assessment: '+(x.recommended?'Verified research priority':'Observation only; not approved as content advice'));
    L.push('  - Placement on the existing page: '+(x.placement&&x.placement.section_heading?'Near '+x.placement.section_heading:x.your_section?'Near '+x.your_section:'Confirm the relevant section before editing'));
    L.push('  - Editor instruction: '+(x.recommended?(x.priority&&x.priority.suggested_action||'Write a source-supported answer in the existing relevant section; verify every business claim.'):'Do not publish this observation until intent, source evidence and business claims are confirmed.'));
