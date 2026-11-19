@@ -411,7 +411,8 @@ function wireAi(){wireAiGap();var b=document.getElementById('aiSave');if(!b)retu
   try{
    var u=new URL(link);
    if(u.protocol!=='https:'||u.origin!==location.origin)throw Error('Use the original Free Growth result URL on this website.');
-   match=u.pathname.match(/\/free-growth\/r\/([A-Za-z0-9_-]+)\/?$/);
+   var parts=u.pathname.split('/').filter(Boolean);
+   match=parts.length===3&&parts[0]==='free-growth'&&parts[1]==='r'&&/^[A-Za-z0-9_-]+$/.test(parts[2])?[null,parts[2]]:null;
    if(!match||!u.searchParams.get('k'))throw Error('Paste a complete Free Growth result link, including its access key.');
    importBtn.disabled=true;st.textContent='Restoring previously saved responses…';
    var r=await fetch(API+'/import-ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_id:match[1],source_key:u.searchParams.get('k')})}),data=await r.json();
