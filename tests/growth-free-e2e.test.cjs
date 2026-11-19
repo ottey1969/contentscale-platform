@@ -98,6 +98,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.inputValue('#query'),'roof repair lodi nj');
     await p.fill('#email', email); await p.check('input[name=consent]');
     // Optional Search Console export (TEST data), filtered on exactly this page.
+    await p.locator('#freeExtraSources > summary').click();
     await p.locator('#freeGscSection > summary').click();
     const { zip } = require('./helpers/zip.cjs');
     await p.setInputFiles('#gscFile', { name: 'Performance-export.zip', mimeType: 'application/zip', buffer: zip({
