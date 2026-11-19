@@ -69,6 +69,19 @@ async function runFreeGrowthResearch({url,query,market=null,gscRows=[],sitemapUr
   if(firecrawl.stats.enabled)options.fetchLive=firecrawl.reader;
  }
  if(market&&(market.countries?.length||market.language))options.loadPageMarkets=async()=>market;
+ // Free Growth-only explicit location: pin Google organic discovery to the chosen
+ // US state/city. Serper receives market.location; the same state scopes rival-page filtering.
+ // Tracker Growth's search implementation remains unchanged.
+ if(market?.location){
+  const {statesIn}=require('../growth-serp-quality.cjs');
+  const {discoverGrowthCompetitorsWithFallback}=require('../growth-public-search-discovery.cjs');
+  const lookup=options.searchLive||discoverGrowthCompetitorsWithFallback;
+  options.searchLive=(args)=>{
+   const states=statesIn(market.location);
+   const local={...(args.market||{}),states,country:'us',location:market.location,source:'VISITOR_SELECTED_SEARCH_LOCATION'};
+   return lookup({...args,market:local});
+  };
+ }
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h}},readOnlySource(page,{gscRows,sitemapUrls}),(req,res,next)=>{
   req.growthTrackerClientId=FREE_CLIENT_ID;req.growth={can_edit:false,pages:[page]};next();
  },options);
