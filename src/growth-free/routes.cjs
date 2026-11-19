@@ -863,7 +863,8 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  if(d.research_reader){var rd=d.research_reader;
   h+='<details class="research-details" id="firecrawlResearchStatus"><summary>Page reading · '+(rd.enabled?'Firecrawl pilot':'Standard reader')+'</summary>'+
    '<p class="muted">'+(rd.enabled?'Hosted Firecrawl used on '+esc(rd.used)+' of '+esc(rd.attempted)+' attempted page(s); '+esc(rd.fallbacks)+' used the normal reader instead. Maximum '+esc(rd.limit)+' Firecrawl requests for this check.':'Firecrawl pilot is not enabled for this check. The normal ContentScale reader was used.')+'</p>'+
-   (rd.errors&&rd.errors.length?'<p class="muted">Fallback reasons: '+esc(rd.errors.map(function(e){return e.host+' ('+e.code+')'}).join(', '))+'</p>':'')+'</details>';
+   (rd.errors&&rd.errors.length?'<p class="muted">Fallback reasons: '+esc(rd.errors.map(function(e){return e.host+' ('+e.code+')'}).join(', '))+'</p>':'')+
+   (rd.pages&&rd.pages.length?'<h3>Source captures</h3><ul>'+rd.pages.map(function(p){return '<li><a href="'+esc(p.final_url||p.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(p.final_url||p.url)+'</a> <small>· '+esc(p.provider||'unknown reader')+' · '+esc(p.status||'unknown')+' · '+esc(p.retrieved_at||'time unknown')+(p.truncated?' · partial page':'')+'</small></li>'}).join('')+'</ul>':'')+'</details>';
  }
  if(d.sitemap_import){
   var sm=d.sitemap_import,used=Number(sm.urls_used||0);
