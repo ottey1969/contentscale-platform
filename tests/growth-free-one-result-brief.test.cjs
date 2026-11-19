@@ -8,9 +8,13 @@ test('One compact Growth result gives one optional evidence-backed brief and one
  assert.match(ui,/ONE RESEARCH · ONE RESULT/);
  assert.match(ui,/id="growthOneBrief"/);
  assert.match(ui,/id="growthBriefDetails"/);
- for(const heading of ['What:','Where:','How:','Why:'])assert.ok(ui.includes(heading),heading);
+ for(const heading of ['Instruction:','Placement:','Evidence behind this instruction:','Evaluation:'])assert.ok(ui.includes(heading),heading);
+ assert.ok(!ui.includes("<strong>What:</strong>"));
+ assert.match(ui,/Editorial instructions and sources/);
+ assert.doesNotMatch(ui,/What, where, how and why/);
  assert.match(ui,/h\+=growthBriefHtml\(s,d\)/);
  assert.match(ui,/cockpitInner\(NOW_CTX,chosen\)/);
+ assert.match(ui,/if\(published\|\|hasConcepts\|\|\(chosen&&!blocker&&canWrite\)\)/);
 });
 test('Five system answers are consolidated and their detail collapsed unless explicitly opened',()=>{
  assert.match(ui,/id="freeAiResearch"/);
