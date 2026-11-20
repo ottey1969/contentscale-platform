@@ -146,6 +146,16 @@ function isQuestion(t){const x=clean(t).replace(/^[¿¡]+/,'');return /\?$/.test
 // searches) and only when it shares a word with the term; a term that already is a question stays as it is. One Google
 // lookup per term and market per day. null: ask the term itself.
 const termQuestionCache=new Map();
+// The question must hold every core word of the term (owner 2026-11-20: for "content scaling" the AI systems were asked
+// "What is content at scale?" because it shared "content"; that is another term). A word counts with its own ending
+// ("repair" ~ "repairs"), not as a different word ("scaling" is not "scale"); small words do not count.
+const TERM_FILLER=new Set('the and for with what how why who which does are can you your our near from into that this de het een van voor met wat hoe wie welke waar zijn el la los las del que qué para por con como cómo una uno'.split(' '));
+const foldWord=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function holdsTerm(question,term){
+ const qw=foldWord(question).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+ const core=foldWord(term).split(/[^\p{L}\p{N}]+/u).filter(w=>w.length>=3&&!TERM_FILLER.has(w));
+ return core.every(w=>qw.some(x=>x.startsWith(w.slice(0,Math.min(6,w.length)))&&x.length<=w.length+3));
+}
 async function aiQuestionForTerm({term,gl='us',hl='en',key,fetchImpl,now=Date.now()}={}){
  const t=clean(term).slice(0,100);
  if(!t||isQuestion(t)||t.split(' ').length>12)return null;
@@ -154,8 +164,9 @@ async function aiQuestionForTerm({term,gl='us',hl='en',key,fetchImpl,now=Date.no
  let value=null;
  try{
   const g=await googleWithFallback({query:t,gl,hl,key,fetchImpl});
-  const real=(g.questions||[]).filter(q=>isQuestion(q.text));
-  const ranked=rankQuestions(real.length?real:g.questions||[],{offer:{h1:[],h2:[],title:''},seed:t});
+  const onTerm=(g.questions||[]).filter(q=>holdsTerm(q.text,t));
+  const real=onTerm.filter(q=>isQuestion(q.text));
+  const ranked=rankQuestions(real.length?real:onTerm,{offer:{h1:[],h2:[],title:''},seed:t});
   const best=(ranked.questions||[]).find(q=>q.priority==='OBSERVED_GOOGLE')||null;
   if(best)value={text:best.text,source:best.source,label:best.label,term:t};
   // Google unreachable or not configured: not cached, so the next view tries again.
