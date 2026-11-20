@@ -35,7 +35,8 @@ test('owner makes a report in the browser and the company opens the private link
   await page.fill('#manual',S+'/new-service/ ;;;; Nieuwe dienst');await page.check('#growthOn');
   await page.click('#go');await page.waitForSelector('#made a.btn',{timeout:15000}).catch(async e=>{throw Error('status: '+await page.textContent('#st')+' | errors: '+errors.join(';'))});
   const href=await page.getAttribute('#made a.btn','href');assert.match(href,/^\/gsc\/r\//);
-  await page.waitForSelector('#list table');assert.match(await page.textContent('#list'),/Acme Roofing/);
+  // Owner 2026-11-20: reports with and without Search Console in two separate sections.
+  await page.waitForSelector('#listWith table');assert.match(await page.textContent('#listWith'),/Acme Roofing/);assert.doesNotMatch(await page.textContent('#listWithout'),/Acme Roofing/);
   // The company: a fresh browser without the owner's session, on a phone.
   const phone=await browser.newContext({viewport:{width:390,height:844}}),p2=await phone.newPage();const e2=[];p2.on('pageerror',e=>e2.push(e.message));
   const resp=await p2.goto(base+href);assert.equal(resp.status(),200);
@@ -45,9 +46,15 @@ test('owner makes a report in the browser and the company opens the private link
   assert.equal(await p2.evaluate(()=>document.documentElement.scrollWidth),390,'no horizontal scroll on a phone');
   assert.deepEqual(errors.concat(e2),[]);
   // Withdraw: the link stops working.
-  await page.once('dialog',d=>d.accept());await page.click('#list [data-revoke]');
-  await page.waitForFunction(()=>/Withdrawn/.test(document.getElementById('list').textContent));
+  await page.once('dialog',d=>d.accept());await page.click('#listWith [data-revoke]');
+  await page.waitForFunction(()=>/Withdrawn/.test(document.getElementById('listWith').textContent));
   assert.equal((await p2.goto(base+href)).status(),404);
+  // Delete (owner 2026-11-20: "delete optie ... en bulk delete"): select, delete selected, confirm; the report is gone from the list and the database.
+  await page.check('#listWith [data-id]');assert.equal(await page.isDisabled('#deleteSelected'),false);
+  await page.once('dialog',d=>d.accept());await page.click('#deleteSelected');
+  await page.waitForFunction(()=>!/Acme Roofing/.test(document.getElementById('listWith').textContent));
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM gsc_reports WHERE title='Acme Roofing — Search Console'")).rows[0].n,0);
+  assert.deepEqual(errors,[]);
   ids.push(...(await pool.query("SELECT id FROM gsc_reports WHERE title='Acme Roofing — Search Console'")).rows.map(r=>r.id));
  }finally{await browser.close();srv.close();if(ids.length)await pool.query('DELETE FROM gsc_reports WHERE id=ANY($1)',[ids]);await pool.end();fs.rmSync(dir,{recursive:true,force:true})}
 });

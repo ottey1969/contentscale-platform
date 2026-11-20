@@ -20,3 +20,23 @@ test('PostgreSQL: create, open (counted), list, withdraw, expire',{skip:!local?'
   assert.equal(await st.openReport(pool,b.token),null,'an expired link shows nothing');
  }finally{if(ids.length)await pool.query('DELETE FROM gsc_reports WHERE id=ANY($1)',[ids]);await pool.end()}
 });
+
+// Owner 2026-11-20: "delete optie Your reports en bulk delete / twee secties: zonder en met duidelijk scheiden".
+test('PostgreSQL: the list says with or without Search Console; delete one or many, the links stop working',{skip:!local?'isolated PostgreSQL database not configured':false,timeout:30000},async()=>{
+ const pg=require('pg'),st=require('../src/gsc-report/store.cjs');
+ const pool=new pg.Pool({connectionString:DB});const ids=[];
+ try{
+  await st.ensureTables(pool);
+  const mk=async(scope,invite=null)=>{const r=await st.createReport(pool,{title:scope,site:'x.example',lang:'en',report:{scope,pages:[]},days:5,growthInvite:invite});ids.push(r.id);return r};
+  const a=await mk('SITE'),b=await mk('CRAWL','invite-token-abc'),c=await mk('UPLOADED_PAGES');
+  const list=await st.listReports(pool);
+  assert.equal(list.find(r=>r.id===b.id).scope,'CRAWL');assert.equal(list.find(r=>r.id===a.id).scope,'SITE');
+  assert.ok(!('report' in list[0]),'the list does not carry the whole report');
+  const gone=await st.deleteReports(pool,[a.id,b.id,999999999]);
+  assert.deepEqual(gone.map(r=>r.id).sort(),[Number(a.id),Number(b.id)].sort());
+  assert.equal(gone.find(r=>r.id===Number(b.id)).growth_invite,'invite-token-abc','the invitation is returned so it can be withdrawn');
+  assert.equal(await st.openReport(pool,a.token),null);assert.equal(await st.openReport(pool,b.token),null);
+  assert.ok(await st.openReport(pool,c.token),'other reports stay');
+  assert.deepEqual(await st.deleteReports(pool,[]),[]);
+ }finally{if(ids.length)await pool.query('DELETE FROM gsc_reports WHERE id=ANY($1)',[ids]);await pool.end()}
+});

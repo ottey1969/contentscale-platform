@@ -20,7 +20,8 @@ const enc=encodeURIComponent;
 function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs').freeGrowthConfig(),storage=null,basePath='/gsc',apiPath='/api/gsc',growthPath='/free-growth',checkUrls=urls=>checkUrlStatuses(urls),siteReader=fetchPublicGrowthHtml,fetchImpl=(...a)=>global.fetch(...a),
  serperKey=process.env.SERPER_API_KEY||'',pagespeedKey=process.env.PAGESPEED_API_KEY||''}={}){
  // The Free Growth invitation for a recipient lives in the Free Growth tables; they are made on first use.
- const st=storage||{...reportStore,createInvite:async(p,o)=>{await growthStore.ensureTables(p);return growthStore.createInvite(p,o)}};
+ const st=storage||{...reportStore,createInvite:async(p,o)=>{await growthStore.ensureTables(p);return growthStore.createInvite(p,o)},
+  revokeInviteToken:async(p,t)=>{const i=await growthStore.getInvite(p,t);return i?growthStore.revokeInvite(p,i.id):null}};
  // The owner is the Free Growth owner: the same key, the same signed session cookie (one login for both).
  const SESSION='gf_admin';
  const sign=exp=>crypto.createHmac('sha256',config.adminKey).update('growth-free-admin|'+exp).digest('base64url');
@@ -93,9 +94,19 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
  app.get(apiPath+'/reports',async(req,res)=>{
   if(!isOwner(req))return res.status(404).json({success:false,error:'Not found'});
   try{await ensure();const rows=await st.listReports(pool,{limit:200});
-   res.set('Cache-Control','no-store').json({success:true,reports:rows.map(r=>({id:r.id,title:r.title,site:r.site,lang:r.lang,url:basePath+'/r/'+r.token,created_at:r.created_at,expires_at:r.expires_at,
+   res.set('Cache-Control','no-store').json({success:true,reports:rows.map(r=>({id:r.id,title:r.title,site:r.site,lang:r.lang,url:basePath+'/r/'+r.token,search_console:(r.scope||(r.report&&r.report.scope))!=='CRAWL',created_at:r.created_at,expires_at:r.expires_at,
     revoked:!!r.revoked_at,expired:new Date(r.expires_at)<=new Date(),views:r.views,last_viewed_at:r.last_viewed_at,growth:!!r.growth}))})}
   catch(e){console.error('[gsc-report] list failed',e.message);res.status(500).json({success:false,error:'The reports could not be loaded.'})}
+ });
+ // Delete one or many reports for good. An attached Free Growth invitation is withdrawn with it.
+ app.post(apiPath+'/reports/delete',async(req,res)=>{
+  if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
+  const raw=(req.body||{}).ids;
+  if(!Array.isArray(raw)||!raw.length||raw.length>200||!raw.every(i=>Number.isSafeInteger(Number(i))&&Number(i)>0))return res.status(400).json({success:false,error:'Choose 1 to 200 reports.'});
+  try{await ensure();const gone=await st.deleteReports(pool,[...new Set(raw.map(Number))]);
+   for(const g of gone)if(g.growth_invite){try{await st.revokeInviteToken(pool,g.growth_invite)}catch(e){console.error('[gsc-report] invite revoke failed',e.message)}}
+   res.json({success:true,deleted:gone.length})}
+  catch(e){console.error('[gsc-report] delete failed',e.message);res.status(500).json({success:false,error:'The reports could not be deleted.'})}
  });
  app.post(apiPath+'/reports/:id/revoke',async(req,res)=>{
   if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
@@ -134,7 +145,8 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .facts{font-size:13px;margin:6px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:2px 10px}.facts dt{color:#64748b}.facts dd{margin:0;word-break:break-word}.GONE{background:#fecaca;color:#7f1d1d}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 .btn{display:inline-block;background:#4338ca;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .btn.big{padding:12px 20px;font-size:15px}.muted{color:#64748b;font-size:13px}details{margin-top:8px}summary{cursor:pointer;color:#4338ca;font-weight:600}
-.flag{color:#b91c1c;font-weight:600}.live{font-size:13px;margin-top:4px;color:#7c2d12}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.flag{color:#b91c1c;font-weight:600}
+.sec{border:2px solid #e2e8f0;border-radius:12px;padding:12px 16px 16px;margin:18px 0}.sec legend{font-weight:800;padding:0 8px;font-size:16px}.sec.with{border-color:#93c5fd;background:#f8fbff}.sec.without{border-color:#fdba74;background:#fffaf5}.sec.pos{border-color:#cbd5e1}div.sec h3{margin-top:0}.live{font-size:13px;margin-top:4px;color:#7c2d12}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .cta{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border-color:#c7d2fe}.foot{color:#64748b;font-size:13px;text-align:center;margin-top:28px}
 @media(max-width:700px){.ptbl thead{display:none}.ptbl,.ptbl tbody,.ptbl tr,.ptbl td{display:block;width:100%}
 .ptbl tr{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin:0 0 12px;background:#fff}.ptbl td{border:0;padding:3px 0}
@@ -280,17 +292,23 @@ function ownerPage(config,api,base){
 <label>Site (optional)<br><input id="site" maxlength="200" placeholder="acme-roofing.com" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
 <label>Report language<br><select id="lang" style="padding:9px;border-radius:8px"><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></label>
 <label>Link valid for (days)<br><input id="days" type="number" min="1" max="365" value="90" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div>
-<h3>Without Search Console: read the site in public</h3>
-<label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
-<p class="muted">Suggested search terms come from your Search Console files when you add them, otherwise from the H1 and title of the site's pages. Check them before you make the report: only then is anything searched.</p>
-<p class="muted">Reads robots.txt (and follows it), the sitemap and up to 150 pages: redirects, 404, noindex, canonical, title, meta description, H1, amount of text. Adds Google's speed data for real visitors. Free. Leave empty to use only Search Console files. Both together also works.</p>
-<label><input type="checkbox" id="posOn"> Look up positions in Google for these search terms (Serper: up to 3 paid searches per term)</label>
-<div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10) <button type="button" id="suggestTerms" class="btn" style="margin-left:6px">Suggest search terms</button><br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
-<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px">${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
+<fieldset id="secWith" class="sec with"><legend>A · With Search Console</legend>
+<p class="muted">The company gave you its Search Console export: clicks, impressions, CTR and position per page. The order of the pages is calculated on these numbers.</p>
 <h3>Search Console files</h3><p class="muted">Search Console → Performance → Export → Download CSV (ZIP). Add as many as you like: one export of the whole site, exports filtered on one page (their search terms are linked to that page), or a CSV with a page and a search-term column. Each file at most 5 MB.</p>
 <input id="gscFiles" type="file" multiple accept=".zip,.csv,.tsv,.txt">
 <h3>Pages added by hand</h3><p class="muted">One per line: URL ; clicks ; impressions ; position ; note. Only the URL is required. A page that is also in the export keeps the numbers of the export.</p>
 <textarea id="manual" rows="5" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="https://acme-roofing.com/new-service/ ;;;; New service, not in Search Console yet"></textarea>
+</fieldset>
+<fieldset id="secWithout" class="sec without"><legend>B · Without Search Console (public read)</legend>
+<p class="muted">Only a domain: robots.txt (followed), the sitemap and up to 150 pages are read in public — redirects, 404, noindex, canonical, title, meta description, H1, amount of text — plus Google's speed data for real visitors. Free. No clicks or impressions: those are only in Search Console.</p>
+<label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
+<p class="muted">Fill in A, B or both. With both, the Search Console numbers stay and the public facts are added per page.</p></fieldset>
+<fieldset id="secPositions" class="sec pos"><legend>Positions in Google (optional, for A and B)</legend>
+<p class="muted">Suggested search terms come from your Search Console files when you add them, otherwise from the H1 and title of the site's pages. Check them before you make the report: only then is anything searched.</p>
+<label><input type="checkbox" id="posOn"> Look up positions in Google for these search terms (Serper: up to 3 paid searches per term)</label>
+<div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10) <button type="button" id="suggestTerms" class="btn" style="margin-left:6px">Suggest search terms</button><br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
+<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px">${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
+</fieldset>
 <h3>Live check</h3><label><input type="checkbox" id="checkUrls" checked> Check every URL live: does it redirect (301/302) and to where, or is it gone (404/410)?</label>
 <p class="muted">Each URL is requested once (public https only, at most 150). A site that blocks the request is shown as not checked.</p>
 <h3>Free Growth for the recipient</h3><label><input type="checkbox" id="growthOn"> Let the company research pages in Free Growth from the report</label>
@@ -298,7 +316,9 @@ function ownerPage(config,api,base){
 <p class="muted">An invitation is made with this number of checks; it ends with the report. Without it, the company sees your contact button; you always see a Free Growth link per page.</p>
 <p><button class="btn big" type="submit" id="go">Make the report</button> <span id="st" class="muted" role="status"></span></p></form>
 <div id="made"></div></div>
-<div class="card"><h2>Your reports</h2><div id="list" class="muted">Loading…</div></div></div>
+<div class="card"><h2>Your reports</h2><p><button class="btn" style="background:#b91c1c" type="button" id="deleteSelected" disabled>Delete selected</button> <span id="delSt" class="muted" role="status"></span></p>
+<div id="listWith" class="sec with"><h3>A · With Search Console</h3><div class="muted">Loading…</div></div>
+<div id="listWithout" class="sec without"><h3>B · Without Search Console (public read)</h3><div class="muted">Loading…</div></div></div></div>
 <script>
 var API=${JSON.stringify(api)},BASE=${JSON.stringify(base)};
 function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -314,16 +334,32 @@ document.getElementById('suggestTerms').onclick=async function(){var st=document
   var src={SEARCH_CONSOLE:'Search Console',PAGE_H1:'H1 of',PAGE_TITLE:'title of'};
   st.innerHTML='Suggested — check and edit before you make the report:<br>'+d.terms.map(function(t){return h(t.term)+' <span style="opacity:.7">('+h(src[t.source]||t.source)+(t.page?' '+h((function(u){try{return new URL(u).pathname}catch(e){return u}})(t.page)):'')+(t.impressions?', '+t.impressions+' impressions':'')+')</span>'}).join('<br>');
  }catch(e){st.textContent=e.message||'No search terms could be suggested.'}finally{btn.disabled=false}};
-async function load(){var el=document.getElementById('list');try{var r=await fetch(API+'/reports',{credentials:'same-origin',cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error);
- if(!d.reports.length){el.textContent='No reports yet.';return}
- el.innerHTML='<div class="scroll"><table class="tbl"><thead><tr><th>Title</th><th>Site</th><th>Made</th><th>Valid until</th><th class="num">Views</th><th>Status</th><th></th></tr></thead><tbody>'+d.reports.map(function(x){
+function rowsHtml(list){if(!list.length)return '<p class="muted">No reports.</p>';
+ return '<div class="scroll"><table class="tbl"><thead><tr><th><input type="checkbox" data-all aria-label="Select all"></th><th>Title</th><th>Site</th><th>Made</th><th>Valid until</th><th class="num">Views</th><th>Status</th><th></th></tr></thead><tbody>'+list.map(function(x){
   var live=!x.revoked&&!x.expired,full=location.origin+x.url;
-  return '<tr><td>'+h(x.title)+(x.growth?' <span class="badge QUICK_WIN">Free Growth</span>':'')+'</td><td>'+h(x.site)+'</td><td>'+h(String(x.created_at).slice(0,10))+'</td><td>'+h(String(x.expires_at).slice(0,10))+'</td><td class="num">'+h(x.views)+'</td><td>'+(x.revoked?'Withdrawn':x.expired?'Expired':'Active')+'</td><td>'+
-   (live?'<a class="btn" href="'+h(x.url)+'" target="_blank" rel="noopener">Open</a> <button class="btn" data-copy="'+h(full)+'">Copy link</button> <button class="btn" style="background:#b91c1c" data-revoke="'+h(x.id)+'">Withdraw</button>':'')+'</td></tr>'}).join('')+'</tbody></table></div>';
- el.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){navigator.clipboard.writeText(b.getAttribute('data-copy'));b.textContent='Copied'}});
- el.querySelectorAll('[data-revoke]').forEach(function(b){b.onclick=async function(){if(!confirm('Withdraw this link? The company can no longer open the report.'))return;
-  await fetch(API+'/reports/'+b.getAttribute('data-revoke')+'/revoke',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:'{}'});load()}})}
- catch(e){el.textContent='Could not load the reports: '+e.message}}
+  return '<tr><td><input type="checkbox" data-id="'+h(x.id)+'" aria-label="Select"></td><td>'+h(x.title)+(x.growth?' <span class="badge QUICK_WIN">Free Growth</span>':'')+'</td><td>'+h(x.site)+'</td><td>'+h(String(x.created_at).slice(0,10))+'</td><td>'+h(String(x.expires_at).slice(0,10))+'</td><td class="num">'+h(x.views)+'</td><td>'+(x.revoked?'Withdrawn':x.expired?'Expired':'Active')+'</td><td>'+
+   (live?'<a class="btn" href="'+h(x.url)+'" target="_blank" rel="noopener">Open</a> <button class="btn" data-copy="'+h(full)+'">Copy link</button> <button class="btn" style="background:#b45309" data-revoke="'+h(x.id)+'">Withdraw</button> ':'')+
+   '<button class="btn" style="background:#b91c1c" data-delete="'+h(x.id)+'">Delete</button></td></tr>'}).join('')+'</tbody></table></div>'}
+async function del(ids){var st=document.getElementById('delSt');
+ if(!ids.length||!confirm('Delete '+ids.length+' report'+(ids.length>1?'s':'')+' for good? The link stops working and cannot be restored.'))return;
+ try{var r=await fetch(API+'/reports/delete',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:JSON.stringify({ids:ids})});var d=await r.json();if(!d.success)throw Error(d.error);
+  st.textContent=d.deleted+' deleted.'}catch(e){st.textContent=e.message||'Could not delete.'}load()}
+function selected(){return [].slice.call(document.querySelectorAll('[data-id]:checked')).map(function(b){return Number(b.getAttribute('data-id'))})}
+function sync(){var n=selected().length,b=document.getElementById('deleteSelected');b.disabled=!n;b.textContent=n?'Delete selected ('+n+')':'Delete selected'}
+document.getElementById('deleteSelected').onclick=function(){del(selected())};
+async function load(){var A=document.getElementById('listWith'),B=document.getElementById('listWithout');
+ try{var r=await fetch(API+'/reports',{credentials:'same-origin',cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error);
+  A.innerHTML='<h3>A · With Search Console</h3>'+rowsHtml(d.reports.filter(function(x){return x.search_console}));
+  B.innerHTML='<h3>B · Without Search Console (public read)</h3>'+rowsHtml(d.reports.filter(function(x){return !x.search_console}));
+  [A,B].forEach(function(el){
+   var all=el.querySelector('[data-all]');if(all)all.onchange=function(){el.querySelectorAll('[data-id]').forEach(function(c){c.checked=all.checked});sync()};
+   el.querySelectorAll('[data-id]').forEach(function(c){c.onchange=sync});
+   el.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){navigator.clipboard.writeText(b.getAttribute('data-copy'));b.textContent='Copied'}});
+   el.querySelectorAll('[data-delete]').forEach(function(b){b.onclick=function(){del([Number(b.getAttribute('data-delete'))])}});
+   el.querySelectorAll('[data-revoke]').forEach(function(b){b.onclick=async function(){if(!confirm('Withdraw this link? The company can no longer open the report.'))return;
+    await fetch(API+'/reports/'+b.getAttribute('data-revoke')+'/revoke',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:'{}'});load()}})});
+  sync()}
+ catch(e){A.textContent='Could not load the reports: '+e.message;B.textContent=''}}
 document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var st=document.getElementById('st'),go=document.getElementById('go'),files=[].slice.call(document.getElementById('gscFiles').files);
  if(files.some(function(f){return f.size>5*1024*1024})){st.textContent='A file is larger than 5 MB.';return}
  if(files.reduce(function(a,f){return a+f.size},0)>7*1024*1024){st.textContent='Together the files are larger than 7 MB: make two reports.';return}

@@ -36,10 +36,15 @@ async function openReport(pool,t,{count=true}={}){
  return (await pool.query(sql,[t])).rows[0]||null;
 }
 async function listReports(pool,{limit=100}={}){
- return (await pool.query(`SELECT id,token,title,site,lang,created_at,expires_at,revoked_at,views,last_viewed_at,growth_invite IS NOT NULL AS growth
+ return (await pool.query(`SELECT id,token,title,site,lang,created_at,expires_at,revoked_at,views,last_viewed_at,growth_invite IS NOT NULL AS growth,report->>'scope' AS scope
    FROM gsc_reports ORDER BY created_at DESC LIMIT $1`,[limit])).rows;
 }
 async function revokeReport(pool,id){
  return (await pool.query('UPDATE gsc_reports SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
-module.exports={ensureTables,createReport,openReport,listReports,revokeReport};
+// Deleted for good: the link stops working. The Free Growth invitation (if any) is returned so it can be withdrawn too.
+async function deleteReports(pool,ids){
+ if(!ids||!ids.length)return [];
+ return (await pool.query('DELETE FROM gsc_reports WHERE id=ANY($1::bigint[]) RETURNING id,growth_invite',[ids])).rows.map(r=>({id:Number(r.id),growth_invite:r.growth_invite}));
+}
+module.exports={ensureTables,createReport,openReport,listReports,revokeReport,deleteReports};
