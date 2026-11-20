@@ -108,8 +108,8 @@ function trendOf(dates){
 function sumByName(lists){const m=new Map();for(const l of lists)for(const x of l||[]){const k=x.name;const o=m.get(k)||{name:k,clicks:0,impressions:0,_w:0,_wi:0};
  o.clicks+=x.clicks;o.impressions+=x.impressions;if(x.position!=null&&x.impressions){o._w+=x.position*x.impressions;o._wi+=x.impressions}m.set(k,o)}
  return [...m.values()].map(({_w,_wi,...o})=>({...o,position:_wi?Math.round(_w/_wi*10)/10:null}))}
-const ORDER={QUICK_WIN:1,SNIPPET:2,ZERO_CLICKS:3,GONE:4,REVIEW:5,DEEPER:6,REDIRECT:7,NO_DATA:8,KEEP:9};
-const sortPages=list=>{list.sort((a,b)=>ORDER[a.action]-ORDER[b.action]||(b.click_gap||0)-(a.click_gap||0)||(b.impressions||0)-(a.impressions||0)||(b.clicks||0)-(a.clicks||0));list.forEach((p,i)=>p.rank=i+1)};
+const ORDER={QUICK_WIN:1,SNIPPET:2,ZERO_CLICKS:3,GONE:4,BLOCKED:5,REVIEW:6,DEEPER:7,FIX_SNIPPET:8,FIX_STRUCTURE:9,THIN:10,REDIRECT:11,NO_DATA:12,NO_ISSUES:13,KEEP:14};
+const sortPages=list=>{list.sort((a,b)=>ORDER[a.action]-ORDER[b.action]||(b.click_gap||0)-(a.click_gap||0)||(b.impressions||0)-(a.impressions||0)||(b.clicks||0)-(a.clicks||0)||((b.audit&&b.audit.issues.length)||0)-((a.audit&&a.audit.issues.length)||0));list.forEach((p,i)=>p.rank=i+1)};
 
 function analyze({uploads,manualPages=[],site=''}={}){
  const up=uploads||{sitewide:{pages:[],queries:[],countries:[],devices:[],dates:[]},perPage:[],pairs:[],files:[]};
@@ -129,13 +129,13 @@ function analyze({uploads,manualPages=[],site=''}={}){
  for(const pp of up.perPage)attach(pp.page,pp.queries,'PAGE_EXPORT',pp);
  const byPage=new Map();for(const x of up.pairs){const k=x.page;if(!byPage.has(k))byPage.set(k,[]);byPage.get(k).push(x)}
  for(const [pg,qs] of byPage)attach(pg,qs,'PAGE_QUERY_EXPORT');
- for(const m of (Array.isArray(manualPages)?manualPages:[]).slice(0,200)){
+ for(const m of (Array.isArray(manualPages)?manualPages:[]).slice(0,400)){
   const url=String(m&&m.url||'').trim();if(!/^https?:\/\//i.test(url))continue;
   const have=pages.get(normUrl(url));
   if(have){if(m.note)have.note=String(m.note).slice(0,300);have.manual=true;continue}
   const num=v=>v===''||v==null?null:Number(v);
   const clicks=num(m.clicks),impressions=num(m.impressions),position=num(m.position);
-  add(url,{clicks:Number.isFinite(clicks)?clicks:null,impressions:Number.isFinite(impressions)?impressions:null,position:Number.isFinite(position)?position:null,source:'MANUAL',
+  add(url,{clicks:Number.isFinite(clicks)?clicks:null,impressions:Number.isFinite(impressions)?impressions:null,position:Number.isFinite(position)?position:null,source:m.source==='CRAWL'?'CRAWL':'MANUAL',
    ...(m.note?{note:String(m.note).slice(0,300)}:{})});
  }
  const list=[...pages.values()];
@@ -200,10 +200,10 @@ function analyze({uploads,manualPages=[],site=''}={}){
 // answers 404/410 is gone while Google still shows it. A URL that could not be checked keeps its action and says why.
 function applyUrlStatus(report,statuses){
  if(!statuses||!report||!Array.isArray(report.pages))return report;
- const byKey=new Map(report.pages.map(p=>[normUrl(p.url),p]));
+ const byKey=new Map(report.pages.map(p=>[normUrl(p.url),p])),S=new Map([...statuses].map(([u,v])=>[normUrl(u),v]));
  let checked=0,notChecked=0,redirects=0,gone=0;
  for(const p of report.pages){
-  const live=statuses.get(p.url);if(!live)continue;
+  const live=statuses.get(p.url)||S.get(normUrl(p.url));if(!live)continue;
   p.live={...live};
   if(live.error){notChecked++;continue}
   checked++;
@@ -215,4 +215,39 @@ function applyUrlStatus(report,statuses){
  Object.assign(report.kpis,{urls_checked:checked,urls_not_checked:notChecked,redirects,gone});
  return report;
 }
-module.exports={readUploads,analyze,applyUrlStatus,normUrl,bandOf};
+// What the public pages show (site-audit.cjs). A page Google is told not to index, or whose canonical points elsewhere,
+// is fixed first whatever its numbers. A page without Search Console numbers gets its action from what its page shows.
+// Without any Search Console data the report says so (scope CRAWL) and shows no clicks or impressions at all.
+const SNIPPET_ISSUES=/^(TITLE|DESCRIPTION)_/,STRUCTURE_ISSUES=/^H1_/;
+function applyAudit(report,crawl){
+ if(!crawl||!report)return report;
+ const counts={};let withIssues=0,blocked=0;
+ const A=new Map([...crawl.audits].map(([u,a])=>[normUrl(u),a])),M=new Map([...crawl.lastmod].map(([u,d])=>[normUrl(u),d]));
+ for(const p of report.pages){
+  const a=A.get(normUrl(p.url)),lm=M.get(normUrl(p.url));
+  if(lm)p.lastmod=lm;
+  if(!a)continue;
+  p.audit=a;
+  for(const c of a.issues)counts[c]=(counts[c]||0)+1;
+  if(a.issues.length)withIssues++;
+  if(p.action==='REDIRECT'||p.action==='GONE')continue;
+  if(a.issues.includes('NOINDEX')||a.issues.includes('CANONICAL_ELSEWHERE')){p.action='BLOCKED';blocked++;continue}
+  if(p.action!=='NO_DATA')continue;
+  p.action=a.issues.some(c=>SNIPPET_ISSUES.test(c))?'FIX_SNIPPET':a.issues.some(c=>STRUCTURE_ISSUES.test(c))?'FIX_STRUCTURE':a.issues.includes('THIN')?'THIN':'NO_ISSUES';
+ }
+ const gsc=(report.files||[]).some(f=>f.kind&&f.kind!=='NOT_READ')||report.pages.some(p=>p.source==='MANUAL'&&p.impressions!=null);
+ if(!gsc){report.scope='CRAWL';report.notes=[];Object.assign(report.kpis,{clicks:null,impressions:null,ctr:null,position:null,zero_click_pages:null,top5_click_share:null,source:'NONE'});report.trend=null}
+ sortPages(report.pages);
+ report.kpis.audit={pages_read:crawl.audits.size,with_issues:withIssues,blocked,by_issue:counts};
+ report.crawl={origin:crawl.origin,robots:crawl.robots,sitemap:crawl.sitemap,pages_listed:crawl.pages.length,pages_read:crawl.audits.size,
+  not_crawled:crawl.not_crawled.slice(0,50),not_crawled_count:crawl.not_crawled.length,not_crawled_limit:crawl.not_crawled_limit,crawled_at:crawl.crawled_at};
+ return report;
+}
+// Positions the owner asked for: on the page that ranks, and in their own table.
+function applyPositions(report,positions){
+ if(!report)return report;report.positions=positions||null;if(!positions)return report;
+ const byKey=new Map(report.pages.map(p=>[normUrl(p.url),p]));
+ for(const r of positions.rows||[]){if(!r.url)continue;const p=byKey.get(normUrl(r.url));r.in_list=!!p;if(p){(p.positions=p.positions||[]).push({keyword:r.keyword,position:r.position});r.rank=p.rank}}
+ return report;
+}
+module.exports={readUploads,analyze,applyUrlStatus,applyAudit,applyPositions,normUrl,bandOf};
