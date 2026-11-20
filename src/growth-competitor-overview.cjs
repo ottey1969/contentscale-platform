@@ -98,6 +98,9 @@ function topicPrompt({query,competitors,page,language}){
 function withIds(competitors,page){
  let n=0;return {competitors:competitors.map(c=>({...c,sections:c.sections.map(s=>({id:'c'+(++n),...s}))})),page:page.map((s,i)=>({id:'p'+(i+1),...s}))};
 }
+// A topic is our own label for a reader need: a competitor's list number ("2. ", "Step 6) ") means nothing on the owner's
+// page (owner 2026-11-20). Only a leading step number followed by a separator and a space; "24/7" or "1.500" stay.
+const withoutListNumber=t=>String(t||'').replace(/^\s*(?:(?:step|paso|stap)\s*)?\d{1,2}\s*[.):-]\s+(?=\S)/i,'');
 function validateTopics(raw,competitors,page){
  let obj;try{obj=JSON.parse(String(raw||'').replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim())}catch{return null}
  if(!obj||!Array.isArray(obj.topics))return null;
@@ -114,7 +117,7 @@ function validateTopics(raw,competitors,page){
   if(!['YES','PARTLY','NO'].includes(covers))covers='UNKNOWN';
   if(covers!=='NO'&&covers!=='UNKNOWN'&&!ownHeadings.has(heading)){covers='UNKNOWN';heading=null}
   const fits=['YES','NO','UNSURE'].includes(String(t.fits_search||'').toUpperCase())?String(t.fits_search).toUpperCase():null;
-  topics.push({topic:clip(t.topic,140),ranking_pages:new Set(secs.map(s=>s.host)).size,sections:secs,this_page:covers,this_page_heading:covers==='NO'?null:heading,
+  topics.push({topic:clip(withoutListNumber(t.topic),140),ranking_pages:new Set(secs.map(s=>s.host)).size,sections:secs,this_page:covers,this_page_heading:covers==='NO'?null:heading,
    ...(fits?{fits_search:fits}:{}),...(fits==='NO'&&t.fits_reason?{fits_reason:clip(t.fits_reason,200)}:{})});
  }
  // Headings the model left out are still listed: nothing a ranking page covers disappears from the overview.
@@ -170,4 +173,4 @@ async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitor
   ungrouped_sections:grouped?grouped.ungrouped_sections:pages.flatMap(p=>p.sections.map(s=>({host:p.host,url:p.url,position:p.serp_position,heading:s.heading,excerpt:s.excerpt})))};
 }
 
-module.exports={topicPrompt,pageLanguage,buildCompetitorOverview,pageElements,compareElements,validateTopics,contentSections};
+module.exports={withoutListNumber,topicPrompt,pageLanguage,buildCompetitorOverview,pageElements,compareElements,validateTopics,contentSections};

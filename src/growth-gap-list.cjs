@@ -16,6 +16,7 @@ const {createHash}=require('node:crypto');
 const {terms}=require('./growth-one-action-decision.cjs');
 const {matchedTerms}=require('./growth-word-match.cjs');
 const {isFurnitureHeading}=require('./growth-derived-reader-tasks.cjs');
+const {withoutListNumber}=require('./growth-competitor-overview.cjs');
 const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
 const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch{return ''}};
 const PAGE={NOT_OBSERVED:'Not on your page',PARTIAL:'Partly on your page'};
@@ -86,7 +87,7 @@ function buildGapList(report={}){
   const label=ov.topics_status==='GROUPED'?'Not placed in a topic by AI':'Not grouped ('+String(ov.topics_status||'').toLowerCase().replace(/_/g,' ')+')';
   const loose=[];
   for(const x of rest){
-   const it={id:stableId('s-',['section',key(x.host,x.heading)]),need:{status:'SINGLE_SECTION'},group:'COMPETITOR_SECTION',writable:true,title:clip(x.heading,200),reader_question:null,
+   const it={id:stableId('s-',['section',key(x.host,x.heading)]),need:{status:'SINGLE_SECTION'},group:'COMPETITOR_SECTION',writable:true,title:clip(withoutListNumber(x.heading),200),reader_question:null,
     status:'Not compared with your page',coverage:'NOT_COMPARED',confidence:'NOT_GROUPED',ai:label,your_section:null,placement:null,examples:[],merged:[]};
    if(addEvidence(it,[x]))loose.push(it);
   }
