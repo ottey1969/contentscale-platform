@@ -39,7 +39,12 @@ function sectionProfile(sec,skip){
 // Page furniture: contact/quote blocks, FAQ containers and navigation headings frame a page; they are not something the reader
 // must learn. Industry-neutral, heading-level only (an individual question heading such as "Is wind damage covered?" stays).
 const FURNITURE_HEADING=/^(?:contact(?: us| information)?(?: today| now)?|get in touch|reach us|call us(?: today| now)?|request (?:a |your )?(?:free )?(?:quote|estimate|inspection|consultation|demo)|get (?:a |your )?(?:free )?(?:quote|estimate)|book (?:a|an|your)\b.*|schedule (?:a|an|your)\b.*|faqs?|frequently asked(?: questions)?|common questions|questions(?: and answers)?|q ?& ?a|related(?: [a-z-]+){0,3} (?:posts|articles|services|pages|links|guides|reading)|our (?:team|services|locations)|service areas?|areas we serve|about us|share this|follow us)\s*[?:.!]*$/i;
-const isFurnitureHeading=h=>FURNITURE_HEADING.test(String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim());
+// Site chrome and navigation in the page's own language (owner 2026-11-20, es.contentscale.site/consultor-geo/): plugin widgets
+// such as an accessibility menu or cookie settings, and the table of contents, reading list, contact and FAQ headings in Spanish
+// and Dutch. They frame a page; they are never content to shorten, move or preserve. Whole-heading matches only, so
+// "Menu pricing for restaurants" or "Related costs of a roof repair" stay content.
+const CHROME_HEADING=/^(?:accessibility(?: menu| tools| options| settings)?|cookie(?:s)?(?: settings| preferences| policy| notice)?|skip to (?:main )?content|(?:main |site |mobile )?(?:menu|navigation)|search this site|language|on this page|in this (?:article|guide|post)|related|(?:related|further) reading|(?:table of )?contents|en esta p[aá]gina|[ií]ndice(?: de contenidos?)?|tabla de contenidos?|contenidos?|relacionad[oa]s?|(?:art[ií]culos|entradas|p[aá]ginas|gu[ií]as|servicios) relacionad[oa]s|lee tambi[eé]n|contacto|cont[aá]ctanos|preguntas frecuentes|op deze pagina|inhoud(?:sopgave)?|gerelateerd(?:e (?:artikelen|pagina'?s|berichten|diensten))?|lees ook|veelgestelde vragen|neem contact op)\s*[?:.!]*$/i;
+const isFurnitureHeading=h=>{const t=String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();return FURNITURE_HEADING.test(t)||CHROME_HEADING.test(t)};
 function isPromotionalSection(sec,host,otherHostsText=''){
  if(isFurnitureHeading(sec.heading))return true;
  // Copy written about the provider itself ("our team is here…", "we offer…") is a sales section, whatever its heading.
