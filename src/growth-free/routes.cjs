@@ -57,7 +57,10 @@ function parseAccessKeys(raw,defaults){
    daily:int(x.daily,defaults.daily),perEmail:int(x.per_email,defaults.perEmail),
    brand:x.brand?clean(x.brand,80):defaults.brand,
    contactUrl:/^https:\/\//.test(x.contact_url||'')?x.contact_url:defaults.contactUrl,
-   serviceText:x.service_text?clean(x.service_text,600):defaults.serviceText};
+   serviceText:x.service_text?clean(x.service_text,600):defaults.serviceText,
+   // A key with its own brand never shows the owner's photo or name unless it brings its own.
+   authorName:x.author_name?clean(x.author_name,80):x.brand?'':defaults.authorName,
+   authorImage:/^https:\/\//.test(x.author_image||'')?x.author_image:x.brand?'':defaults.authorImage};
  });
 }
 function freeGrowthConfig(env=process.env){
@@ -71,6 +74,9 @@ function freeGrowthDefaults(env){
   // Existing result links continue to work; new check creation needs owner access or an invite.
   approvalRequired:env.GROWTH_FREE_APPROVAL_REQUIRED==='true',
   brand:env.GROWTH_FREE_BRAND||'ContentScale',
+  // Owner 2026-11-20: the paid card says "I", so it shows who that is.
+  authorName:env.GROWTH_FREE_AUTHOR_NAME||'Ottmar J.G. Francisca',
+  authorImage:/^https:\/\//.test(env.GROWTH_FREE_AUTHOR_IMAGE||'')?env.GROWTH_FREE_AUTHOR_IMAGE:'https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png',
   perEmail:int(env.GROWTH_FREE_PER_EMAIL_PER_DAY,3),
   perIp:int(env.GROWTH_FREE_PER_IP_PER_DAY,3),
   daily:int(env.GROWTH_FREE_DAILY_LIMIT,50),
@@ -86,7 +92,7 @@ function freeGrowthDefaults(env){
   writing:['off','admin','invited','all'].includes(String(env.GROWTH_FREE_WRITING||'').toLowerCase())?String(env.GROWTH_FREE_WRITING).toLowerCase():'all',
   writeLimit:Math.max(1,int(env.GROWTH_FREE_WRITES_PER_CHECK,3)),
   writesPerDay:Math.max(0,int(env.GROWTH_FREE_WRITES_PER_DAY,40)),
-  serviceText:env.GROWTH_FREE_SERVICE_TEXT||'I write the missing sections in your voice, check every fact with you, publish nothing without your approval and measure the result in Search Console after 28 days.'
+  serviceText:env.GROWTH_FREE_SERVICE_TEXT||'What: I write the missing sections in your voice and check every fact with you.\nWhy: your page answers what Google and AI look for; after 28 days I measure the result.'
  };
 }
 
@@ -108,7 +114,7 @@ function page(title,body,cfg){
  return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
 :root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
-.growth-priorities{border-left:4px solid #15803d}.journey-head{display:flex;align-items:center;gap:12px;padding:18px 16px;border-bottom:1px solid var(--line);background:var(--bg)}.journey-head strong{display:block;font-size:17px}.journey-head small{display:block;color:var(--muted);font-weight:400}.journey-static{border:2px solid #2563eb}.growth-brief-jump{margin:0 0 14px}.growth-brief-jump a{font-weight:700;text-decoration:none}.card.hire-prominent{border:2px solid #2563eb;border-left-width:8px;box-shadow:0 8px 24px rgba(37,99,235,.22)}.card.hire-prominent .kicker{color:#2563eb;font-weight:800;letter-spacing:.04em}.card.hire-prominent h2{font-size:1.5em}.prio-list{padding-left:22px;margin:10px 0}.prio-item{margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}.prio-item p{margin:6px 0}.prio-head{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline}.prio-tier,.prio-action{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--card);border:1px solid var(--line)}.prio-most_important .prio-tier{background:#dcfce7;color:#14532d;border-color:#86efac}.prio-important .prio-tier{background:#dbeafe;color:#1e3a8a;border-color:#93c5fd}.prio-fact{color:var(--blocked)}.prio-item details>summary{cursor:pointer;font-size:14px;color:var(--muted)}
+.growth-priorities{border-left:4px solid #15803d}.journey-head{display:flex;align-items:center;gap:12px;padding:18px 16px;border-bottom:1px solid var(--line);background:var(--bg)}.journey-head strong{display:block;font-size:17px}.journey-head small{display:block;color:var(--muted);font-weight:400}.journey-static{border:2px solid #2563eb}.growth-brief-jump{margin:0 0 14px}.growth-brief-jump a{font-weight:700;text-decoration:none}.card.hire-prominent{border:2px solid #2563eb;border-left-width:8px;box-shadow:0 8px 24px rgba(37,99,235,.22)}.card.hire-prominent .kicker{color:#2563eb;font-weight:800;letter-spacing:.04em}.card.hire-prominent h2{font-size:1.5em;margin-bottom:2px}.hire-who{display:flex;gap:14px;align-items:center}.hire-who img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #2563eb;flex-shrink:0}.hire-name{margin:0;color:var(--muted);font-size:14px}.prio-list{padding-left:22px;margin:10px 0}.prio-item{margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}.prio-item p{margin:6px 0}.prio-head{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline}.prio-tier,.prio-action{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--card);border:1px solid var(--line)}.prio-most_important .prio-tier{background:#dcfce7;color:#14532d;border-color:#86efac}.prio-important .prio-tier{background:#dbeafe;color:#1e3a8a;border-color:#93c5fd}.prio-fact{color:var(--blocked)}.prio-item details>summary{cursor:pointer;font-size:14px;color:var(--muted)}
 .growth-brief{border:1px solid var(--line);border-left:4px solid #2563eb;background:var(--card);border-radius:16px;padding:22px;margin:16px 0;box-shadow:0 12px 35px rgba(15,23,42,.07)}.growth-brief-head{display:grid;gap:8px}.growth-brief-head>p{max-width:75ch}.growth-brief-head button{min-height:42px}.growth-brief-item{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:16px;margin:12px 0}.growth-brief-item h3{margin:0 0 10px}.growth-brief-body>h3{font-size:17px;margin-top:18px}.growth-brief-body details.research-details{border-radius:10px;padding:10px;margin-top:10px}@media(max-width:620px){.growth-brief{padding:14px}.growth-brief-head h2{font-size:20px}.growth-brief-head button{width:100%;margin:4px 0}}
 .growth-brief-head>small{font-weight:700;letter-spacing:.06em;color:var(--muted)}.growth-brief-head h2{margin:.45em 0;font-size:22px}.growth-brief-head p{margin:.45em 0}.growth-brief-meta{font-size:13px;color:var(--muted)}.growth-brief details>summary{cursor:pointer}.growth-brief #growthBriefDetails{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.growth-brief-body{padding:12px 2px}.growth-brief-item{border-top:1px solid var(--line);padding:8px 0}.growth-brief-item p{margin:6px 0}.growth-brief-body h3{margin:12px 0 3px}.growth-ai-prominent>summary{font-weight:700;color:#1e40af;cursor:pointer}.growth-ai-prominent:not([open]){padding:14px 20px}.growth-ai-prominent:not([open])>summary small{font-weight:400}\n*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 main{max-width:860px;margin:0 auto;padding:24px 16px 60px}h1{font-size:30px;line-height:1.2;margin:.4em 0}h2{font-size:21px;margin:1.6em 0 .5em}
@@ -366,7 +372,7 @@ function resultPage(cfg,api,base,id,key,lang='en'){
 ${lang!=='en'?'<script>'+uiTexts.clientScript(lang)+'</script>':''}
 <div id="out" class="card free-research-working" aria-live="polite" aria-busy="true"><p class="kicker">Working</p><h1>Checking your page…</h1><div class="research-progress" role="progressbar" aria-label="Research in progress" aria-valuetext="Research in progress"></div><p id="freeResearchLiveStatus" class="muted" role="status">Reading your page…</p><p class="muted">Reading your page and the pages that rank for your search. This usually takes under a minute. You can keep this page open; the link also works later.</p></div>
 <script>
-var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVICE=${js(cfg.serviceText)},BRAND=${js(cfg.brand)},PAGE_LANG=${js(lang)};
+var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVICE=${js(cfg.serviceText)},BRAND=${js(cfg.brand)},AUTHOR_NAME=${js(cfg.authorName||'')},AUTHOR_IMG=${js(cfg.authorImage||'')},PAGE_LANG=${js(lang)};
 // The check remembers its language: a link without it (an older link, an e-mail) opens in that language.
 function langRedirect(d){try{if(d&&d.ui_lang&&d.ui_lang!==PAGE_LANG){var u=new URL(location.href);u.searchParams.set('lang',d.ui_lang);location.replace(u.toString());return true}}catch(e){}return false}
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -1040,7 +1046,7 @@ var nowObs=null;
 function wireNowBar(){var card=document.getElementById('freeNextAction'),bar=document.getElementById('nowBar');if(!bar){bar=document.createElement('div');bar.id='nowBar';bar.className='now-bar';bar.hidden=true;bar.setAttribute('role','region');bar.setAttribute('aria-label','Next action');document.body.appendChild(bar)}
  if(!card||!window.IntersectionObserver)return;if(nowObs)nowObs.disconnect();
  nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''},{threshold:0});nowObs.observe(card)}
-function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
+function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
@@ -1086,7 +1092,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
   '<p><small>'+(fc&&fc.enabled?'Pages read with Firecrawl: '+esc(fc.used)+' of '+esc(fc.attempted)+' · ':'')+'AI answers: '+esc(aiN)+' of 5</small></p>'+
   '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> <button type="button" id="briefDownloadAll" class="btn">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div></section>';
  h+='<details id="stepPublish" class="journey-section"'+(published?' open':'')+'>'+stepSum(4,'Publish & measure',published?'Published on '+String(d.publication.published_on).slice(0,10)+' — compare before and after here':'After you put the text on your site: record the date',published)+'<div class="journey-body" id="pubBox">'+pubHtml(d.publication,d.gsc)+'</div></details>';
- h+='<div class="card hire-prominent" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Prefer to have it done for you?</h2><p>'+esc(SERVICE)+'</p><p><button type="button" class="btn" id="hireOpen">Ask '+esc(BRAND)+' to do it</button>'+(CONTACT?' <a class="btn ghost" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a>':'')+'</p>'+
+ h+='<div class="card hire-prominent" id="hire"><div class="hire-who">'+(AUTHOR_IMG?'<img src="'+esc(AUTHOR_IMG)+'" alt="'+esc(AUTHOR_NAME||BRAND)+'" width="64" height="64" loading="lazy" referrerpolicy="no-referrer">':'')+'<div><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Rather not do it yourself?</h2>'+(AUTHOR_NAME?'<p class="hire-name">'+esc(AUTHOR_NAME)+' · '+esc(BRAND)+'</p>':'')+'</div></div>'+String(SERVICE).split('\\n').map(function(l){return '<p>'+esc(l)+'</p>'}).join('')+'<p><button type="button" class="btn" id="hireOpen">Yes, do it for me</button>'+(CONTACT?' <a class="btn ghost" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a>':'')+'</p>'+
  '<form id="hf" hidden><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit" class="btn">Send my request</button> <small role="status" id="hs"></small></p></form></div>';
  LAST_SELF=selfItems(s.gaps,d);h+=selfHtml(LAST_SELF);
  // The evidence: one tab per source, closed until opened (also by every "evidence" link).
@@ -1145,7 +1151,7 @@ function findKey(config,value,req){
  const host=String(req&&req.hostname||'').toLowerCase().replace(/^www\./,'');
  return host?(config.accessKeys||[]).find(k=>k.hosts&&k.hosts.includes(host))||null:null;
 }
-const offerOf=k=>({brand:k.brand,contact_url:k.contactUrl||null,service_text:k.serviceText});
+const offerOf=k=>({brand:k.brand,contact_url:k.contactUrl||null,service_text:k.serviceText,...(k.authorName?{author_name:k.authorName}:{}),...(k.authorImage?{author_image:k.authorImage}:{})});
 
 function adminPage(cfg,api,base,loggedIn){
  return page('Growth check — admin',`
