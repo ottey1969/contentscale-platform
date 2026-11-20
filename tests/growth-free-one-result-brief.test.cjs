@@ -10,7 +10,7 @@ test('One compact Growth result gives one optional evidence-backed brief and one
  assert.match(ui,/id="growthBriefDetails"/);
  for(const heading of ['Instruction:','Placement:','Evidence behind this instruction:','Evaluation:'])assert.ok(ui.includes(heading),heading);
  assert.ok(!ui.includes("<strong>What:</strong>"));
- assert.match(ui,/Editorial instructions and sources/);
+ assert.match(ui,/Sources and details per topic/); // owner 2026-11-20: plain words, moved to the evidence at the bottom
  assert.doesNotMatch(ui,/What, where, how and why/);
  assert.match(ui,/h\+=growthBriefHtml\(s,d\)/);
  assert.match(ui,/cockpitInner\(NOW_CTX,chosen\)/);
@@ -34,7 +34,7 @@ test('Brief only proposes evidence-supported topics, with source links and safe 
  assert.match(ui,/function gapBrief\(g,s,all(?:,d)?\)/); // d (saved check data) was added in #500
  assert.match(ui,/esc\(e\.url\)/);
  assert.match(ui,/No verified content improvement/);
- assert.match(ui,/No verified content change yet/);
+ assert.match(ui,/The top Google pages do not agree, so there is no firm advice/); // plain-language outcome (owner 2026-11-20)
  assert.match(ui,/Keep the page unchanged for now/);
 });
 test('Result brief labels have EN/NL/ES translations',()=>{

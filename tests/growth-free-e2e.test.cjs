@@ -220,11 +220,11 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-unavailable/);
     await p.fill('.pkgText',savedPrepared);
     assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-complete/);
-    // 5. Downloads: the editor brief and the JSON.
-    if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
-    await p.locator('#gapDownload').locator('xpath=ancestor::details[1]/summary').click();
-    const [brief] = await Promise.all([p.waitForEvent('download'), p.click('#gapDownload')]);
-    assert.equal(brief.suggestedFilename(), 'editor-brief.md');
+    // 5. Downloads: the complete brief (at the bottom of the result since owner 2026-11-20) and the JSON.
+    await p.locator('#briefExport').scrollIntoViewIfNeeded();
+    const [brief] = await Promise.all([p.waitForEvent('download'), p.click('#briefDownloadAll')]);
+    assert.equal(brief.suggestedFilename(), 'growth-complete-editor-brief.md');
+    assert.doesNotMatch(require('node:fs').readFileSync(await brief.path(),'utf8'),/Decision: [A-Z_]+/,'the brief says the outcome in words, not a status code');
     const jsonUrl = await p.getAttribute('a[download][href*="report.json"]', 'href');
     const report = await (await fetch(new URL(jsonUrl, base))).json();
     assert.equal(report.search_console.latest.used_in_research, true);
