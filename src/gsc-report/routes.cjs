@@ -6,6 +6,7 @@
 const crypto=require('node:crypto');
 const {readUploads,analyze,applyUrlStatus,applyAudit,applyPositions}=require('./analysis.cjs');
 const audit=require('./site-audit.cjs');
+const {suggestTerms}=require('./suggest-terms.cjs');
 const {readMarket}=require('../rank-free/engine.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const {checkUrlStatuses}=require('./url-status.cjs');
@@ -80,6 +81,15 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    res.json({success:true,id:row.id,url:basePath+'/r/'+row.token,expires_at:row.expires_at,files:report.files,pages:report.pages.length});
   }catch(e){console.error('[gsc-report] create failed',e.message);res.status(500).json({success:false,error:'The report could not be made. Nothing was saved.'})}
  });
+ // Search terms for the position check, from a real source; the owner reviews them before anything is searched.
+ app.post(apiPath+'/suggest-terms',async(req,res)=>{
+  if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
+  const b=req.body||{},files=(Array.isArray(b.files)?b.files:[]).filter(f=>f&&f.content_base64),domain=String(b.domain||'').trim();
+  if(!files.length&&!domain)return res.status(400).json({success:false,error:'Enter a domain or add a Search Console export first.'});
+  try{const r=await suggestTerms({files,domain,fetchImpl:siteReader});res.json({success:true,...r})}
+  catch(e){if(e&&(e.code==='INVALID_URL'||e.code==='PUBLIC_HTTPS_URL_REQUIRED'))return res.status(400).json({success:false,error:'Enter a public https domain, such as example.com.'});
+   console.error('[gsc-report] suggest failed',e.message);res.status(500).json({success:false,error:'No search terms could be suggested.'})}
+ });
  app.get(apiPath+'/reports',async(req,res)=>{
   if(!isOwner(req))return res.status(404).json({success:false,error:'Not found'});
   try{await ensure();const rows=await st.listReports(pool,{limit:200});
@@ -120,7 +130,7 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .scroll{overflow-x:auto}.url{word-break:break-all}.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
 .QUICK_WIN{background:#dcfce7;color:#14532d}.SNIPPET{background:#dbeafe;color:#1e3a8a}.ZERO_CLICKS{background:#fee2e2;color:#7f1d1d}.REVIEW{background:#fef3c7;color:#78350f}
 .DEEPER{background:#ede9fe;color:#4c1d95}.REDIRECT{background:#ffedd5;color:#7c2d12}.BLOCKED{background:#fecaca;color:#7f1d1d}.FIX_SNIPPET{background:#dbeafe;color:#1e3a8a}.FIX_STRUCTURE{background:#e0e7ff;color:#3730a3}.THIN{background:#fef3c7;color:#78350f}.NO_ISSUES{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
-.issues{font-size:13px;margin-top:4px}.issues .flag{font-weight:600}.chip{display:inline-block;background:#ecfdf5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
+.issues{font-size:13px;margin-top:4px}.issues .flag{font-weight:600}.chip.idea{background:#f1f5f9;color:#334155;font-weight:600}.chip{display:inline-block;background:#ecfdf5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
 .facts{font-size:13px;margin:6px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:2px 10px}.facts dt{color:#64748b}.facts dd{margin:0;word-break:break-word}.GONE{background:#fecaca;color:#7f1d1d}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 .btn{display:inline-block;background:#4338ca;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .btn.big{padding:12px 20px;font-size:15px}.muted{color:#64748b;font-size:13px}details{margin-top:8px}summary{cursor:pointer;color:#4338ca;font-weight:600}
@@ -245,6 +255,7 @@ function reportPage(row,{owner,config,growthPath}){
  const positions=P?`<div class="card"><h2>${esc(A.pos_title)}</h2>${P.status==='PROVIDER_NOT_CONFIGURED'?`<p class="muted">${esc(A.pos_not_configured)}</p>`:
   `<p class="muted">${esc(A.pos_intro.replace('{country}',dname(lang,'region',P.market.gl)).replace('{language}',dname(lang,'language',P.market.hl)).replace('{date}',day(lang,P.checked_at)))}</p>
   <div class="scroll"><table class="tbl"><thead><tr><th>${esc(A.pos_term)}</th><th>${esc(A.pos_position)}</th><th>${esc(A.pos_page)}</th></tr></thead><tbody>${(P.rows||[]).map(posRow).join('')}</tbody></table></div>`}
+  ${P.ideas&&P.ideas.length?`<h3>${esc(A.ideas_title)}</h3><p class="muted">${esc(A.ideas_intro)}</p><p>${P.ideas.map(i=>`<span class="chip idea" title="${esc(i.from)}">${esc(i.term)}</span>`).join('')}</p>`:''}
   ${owner&&P.calls!=null?`<p class="muted">${esc(t.owner_view)} · ${esc(A.pos_calls.replace('{n}',P.calls))}</p>`:''}</div>`:'';
  const SP=r.speed,metric=(key,v)=>`<div class="kpi"><span>${esc(A['m_'+key])}</span><b>${key==='CLS'?esc(nf(lang,v.score,{maximumFractionDigits:2})):esc(nf(lang,v.ms/1000,{maximumFractionDigits:1}))+' s'}</b><span>${esc(A.cat[v.category]||'')}</span></div>`;
  const speed=SP?`<div class="card"><h2>${esc(A.speed_title)}</h2>${SP.status==='FOUND'?`<div class="kpis">${Object.entries(SP.metrics).map(([k2,v])=>metric(k2,v)).join('')}${SP.overall?`<div class="kpi"><span>${esc(A.overall)}</span><b>${esc(A.cat[SP.overall]||SP.overall)}</b></div>`:''}</div>
@@ -271,10 +282,11 @@ function ownerPage(config,api,base){
 <label>Link valid for (days)<br><input id="days" type="number" min="1" max="365" value="90" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div>
 <h3>Without Search Console: read the site in public</h3>
 <label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
+<p class="muted">Suggested search terms come from your Search Console files when you add them, otherwise from the H1 and title of the site's pages. Check them before you make the report: only then is anything searched.</p>
 <p class="muted">Reads robots.txt (and follows it), the sitemap and up to 150 pages: redirects, 404, noindex, canonical, title, meta description, H1, amount of text. Adds Google's speed data for real visitors. Free. Leave empty to use only Search Console files. Both together also works.</p>
 <label><input type="checkbox" id="posOn"> Look up positions in Google for these search terms (Serper: up to 3 paid searches per term)</label>
-<div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10)<br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
-<div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px">${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
+<div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10) <button type="button" id="suggestTerms" class="btn" style="margin-left:6px">Suggest search terms</button><br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
+<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px">${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
 <h3>Search Console files</h3><p class="muted">Search Console → Performance → Export → Download CSV (ZIP). Add as many as you like: one export of the whole site, exports filtered on one page (their search terms are linked to that page), or a CSV with a page and a search-term column. Each file at most 5 MB.</p>
 <input id="gscFiles" type="file" multiple accept=".zip,.csv,.tsv,.txt">
 <h3>Pages added by hand</h3><p class="muted">One per line: URL ; clicks ; impressions ; position ; note. Only the URL is required. A page that is also in the export keeps the numbers of the export.</p>
@@ -293,6 +305,15 @@ function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return 
 function read(f){return new Promise(function(ok,no){var r=new FileReader();r.onload=function(){ok({name:f.name,content_base64:String(r.result).split(',')[1]||''})};r.onerror=no;r.readAsDataURL(f)})}
 function manual(){return document.getElementById('manual').value.split('\\n').map(function(l){var p=l.split(';').map(function(x){return x.trim()});
  return p[0]?{url:p[0],clicks:p[1]||null,impressions:p[2]||null,position:p[3]||null,note:p.slice(4).join(';')||null}:null}).filter(Boolean)}
+document.getElementById('suggestTerms').onclick=async function(){var st=document.getElementById('termSources'),btn=this;btn.disabled=true;st.textContent='Looking for search terms…';
+ try{var files=[].slice.call(document.getElementById('gscFiles').files);
+  var r=await fetch(API+'/suggest-terms',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},
+   body:JSON.stringify({domain:document.getElementById('auditDomain').value.trim(),files:await Promise.all(files.map(read))})});var d=await r.json();if(!d.success)throw Error(d.error);
+  if(!d.terms.length){st.textContent='No usable search terms found. Type them yourself.';return}
+  document.getElementById('posTerms').value=d.terms.map(function(t){return t.term}).join('\\n');document.getElementById('posOn').checked=true;
+  var src={SEARCH_CONSOLE:'Search Console',PAGE_H1:'H1 of',PAGE_TITLE:'title of'};
+  st.innerHTML='Suggested — check and edit before you make the report:<br>'+d.terms.map(function(t){return h(t.term)+' <span style="opacity:.7">('+h(src[t.source]||t.source)+(t.page?' '+h((function(u){try{return new URL(u).pathname}catch(e){return u}})(t.page)):'')+(t.impressions?', '+t.impressions+' impressions':'')+')</span>'}).join('<br>');
+ }catch(e){st.textContent=e.message||'No search terms could be suggested.'}finally{btn.disabled=false}};
 async function load(){var el=document.getElementById('list');try{var r=await fetch(API+'/reports',{credentials:'same-origin',cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error);
  if(!d.reports.length){el.textContent='No reports yet.';return}
  el.innerHTML='<div class="scroll"><table class="tbl"><thead><tr><th>Title</th><th>Site</th><th>Made</th><th>Valid until</th><th class="num">Views</th><th>Status</th><th></th></tr></thead><tbody>'+d.reports.map(function(x){
