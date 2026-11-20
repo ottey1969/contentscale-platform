@@ -76,3 +76,19 @@ test('the ordered list is translated: a row written with a bare {q} still matche
  assert.equal(nl['Add this page element yourself: “{q}”.'],'Voeg dit pagina-element zelf toe: “{q}”.');
  assert.equal(nl['On your page (topic comparison: “{q}”)'],'Op je pagina (onderwerpvergelijking: “{q}”)');
 });
+
+// Owner 2026-11-20 (PRT emergency check): "ik zie nergens waar ik dit kan downloaden voor external ai of editor". The
+// "AI cannot write" card still pointed to the removed "Export your selection, below". Every pointer now leads to the
+// complete brief at the bottom (#briefExport), and the result head links to it.
+test('the complete brief is findable: a link under the outcome and no pointer to the removed selection export',()=>{
+ assert.ok(!src.includes('Export your selection'),'no pointer to the removed export');
+ assert.ok(!src.includes('Your editor brief is in step 1'),'the brief is not in step 1 any more');
+ assert.ok(!src.includes('step 2 (Write the text)'),'step 2 is called Write with AI');
+ const brief=src.slice(src.indexOf('function growthBriefHtml(s,d){'),src.indexOf('function briefSourcesHtml(s,d){'));
+ assert.match(brief,/href="#briefExport"[^>]*>↓ Download the brief for an editor or another AI tool<\/a>/);
+ const next=src.slice(src.indexOf('function nextWrite('),src.indexOf('function automaticDraftIds('));
+ assert.match(next,/Or download the complete brief at the bottom of this page and give it to an editor or another AI tool\./);
+ assert.match(next,/href="#briefExport"/);
+ for(const k of ['↓ Download the brief for an editor or another AI tool','Or download the complete brief at the bottom of this page and give it to an editor or another AI tool.','Go to the brief ↓','Use the complete brief at the bottom of this page instead.','Your complete brief is at the bottom of this page.'])
+  {const row=ROWS.find(r=>r[0]===k);assert.ok(row&&row[1]&&row[2],'nl/es: '+k)}
+});

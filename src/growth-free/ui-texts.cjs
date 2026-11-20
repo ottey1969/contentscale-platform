@@ -8,6 +8,11 @@ const ROWS = [
   ['AI research · {n}/{n} saved answers', 'AI-onderzoek · {n}/{n} opgeslagen antwoorden', 'Investigación de IA · {n}/{n} respuestas guardadas'],
   ['Copy full editor / external AI brief', 'Kopieer de volledige brief', 'Copiar el brief completo'],
   ['Download complete brief', 'Download de volledige brief', 'Descargar el brief completo'],
+  ['↓ Download the brief for an editor or another AI tool', '↓ Download de brief voor een redacteur of een andere AI-tool', '↓ Descarga el brief para un redactor u otra herramienta de IA'],
+  ['Or download the complete brief at the bottom of this page and give it to an editor or another AI tool.', 'Of download de volledige brief onderaan deze pagina en geef hem aan een redacteur of een andere AI-tool.', 'O descarga el brief completo al final de esta página y dáselo a un redactor o a otra herramienta de IA.'],
+  ['Go to the brief ↓', 'Naar de brief ↓', 'Ir al brief ↓'],
+  ['Use the complete brief at the bottom of this page instead.', 'Gebruik in plaats daarvan de volledige brief onderaan deze pagina.', 'Usa en su lugar el brief completo al final de esta página.'],
+  ['Your complete brief is at the bottom of this page.', 'Je volledige brief staat onderaan deze pagina.', 'Tu brief completo está al final de esta página.'],
   // Free Growth result in one logical order, in plain words (owner 2026-11-20)
   ['Choose what AI writes into your page', 'Kies wat AI in je pagina schrijft', 'Elige lo que la IA escribe en tu página'],
   ['{n} topic(s) chosen', '{n} onderwerp(en) gekozen', '{n} tema(s) elegido(s)'],
