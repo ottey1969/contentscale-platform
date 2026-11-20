@@ -13,6 +13,13 @@ const ROWS = [
   ['Go to the brief ↓', 'Naar de brief ↓', 'Ir al brief ↓'],
   ['Use the complete brief at the bottom of this page instead.', 'Gebruik in plaats daarvan de volledige brief onderaan deze pagina.', 'Usa en su lugar el brief completo al final de esta página.'],
   ['Your complete brief is at the bottom of this page.', 'Je volledige brief staat onderaan deze pagina.', 'Tu brief completo está al final de esta página.'],
+  ['Write it yourself: your brief for an editor or another AI tool', 'Zelf schrijven: je brief voor een redacteur of een andere AI-tool', 'Escríbelo tú: tu brief para un redactor u otra herramienta de IA'],
+  ['Prefer to have it done for you?', 'Laat je het liever voor je doen?', '¿Prefieres que lo hagamos por ti?'],
+  ['Send my request', 'Verstuur mijn aanvraag', 'Enviar mi solicitud'],
+  ['Or download the complete brief in step 3 below and give it to an editor or another AI tool.', 'Of download de volledige brief in stap 3 hieronder en geef hem aan een redacteur of een andere AI-tool.', 'O descarga el brief completo en el paso 3 de abajo y dáselo a un redactor o a otra herramienta de IA.'],
+  ['Use the complete brief in step 3 instead.', 'Gebruik in plaats daarvan de volledige brief in stap 3.', 'Usa en su lugar el brief completo del paso 3.'],
+  ['Your complete brief is in step 3.', 'Je volledige brief staat in stap 3.', 'Tu brief completo está en el paso 3.'],
+  ['Brief', 'Brief', 'Brief'],
   // Free Growth result in one logical order, in plain words (owner 2026-11-20)
   ['Choose what AI writes into your page', 'Kies wat AI in je pagina schrijft', 'Elige lo que la IA escribe en tu página'],
   ['{n} topic(s) chosen', '{n} onderwerp(en) gekozen', '{n} tema(s) elegido(s)'],
