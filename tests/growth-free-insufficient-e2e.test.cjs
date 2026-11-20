@@ -45,7 +45,7 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     assert.match(box, /Only 1 Google result\(s\) could be used|It is not clear what people searching for this want/, 'the concrete reason, in plain words');
     assert.doesNotMatch(box, /data blocked|serp intent/i, 'no internal codes');
     assert.match(box, /at least 2 pages that Google ranks[^]*\(here: 1\)/);
-    assert.match(box, /more specific search term/); assert.match(box, /complete brief at the bottom of this page[^]*editor or another AI tool/);
+    assert.match(box, /more specific search term/); assert.match(box, /complete brief in step 3 below[^]*editor or another AI tool/);
     // Owner 2026-11-20: the card links to the downloadable brief (the old "Export your selection" button no longer exists).
     assert.equal(await p.locator('#nextWrite a[href="#briefExport"]').count(), 1);
     assert.equal(await p.locator('#briefExport #briefDownloadAll').count(), 1);

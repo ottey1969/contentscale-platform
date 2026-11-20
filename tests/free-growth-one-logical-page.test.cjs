@@ -13,8 +13,10 @@ const prt=require('./fixtures/free-growth-prt-emergency/check.json');
 const renderSrc=src.slice(src.indexOf('function render(d){'),src.indexOf('// While Google is researched'));
 
 test('the result page has one logical order',()=>{
- const order=['h+=growthBriefHtml(s,d)','id="freeAiResearch"','h+=gapsHtml(s.gaps,d.writing,d)','id="stepPublish"','id="hire"',
-  'h+=selfHtml(LAST_SELF)','id="stepResearch"','h+=briefSourcesHtml(s,d)','id="briefExport"','id="data"'];
+ // Owner 2026-11-20: "de brief kopieren staat helemaal onderin, dus hoe kan dan publish en measure ergens anders staan".
+ // The brief is step 3 (write it yourself), publish & measure is step 4, then the paid offer; evidence stays at the bottom.
+ const order=['h+=growthBriefHtml(s,d)','id="freeAiResearch"','h+=gapsHtml(s.gaps,d.writing,d)','id="briefExport"','id="stepPublish"','id="hire"',
+  'h+=selfHtml(LAST_SELF)','id="stepResearch"','h+=briefSourcesHtml(s,d)','id="data"'];
  let last=-1;
  for(const k of order){const i=renderSrc.indexOf(k);assert.ok(i>last,'in order: '+k+' ('+i+' after '+last+')');last=i}
 });
@@ -32,6 +34,10 @@ test('what does not matter is gone: no duplicate lists, no second AI block, no e
 test('the steps say what they do, in plain words: choose, Write with AI, publish',()=>{
  assert.match(src,/stepSum\(1,'Choose what AI writes into your page'/);
  assert.match(src,/stepSum\(2,'Write with AI'/);
+ assert.match(src,/<span class="journey-num">3<\/span>[^]*Write it yourself: your brief for an editor or another AI tool/);
+ assert.match(src,/stepSum\(4,'Publish & measure'/);
+ assert.match(src,/id="briefDownloadAll" class="btn"/,'the download is a primary button');
+ assert.match(src,/id="hireOpen"/,'the paid offer has one clear button; the form opens after the click');
  assert.match(src,/class="card hire-prominent" id="hire"/);
 });
 
@@ -87,8 +93,8 @@ test('the complete brief is findable: a link under the outcome and no pointer to
  const brief=src.slice(src.indexOf('function growthBriefHtml(s,d){'),src.indexOf('function briefSourcesHtml(s,d){'));
  assert.match(brief,/href="#briefExport"[^>]*>↓ Download the brief for an editor or another AI tool<\/a>/);
  const next=src.slice(src.indexOf('function nextWrite('),src.indexOf('function automaticDraftIds('));
- assert.match(next,/Or download the complete brief at the bottom of this page and give it to an editor or another AI tool\./);
+ assert.match(next,/Or download the complete brief in step 3 below and give it to an editor or another AI tool\./);
  assert.match(next,/href="#briefExport"/);
- for(const k of ['↓ Download the brief for an editor or another AI tool','Or download the complete brief at the bottom of this page and give it to an editor or another AI tool.','Go to the brief ↓','Use the complete brief at the bottom of this page instead.','Your complete brief is at the bottom of this page.'])
+ for(const k of ['↓ Download the brief for an editor or another AI tool','Or download the complete brief in step 3 below and give it to an editor or another AI tool.','Go to the brief ↓','Use the complete brief in step 3 instead.','Your complete brief is in step 3.','Write it yourself: your brief for an editor or another AI tool','Prefer to have it done for you?'])
   {const row=ROWS.find(r=>r[0]===k);assert.ok(row&&row[1]&&row[2],'nl/es: '+k)}
 });
