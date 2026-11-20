@@ -298,13 +298,21 @@ var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 // filled in. Only in this browser; a link with values wins; works without storage too.
 var REMEMBER=['url','query','market','language','search_location','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
-function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}rememberAi()}
-// Pasted AI answers are kept in this browser too, with the customer question they answer: after a refresh or a failed start
-// they come back as long as the question is the same (an answer to another question would not count). Reset clears them.
+function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}if(!aiKeyChanged())rememberAi()}
+// Pasted AI answers are kept in this browser too, with the page and customer question they answer: after a refresh or a
+// failed start they come back only for the same page and question. When either changes, the answers are removed instead of
+// being kept under the new one (owner 2026-11-20: answers from an earlier check ended up in a check about something else).
 var MEM_AI='growthFreeFormAi';
-function rememberAi(){try{var q=(document.getElementById('query')||{}).value||'',a={};document.querySelectorAll('textarea[data-engine]').forEach(function(t){if(t.value.trim())a[t.getAttribute('data-engine')]=t.value});
- if(Object.keys(a).length)localStorage.setItem(MEM_AI,JSON.stringify({query:q.trim(),answers:a}));else localStorage.removeItem(MEM_AI)}catch(e){}}
-(function(){try{var m=JSON.parse(localStorage.getItem(MEM_AI)||'null'),q=(document.getElementById('query')||{}).value||'';if(!m||!m.answers||String(m.query||'')!==q.trim())return;var n=0;
+function aiPage(){return ((document.getElementById('url')||{}).value||'').trim()}
+function aiKeyChanged(){try{var m=JSON.parse(localStorage.getItem(MEM_AI)||'null'),u=aiPage(),q=((document.getElementById('query')||{}).value||'').trim();
+ if(!m||(String(m.query||'')===q&&String(m.url||'')===u))return false;
+ var had=false;document.querySelectorAll('textarea[data-engine]').forEach(function(t){if(t.value.trim()){had=true;t.value=''}});localStorage.removeItem(MEM_AI);
+ var old=document.getElementById('aiRestored');if(old)old.remove();
+ if(had){var box=document.getElementById('aiStart'),note=document.createElement('p');note.className='muted';note.id='aiRestored';note.textContent=FT.aiCleared;if(box)box.insertBefore(note,box.children[1]||null)}
+ return true}catch(e){return false}}
+function rememberAi(){try{var q=(document.getElementById('query')||{}).value||'',u=aiPage(),a={};document.querySelectorAll('textarea[data-engine]').forEach(function(t){if(t.value.trim())a[t.getAttribute('data-engine')]=t.value});
+ if(Object.keys(a).length)localStorage.setItem(MEM_AI,JSON.stringify({url:u,query:q.trim(),answers:a}));else localStorage.removeItem(MEM_AI)}catch(e){}}
+(function(){try{var m=JSON.parse(localStorage.getItem(MEM_AI)||'null'),q=(document.getElementById('query')||{}).value||'',u=aiPage();if(!m||!m.answers||String(m.query||'')!==q.trim()||String(m.url||'')!==u)return;var n=0;
  document.querySelectorAll('textarea[data-engine]').forEach(function(t){var v=m.answers[t.getAttribute('data-engine')];if(v&&!t.value){t.value=String(v).slice(0,40000);n++}});
  var box=document.getElementById('aiStart');if(n&&box){box.open=true;var note=document.createElement('p');note.className='muted';note.id='aiRestored';note.textContent=FT.aiRestored.replace('§',n);box.insertBefore(note,box.children[1]||null)}}catch(e){}})();
 document.querySelectorAll('textarea[data-engine]').forEach(function(t){t.addEventListener('input',rememberAi)});
@@ -1439,7 +1447,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // The owner, signed in with the admin key on this browser: no daily limits, AI writing as for the owner's checks.
    // Cookie-based, so it needs the custom header another website cannot send (CSRF), as every owner action.
    if(sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin'){
-    const input=readInput(b,res);if(!input)return;
+    const input=readInput(b,res);if(!input)return;if(await refuseReusedAnswers(input.aiAnswers,input.query,res))return;
     await storage.ensureTables(pool);
     return await start(res,input,{accessLabel:'admin',marketingConsent:tipsOf(b),fresh:b.fresh===true});
    }
@@ -1459,6 +1467,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const query=clean(b.query,300),topic=query?'':clean(b.topic,120);
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
+   if(await refuseReusedAnswers(aiAnswers,clean(b.query,300),res))return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
    const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return;
    await storage.ensureTables(pool);
@@ -1520,6 +1529,17 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   }
   if(list.length&&!clean(b.query,300)){res.status(400).json({success:false,error:'Enter the customer question first: your pasted AI answers are checked against it.'});return undefined}
   return list.map(x=>({engine:String(x.engine),text:String(x.text)}));
+ }
+ // An answer whose exact text was saved for another customer question is an answer to that question, not to this one.
+ const otherQuestionMessage=(label,other,query)=>label+': This answer is about another question. It was saved for “'+other+'”, not for “'+query+'”. Ask the AI system the prompt shown for this search term and paste that answer.';
+ async function otherQueryOf(checkId,text,query){
+  if(!query||typeof storage.answerUsedForOtherQuery!=='function')return null;
+  try{return await storage.answerUsedForOtherQuery(pool,{checkId,rawText:text,query})}catch{return null}
+ }
+ async function refuseReusedAnswers(list,query,res){
+  for(const x of list||[]){const other=await otherQueryOf(0,x.text,query);
+   if(other){res.status(400).json({success:false,error:otherQuestionMessage((ai.ENGINES.find(e=>e.id===x.engine)||{}).label||x.engine,other,query)});return true}}
+  return false;
  }
  async function saveStartAnswers(row,url,answers){
   for(const x of answers||[])await storage.saveAiAnswer(pool,{checkId:row.id,engine:x.engine,rawText:x.text,parsed:ai.parseAiAnswer(x.text,{pageUrl:url})});
@@ -1584,7 +1604,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
  // account must be among the addresses (the result and the reminder go to it); its own weekly limit and the daily total.
  async function startRankCheck(req,res,b,rk){
-  const input=readInput(b,res);if(!input)return;
+  const input=readInput(b,res);if(!input)return;if(await refuseReusedAnswers(input.aiAnswers,input.query,res))return;
   if(!input.emails.includes(String(rk.account.email).toLowerCase()))return res.status(403).json({success:false,error:'Use the e-mail address of your rank tracker ('+maskEmail(rk.account.email)+').'});
   // A signed handoff belongs to the confirmed site's host and tracked keyword, not just the email.
   // Reject other websites before creating an expensive check or linking publication to this keyword.
@@ -1601,7 +1621,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:!!(rk.account&&rk.account.marketing_consent),accessLabel:'rank-tracker'});
  }
  async function startInviteCheck(req,res,b){
-  const input=readInput(b,res);if(!input)return;
+  const input=readInput(b,res);if(!input)return;if(await refuseReusedAnswers(input.aiAnswers,input.query,res))return;
   await storage.ensureTables(pool);
   const inv=await storage.getInvite(pool,b.invite),status=store.inviteStatus(inv);
   if(status!=='ACTIVE')return res.status(403).json({success:false,error:INVITE_TEXT[status]});
@@ -1985,6 +2005,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(ai.otherPrompt(text))return res.status(400).json({success:false,error:'This is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here, paste it into a new chat with web search on, and paste that answer.'});
    const parsed=ai.parseAiAnswer(text,{pageUrl:row.url,query:searchTermOf(row),question:(aiQuestionOf(row)||{}).text});
    if(parsed.validation_status==='invalid')return res.status(400).json({success:false,error:parsed.error_message||'This is not an answer to the search term.'});
+   {const other=await otherQueryOf(row.id,text,searchTermOf(row));if(other)return res.status(400).json({success:false,error:otherQuestionMessage((ai.ENGINES.find(e=>e.id===engine)||{}).label||engine,other,searchTermOf(row))})}
    await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
    const aiPart=await aiFor(row,{waitGap:true});
    res.json({success:true,engine,parsed:{sources:parsed.sources.length,resources_status:parsed.resources_status,verifiable:parsed.sources_verifiable,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited,own_url_mentioned_not_cited:parsed.own_url_mentioned_not_cited},
@@ -2054,6 +2075,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     await storage.ensureTables(pool);
     const market=readMarket(b,res);if(market===undefined)return;
     const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
+    if(await refuseReusedAnswers(aiAnswers,clean(b.query,300),res))return;
     await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,300),market,aiAnswers},{accessLabel:'admin',fresh:b.fresh===true});
    }catch(e){console.error('[free-growth] admin run failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
   });

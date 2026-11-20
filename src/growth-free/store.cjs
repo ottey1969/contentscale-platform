@@ -240,6 +240,14 @@ async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
  await pool.query(`INSERT INTO growth_free_ai_answers(check_id,engine,raw_text,parsed) VALUES ($1,$2,$3,$4::jsonb)
    ON CONFLICT (check_id,engine) DO UPDATE SET raw_text=EXCLUDED.raw_text,parsed=EXCLUDED.parsed,created_at=NOW()`,[checkId,engine,rawText,JSON.stringify(parsed)]);
 }
+// The same answer text already saved for a check with another customer question (owner 2026-11-20: answers from an earlier
+// check ended up in a check about something else). Returns that other question, or null.
+async function answerUsedForOtherQuery(pool,{checkId,rawText,query}){
+ const r=await pool.query(`SELECT c.query FROM growth_free_ai_answers a JOIN growth_free_checks c ON c.id=a.check_id
+  WHERE a.check_id<>$1 AND btrim(a.raw_text,E' \t\r\n')=btrim($2,E' \t\r\n') AND btrim(c.query)<>'' AND lower(btrim(c.query))<>lower(btrim($3))
+  ORDER BY a.created_at DESC LIMIT 1`,[Number(checkId)||0,String(rawText||''),String(query||'')]);
+ return r.rows[0]?r.rows[0].query:null;
+}
 // Transfer answers only when BOTH result capabilities are presented and the route
 // has confirmed the same page, explicit customer question, and market.
 // Keep original timestamps; never overwrite an answer already saved in the destination.
@@ -287,4 +295,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
