@@ -1,3 +1,4 @@
+const {urlOnClientDomain}=require('./tracker-domain-guard.cjs');
 if (process.env.CS_DEPLOYMENT_TIER === 'staging') throw new Error('RELEASE BLOCKED: production artifact cannot boot as staging');
 const _csStagingStartupQuarantine = process.env.CS_DEPLOYMENT_TIER === 'staging';
 // CONTENTSCALE-STAGING-STARTUP-QUARANTINE-WAVE2: automatic jobs, migrations, and provider calls.
@@ -3688,6 +3689,7 @@ app.post('/api/tracker-client/:token/sitemap-links', async (req, res) => {
     const client = cr.rows[0];
     const { sitemap_url } = req.body;
     if (!sitemap_url) return res.status(400).json({ success: false, error: 'sitemap_url required' });
+    if (!urlOnClientDomain(client,sitemap_url)) return res.status(400).json({ success: false, error: 'Sitemap refused — it belongs to a different domain than this tracker.' });
     try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1 WHERE id=$2', [sitemap_url, client.id]); } catch(e){}
 
     // Fetch sitemap
@@ -8021,13 +8023,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
 
     // Verify URL belongs to client domain or its subdomains (or admin-added extra domains)
-    const urlDomain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().split(':')[0];
-    const allowedDomains = [client.domain, ...(client.extra_domains || '').split(',').map(d => d.trim().replace(/^www\./, '')).filter(Boolean)];
-    const domainOk = allowedDomains.some(d => {
-      const clean = d.toLowerCase().replace(/^www\./, '');
-      return urlDomain === clean || urlDomain.endsWith('.' + clean);
-    });
-    if (!domainOk) {
+    if (!urlOnClientDomain(client,url)) {
       return res.json({ success: false, skipped: true, error: `URL skipped — belongs to different domain` });
     }
 
@@ -8827,11 +8823,16 @@ app.get('/api/tracker-client/:token/pages/check-stale', async (req, res) => {
 // POST /api/tracker-client/:token/add-page-manual — Add single URL with keyword + intent (fallback)
 app.post('/api/tracker-client/:token/add-page-manual', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    const cr = await pool.query("SELECT id,domain,extra_domains,max_pages FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status<>'deleted')", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    const client = cr.rows[0];
     
     const { url, keyword, intent, html_content } = req.body;
     if (!url || !keyword) return res.status(400).json({ success: false, error: 'url and keyword required' });
+    // The same rules as the normal add route: only this tracker's domain, and within its page limit.
+    if (!urlOnClientDomain(client,url)) return res.status(400).json({ success: false, error: 'URL refused — it belongs to a different domain than this tracker.' });
+    const cnt = await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
+    if (parseInt(cnt.rows[0].count) >= (client.max_pages || 1)) return res.status(400).json({ success: false, error: 'Tracker limit reached: ' + cnt.rows[0].count + '/' + (client.max_pages || 1) + ' pages used.' });
     
     // Check if already exists
     const existing = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [cr.rows[0].id, url]);
