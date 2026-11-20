@@ -50,9 +50,13 @@ function sameNeed(a,b,queryWords){
 // covers the section, and it shares no word with the search term. Introductions, trust and contact sections and page
 // furniture are never proposed. The advice is to shorten or move, never to delete without checking.
 const PROTECT=/(contact|about us|author|review|testimonial|customers? say|why choose|reviews?|call us|free quote|get (?:a )?quote|estimate|get started|book|schedule|table of contents|related|privacy|terms|want to|ready to|let us|talk to|in this guide|in this article|contents|overview|summary|key takeaways)/i;
+// The page's own offer, contact and proof (owner 2026-11-20, contentscale.site homepage): "Done-For-You", "Team Handoff",
+// "Ask your question", "See the Live Tracker", a case-study baseline… No competitor has these headings, and that is the
+// point: they sell, invite or prove. Never proposed for shortening, in English, Dutch or Spanish.
+const OWN_OFFER=/(done[- ]for[- ]you|do it yourself|\bdiy\b|hand-?off|ask (?:your|a|me|us)\b|your question|work (?:directly )?with|\bhire\b|pricing|\bprices?\b|\bplans?\b|packages?|free (?:scan|check|trial|audit|tool)|\btry\b|\bdemo\b|live tracker|tracker view|new here|start here|^new\s*[–—-]|starting point|before[- ]and[- ]after|case study|guarantee|warranty|tarifa|precio|presupuesto|contacto|cont[aá]ctame|hazlo|lo hago|lo hacemos|prijs|tarief|tarieven|offerte|uit handen|zelf doen|neem contact|direct contact)/i;
 // A numbered step belongs to a process the page explains; one step is never trimmed on its own.
 const STEP=/^\s*(?:step\s*)?\d+\s*[.):-]/i;
-function trimCandidates({report,aiGap,items,queryWords}){
+function trimCandidates({report,aiGap,items,queryWords,summaryGaps}){
  const ov=report&&report.competitor_overview;
  if(!ov||ov.status!=='OBSERVED'||!Array.isArray(ov.this_page_sections))return [];
  const covered=new Set();
@@ -67,9 +71,12 @@ function trimCandidates({report,aiGap,items,queryWords}){
  for(const t of (aiGap&&aiGap.missing_topics)||[])addWords(t.topic);
  const aiTexts=((aiGap&&aiGap.missing_topics)||[]).map(t=>({text:[t.topic,...(t.examples||[]).map(e=>e.heading)].join(' '),sites:[]}));
  const out=[];
+ // A section listed as unique content to preserve is never also advised to shorten (owner 2026-11-20: "Voice Search
+ // Optimisation" appeared under both). Adding is the safer advice.
+ const unique=new Set(((summaryGaps&&summaryGaps.unique_content)||[]).map(x=>String(x&&x.heading||'').trim()).filter(Boolean));
  ov.this_page_sections.forEach((sec,i)=>{
   const h=String(sec.heading||'').trim();
-  if(!h||i===0||sec.furniture||covered.has(h)||PROTECT.test(h)||STEP.test(h))return;
+  if(!h||i===0||sec.furniture||covered.has(h)||unique.has(h)||PROTECT.test(h)||OWN_OFFER.test(h)||STEP.test(h))return;
   const hw=words(h);
   if([...hw].some(w=>queryWords.has(w)))return;
   // Something ranking or AI-cited pages also write about (any shared meaningful word in their headings) is in scope
@@ -150,7 +157,7 @@ function buildContentPriorities({summary,aiGap,report}={}){
     shares_search_words:x.searchWords,passed_evidence_check:x.evidenceCheck},
    evidence:x.evidence};
  });
- const trim=trimCandidates({report,aiGap,items:gaps.items||[],queryWords});
+ const trim=trimCandidates({report,aiGap,items:gaps.items||[],queryWords,summaryGaps:gaps});
  scored.sort((a,b)=>b.score-a.score||Number(b.verified)-Number(a.verified)||a.title.localeCompare(b.title));
  scored.forEach((x,i)=>{x.rank=i+1});
  return {status:!scored.length&&!trim.length?'NOTHING_FOUND':researchOnly?'RESEARCH_ONLY':'READY_FOR_EDITORIAL_REVIEW',publish_allowed:false,decision,
