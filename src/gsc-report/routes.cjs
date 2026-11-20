@@ -4,7 +4,10 @@
 // static HTML (no scripts), not indexed, and every value is escaped. Free Growth is linked per page: always for the owner;
 // for a recipient only when the owner attached an invitation to the report.
 const crypto=require('node:crypto');
-const {readUploads,analyze,applyUrlStatus}=require('./analysis.cjs');
+const {readUploads,analyze,applyUrlStatus,applyAudit,applyPositions}=require('./analysis.cjs');
+const audit=require('./site-audit.cjs');
+const {readMarket}=require('../rank-free/engine.cjs');
+const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const {checkUrlStatuses}=require('./url-status.cjs');
 const reportStore=require('./store.cjs');
 const growthStore=require('../growth-free/store.cjs');
@@ -13,7 +16,8 @@ const {T,LANGS}=require('./texts.cjs');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const enc=encodeURIComponent;
 
-function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs').freeGrowthConfig(),storage=null,basePath='/gsc',apiPath='/api/gsc',growthPath='/free-growth',checkUrls=urls=>checkUrlStatuses(urls)}={}){
+function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs').freeGrowthConfig(),storage=null,basePath='/gsc',apiPath='/api/gsc',growthPath='/free-growth',checkUrls=urls=>checkUrlStatuses(urls),siteReader=fetchPublicGrowthHtml,fetchImpl=(...a)=>global.fetch(...a),
+ serperKey=process.env.SERPER_API_KEY||'',pagespeedKey=process.env.PAGESPEED_API_KEY||''}={}){
  // The Free Growth invitation for a recipient lives in the Free Growth tables; they are made on first use.
  const st=storage||{...reportStore,createInvite:async(p,o)=>{await growthStore.ensureTables(p);return growthStore.createInvite(p,o)}};
  // The owner is the Free Growth owner: the same key, the same signed session cookie (one login for both).
@@ -40,11 +44,33 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const files=(Array.isArray(b.files)?b.files:[]).filter(f=>f&&f.content_base64);
    const manual=Array.isArray(b.manual_pages)?b.manual_pages:[];
    const uploads=readUploads(files);
-   const report=analyze({uploads,manualPages:manual,site:String(b.site||'')});
+   // Without Search Console: a domain, read in public (robots.txt, sitemap, pages), Google's field data for speed, and
+   // positions in Google for the owner's own search terms when asked (paid per search, so only then).
+   const domain=String(b.site_audit&&b.site_audit.domain||'').trim();
+   let site=null,crawlP=null,speedP=null,positionsP=null;
+   if(domain){try{site=audit.siteOrigin(domain)}catch{return res.status(400).json({success:false,error:'Enter a public https domain, such as example.com.'})}}
+   const pos=b.positions||{};
+   if(pos.enabled===true){
+    const market=readMarket(pos.country,pos.language);if(market.error)return res.status(400).json({success:false,error:market.error});
+    const host=site?site.host:(String(b.site||'').replace(/^https?:\/\//i,'').split('/')[0]||'').toLowerCase();
+    if(!host)return res.status(400).json({success:false,error:'Positions need a domain.'});
+    const keywords=(Array.isArray(pos.keywords)?pos.keywords:String(pos.keywords||'').split('\n')).map(x=>String(x).trim()).filter(Boolean);
+    if(!keywords.length)return res.status(400).json({success:false,error:'Add at least one search term for the positions.'});
+    positionsP=audit.checkPositions({keywords,host,gl:market.gl,hl:market.hl,key:serperKey,fetchImpl}).then(r=>({...r,market:{gl:market.gl,hl:market.hl,country_name:market.country_name,language_name:market.language_name}}));
+   }
+   if(site){crawlP=audit.crawlSite({domain:site.origin,fetchImpl:siteReader});speedP=audit.fieldData({origin:site.origin,key:pagespeedKey,fetchImpl})}
+   const crawl=crawlP?await crawlP:null;
+   const report=analyze({uploads,manualPages:[...manual,...(crawl?crawl.pages.map(url=>({url,source:'CRAWL'})):[])],site:String(b.site||'')||(site?site.host:'')});
    if(!report.pages.length&&!report.queries.total&&!report.countries.length)
-    return res.status(400).json({success:false,error:'Upload a Search Console export or add at least one page.',files:report.files});
-   // Live status per URL (301/404), unless the owner turned it off. A failed check never blocks the report.
-   if(b.check_urls!==false&&report.pages.length){try{applyUrlStatus(report,await checkUrls(report.pages.map(p=>p.url)))}catch(e){console.error('[gsc-report] url check failed',e.message)}}
+    return res.status(400).json({success:false,error:crawl?'No page of this site could be read (no sitemap, and the home page did not answer).':'Upload a Search Console export or add at least one page, or enter a domain to read in public.',files:report.files});
+   // Live status per URL (301/404), unless the owner turned it off. A crawled page already has its status. A failed check never blocks the report.
+   let statuses=crawl?new Map(crawl.statuses):new Map();
+   const rest=report.pages.map(p=>p.url).filter(u=>!statuses.has(u)&&!(crawl&&crawl.statuses.has(u)));
+   if(b.check_urls!==false&&rest.length){try{for(const [u,v] of await checkUrls(rest))statuses.set(u,v)}catch(e){console.error('[gsc-report] url check failed',e.message)}}
+   if(statuses.size)applyUrlStatus(report,statuses);
+   if(crawl)applyAudit(report,crawl);
+   applyPositions(report,positionsP?await positionsP:null);
+   if(speedP)report.speed=await speedP;
    await ensure();
    let invite=null;
    const g=b.recipient_growth||{};
@@ -93,7 +119,9 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .tbl td{border-bottom:1px solid #eef2f7;padding:8px 6px;vertical-align:top}.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .scroll{overflow-x:auto}.url{word-break:break-all}.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
 .QUICK_WIN{background:#dcfce7;color:#14532d}.SNIPPET{background:#dbeafe;color:#1e3a8a}.ZERO_CLICKS{background:#fee2e2;color:#7f1d1d}.REVIEW{background:#fef3c7;color:#78350f}
-.DEEPER{background:#ede9fe;color:#4c1d95}.REDIRECT{background:#ffedd5;color:#7c2d12}.GONE{background:#fecaca;color:#7f1d1d}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+.DEEPER{background:#ede9fe;color:#4c1d95}.REDIRECT{background:#ffedd5;color:#7c2d12}.BLOCKED{background:#fecaca;color:#7f1d1d}.FIX_SNIPPET{background:#dbeafe;color:#1e3a8a}.FIX_STRUCTURE{background:#e0e7ff;color:#3730a3}.THIN{background:#fef3c7;color:#78350f}.NO_ISSUES{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+.issues{font-size:13px;margin-top:4px}.issues .flag{font-weight:600}.chip{display:inline-block;background:#ecfdf5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
+.facts{font-size:13px;margin:6px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:2px 10px}.facts dt{color:#64748b}.facts dd{margin:0;word-break:break-word}.GONE{background:#fecaca;color:#7f1d1d}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 .btn{display:inline-block;background:#4338ca;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .btn.big{padding:12px 20px;font-size:15px}.muted{color:#64748b;font-size:13px}details{margin-top:8px}summary{cursor:pointer;color:#4338ca;font-weight:600}
 .flag{color:#b91c1c;font-weight:600}.live{font-size:13px;margin-top:4px;color:#7c2d12}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
@@ -122,6 +150,7 @@ const pathOf=u=>{try{const x=new URL(u);return (x.pathname+x.search)||'/'}catch{
 const nf=(lang,n,o={})=>n==null?'—':new Intl.NumberFormat(lang==='nl'?'nl-NL':lang==='es'?'es-ES':'en-GB',o).format(n);
 const pct=(lang,n)=>n==null?'—':nf(lang,n,{style:'percent',maximumFractionDigits:2});
 const pos=(lang,n)=>n==null?'—':nf(lang,n,{maximumFractionDigits:1});
+const dname=(lang,type,code)=>{try{return new Intl.DisplayNames([lang],{type}).of(type==='region'?String(code).toUpperCase():code)||code}catch{return code}};
 const day=(lang,d)=>{try{return new Intl.DateTimeFormat(lang==='nl'?'nl-NL':lang==='es'?'es-ES':'en-GB',{day:'numeric',month:'long',year:'numeric'}).format(new Date(d))}catch{return ''}};
 function change(lang,n){if(n==null)return '';const c=n>0?'up':n<0?'down':'';return ` <span class="${c}">${n>0?'+':''}${pct(lang,n)}</span>`}
 
@@ -140,42 +169,62 @@ function growthLink(p,{lang,owner,invite,growthPath}){
 
 function reportPage(row,{owner,config,growthPath}){
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
- const work=(r.pages||[]).filter(p=>p.action!=='KEEP'),keep=(r.pages||[]).filter(p=>p.action==='KEEP');
+ const C=r.crawl;
+ const crawlOnly=r.scope==='CRAWL',A=t.audit,done=a=>a==='KEEP'||a==='NO_ISSUES';
+ const work=(r.pages||[]).filter(p=>!done(p.action)),keep=(r.pages||[]).filter(p=>done(p.action));
  const first=work[0];
  const contact=config.contactUrl||'https://contentscale.site/contact/';
- const head=`<div class="top"><div class="wrap"><div class="brand"><small>${esc(config.brand||'ContentScale')} · ${esc(t.kicker)}</small>
+ const head=`<div class="top"><div class="wrap"><div class="brand"><small>${esc(config.brand||'ContentScale')} · ${esc(crawlOnly?A.kicker:t.kicker)}</small>
   ${config.authorName?`<div class="who">${config.authorImage?`<img src="${esc(config.authorImage)}" alt="${esc(config.authorName)}" width="52" height="52">`:''}<div><b>${esc(config.authorName)}</b><br><span class="meta">${esc(t.prepared_by)}</span></div></div>`:''}</div>
-  <h1>${esc(row.title)}</h1><div class="meta">${esc(r.site||'')}${k.period?' · '+esc(day(lang,k.period.start))+' – '+esc(day(lang,k.period.end))+' ('+k.period.days+' '+esc(t.days)+')':''} · ${esc(t.made_on)} ${esc(day(lang,row.created_at))}${r.scope==='UPLOADED_PAGES'?' · '+esc(t.scope_pages):''}</div></div></div>`;
+  <h1>${esc(row.title)}</h1><div class="meta">${esc(r.site||'')}${k.period?' · '+esc(day(lang,k.period.start))+' – '+esc(day(lang,k.period.end))+' ('+k.period.days+' '+esc(t.days)+')':''} · ${esc(t.made_on)} ${esc(day(lang,row.created_at))}${r.scope==='UPLOADED_PAGES'?' · '+esc(t.scope_pages):crawlOnly?' · '+esc(A.scope_crawl):''}</div></div></div>`;
  const summary=`<div class="card"><h2>${esc(t.summary)}</h2><p>${esc(t.summary_line.replace('{n}',nf(lang,(r.pages||[]).length)).replace('{w}',nf(lang,work.length)))}${first?' '+esc(t.start_with)+' <b class="url">'+esc(first.url)+'</b> — '+esc(t.actions[first.action]):''}</p></div>`;
- const kpis=`<div class="kpis">
+ const ka=k.audit||{};
+ const kpisCrawl=`<div class="kpis">
+  <div class="kpi"><span>${esc(A.kpi_read)}</span><b>${nf(lang,ka.pages_read)}</b></div>
+  <div class="kpi"><span>${esc(A.kpi_issues)}</span><b>${nf(lang,ka.with_issues)}</b></div>
+  <div class="kpi"><span>${esc(A.kpi_blocked)}</span><b>${nf(lang,ka.blocked)}</b></div>
+  ${k.urls_checked!=null?`<div class="kpi"><span>${esc(t.live.kpi_redirects)}</span><b>${nf(lang,k.redirects)}</b></div><div class="kpi"><span>${esc(t.live.kpi_gone)}</span><b>${nf(lang,k.gone)}</b></div>`:''}</div>
+  ${k.urls_checked!=null?`<p class="muted">${esc(t.live.checked_note.replace('{c}',nf(lang,k.urls_checked)).replace('{n}',nf(lang,k.urls_not_checked)))}</p>`:''}`;
+ const kpis=crawlOnly?kpisCrawl:`<div class="kpis">
   <div class="kpi"><span>${esc(t.clicks)}</span><b>${nf(lang,k.clicks)}</b>${r.trend?`<span>${esc(t.last7)}${change(lang,r.trend.clicks_change)}</span>`:''}</div>
   <div class="kpi"><span>${esc(t.impressions)}</span><b>${nf(lang,k.impressions)}</b>${r.trend?`<span>${esc(t.last7)}${change(lang,r.trend.impressions_change)}</span>`:''}</div>
   <div class="kpi"><span>CTR</span><b>${pct(lang,k.ctr)}</b></div>
   <div class="kpi"><span>${esc(t.avg_position)}</span><b>${pos(lang,k.position)}</b></div>
   <div class="kpi"><span>${esc(t.pages_no_clicks)}</span><b>${nf(lang,k.zero_click_pages)}</b></div>
   <div class="kpi"><span>${esc(t.top5_share)}</span><b>${pct(lang,k.top5_click_share)}</b></div>
+  ${k.audit?`<div class="kpi"><span>${esc(A.kpi_issues)}</span><b>${nf(lang,ka.with_issues)}</b></div><div class="kpi"><span>${esc(A.kpi_blocked)}</span><b>${nf(lang,ka.blocked)}</b></div>`:''}
   ${k.urls_checked!=null?`<div class="kpi"><span>${esc(t.live.kpi_redirects)}</span><b>${nf(lang,k.redirects)}</b></div><div class="kpi"><span>${esc(t.live.kpi_gone)}</span><b>${nf(lang,k.gone)}</b></div>`:''}</div>
   <p class="muted">${esc(k.source==='DAILY_ROWS'?t.totals_daily:t.totals_pages)}${k.urls_checked!=null?' '+esc(t.live.checked_note.replace('{c}',nf(lang,k.urls_checked)).replace('{n}',nf(lang,k.urls_not_checked))):''}${r.trend?' '+esc(t.trend_note.replace('{a}',nf(lang,r.trend.last7.clicks)).replace('{b}',nf(lang,r.trend.previous7.clicks))):''}</p>`;
  const L=t.live,lv=p=>p.live||{};
- const label=p=>p.action==='REDIRECT'?(lv(p).permanent?L.r301:L.r302).replace('{s}',lv(p).status):p.action==='GONE'?L.gone.replace('{s}',lv(p).status):t.actions[p.action];
+ const label=p=>p.action==='REDIRECT'?(lv(p).permanent?L.r301:L.r302).replace('{s}',lv(p).status):p.action==='GONE'?L.gone.replace('{s}',lv(p).status):crawlOnly&&p.action==='NO_DATA'?A.not_read:t.actions[p.action];
  const liveLine=p=>{const x=lv(p);
   if(x.error)return ` <span class="muted">· ${esc(L.not_checked)}: ${esc(L.reasons[x.error]||x.error.replace(/^HTTP_/,'HTTP '))}</span>`;
   if(!x.hops)return '';
   return `<div class="live">${esc(L.to)} <a class="url" href="${esc(x.final_url)}" title="${esc(x.final_url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(x.final_url))}</a>`+
    (x.target_rank?` (${esc(L.in_list.replace('{n}',x.target_rank))})`:'')+(x.hops>1?` · ${esc(L.chain.replace('{n}',x.hops))}`:'')+
    (x.final_status&&x.final_status!==200?` · <span class="flag">${esc(L.target_broken.replace('{s}',x.final_status))}</span>`:x.final_error?` · <span class="flag">${esc(L.target_broken.replace('{s}',L.reasons[x.final_error]||x.final_error))}</span>`:'')+'</div>'};
- const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}
-   <div class="muted">${esc(t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
+ const BLOCKING=new Set(['NOINDEX','CANONICAL_ELSEWHERE']);
+ const issueLine=p=>p.audit&&p.audit.issues.length?`<div class="issues">${p.audit.issues.map(c=>BLOCKING.has(c)?`<span class="flag">${esc(A.issues[c]||c)}</span>`:esc(A.issues[c]||c)).join(' · ')}</div>`:'';
+ const posChips=p=>(p.positions||[]).map(x=>`<span class="chip" title="${esc(x.keyword)}">${esc(A.pos_found.replace('{n}',x.position))} · ${esc(x.keyword)}</span>`).join('');
+ const facts=p=>{const a=p.audit;if(!a)return '';const row=(k,v)=>`<dt>${esc(k)}</dt><dd>${v}</dd>`,no=`<span class="muted">${esc(A.none)}</span>`;
+  return `<details><summary>${esc(A.seen)}</summary><dl class="facts">${row(A.f_title,a.title?esc(a.title)+` <span class="muted">(${a.title.length})</span>`:no)}${row(A.f_description,a.description?esc(a.description)+` <span class="muted">(${a.description.length})</span>`:no)}
+   ${row(A.f_h1,a.h1.length?a.h1.map(esc).join(' · '):no)}${row(A.words,nf(lang,a.words))}${row(A.f_canonical,a.canonical?esc(a.canonical):no)}${row(A.f_lang,a.lang?esc(a.lang):no)}
+   ${row(A.f_hreflang,a.hreflang.length?a.hreflang.map(h=>esc(h.lang)).join(', '):no)}${p.lastmod?row(A.lastmod,esc(day(lang,p.lastmod))):''}</dl></details>`};
+ const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}${issueLine(p)}${posChips(p)}
+   <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
    ${p.countries&&p.countries.length?`<details><summary>${esc(t.countries)}</summary>${metricRows(lang,t,p.countries)}</details>`:''}
    ${p.devices&&p.devices.length?`<details><summary>${esc(t.devices)}</summary>${metricRows(lang,t,p.devices)}</details>`:''}
+   ${facts(p)}
    ${p.trend?`<div class="muted">${esc(t.last7)}: ${nf(lang,p.trend.last7.clicks)} ${esc(t.clicks_l)}${change(lang,p.trend.clicks_change)}</div>`:''}</td>
    <td class="num" data-l="${esc(t.clicks)}">${nf(lang,p.clicks)}</td><td class="num" data-l="${esc(t.impressions)}">${nf(lang,p.impressions)}</td><td class="num" data-l="CTR">${pct(lang,p.ctr)}</td><td class="num" data-l="${esc(t.position)}">${pos(lang,p.position)}</td>
    <td class="num" data-l="${esc(t.median_ctr)}">${p.median_ctr!=null?pct(lang,p.median_ctr):'<span class="muted">'+esc(p.basis==='NO_DATA'?'—':t.too_few)+'</span>'}</td><td class="num" data-l="${esc(t.click_gap)}">${p.click_gap?'+'+nf(lang,p.click_gap):'—'}</td>
    <td class="gcell">${growthLink(p,{lang,owner,invite,growthPath})}</td></tr>`;
- const table=list=>`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
- const order=`<div class="card"><h2>${esc(t.order_title)}</h2><p class="muted">${esc(t.order_intro)}</p>${work.length?table(work):`<p>${esc(t.nothing_to_do)}</p>`}
-  ${keep.length?`<details><summary>${esc(t.keep_title)} (${keep.length})</summary>${table(keep)}</details>`:''}</div>`;
+ const crawlRow=p=>pageRow(p).replace(/<td class="num" data-l[\s\S]*?<td class="gcell">/,`<td class="num" data-l="${esc(A.words)}">${p.audit?nf(lang,p.audit.words):'—'}</td><td class="num" data-l="${esc(A.lastmod)}">${p.lastmod?esc(day(lang,p.lastmod)):'—'}</td><td class="gcell">`);
+ const crawlTable=list=>`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(A.words)}</th><th class="num">${esc(A.lastmod)}</th><th></th></tr></thead><tbody>${list.map(crawlRow).join('')}</tbody></table></div>`;
+ const table=list=>crawlOnly?crawlTable(list):`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
+ const order=`<div class="card"><h2>${esc(t.order_title)}</h2><p class="muted">${esc(crawlOnly?A.order_intro:t.order_intro)}</p>${work.length?table(work):`<p>${esc(t.nothing_to_do)}</p>`}
+  ${keep.length?`<details><summary>${esc(crawlOnly?A.keep_title:t.keep_title)} (${keep.length})</summary>${table(keep)}</details>`:''}</div>`;
  const bands=`<div class="card"><h2>${esc(t.bands_title)}</h2><div class="scroll"><table class="tbl"><thead><tr><th>${esc(t.position)}</th><th class="num">${esc(t.pages)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.compared)}</th></tr></thead><tbody>`+
   (r.bands||[]).map(b=>`<tr><td>${esc(b.band)}</td><td class="num">${nf(lang,b.pages)}</td><td class="num">${nf(lang,b.clicks)}</td><td class="num">${nf(lang,b.impressions)}</td><td class="num">${b.median_ctr!=null?pct(lang,b.median_ctr):'<span class="muted">'+esc(t.too_few)+'</span>'}</td><td class="num">${nf(lang,b.compared_pages)}</td></tr>`).join('')+'</tbody></table></div></div>';
  const Q=r.queries||{};
@@ -189,12 +238,29 @@ function reportPage(row,{owner,config,growthPath}){
   ${r.appearance&&r.appearance.length?`<h3>${esc(t.appearance)}</h3>${metricRows(lang,t,r.appearance)}`:''}</div></div>`;
  const files=`<div class="card"><h2>${esc(t.uploaded_title)}</h2><ul>${(r.files||[]).map(f=>`<li>${esc(f.name)} — ${esc(t.kinds[f.kind]||f.kind)}${f.reason?' ('+esc(f.reason)+')':''}</li>`).join('')||'<li>'+esc(t.manual_only)+'</li>'}</ul>
   ${r.filters&&r.filters.length?`<p class="muted">${esc(t.filters)}: ${r.filters.map(esc).join(' · ')}</p>`:''}
-  <h3>${esc(t.method_title)}</h3><p class="muted">${esc(t.method)}${k.urls_checked!=null?esc(t.live.method):''}</p><h3>${esc(t.notes_title)}</h3><ul class="muted">${(r.notes||[]).map(n=>'<li>'+esc(t.note_map[n]||n)+'</li>').join('')}</ul></div>`;
+  <h3>${esc(t.method_title)}</h3><p class="muted">${esc(t.method)}${C?esc(A.method_extra):''}${k.urls_checked!=null?esc(t.live.method):''}</p><h3>${esc(t.notes_title)}</h3><ul class="muted">${(r.notes||[]).map(n=>'<li>'+esc(t.note_map[n]||n)+'</li>').join('')}</ul></div>`;
+ const P=r.positions;
+ const posRow=x=>`<tr><td>${esc(x.keyword)}</td><td>${x.status==='FOUND'?`<b>${esc(A.pos_found.replace('{n}',x.position))}</b>`:x.status==='NOT_IN_RESULTS'?esc(A.pos_not_found.replace('{n}',x.depth||30)):`<span class="muted">${esc(A.pos_error)}</span>`}</td>
+  <td>${x.url?`<a class="url" href="${esc(x.url)}" title="${esc(x.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(x.url))}</a>${x.rank?` <span class="muted">(${esc(A.pos_in_list.replace('{n}',x.rank))})</span>`:''}`:'—'}</td></tr>`;
+ const positions=P?`<div class="card"><h2>${esc(A.pos_title)}</h2>${P.status==='PROVIDER_NOT_CONFIGURED'?`<p class="muted">${esc(A.pos_not_configured)}</p>`:
+  `<p class="muted">${esc(A.pos_intro.replace('{country}',dname(lang,'region',P.market.gl)).replace('{language}',dname(lang,'language',P.market.hl)).replace('{date}',day(lang,P.checked_at)))}</p>
+  <div class="scroll"><table class="tbl"><thead><tr><th>${esc(A.pos_term)}</th><th>${esc(A.pos_position)}</th><th>${esc(A.pos_page)}</th></tr></thead><tbody>${(P.rows||[]).map(posRow).join('')}</tbody></table></div>`}
+  ${owner&&P.calls!=null?`<p class="muted">${esc(t.owner_view)} · ${esc(A.pos_calls.replace('{n}',P.calls))}</p>`:''}</div>`:'';
+ const SP=r.speed,metric=(key,v)=>`<div class="kpi"><span>${esc(A['m_'+key])}</span><b>${key==='CLS'?esc(nf(lang,v.score,{maximumFractionDigits:2})):esc(nf(lang,v.ms/1000,{maximumFractionDigits:1}))+' s'}</b><span>${esc(A.cat[v.category]||'')}</span></div>`;
+ const speed=SP?`<div class="card"><h2>${esc(A.speed_title)}</h2>${SP.status==='FOUND'?`<div class="kpis">${Object.entries(SP.metrics).map(([k2,v])=>metric(k2,v)).join('')}${SP.overall?`<div class="kpi"><span>${esc(A.overall)}</span><b>${esc(A.cat[SP.overall]||SP.overall)}</b></div>`:''}</div>
+  <p class="muted">${esc(A.speed_source)}</p>`:`<p class="muted">${esc(SP.status==='NO_FIELD_DATA'?A.speed_none:A.speed_unavailable)}</p>`}</div>`:'';
+ const crawled=C?`<div class="card"><h2>${esc(A.read_title)}</h2><ul><li>${esc(C.origin)}</li><li>${esc(C.robots.found?A.robots_found.replace('{n}',nf(lang,C.robots.rules)):A.robots_none)}</li>
+  <li>${esc(A.src[C.sitemap.source]||'')} ${esc(A.counts.replace('{l}',nf(lang,C.sitemap.urls_found)).replace('{r}',nf(lang,C.pages_read)))}</li>
+  ${C.not_crawled_count?`<li>${esc(A.not_crawled.replace('{n}',nf(lang,C.not_crawled_count)))}<ul class="muted">${C.not_crawled.map(x=>'<li class="url">'+esc(pathOf(x.url))+'</li>').join('')}</ul></li>`:''}
+  ${C.not_crawled_limit?`<li>${esc(A.limit.replace('{n}',nf(lang,C.not_crawled_limit)))}</li>`:''}</ul>
+  ${crawlOnly?`<h3>${esc(A.unknown_title)}</h3><p class="muted">${esc(A.unknown)}</p><h3>${esc(t.method_title)}</h3><p class="muted">${esc(A.method)}${k.urls_checked!=null?esc(t.live.method):''}</p>`:''}</div>`:'';
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
  const foot=`<p class="foot">${esc(t.valid_until)} ${esc(day(lang,row.expires_at))} · ${esc(config.brand||'ContentScale')}${owner?' · '+esc(t.owner_view)+' · '+nf(lang,row.views)+' '+esc(t.views):''}</p>`;
- return shell(lang,row.title,head+`<div class="wrap">${summary}${kpis}${order}${bands}${queries}${geo}${files}${cta}${foot}</div>`);
+ return shell(lang,row.title,head+`<div class="wrap">${summary}${kpis}${order}${positions}${speed}${crawlOnly?crawled:bands+queries+geo+crawled+files}${cta}${foot}</div>`);
 }
 
+const {COUNTRIES}=require('../rank-free/engine.cjs');
+const COUNTRY_OPTIONS=(()=>{const dn=new Intl.DisplayNames(['en'],{type:'region'});return COUNTRIES.map(c=>[c,dn.of(c.toUpperCase())||c]).sort((a,b)=>a[1].localeCompare(b[1])).map(([c,n])=>`<option value="${c}"${c==='nl'?' selected':''}>${n}</option>`).join('')})();
 function ownerPage(config,api,base){
  return shell('en','Search Console reports',`<div class="top"><div class="wrap"><small style="opacity:.8;letter-spacing:.08em;text-transform:uppercase;font-weight:700">ContentScale · Owner</small><h1>Search Console reports</h1>
 <div class="meta">Upload the Search Console export of any site, add pages by hand, and send the company a private link. Signed in as owner.</div></div></div>
@@ -203,6 +269,12 @@ function ownerPage(config,api,base){
 <label>Site (optional)<br><input id="site" maxlength="200" placeholder="acme-roofing.com" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
 <label>Report language<br><select id="lang" style="padding:9px;border-radius:8px"><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></label>
 <label>Link valid for (days)<br><input id="days" type="number" min="1" max="365" value="90" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div>
+<h3>Without Search Console: read the site in public</h3>
+<label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
+<p class="muted">Reads robots.txt (and follows it), the sitemap and up to 150 pages: redirects, 404, noindex, canonical, title, meta description, H1, amount of text. Adds Google's speed data for real visitors. Free. Leave empty to use only Search Console files. Both together also works.</p>
+<label><input type="checkbox" id="posOn"> Look up positions in Google for these search terms (Serper: up to 3 paid searches per term)</label>
+<div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10)<br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
+<div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px">${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
 <h3>Search Console files</h3><p class="muted">Search Console → Performance → Export → Download CSV (ZIP). Add as many as you like: one export of the whole site, exports filtered on one page (their search terms are linked to that page), or a CSV with a page and a search-term column. Each file at most 5 MB.</p>
 <input id="gscFiles" type="file" multiple accept=".zip,.csv,.tsv,.txt">
 <h3>Pages added by hand</h3><p class="muted">One per line: URL ; clicks ; impressions ; position ; note. Only the URL is required. A page that is also in the export keeps the numbers of the export.</p>
@@ -234,9 +306,9 @@ async function load(){var el=document.getElementById('list');try{var r=await fet
 document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var st=document.getElementById('st'),go=document.getElementById('go'),files=[].slice.call(document.getElementById('gscFiles').files);
  if(files.some(function(f){return f.size>5*1024*1024})){st.textContent='A file is larger than 5 MB.';return}
  if(files.reduce(function(a,f){return a+f.size},0)>7*1024*1024){st.textContent='Together the files are larger than 7 MB: make two reports.';return}
- go.disabled=true;st.textContent='Reading the files and calculating…';
+ go.disabled=true;st.textContent=document.getElementById('auditDomain').value.trim()?'Reading the site and calculating… this can take up to two minutes.':'Reading the files and calculating…';
  try{var body={title:document.getElementById('title').value,site:document.getElementById('site').value,lang:document.getElementById('lang').value,expires_days:document.getElementById('days').value,
-  files:await Promise.all(files.map(read)),manual_pages:manual(),check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
+  files:await Promise.all(files.map(read)),manual_pages:manual(),site_audit:{domain:document.getElementById('auditDomain').value.trim()},positions:{enabled:document.getElementById('posOn').checked,keywords:document.getElementById('posTerms').value,country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim()||undefined},check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
   var r=await fetch(API+'/reports',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:JSON.stringify(body)});
   var d=await r.json();if(!d.success)throw Error(d.error);var full=location.origin+d.url;
   st.textContent='Report made: '+d.pages+' pages.';
