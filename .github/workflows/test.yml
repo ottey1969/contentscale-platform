@@ -29,5 +29,7 @@ jobs:
         run: node --test tests/consent-widget-language.test.cjs
       - name: Tracker sign-up works from nl. and es. (CORS)
         run: node --test tests/cors-language-subdomains.test.cjs
+      - name: A tracker only takes in URLs of its own domain
+        run: node --test tests/tracker-domain-guard.test.cjs
       - name: Done
         run: echo "OK — CEO domain boundary and startup syntax verified"
