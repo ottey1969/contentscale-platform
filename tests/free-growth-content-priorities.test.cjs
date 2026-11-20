@@ -104,7 +104,8 @@ test('the result page shows the list first in the brief, in order, and the compl
  assert.match(text,/^## What to put in your content — most to least important/);
  assert.match(text,/1\. Emergency tarping before the permanent repair — Most important · Add a section · score 19/);
  // Wiring: the brief shows the list right under its head and the full export includes it first.
- assert.match(src,/id="briefDownloadAll">Download complete brief<\/button> <small id="briefExportStatus" role="status"><\/small><\/p><\/div>'\+\n  prioritiesHtml\(d\.content_priorities\)\+/);
+ // Owner 2026-11-20: the outcome in plain words heads the list; the copy/download buttons moved to the bottom of the result.
+ assert.match(src,/<p>'\+esc\(o\.line\)\+'<\/p><\/div>'\+\n  prioritiesHtml\(d\.content_priorities\)\+/);
  assert.match(src,/if\(all&&d&&d\.content_priorities\)prioritiesText\(d\.content_priorities\)\.forEach/);
  assert.match(src,/content_priorities:row\.status==='DONE'\?buildContentPriorities\(\{summary:shown\.summary,aiGap:shown\.aiGap,report:row\.report\}\):null/);
  // Every visible label of the list has a Dutch and Spanish translation.

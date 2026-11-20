@@ -5,6 +5,45 @@
 // names of AI systems. Data (headings and words of your page or of other sites, search terms) is never translated.
 // [English, Dutch, Spanish]
 const ROWS = [
+  ['AI research · {n}/{n} saved answers', 'AI-onderzoek · {n}/{n} opgeslagen antwoorden', 'Investigación de IA · {n}/{n} respuestas guardadas'],
+  ['Copy full editor / external AI brief', 'Kopieer de volledige brief', 'Copiar el brief completo'],
+  ['Download complete brief', 'Download de volledige brief', 'Descargar el brief completo'],
+  // Free Growth result in one logical order, in plain words (owner 2026-11-20)
+  ['Choose what AI writes into your page', 'Kies wat AI in je pagina schrijft', 'Elige lo que la IA escribe en tu página'],
+  ['{n} topic(s) chosen', '{n} onderwerp(en) gekozen', '{n} tema(s) elegido(s)'],
+  ['Only needed if you want AI to write the text', 'Alleen nodig als AI de tekst moet schrijven', 'Solo hace falta si quieres que la IA escriba el texto'],
+  ['Tick the topics AI should write into your page. The recommended ones are ticked when you start.', 'Vink de onderwerpen aan die AI in je pagina moet schrijven. De aanbevolen onderwerpen staan bij de start al aangevinkt.', 'Marca los temas que la IA debe escribir en tu página. Los recomendados ya vienen marcados al empezar.'],
+  ['Write with AI', 'Schrijf met AI', 'Escribir con IA'],
+  ['Ideas, not advice:', 'Ideeën, geen advies:', 'Ideas, no consejos:'],
+  ['the top Google pages do not agree on these topics. Tick one only if you know it belongs on your page.', 'de beste pagina’s in Google zijn het over deze onderwerpen niet eens. Vink er alleen een aan als je weet dat het op je pagina hoort.', 'las mejores páginas de Google no coinciden en estos temas. Marca uno solo si sabes que pertenece a tu página.'],
+  ['AI does not write text for this check: the top Google pages do not agree on what is missing. Use the list at the top, or the brief at the bottom of this page.', 'AI schrijft voor deze check geen tekst: de beste pagina’s in Google zijn het niet eens over wat ontbreekt. Gebruik de lijst bovenaan, of de brief onderaan deze pagina.', 'La IA no escribe texto para esta comprobación: las mejores páginas de Google no coinciden en lo que falta. Usa la lista de arriba o el brief al final de esta página.'],
+  ['Write with AI is not switched on for this link. Use the list at the top, or the brief at the bottom of this page.', 'Schrijf met AI staat voor deze link niet aan. Gebruik de lijst bovenaan, of de brief onderaan deze pagina.', 'Escribir con IA no está activado para este enlace. Usa la lista de arriba o el brief al final de esta página.'],
+  ['The top Google pages do not agree on what is missing. The list at the top shows ideas to check.', 'De beste pagina’s in Google zijn het niet eens over wat ontbreekt. De lijst bovenaan toont ideeën om na te gaan.', 'Las mejores páginas de Google no coinciden en lo que falta. La lista de arriba muestra ideas para revisar.'],
+  ['Keep your page as it is', 'Laat je pagina zoals hij is', 'Deja tu página como está'],
+  ['Your page already answers this search. Nothing needs to change now.', 'Je pagina beantwoordt deze zoekvraag al. Er hoeft nu niets te veranderen.', 'Tu página ya responde a esta búsqueda. No hace falta cambiar nada ahora.'],
+  ['Your page already covers most of what the top Google pages cover', 'Je pagina behandelt al het meeste van wat de beste pagina’s in Google behandelen', 'Tu página ya cubre casi todo lo que cubren las mejores páginas de Google'],
+  ['{n} of {n} topics on the ranking pages are already on your page. The {n} remaining topic(s) each appear on only one site: ideas to consider, not must-haves.', '{n} van de {n} onderwerpen op de pagina’s in Google staan al op je pagina. De overige {n} onderwerp(en) staan elk maar op één site: ideeën om te overwegen, geen must.', '{n} de {n} temas de las páginas de Google ya están en tu página. Los {n} tema(s) restantes aparecen cada uno en un solo sitio: ideas a considerar, no imprescindibles.'],
+  ['{n} of {n} topics on the ranking pages are already on your page. The {n} remaining topic(s) are in the list below: ideas to consider, not must-haves.', '{n} van de {n} onderwerpen op de pagina’s in Google staan al op je pagina. De overige {n} onderwerp(en) staan in de lijst hieronder: ideeën om te overwegen, geen must.', '{n} de {n} temas de las páginas de Google ya están en tu página. Los {n} tema(s) restantes están en la lista de abajo: ideas a considerar, no imprescindibles.'],
+  ['{n} of {n} topics on the ranking pages are already on your page.', '{n} van de {n} onderwerpen op de pagina’s in Google staan al op je pagina.', '{n} de {n} temas de las páginas de Google ya están en tu página.'],
+  ['The top Google pages do not agree, so there is no firm advice', 'De beste pagina’s in Google zijn het niet eens, dus er is geen vast advies', 'Las mejores páginas de Google no coinciden, así que no hay un consejo firme'],
+  ['They answer this search in different ways, so no missing topic is confirmed by two or more of them. The list below shows ideas to check, most useful first.', 'Ze beantwoorden deze zoekvraag elk op hun eigen manier, dus geen ontbrekend onderwerp wordt door twee of meer van hen bevestigd. De lijst hieronder toont ideeën om na te gaan, de nuttigste eerst.', 'Responden a esta búsqueda de formas distintas, así que ningún tema que falte lo confirman dos o más de ellas. La lista de abajo muestra ideas para revisar, las más útiles primero.'],
+  ['{n} things to improve on your page', '{n} dingen om op je pagina te verbeteren', '{n} cosas que mejorar en tu página'],
+  ['{n} thing to improve on your page', '{n} ding om op je pagina te verbeteren', '{n} cosa que mejorar en tu página'],
+  ['Compared with the pages Google ranks for this search. Most important first. You decide what goes on your page; nothing is published automatically.', 'Vergeleken met de pagina’s die Google voor deze zoekvraag toont. Het belangrijkste eerst. Jij beslist wat op je pagina komt; niets wordt automatisch gepubliceerd.', 'Comparado con las páginas que Google muestra para esta búsqueda. Lo más importante primero. Tú decides qué va en tu página; nada se publica automáticamente.'],
+  ['No clear improvement found', 'Geen duidelijke verbetering gevonden', 'No se encontró una mejora clara'],
+  ['The research found no change that the top Google pages clearly agree on. The list below shows ideas to check.', 'Het onderzoek vond geen verandering waar de beste pagina’s in Google het duidelijk over eens zijn. De lijst hieronder toont ideeën om na te gaan.', 'La investigación no encontró ningún cambio en el que las mejores páginas de Google coincidan claramente. La lista de abajo muestra ideas para revisar.'],
+  ['Ideas to check, most useful first. None of them is a must-have: use one only if it fits your business.', 'Ideeën om na te gaan, de nuttigste eerst. Geen ervan is een must: gebruik er alleen een als het bij je bedrijf past.', 'Ideas para revisar, las más útiles primero. Ninguna es imprescindible: usa una solo si encaja con tu negocio.'],
+  ['Most important first. Check every point and the facts; nothing is published automatically.', 'Het belangrijkste eerst. Controleer elk punt en de feiten; niets wordt automatisch gepubliceerd.', 'Lo más importante primero. Revisa cada punto y los datos; nada se publica automáticamente.'],
+  ['Sources and details per topic', 'Bronnen en details per onderwerp', 'Fuentes y detalles por tema'],
+  ['· placement, sources, what to check', '· plaats, bronnen, wat je moet controleren', '· ubicación, fuentes, qué revisar'],
+  ['The same research as the list above, per topic: where it goes on your page, the source pages and what to check first.', 'Hetzelfde onderzoek als de lijst bovenaan, per onderwerp: waar het op je pagina komt, de bronpagina’s en wat je eerst moet controleren.', 'La misma investigación que la lista de arriba, por tema: dónde va en tu página, las páginas fuente y qué revisar primero.'],
+  ['Why this outcome', 'Waarom deze uitkomst', 'Por qué este resultado'],
+  ['Let us do it for you', 'Laat ons het voor je doen', 'Deja que lo hagamos por ti'],
+  ['Your brief for an editor or another AI tool', 'Je brief voor een redacteur of een andere AI-tool', 'Tu brief para un redactor u otra herramienta de IA'],
+  ['Everything on this page in one text: the list, the sources and the saved AI answers.', 'Alles van deze pagina in één tekst: de lijst, de bronnen en de opgeslagen AI-antwoorden.', 'Todo lo de esta página en un solo texto: la lista, las fuentes y las respuestas de IA guardadas.'],
+  ['Pages read with Firecrawl: {n} of {n} · AI answers: {n} of {n}', 'Pagina’s gelezen met Firecrawl: {n} van {n} · AI-antwoorden: {n} van {n}', 'Páginas leídas con Firecrawl: {n} de {n} · Respuestas de IA: {n} de {n}'],
+  ['AI answers: {n} of {n}', 'AI-antwoorden: {n} van {n}', 'Respuestas de IA: {n} de {n}'],
+  ['What was checked — evidence (Google · Search Console)', 'Wat is gecontroleerd — bewijs (Google · Search Console)', 'Qué se comprobó — pruebas (Google · Search Console)'],
   ['You indicated at the start that this page has no Search Console data. The research ran without it; nothing else is needed.', 'Je gaf bij de start aan dat er voor deze pagina geen Search Console-gegevens zijn. Het onderzoek is zonder gedaan; je hoeft verder niets te doen.', 'Indicaste al empezar que esta página no tiene datos de Search Console. La investigación se hizo sin ellos; no hace falta nada más.'],
   ['On your page (topic comparison: {q})', 'Op je pagina (onderwerpvergelijking: {q})', 'En tu página (comparación de temas: {q})'],
   ['Partly on your page (topic comparison: {q})', 'Deels op je pagina (onderwerpvergelijking: {q})', 'En parte en tu página (comparación de temas: {q})'],
@@ -462,7 +501,9 @@ const LANGS = ['nl', 'es'];
 // {lang: {normalized English: translation}}
 function table() {
   const out = { nl: {}, es: {} };
-  for (const [en, nl, es] of ROWS) { out.nl[en] = nl; out.es[en] = es; }
+  // The browser sees a quoted text as “{q}” (with its quotes); a row written with a bare {q} gets the quotes here, so it matches.
+  const quoted = s => String(s).replace(/(^|[^“]){q}(?!”)/g, '$1“{q}”');
+  for (const [en, nl, es] of ROWS) { out.nl[quoted(en)] = quoted(nl); out.es[quoted(en)] = quoted(es); }
   return out;
 }
 // The translation layer for the browser: translates every text node (and placeholders, titles, labels) it knows, now and
