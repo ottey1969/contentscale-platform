@@ -4036,6 +4036,8 @@ async function _trackerCaseStudyReadonlySchema(spec={}) {
 require('./tracker-growth-cockpit.cjs').registerGrowthCockpit(app,pool);
 // Free public Growth check: separate module, own tables and GROWTH_FREE_* settings (off with GROWTH_FREE_ENABLED=false).
 require('./growth-free/routes.cjs').registerFreeGrowth(app,pool,{rankHandoff:require('./rank-free/handoff.cjs').pgRankHandoff(pool)});
+// Search Console reports (owner 2026-11-20): any site's export → the order of pages to work on, sent as a private link.
+require('./gsc-report/routes.cjs').registerGscReport(app,pool);
 // Free public rank tracker: own module and tables, weekly Google positions per keyword (off with RANK_FREE_ENABLED=false).
 require('./rank-free/routes.cjs').registerRankFree(app,pool);
 // Pre-Write: the best real customer question to ask the AI systems for a keyword (Google's own questions first).
