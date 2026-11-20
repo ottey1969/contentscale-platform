@@ -142,13 +142,15 @@ async function checkPositions({keywords,host,gl,hl,key,fetchImpl=global.fetch,ma
  const list=[];for(const k of keywords||[]){const r=readKeyword(String(k||''));if(r&&r.keyword&&!list.includes(r.keyword))list.push(r.keyword);if(list.length>=maxKeywords)break}
  const base={market:{gl,hl},checked_at:new Date().toISOString()};
  if(!key)return {...base,status:'PROVIDER_NOT_CONFIGURED',rows:list.map(keyword=>({keyword,status:'NOT_CHECKED'})),calls:0};
- const target=host.replace(/^www\./,''),rows=[];let calls=0;
+ const target=host.replace(/^www\./,''),rows=[],ideas=[];let calls=0;
  for(const keyword of list){
   const r=await checkRank({keyword,host:target,gl,hl,key,fetchImpl,maxPages});calls+=r.calls||0;
   // Only this site's own result is kept; the sites around it are research, never part of the report.
+  // Google's own related searches and "People also ask" from this same search: ideas, at no extra cost.
+  for(const s of r.suggestions||[])if(!list.includes(s)&&!ideas.some(i=>i.term===s)&&ideas.length<20)ideas.push({term:s,from:keyword});
   rows.push({keyword,status:r.status,...(r.position?{position:r.position,url:r.url}:{}),...(r.depth?{depth:r.depth}:{}),...(r.reason?{reason:r.reason}:{})});
  }
- return {...base,status:'DONE',rows,calls};
+ return {...base,status:'DONE',rows,ideas,calls};
 }
 const PSI='https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
 async function fieldData({origin,key='',fetchImpl=global.fetch,timeout=60000}){
