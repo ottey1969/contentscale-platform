@@ -4,7 +4,8 @@
 // static HTML (no scripts), not indexed, and every value is escaped. Free Growth is linked per page: always for the owner;
 // for a recipient only when the owner attached an invitation to the report.
 const crypto=require('node:crypto');
-const {readUploads,analyze}=require('./analysis.cjs');
+const {readUploads,analyze,applyUrlStatus}=require('./analysis.cjs');
+const {checkUrlStatuses}=require('./url-status.cjs');
 const reportStore=require('./store.cjs');
 const growthStore=require('../growth-free/store.cjs');
 const {T,LANGS}=require('./texts.cjs');
@@ -12,7 +13,7 @@ const {T,LANGS}=require('./texts.cjs');
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const enc=encodeURIComponent;
 
-function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs').freeGrowthConfig(),storage=null,basePath='/gsc',apiPath='/api/gsc',growthPath='/free-growth'}={}){
+function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs').freeGrowthConfig(),storage=null,basePath='/gsc',apiPath='/api/gsc',growthPath='/free-growth',checkUrls=urls=>checkUrlStatuses(urls)}={}){
  // The Free Growth invitation for a recipient lives in the Free Growth tables; they are made on first use.
  const st=storage||{...reportStore,createInvite:async(p,o)=>{await growthStore.ensureTables(p);return growthStore.createInvite(p,o)}};
  // The owner is the Free Growth owner: the same key, the same signed session cookie (one login for both).
@@ -42,6 +43,8 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const report=analyze({uploads,manualPages:manual,site:String(b.site||'')});
    if(!report.pages.length&&!report.queries.total&&!report.countries.length)
     return res.status(400).json({success:false,error:'Upload a Search Console export or add at least one page.',files:report.files});
+   // Live status per URL (301/404), unless the owner turned it off. A failed check never blocks the report.
+   if(b.check_urls!==false&&report.pages.length){try{applyUrlStatus(report,await checkUrls(report.pages.map(p=>p.url)))}catch(e){console.error('[gsc-report] url check failed',e.message)}}
    await ensure();
    let invite=null;
    const g=b.recipient_growth||{};
@@ -90,10 +93,10 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .tbl td{border-bottom:1px solid #eef2f7;padding:8px 6px;vertical-align:top}.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .scroll{overflow-x:auto}.url{word-break:break-all}.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
 .QUICK_WIN{background:#dcfce7;color:#14532d}.SNIPPET{background:#dbeafe;color:#1e3a8a}.ZERO_CLICKS{background:#fee2e2;color:#7f1d1d}.REVIEW{background:#fef3c7;color:#78350f}
-.DEEPER{background:#ede9fe;color:#4c1d95}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+.DEEPER{background:#ede9fe;color:#4c1d95}.REDIRECT{background:#ffedd5;color:#7c2d12}.GONE{background:#fecaca;color:#7f1d1d}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 .btn{display:inline-block;background:#4338ca;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .btn.big{padding:12px 20px;font-size:15px}.muted{color:#64748b;font-size:13px}details{margin-top:8px}summary{cursor:pointer;color:#4338ca;font-weight:600}
-.flag{color:#b91c1c;font-weight:600}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.flag{color:#b91c1c;font-weight:600}.live{font-size:13px;margin-top:4px;color:#7c2d12}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .cta{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border-color:#c7d2fe}.foot{color:#64748b;font-size:13px;text-align:center;margin-top:28px}
 @media(max-width:700px){.ptbl thead{display:none}.ptbl,.ptbl tbody,.ptbl tr,.ptbl td{display:block;width:100%}
 .ptbl tr{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin:0 0 12px;background:#fff}.ptbl td{border:0;padding:3px 0}
@@ -150,9 +153,18 @@ function reportPage(row,{owner,config,growthPath}){
   <div class="kpi"><span>CTR</span><b>${pct(lang,k.ctr)}</b></div>
   <div class="kpi"><span>${esc(t.avg_position)}</span><b>${pos(lang,k.position)}</b></div>
   <div class="kpi"><span>${esc(t.pages_no_clicks)}</span><b>${nf(lang,k.zero_click_pages)}</b></div>
-  <div class="kpi"><span>${esc(t.top5_share)}</span><b>${pct(lang,k.top5_click_share)}</b></div></div>
-  <p class="muted">${esc(k.source==='DAILY_ROWS'?t.totals_daily:t.totals_pages)}${r.trend?' '+esc(t.trend_note.replace('{a}',nf(lang,r.trend.last7.clicks)).replace('{b}',nf(lang,r.trend.previous7.clicks))):''}</p>`;
- const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(t.actions[p.action])}</span>
+  <div class="kpi"><span>${esc(t.top5_share)}</span><b>${pct(lang,k.top5_click_share)}</b></div>
+  ${k.urls_checked!=null?`<div class="kpi"><span>${esc(t.live.kpi_redirects)}</span><b>${nf(lang,k.redirects)}</b></div><div class="kpi"><span>${esc(t.live.kpi_gone)}</span><b>${nf(lang,k.gone)}</b></div>`:''}</div>
+  <p class="muted">${esc(k.source==='DAILY_ROWS'?t.totals_daily:t.totals_pages)}${k.urls_checked!=null?' '+esc(t.live.checked_note.replace('{c}',nf(lang,k.urls_checked)).replace('{n}',nf(lang,k.urls_not_checked))):''}${r.trend?' '+esc(t.trend_note.replace('{a}',nf(lang,r.trend.last7.clicks)).replace('{b}',nf(lang,r.trend.previous7.clicks))):''}</p>`;
+ const L=t.live,lv=p=>p.live||{};
+ const label=p=>p.action==='REDIRECT'?(lv(p).permanent?L.r301:L.r302).replace('{s}',lv(p).status):p.action==='GONE'?L.gone.replace('{s}',lv(p).status):t.actions[p.action];
+ const liveLine=p=>{const x=lv(p);
+  if(x.error)return ` <span class="muted">· ${esc(L.not_checked)}: ${esc(L.reasons[x.error]||x.error.replace(/^HTTP_/,'HTTP '))}</span>`;
+  if(!x.hops)return '';
+  return `<div class="live">${esc(L.to)} <a class="url" href="${esc(x.final_url)}" title="${esc(x.final_url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(x.final_url))}</a>`+
+   (x.target_rank?` (${esc(L.in_list.replace('{n}',x.target_rank))})`:'')+(x.hops>1?` · ${esc(L.chain.replace('{n}',x.hops))}`:'')+
+   (x.final_status&&x.final_status!==200?` · <span class="flag">${esc(L.target_broken.replace('{s}',x.final_status))}</span>`:x.final_error?` · <span class="flag">${esc(L.target_broken.replace('{s}',L.reasons[x.final_error]||x.final_error))}</span>`:'')+'</div>'};
+ const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}
    <div class="muted">${esc(t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
    ${p.countries&&p.countries.length?`<details><summary>${esc(t.countries)}</summary>${metricRows(lang,t,p.countries)}</details>`:''}
@@ -177,7 +189,7 @@ function reportPage(row,{owner,config,growthPath}){
   ${r.appearance&&r.appearance.length?`<h3>${esc(t.appearance)}</h3>${metricRows(lang,t,r.appearance)}`:''}</div></div>`;
  const files=`<div class="card"><h2>${esc(t.uploaded_title)}</h2><ul>${(r.files||[]).map(f=>`<li>${esc(f.name)} — ${esc(t.kinds[f.kind]||f.kind)}${f.reason?' ('+esc(f.reason)+')':''}</li>`).join('')||'<li>'+esc(t.manual_only)+'</li>'}</ul>
   ${r.filters&&r.filters.length?`<p class="muted">${esc(t.filters)}: ${r.filters.map(esc).join(' · ')}</p>`:''}
-  <h3>${esc(t.method_title)}</h3><p class="muted">${esc(t.method)}</p><h3>${esc(t.notes_title)}</h3><ul class="muted">${(r.notes||[]).map(n=>'<li>'+esc(t.note_map[n]||n)+'</li>').join('')}</ul></div>`;
+  <h3>${esc(t.method_title)}</h3><p class="muted">${esc(t.method)}${k.urls_checked!=null?esc(t.live.method):''}</p><h3>${esc(t.notes_title)}</h3><ul class="muted">${(r.notes||[]).map(n=>'<li>'+esc(t.note_map[n]||n)+'</li>').join('')}</ul></div>`;
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
  const foot=`<p class="foot">${esc(t.valid_until)} ${esc(day(lang,row.expires_at))} · ${esc(config.brand||'ContentScale')}${owner?' · '+esc(t.owner_view)+' · '+nf(lang,row.views)+' '+esc(t.views):''}</p>`;
  return shell(lang,row.title,head+`<div class="wrap">${summary}${kpis}${order}${bands}${queries}${geo}${files}${cta}${foot}</div>`);
@@ -195,6 +207,8 @@ function ownerPage(config,api,base){
 <input id="gscFiles" type="file" multiple accept=".zip,.csv,.tsv,.txt">
 <h3>Pages added by hand</h3><p class="muted">One per line: URL ; clicks ; impressions ; position ; note. Only the URL is required. A page that is also in the export keeps the numbers of the export.</p>
 <textarea id="manual" rows="5" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="https://acme-roofing.com/new-service/ ;;;; New service, not in Search Console yet"></textarea>
+<h3>Live check</h3><label><input type="checkbox" id="checkUrls" checked> Check every URL live: does it redirect (301/302) and to where, or is it gone (404/410)?</label>
+<p class="muted">Each URL is requested once (public https only, at most 150). A site that blocks the request is shown as not checked.</p>
 <h3>Free Growth for the recipient</h3><label><input type="checkbox" id="growthOn"> Let the company research pages in Free Growth from the report</label>
 <label style="margin-left:12px">checks <input id="growthChecks" type="number" min="1" max="20" value="3" style="width:70px;padding:6px;border:1px solid #cbd5e1;border-radius:8px"></label>
 <p class="muted">An invitation is made with this number of checks; it ends with the report. Without it, the company sees your contact button; you always see a Free Growth link per page.</p>
@@ -222,7 +236,7 @@ document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var 
  if(files.reduce(function(a,f){return a+f.size},0)>7*1024*1024){st.textContent='Together the files are larger than 7 MB: make two reports.';return}
  go.disabled=true;st.textContent='Reading the files and calculating…';
  try{var body={title:document.getElementById('title').value,site:document.getElementById('site').value,lang:document.getElementById('lang').value,expires_days:document.getElementById('days').value,
-  files:await Promise.all(files.map(read)),manual_pages:manual(),recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
+  files:await Promise.all(files.map(read)),manual_pages:manual(),check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
   var r=await fetch(API+'/reports',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:JSON.stringify(body)});
   var d=await r.json();if(!d.success)throw Error(d.error);var full=location.origin+d.url;
   st.textContent='Report made: '+d.pages+' pages.';

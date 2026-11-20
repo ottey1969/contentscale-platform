@@ -101,4 +101,31 @@ const T={
    'No hay filas diarias en la subida: los totales son la suma de las páginas y no hay tendencia.'),
   cta_title:'¿Quiere ayuda con estas páginas?',cta_text:'Analizo cada página y escribo las mejoras con usted: cada dato comprobado con usted, nada publicado sin su aprobación.',cta_button:'Contactar',
   valid_until:'Este enlace privado es válido hasta el',owner_view:'vista del propietario',views:'visitas'}};
+// Live URL check (owner 2026-11-20: "301 aanwijzen in dit overzicht").
+const LIVE={
+ en:{actions:{REDIRECT:'Redirected',GONE:'Page gone'},
+  todo:{REDIRECT:'This URL now redirects, so there is nothing to edit here: work on the page it goes to. Point internal links and the sitemap straight at that page. A temporary redirect (302/307) that is meant to stay should become a 301.',
+   GONE:'Google still shows this URL, but the page no longer exists. Redirect it with a 301 to the best matching page, or bring the page back.'},
+  live:{r301:'Redirected ({s})',r302:'Temporarily redirected ({s})',gone:'Page no longer exists ({s})',to:'to',in_list:'#{n} in this list',chain:'{n} steps; redirect in one step',
+   target_broken:'the target does not work ({s})',not_checked:'Not checked',kpi_redirects:'Redirected URLs (3xx)',kpi_gone:'Pages gone (404/410)',
+   checked_note:'Checked live when the report was made: {c} URLs checked, {n} could not be checked.',
+   reasons:{FETCH_TIMEOUT:'no answer in time',NOT_HTTPS:'not an https URL',NOT_CHECKED_LIMIT:'beyond the check limit',NOT_HTML:'not a web page',PUBLIC_IPV4_UNAVAILABLE:'site not reachable',REDIRECT_LOOP:'redirect loop',REDIRECT_LIMIT:'too many redirects'},
+   method:' Each URL was also requested once when the report was made: a URL that redirects (301/308 permanent, 302/303/307 temporary) is listed with where it goes, and a URL that answers 404 or 410 is marked as gone. A site that blocks the request is reported as not checked.'}},
+ nl:{actions:{REDIRECT:'Doorverwezen',GONE:'Pagina weg'},
+  todo:{REDIRECT:'Deze URL verwijst nu door, dus hier valt niets te bewerken: werk aan de pagina waar hij naartoe gaat. Laat interne links en de sitemap direct naar die pagina wijzen. Een tijdelijke doorverwijzing (302/307) die moet blijven: maak er een 301 van.',
+   GONE:'Google toont deze URL nog, maar de pagina bestaat niet meer. Verwijs hem met een 301 door naar de best passende pagina, of zet de pagina terug.'},
+  live:{r301:'Doorverwezen ({s})',r302:'Tijdelijk doorverwezen ({s})',gone:'Pagina bestaat niet meer ({s})',to:'naar',in_list:'#{n} in deze lijst',chain:'{n} stappen; verwijs in één stap door',
+   target_broken:'het doel werkt niet ({s})',not_checked:'Niet gecontroleerd',kpi_redirects:'Doorverwezen URL’s (3xx)',kpi_gone:'Pagina’s weg (404/410)',
+   checked_note:'Live gecontroleerd bij het maken van het rapport: {c} URL’s gecontroleerd, {n} konden niet gecontroleerd worden.',
+   reasons:{FETCH_TIMEOUT:'geen antwoord op tijd',NOT_HTTPS:'geen https-URL',NOT_CHECKED_LIMIT:'buiten de controlelimiet',NOT_HTML:'geen webpagina',PUBLIC_IPV4_UNAVAILABLE:'site niet bereikbaar',REDIRECT_LOOP:'doorverwijzingslus',REDIRECT_LIMIT:'te veel doorverwijzingen'},
+   method:' Elke URL is bij het maken van het rapport ook één keer opgevraagd: een URL die doorverwijst (301/308 permanent, 302/303/307 tijdelijk) staat erbij met waar hij naartoe gaat, en een URL die 404 of 410 geeft is gemarkeerd als weg. Een site die het verzoek blokkeert, staat als niet gecontroleerd.'}},
+ es:{actions:{REDIRECT:'Redirigida',GONE:'Página eliminada'},
+  todo:{REDIRECT:'Esta URL ahora redirige, así que aquí no hay nada que editar: trabaje en la página de destino. Haga que los enlaces internos y el sitemap apunten directamente a esa página. Una redirección temporal (302/307) que deba quedarse: conviértala en 301.',
+   GONE:'Google sigue mostrando esta URL, pero la página ya no existe. Rediríjala con un 301 a la página más adecuada o recupere la página.'},
+  live:{r301:'Redirigida ({s})',r302:'Redirigida temporalmente ({s})',gone:'La página ya no existe ({s})',to:'a',in_list:'n.º {n} de esta lista',chain:'{n} pasos; redirija en un solo paso',
+   target_broken:'el destino no funciona ({s})',not_checked:'No comprobada',kpi_redirects:'URL redirigidas (3xx)',kpi_gone:'Páginas eliminadas (404/410)',
+   checked_note:'Comprobado en vivo al crear el informe: {c} URL comprobadas, {n} no se pudieron comprobar.',
+   reasons:{FETCH_TIMEOUT:'sin respuesta a tiempo',NOT_HTTPS:'no es una URL https',NOT_CHECKED_LIMIT:'fuera del límite de comprobación',NOT_HTML:'no es una página web',PUBLIC_IPV4_UNAVAILABLE:'sitio no accesible',REDIRECT_LOOP:'bucle de redirecciones',REDIRECT_LIMIT:'demasiadas redirecciones'},
+   method:' Además, cada URL se solicitó una vez al crear el informe: una URL que redirige (301/308 permanente, 302/303/307 temporal) aparece con su destino, y una URL que responde 404 o 410 se marca como eliminada. Un sitio que bloquea la solicitud figura como no comprobado.'}}};
+for(const l of LANGS){Object.assign(T[l].actions,LIVE[l].actions);Object.assign(T[l].todo,LIVE[l].todo);T[l].live=LIVE[l].live}
 module.exports={T,LANGS,NOTE_EN};

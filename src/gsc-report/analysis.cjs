@@ -108,7 +108,8 @@ function trendOf(dates){
 function sumByName(lists){const m=new Map();for(const l of lists)for(const x of l||[]){const k=x.name;const o=m.get(k)||{name:k,clicks:0,impressions:0,_w:0,_wi:0};
  o.clicks+=x.clicks;o.impressions+=x.impressions;if(x.position!=null&&x.impressions){o._w+=x.position*x.impressions;o._wi+=x.impressions}m.set(k,o)}
  return [...m.values()].map(({_w,_wi,...o})=>({...o,position:_wi?Math.round(_w/_wi*10)/10:null}))}
-const ORDER={QUICK_WIN:1,SNIPPET:2,ZERO_CLICKS:3,REVIEW:4,DEEPER:5,NO_DATA:6,KEEP:7};
+const ORDER={QUICK_WIN:1,SNIPPET:2,ZERO_CLICKS:3,GONE:4,REVIEW:5,DEEPER:6,REDIRECT:7,NO_DATA:8,KEEP:9};
+const sortPages=list=>{list.sort((a,b)=>ORDER[a.action]-ORDER[b.action]||(b.click_gap||0)-(a.click_gap||0)||(b.impressions||0)-(a.impressions||0)||(b.clicks||0)-(a.clicks||0));list.forEach((p,i)=>p.rank=i+1)};
 
 function analyze({uploads,manualPages=[],site=''}={}){
  const up=uploads||{sitewide:{pages:[],queries:[],countries:[],devices:[],dates:[]},perPage:[],pairs:[],files:[]};
@@ -152,8 +153,7 @@ function analyze({uploads,manualPages=[],site=''}={}){
   else if(p.band==='1-3')p.action=med!=null&&ctr<med?'SNIPPET':'KEEP';
   else p.action=p.band?'DEEPER':'REVIEW';
  }
- list.sort((a,b)=>ORDER[a.action]-ORDER[b.action]||(b.click_gap||0)-(a.click_gap||0)||(b.impressions||0)-(a.impressions||0)||(b.clicks||0)-(a.clicks||0));
- list.forEach((p,i)=>p.rank=i+1);
+ sortPages(list);
 
  const sw=up.sitewide,hasSite=!!(sw.pages.length||sw.queries.length||sw.dates.length);
  // Without a site-wide export the report covers the uploaded pages: their countries, devices and days added up.
@@ -196,4 +196,23 @@ function analyze({uploads,manualPages=[],site=''}={}){
  const method='The order puts first the pages on positions 4–20 whose CTR is below this site\'s own median CTR for that position band (the middle value of the pages in that band that earn clicks, at least three of them). The click gap is impressions × that median − clicks: a calculation on this site\'s own numbers, not a forecast. Then pages in the top 3 below the median (title and description), pages with impressions but no clicks, pages that need a closer look, pages beyond position 20, and pages without data. Pages at or above the median are kept as they are.';
  return {scope,site:siteHost,kpis,trend,bands,pages:list,queries,countries,devices,appearance,files:up.files,filters:s.filters||[],notes,method};
 }
-module.exports={readUploads,analyze,normUrl,bandOf};
+// Live status (from url-status.cjs) on the report: a URL that redirects is not a page to edit (its target is), a URL that
+// answers 404/410 is gone while Google still shows it. A URL that could not be checked keeps its action and says why.
+function applyUrlStatus(report,statuses){
+ if(!statuses||!report||!Array.isArray(report.pages))return report;
+ const byKey=new Map(report.pages.map(p=>[normUrl(p.url),p]));
+ let checked=0,notChecked=0,redirects=0,gone=0;
+ for(const p of report.pages){
+  const live=statuses.get(p.url);if(!live)continue;
+  p.live={...live};
+  if(live.error){notChecked++;continue}
+  checked++;
+  if(live.hops){redirects++;p.action='REDIRECT';p.click_gap=null}
+  else if(live.status===404||live.status===410){gone++;p.action='GONE';p.click_gap=null}
+ }
+ sortPages(report.pages);
+ for(const p of report.pages)if(p.live&&p.live.final_url){const t=byKey.get(normUrl(p.live.final_url));if(t&&t!==p)p.live.target_rank=t.rank}
+ Object.assign(report.kpis,{urls_checked:checked,urls_not_checked:notChecked,redirects,gone});
+ return report;
+}
+module.exports={readUploads,analyze,applyUrlStatus,normUrl,bandOf};
