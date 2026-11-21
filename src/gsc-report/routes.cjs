@@ -9,6 +9,7 @@ const audit=require('./site-audit.cjs');
 const {suggestTerms}=require('./suggest-terms.cjs');
 const {readMarket}=require('../rank-free/engine.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
+const {createFreeGrowthFirecrawlReader}=require('../growth-free-firecrawl-reader.cjs');
 const {checkUrlStatuses}=require('./url-status.cjs');
 const reportStore=require('./store.cjs');
 const growthStore=require('../growth-free/store.cjs');
@@ -18,7 +19,10 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const enc=encodeURIComponent;
 
 function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs').freeGrowthConfig(),storage=null,basePath='/gsc',apiPath='/api/gsc',growthPath='/free-growth',checkUrls=urls=>checkUrlStatuses(urls),siteReader=fetchPublicGrowthHtml,fetchImpl=(...a)=>global.fetch(...a),
- serperKey=process.env.SERPER_API_KEY||'',pagespeedKey=process.env.PAGESPEED_API_KEY||''}={}){
+ serperKey=process.env.SERPER_API_KEY||'',pagespeedKey=process.env.PAGESPEED_API_KEY||'',firecrawlKey=process.env.FIRECRAWL_API_KEY||'',
+ makeRenderer=null}={}){
+ // Firecrawl (paid per page, runs JavaScript): only when the owner ticks it, through the same guarded reader Free Growth uses.
+ const renderer=makeRenderer||(({max})=>createFreeGrowthFirecrawlReader({env:{FREE_GROWTH_FIRECRAWL_ENABLED:'true',FIRECRAWL_API_KEY:firecrawlKey},original:siteReader,maxPages:max,hardCap:50}).reader);
  // The Free Growth invitation for a recipient lives in the Free Growth tables; they are made on first use.
  const st=storage||{...reportStore,createInvite:async(p,o)=>{await growthStore.ensureTables(p);return growthStore.createInvite(p,o)},
   revokeInviteToken:async(p,t)=>{const i=await growthStore.getInvite(p,t);return i?growthStore.revokeInvite(p,i.id):null}};
@@ -60,7 +64,11 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
     if(!keywords.length)return res.status(400).json({success:false,error:'Add at least one search term for the positions.'});
     positionsP=audit.checkPositions({keywords,host,gl:market.gl,hl:market.hl,key:serperKey,fetchImpl}).then(r=>({...r,market:{gl:market.gl,hl:market.hl,country_name:market.country_name,language_name:market.language_name}}));
    }
-   if(site){crawlP=audit.crawlSite({domain,fetchImpl:siteReader});speedP=audit.fieldData({origin:site.origin,key:pagespeedKey,fetchImpl})}
+   const fc=(b.site_audit&&b.site_audit.firecrawl)||{},fcWanted=!!site&&fc.enabled===true,fcMax=Math.min(50,Math.max(1,parseInt(fc.max,10)||25));
+   const fcRender=fcWanted&&firecrawlKey?renderer({max:fcMax}):null;
+   // The owner chooses how many pages are read (testing: a few; at most 150).
+   const auditMax=Math.min(150,Math.max(1,parseInt(b.site_audit&&b.site_audit.max,10)||150));
+   if(site){crawlP=audit.crawlSite({domain,fetchImpl:siteReader,max:auditMax,...(fcRender?{renderImpl:fcRender,renderMax:fcMax}:{})});speedP=audit.fieldData({origin:site.origin,key:pagespeedKey,fetchImpl})}
    const crawl=crawlP?await crawlP:null;
    const report=analyze({uploads,manualPages:[...manual,...(crawl?crawl.pages.map(url=>({url,source:'CRAWL'})):[])],site:String(b.site||'')||(site?site.host:'')});
    if(!report.pages.length&&!report.queries.total&&!report.countries.length)
@@ -70,7 +78,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const rest=report.pages.map(p=>p.url).filter(u=>!statuses.has(u)&&!(crawl&&crawl.statuses.has(u)));
    if(b.check_urls!==false&&rest.length){try{for(const [u,v] of await checkUrls(rest))statuses.set(u,v)}catch(e){console.error('[gsc-report] url check failed',e.message)}}
    if(statuses.size)applyUrlStatus(report,statuses);
-   if(crawl)applyAudit(report,crawl);
+   if(crawl){applyAudit(report,crawl);if(fcWanted&&!fcRender)report.crawl.render={status:'NOT_CONFIGURED'}}
    applyPositions(report,positionsP?await positionsP:null);
    if(speedP)report.speed=await speedP;
    await ensure();
@@ -232,13 +240,14 @@ function reportPage(row,{owner,config,growthPath}){
    (x.target_rank?` (${esc(L.in_list.replace('{n}',x.target_rank))})`:'')+(x.hops>1?` · ${esc(L.chain.replace('{n}',x.hops))}`:'')+
    (x.final_status&&x.final_status!==200?` · <span class="flag">${esc(L.target_broken.replace('{s}',x.final_status))}</span>`:x.final_error?` · <span class="flag">${esc(L.target_broken.replace('{s}',L.reasons[x.final_error]||x.final_error))}</span>`:'')+'</div>'};
  const BLOCKING=new Set(['NOINDEX','CANONICAL_ELSEWHERE']);
+ const jsLine=p=>p.audit&&p.audit.rendered==='FIRECRAWL'?`<div class="issues"><span class="chip">${esc(A.js_read)}</span>${p.audit.raw_issues&&p.audit.raw_issues.length?` <span class="muted">${esc(A.js_raw.replace('{x}',p.audit.raw_issues.map(c=>A.issues[c]||c).join(' · ')))}</span>`:''}</div>`:'';
  const issueLine=p=>p.audit&&p.audit.issues.length?`<div class="issues">${p.audit.issues.map(c=>BLOCKING.has(c)?`<span class="flag">${esc(A.issues[c]||c)}</span>`:esc(A.issues[c]||c)).join(' · ')}</div>`:'';
  const posChips=p=>(p.positions||[]).map(x=>`<span class="chip" title="${esc(x.keyword)}">${esc(A.pos_found.replace('{n}',x.position))} · ${esc(x.keyword)}</span>`).join('');
  const facts=p=>{const a=p.audit;if(!a)return '';const row=(k,v)=>`<dt>${esc(k)}</dt><dd>${v}</dd>`,no=`<span class="muted">${esc(A.none)}</span>`;
   return `<details><summary>${esc(A.seen)}</summary><dl class="facts">${row(A.f_title,a.title?esc(a.title)+` <span class="muted">(${a.title.length})</span>`:no)}${row(A.f_description,a.description?esc(a.description)+` <span class="muted">(${a.description.length})</span>`:no)}
    ${row(A.f_h1,a.h1.length?a.h1.map(esc).join(' · '):no)}${row(A.words,nf(lang,a.words))}${row(A.f_canonical,a.canonical?esc(a.canonical):no)}${row(A.f_lang,a.lang?esc(a.lang):no)}
    ${row(A.f_hreflang,a.hreflang.length?a.hreflang.map(h=>esc(h.lang)).join(', '):no)}${p.lastmod?row(A.lastmod,esc(day(lang,p.lastmod))):''}</dl></details>`};
- const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}${issueLine(p)}${posChips(p)}
+ const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}${jsLine(p)}${issueLine(p)}${posChips(p)}
    <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
    ${p.countries&&p.countries.length?`<details><summary>${esc(t.countries)}</summary>${metricRows(lang,t,p.countries)}</details>`:''}
@@ -282,6 +291,8 @@ function reportPage(row,{owner,config,growthPath}){
   <li>${esc(A.src[C.sitemap.source]||'')} ${esc(A.counts.replace('{l}',nf(lang,C.sitemap.urls_found)).replace('{r}',nf(lang,C.pages_read)))}</li>
   ${C.not_crawled_count?`<li>${esc(A.not_crawled.replace('{n}',nf(lang,C.not_crawled_count)))}<ul class="muted">${C.not_crawled.map(x=>'<li class="url">'+esc(pathOf(x.url))+'</li>').join('')}</ul></li>`:''}
   ${C.path&&C.path!=='/'?`<li>${esc(A.path_only.replace('{p}',C.path).replace('{n}',nf(lang,C.outside_path)))}</li>`:''}
+  ${C.render&&C.render.tried!=null?`<li>${esc(A.fc_summary.replace('{u}',nf(lang,C.render.used)).replace('{t}',nf(lang,C.render.tried)))}${owner?` <span class="muted">(${esc(t.owner_view)} · ${esc(A.fc_used.replace('{n}',C.render.tried))})</span>`:''}</li>`:''}
+  ${owner&&C.render&&C.render.status==='NOT_CONFIGURED'?`<li class="muted">${esc(t.owner_view)} · ${esc(A.fc_none)}</li>`:''}
   ${C.not_crawled_limit?`<li>${esc(A.limit.replace('{n}',nf(lang,C.not_crawled_limit)))}</li>`:''}</ul>
   ${crawlOnly?`<h3>${esc(A.unknown_title)}</h3><p class="muted">${esc(A.unknown)}</p><h3>${esc(t.method_title)}</h3><p class="muted">${esc(A.method)}${k.urls_checked!=null?esc(t.live.method):''}</p>`:''}</div>`:'';
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
@@ -302,6 +313,9 @@ function ownerPage(config,api,base){
 <fieldset id="secWithout" class="sec without"><legend>A · Without Search Console (public read)</legend>
 <p class="muted">Only a domain: robots.txt (followed), the sitemap and up to 150 pages are read in public — redirects, 404, noindex, canonical, title, meta description, H1, amount of text — plus Google's speed data for real visitors. Free. No clicks or impressions: those are only in Search Console.</p>
 <label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
+<label>Pages to read (at most) <input id="auditMax" type="number" min="1" max="150" value="150" style="width:80px;padding:6px;border:1px solid #cbd5e1;border-radius:8px"></label> <span class="muted">Fewer is faster: use 5–10 while testing.</span><br>
+<label><input type="checkbox" id="fcOn"> <b>Paid:</b> read pages again with Firecrawl when they look empty without JavaScript (no H1, little text, no real title)</label> <label style="margin-left:8px">at most <input id="fcMax" type="number" min="1" max="50" value="25" style="width:70px;padding:6px;border:1px solid #cbd5e1;border-radius:8px"> pages</label>
+<p class="muted">Only those pages, one Firecrawl credit each; good pages and pages that refuse readers are never sent. The report then shows what Google sees after JavaScript.</p>
 <p class="muted">Fill in A, B or both. With both, the Search Console numbers stay and the public facts are added per page.</p></fieldset>
 <fieldset id="secWith" class="sec with"><legend>B · With Search Console</legend>
 <p class="muted">The company gave you its Search Console export: clicks, impressions, CTR and position per page. The order of the pages is calculated on these numbers.</p>
@@ -375,15 +389,18 @@ document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var 
  if(files.reduce(function(a,f){return a+f.size},0)>7*1024*1024){st.textContent='Together the files are larger than 7 MB: make two reports.';return}
  var dom=document.getElementById('auditDomain').value.trim(),posOn=document.getElementById('posOn').checked,t0=Date.now(),pr=document.getElementById('progress'),pt=document.getElementById('progressText');
  // Visible progress: reading a site takes up to two minutes; without it the button seems to do nothing (owner 2026-11-21).
- var steps=(files.length?['Reading the Search Console files']:[]).concat(dom?['Reading robots.txt and the sitemap','Reading the pages (up to 150)','Fetching Google’s speed data']:[]).concat(posOn?['Looking up positions in Google']:[]).concat(['Checking redirects and 404','Calculating the order']);
+ var steps=(files.length?['Reading the Search Console files']:[]).concat(dom?['Reading robots.txt and the sitemap','Reading the pages (up to '+(document.getElementById('auditMax').value||150)+')','Fetching Google’s speed data']:[]).concat(dom&&document.getElementById('fcOn').checked?['Reading pages again with JavaScript (Firecrawl)']:[]).concat(posOn?['Looking up positions in Google']:[]).concat(['Checking redirects and 404','Calculating the order']);
  var tick=function(){var s=Math.round((Date.now()-t0)/1000),i=Math.min(steps.length-1,Math.floor(s/(dom?12:2)));pt.textContent=steps[i]+'… ('+s+' s'+(dom?', up to about 2 minutes':'')+')'};
  // Paid searches only with the owner's own tick, a chosen country and a confirmation that names the market (owner 2026-11-21).
+ var paid=[],fcOn=document.getElementById('fcOn').checked&&!!dom;
  if(posOn){var cs=document.getElementById('posCountry'),pl=document.getElementById('posLang').value.trim(),nterms=Math.min(10,document.getElementById('posTerms').value.split('\\n').filter(function(x){return x.trim()}).length);
   if(!cs.value){st.textContent='Choose the country for the positions in Google.';cs.focus();return}
-  if(!confirm('This makes up to '+nterms*3+' paid Google searches (Serper) for '+nterms+' search terms in Google '+cs.options[cs.selectedIndex].text+(pl?' ('+pl+')':'')+'. Continue?'))return}
+  paid.push('up to '+nterms*3+' paid Google searches (Serper) for '+nterms+' search terms in Google '+cs.options[cs.selectedIndex].text+(pl?' ('+pl+')':''))}
+ if(fcOn)paid.push('up to '+Math.min(50,Math.max(1,parseInt(document.getElementById('fcMax').value,10)||25))+' pages read with Firecrawl (one credit each)');
+ if(paid.length&&!confirm('This report uses: '+paid.join(' and ')+'. Continue?'))return
  go.disabled=true;go.innerHTML='<span class="spinner"></span>Working…';st.textContent='';pr.hidden=false;tick();var timer=setInterval(tick,1000);
  try{var body={title:document.getElementById('title').value,site:document.getElementById('site').value,lang:document.getElementById('lang').value,expires_days:document.getElementById('days').value,
-  files:await Promise.all(files.map(read)),manual_pages:manual(),site_audit:{domain:document.getElementById('auditDomain').value.trim()},positions:{enabled:document.getElementById('posOn').checked,keywords:document.getElementById('posTerms').value,country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim()||undefined},check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
+  files:await Promise.all(files.map(read)),manual_pages:manual(),site_audit:{domain:document.getElementById('auditDomain').value.trim(),max:document.getElementById('auditMax').value,firecrawl:{enabled:document.getElementById('fcOn').checked,max:document.getElementById('fcMax').value}},positions:{enabled:document.getElementById('posOn').checked,keywords:document.getElementById('posTerms').value,country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim()||undefined},check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
   var r=await fetch(API+'/reports',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:JSON.stringify(body)});
   var d=await r.json();if(!d.success)throw Error(d.error);var full=location.origin+d.url;
   st.textContent='Report made: '+d.pages+' pages.';

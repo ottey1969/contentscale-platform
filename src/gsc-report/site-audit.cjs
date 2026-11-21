@@ -85,7 +85,7 @@ function siteOrigin(domain){
  // A path ("/en/") limits the read to that part of the site.
  return {origin:u.origin,host:u.hostname.toLowerCase(),path:u.pathname.replace(/[^/]*$/,'')||'/'};
 }
-async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurrency=6,maxSitemaps=10,timeout=8000}={}){
+async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurrency=6,maxSitemaps=10,timeout=8000,renderImpl=null,renderMax=0}={}){
  const {origin,host,path}=siteOrigin(domain);
  const inPath=u=>{try{return new URL(u).pathname.startsWith(path)}catch{return false}};
  const sameHost=u=>{try{const x=new URL(u);return x.hostname.toLowerCase()===host&&(x.protocol==='https:'||x.protocol==='http:')}catch{return false}};
@@ -130,12 +130,26 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
    if(!(r.redirect_chain&&r.redirect_chain.length))audits.set(u,pageAudit(r.html,u,{xRobotsTag:r.x_robots_tag||null}));
   }catch(e){statuses.set(u,fromResult(u,null,e))}}};
  await Promise.all(Array.from({length:Math.min(concurrency,pages.length)},worker));
+ // Pages that look empty without JavaScript (no H1, little text, no real title) are read again with a renderer that runs
+ // it (Firecrawl), when the owner asked for it. Only pages the plain reader could read: a refused page is never sent.
+ let render;
+ if(renderImpl&&renderMax>0){
+  const looksEmpty=a=>a.issues.some(c=>c==='H1_MISSING'||c==='THIN'||c==='TITLE_MISSING')||/^[\s\-–—|:·•]+/.test(a.title||'');
+  const cands=pages.filter(u=>audits.has(u)&&looksEmpty(audits.get(u))).slice(0,renderMax);
+  render={tried:0,used:0,max:renderMax};let k=0;
+  const rworker=async()=>{while(k<cands.length){const u=cands[k++],old=audits.get(u);render.tried++;
+   try{const r=await renderImpl(u,{compact:true,limit:400000});
+    if(r&&r.source==='FIRECRAWL_HOSTED_API'&&r.html){const na=pageAudit(r.html,u);na.rendered='FIRECRAWL';na.raw_issues=old.issues.slice();audits.set(u,na);render.used++}
+    else old.rendered='NOT_USED';
+   }catch{old.rendered='NOT_USED'}}};
+  await Promise.all(Array.from({length:Math.min(3,cands.length)},rworker));
+ }
  // The same title or description on more than one page.
  for(const [field,code] of [['title','TITLE_DUPLICATE'],['description','DESCRIPTION_DUPLICATE']]){
   const by=new Map();for(const [u,a] of audits){const k=a[field].toLowerCase();if(!k)continue;if(!by.has(k))by.set(k,[]);by.get(k).push(u)}
   for(const us of by.values())if(us.length>1)for(const u of us){const a=audits.get(u);a.issues.push(code);a[field+'_shared_with']=us.length-1}
  }
- return {origin,host,path,outside_path:outside,robots:{found:robotsFound,error:robotsError,rules:robots.rules.length},sitemap:{source,sitemaps_read:read,urls_found:found.length},
+ return {origin,host,path,outside_path:outside,...(render?{render}:{}),robots:{found:robotsFound,error:robotsError,rules:robots.rules.length},sitemap:{source,sitemaps_read:read,urls_found:found.length},
   pages,statuses,audits,lastmod,not_crawled:notCrawled,not_crawled_limit:limited,crawled_at:new Date().toISOString()};
 }
 
