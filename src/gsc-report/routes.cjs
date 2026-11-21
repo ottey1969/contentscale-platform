@@ -147,6 +147,7 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .kpi b{display:block;font-size:24px;line-height:1.2}.kpi span{color:#475569;font-size:13px}.up{color:#15803d}.down{color:#b91c1c}
 .tbl{width:100%;border-collapse:collapse;font-size:14px}.tbl th{text-align:left;color:#475569;font-weight:600;border-bottom:2px solid #e2e8f0;padding:8px 6px;white-space:nowrap}
 .tbl td{border-bottom:1px solid #eef2f7;padding:8px 6px;vertical-align:top}.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tbl th.num,.tbl td.num{text-align:center}
 .scroll{overflow-x:auto}.url{word-break:break-all}.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
 .QUICK_WIN{background:#dcfce7;color:#14532d}.SNIPPET{background:#dbeafe;color:#1e3a8a}.ZERO_CLICKS{background:#fee2e2;color:#7f1d1d}.REVIEW{background:#fef3c7;color:#78350f}
 .DEEPER{background:#ede9fe;color:#4c1d95}.FIX_HREFLANG{background:#ccfbf1;color:#134e4a}.REDIRECT{background:#ffedd5;color:#7c2d12}.BLOCKED{background:#fecaca;color:#7f1d1d}.FIX_SNIPPET{background:#dbeafe;color:#1e3a8a}.FIX_STRUCTURE{background:#e0e7ff;color:#3730a3}.THIN{background:#fef3c7;color:#78350f}.NO_ISSUES{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
