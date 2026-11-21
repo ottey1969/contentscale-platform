@@ -148,3 +148,17 @@ test('real data: "not compared" is NOT_COMPARED; done work on the guide and on t
  const rank=id=>by(id).rank;assert.ok(rank('d')<rank('b')&&rank('d')<rank('a'),'open work first, done work last');
  for(const k of ['Done — already on your service page','Done — price named and linked'])assert.ok(ROWS.find(r=>r[0]===k),k);
 });
+test('the page whose address is the whole subject keeps the price question; the homepage is never the best match (owner 2026-11-21)',async()=>{
+ const SEOP='https://nl.contentscale.site/seo-content-optimalisatie/',HOME='https://nl.contentscale.site/';
+ const q='SEO content optimalisatie uitbesteden wat kost dat?';
+ const own=body('<h1>SEO-contentoptimalisatie — Onderzoek, verbeter en meet</h1><p>Geen prijs. <a href="/">SEO content home</a> <a href="/generative-engine-optimization-geo/">GEO content specialist</a></p>');
+ const f=async u=>({html:u===HOME?body('<h1>ContentScale SEO content</h1><p>Vanaf €297 per maand.</p>'):pages[u]||''});
+ const r=await findBestOwnPage({pageUrl:SEOP,query:q,ownHtml:own,fetchHtml:f});
+ assert.equal(r.status,'THIS_PAGE_IS_THE_SUBJECT',JSON.stringify(r));
+ // From a guide, the homepage is still never picked.
+ const guide=body('<h1>Gids</h1><p><a href="/">SEO content optimalisatie</a></p>');
+ const g=await findBestOwnPage({pageUrl:'https://nl.contentscale.site/gids-seo/',query:q,ownHtml:guide,fetchHtml:f});
+ assert.notEqual(g.url,HOME);
+ const cp=buildContentPriorities({summary:{...summary,query:q},aiGap,bestOwnPage:r});
+ assert.equal(cp.best_own_page,null);assert.equal(cp.items.find(x=>x.id==='fact-price').action,'ADD_OWN_FACT','the price belongs on this page itself');
+});

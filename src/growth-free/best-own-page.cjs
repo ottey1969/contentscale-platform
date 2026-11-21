@@ -18,7 +18,8 @@ const isPriceQuestion=q=>PRICE_Q.test(String(q||''));
 const NOISE=new Set(('wat kost kosten kostte prijs prijzen tarief tarieven hoeveel hoe waarom welke beste goedkoop een de het van voor bij in op met per je mijn ik is zijn om te en of inhuren huren laten ' +
  'cuanto cuanta cuesta cuestan coste costo precio precios tarifa tarifas como que cual mejor un una el la los las de del en para por mi es son contratar y o ' +
  'how much does do cost costs price prices pricing rate rates fee fees what which best cheap a an the of for in to my is are hire and or ' +
- 'specialist specialists especialista expert experto consultant consultor bureau agency agencia service services dienst diensten servicio servicios').split(/\s+/));
+ 'specialist specialists especialista expert experto consultant consultor bureau agency agencia service services dienst diensten servicio servicios ' +
+ 'dat dit die deze uitbesteden uitbesteed outsource outsourcing').split(/\s+/));
 const SPELLED={geo:'generative engine optimization',aeo:'answer engine optimization',seo:'search engine optimization'};
 // The page of the service someone wants to hire ("specialist inhuren", "consultant").
 const PROVIDER=/\b(?:specialist|specialists|consultant|consultants|consultancy|consultor|especialista|expert|experto|adviseur|bureau|agency|agencia|inhuren|hire|contratar)\b/;
@@ -53,7 +54,7 @@ function scoreLink(link,subject){
  return {matched,score:matched.reduce((a,w)=>a+(w.length<=2?0.5:1),0)+(PRICE_PATH.test(path+' '+text)?0.5:0)+(PROVIDER.test(path+' '+text)?0.5:0)};
 }
 
-// status: NOT_A_PRICE_QUESTION | THIS_PAGE_HAS_PRICE | FOUND | NOT_FOUND | OWN_PAGE_UNREADABLE
+// status: NOT_A_PRICE_QUESTION | THIS_PAGE_HAS_PRICE | THIS_PAGE_IS_THE_SUBJECT | FOUND | NOT_FOUND | OWN_PAGE_UNREADABLE
 async function findBestOwnPage({pageUrl,query,ownHtml=null,fetchHtml,max=MAX_READ}){
  if(!isPriceQuestion(query))return {status:'NOT_A_PRICE_QUESTION'};
  if(ownHtml==null){try{ownHtml=String((await fetchHtml(pageUrl))?.html||'')}catch{ownHtml=''}}
@@ -65,7 +66,13 @@ async function findBestOwnPage({pageUrl,query,ownHtml=null,fetchHtml,max=MAX_REA
  const servicePage=PROVIDER.test(fold(pageUrl+' '+headOf(ownHtml)));
  if(own.price&&servicePage)return {status:'THIS_PAGE_HAS_PRICE',excerpt:own.price.slice(0,220)};
  const subject=subjectWords(query),market=marketOf(pageUrl);
- const links=ownLinks(ownHtml,pageUrl).filter(l=>marketOf(l.url)===market).map(l=>({...l,...scoreLink(l,subject)})).filter(l=>l.matched.length);
+ // The page whose address holds the whole subject is the page for this question (owner 2026-11-21: /seo-content-optimalisatie/
+ // was sent to the homepage for "SEO content optimalisatie uitbesteden wat kost dat?"). Its price belongs on it.
+ const ownPath=(()=>{try{return ' '+fold(decodeURIComponent(new URL(pageUrl).pathname)).replace(/[^\p{L}\p{N}]+/gu,' ')+' '}catch{return ''}})();
+ if(subject.length>=2&&subject.every(w=>ownPath.includes(' '+w)||(SPELLED[w]&&ownPath.includes(SPELLED[w]))))
+  return own.price?{status:'THIS_PAGE_HAS_PRICE',excerpt:own.price.slice(0,220)}:{status:'THIS_PAGE_IS_THE_SUBJECT'};
+ // The homepage is never the page for one service.
+ const links=ownLinks(ownHtml,pageUrl).filter(l=>marketOf(l.url)===market&&!/^\/?(?:[a-z]{2}\/?)?$/i.test(new URL(l.url).pathname)).map(l=>({...l,...scoreLink(l,subject)})).filter(l=>l.matched.length);
  // A subject word that few links have says more than one that many links have ("geo" against "ai").
  const freq=new Map();for(const l of links)for(const w of l.matched)freq.set(w,(freq.get(w)||0)+1);
  for(const l of links)l.score+=l.matched.reduce((a,w)=>a+1/freq.get(w),0);
