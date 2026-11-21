@@ -218,7 +218,7 @@ function applyUrlStatus(report,statuses){
 // What the public pages show (site-audit.cjs). A page Google is told not to index, or whose canonical points elsewhere,
 // is fixed first whatever its numbers. A page without Search Console numbers gets its action from what its page shows.
 // Without any Search Console data the report says so (scope CRAWL) and shows no clicks or impressions at all.
-const SNIPPET_ISSUES=/^(TITLE|DESCRIPTION)_|^LANGUAGE_MISMATCH$/,STRUCTURE_ISSUES=/^(H1|SCHEMA)_/,HREFLANG_ISSUES=/^HREFLANG_/;
+const SNIPPET_ISSUES=/^(TITLE|DESCRIPTION)_|^LANGUAGE_MISMATCH$/,STRUCTURE_ISSUES=/^(H1|SCHEMA|ARTICLE)_/,HREFLANG_ISSUES=/^HREFLANG_/;
 function applyAudit(report,crawl){
  if(!crawl||!report)return report;
  const counts={};let withIssues=0,withNotes=0,blocked=0;
