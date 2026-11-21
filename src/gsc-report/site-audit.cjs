@@ -68,14 +68,32 @@ function pageAudit(html,url,{xRobotsTag=null}={}){
  const body=(h.match(/<body\b[^>]*>([\s\S]*)<\/body>/i)||[null,h])[1]
   .replace(/<(script|style|noscript|svg|template|nav|header|footer|form|select)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,' ');
  const words=(text(body).match(/[\p{L}\p{N}][\p{L}\p{N}\p{M}'’-]*/gu)||[]).length;
- const issues=[];
+ // Structured data: the types on the page; an Article twice (theme plus plugin) and JSON-LD that does not parse.
+ const schema=[];let schemaInvalid=false,articles=0;
+ for(const m of h.matchAll(/<script\b[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script\s*>/gi)){
+  let j;try{j=JSON.parse(m[1].trim())}catch{schemaInvalid=true;continue}
+  const walk=x=>{if(Array.isArray(x))return x.forEach(walk);if(!x||typeof x!=='object')return;
+   const ty=[].concat(x['@type']||[]).map(String).filter(Boolean);if(ty.length){schema.push(...ty);if(ty.some(t=>/^(Article|NewsArticle|BlogPosting)$/.test(t)))articles++}
+   if(x['@graph'])walk(x['@graph'])};
+  walk(j);
+ }
+ // The language of the page against the script of its title and description.
+ const letters=t=>{const ar=(String(t).match(/[؀-ۿ]/g)||[]).length,la=(String(t).match(/[a-z]/gi)||[]).length;return {ar,la}};
+ const arPage=/^(ar|fa|ur)\b/.test(lang||''),laPage=/^(en|nl|es|fr|de|it|pt|tr|id|ms)\b/.test(lang||'');
+ const otherScript=t=>{const {ar,la}=letters(t);if(ar+la<8)return false;return arPage?la>ar:laPage?ar>la:false};
+ const issues=[],notes=[];
  if(noindex)issues.push('NOINDEX');
  if(canonical&&!samePage(canonical,url))issues.push('CANONICAL_ELSEWHERE');
- if(!title)issues.push('TITLE_MISSING');else if(title.length>TITLE_MAX)issues.push('TITLE_LONG');
- if(!description)issues.push('DESCRIPTION_MISSING');else if(description.length>DESCRIPTION_MAX)issues.push('DESCRIPTION_LONG');
+ if(!title)issues.push('TITLE_MISSING');else if(/^[\s\-–—|:·•]+/.test(title))issues.push('TITLE_BROKEN');
+ // Long titles and descriptions are cut off in Google, not wrong: a small note, not a problem (owner 2026-11-21).
+ if(title.length>TITLE_MAX)notes.push('TITLE_LONG');
+ if(!description)issues.push('DESCRIPTION_MISSING');else if(description.length>DESCRIPTION_MAX)notes.push('DESCRIPTION_LONG');
+ if(otherScript(title)||otherScript(description))issues.push('LANGUAGE_MISMATCH');
  if(!h1.length)issues.push('H1_MISSING');else if(h1.length>1)issues.push('H1_MULTIPLE');
  if(words<THIN_WORDS)issues.push('THIN');
- return {title:title.slice(0,300),description:description.slice(0,400),h1:h1.slice(0,5).map(x=>x.slice(0,200)),words,canonical,noindex,lang,hreflang:hreflang.slice(0,20),issues};
+ if(articles>1)issues.push('SCHEMA_DUPLICATE_ARTICLE');
+ if(schemaInvalid)issues.push('SCHEMA_INVALID');
+ return {title:title.slice(0,300),description:description.slice(0,400),h1:h1.slice(0,5).map(x=>x.slice(0,200)),words,canonical,noindex,lang,hreflang:hreflang.slice(0,20),schema:schema.slice(0,30),issues,notes};
 }
 
 // ── the site ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -134,7 +152,7 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
  // it (Firecrawl), when the owner asked for it. Only pages the plain reader could read: a refused page is never sent.
  let render;
  if(renderImpl&&renderMax>0){
-  const looksEmpty=a=>a.issues.some(c=>c==='H1_MISSING'||c==='THIN'||c==='TITLE_MISSING')||/^[\s\-–—|:·•]+/.test(a.title||'');
+  const looksEmpty=a=>a.issues.some(c=>c==='H1_MISSING'||c==='THIN'||c==='TITLE_MISSING'||c==='TITLE_BROKEN')||/^[\s\-–—|:·•]+/.test(a.title||'');
   const cands=pages.filter(u=>audits.has(u)&&looksEmpty(audits.get(u))).slice(0,renderMax);
   render={tried:0,used:0,max:renderMax};let k=0;
   const rworker=async()=>{while(k<cands.length){const u=cands[k++],old=audits.get(u);render.tried++;
@@ -148,6 +166,23 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
  for(const [field,code] of [['title','TITLE_DUPLICATE'],['description','DESCRIPTION_DUPLICATE']]){
   const by=new Map();for(const [u,a] of audits){const k=a[field].toLowerCase();if(!k)continue;if(!by.has(k))by.set(k,[]);by.get(k).push(u)}
   for(const us of by.values())if(us.length>1)for(const u of us){const a=audits.get(u);a.issues.push(code);a[field+'_shared_with']=us.length-1}
+ }
+ // Across the pages read: a title that is only the site name (a title part on many pages), and language versions
+ // (hreflang) that do not point to themselves, are not linked back, or point to a page that is gone or redirects.
+ const segs=t=>String(t||'').split(/\s+[|–—:·•-]\s+|\s*[|–—·•]\s*/).map(x=>x.trim().toLowerCase()).filter(Boolean);
+ const segCount=new Map();for(const a of audits.values())for(const s of new Set(segs(a.title)))segCount.set(s,(segCount.get(s)||0)+1);
+ const names=new Set([...segCount].filter(([,n])=>n>=Math.max(3,audits.size*0.3)).map(([s])=>s));
+ for(const a of audits.values()){const t=String(a.title||'').trim().toLowerCase();if(t&&names.has(t)&&!a.issues.includes('TITLE_BROKEN'))a.issues.push('TITLE_BROKEN')}
+ const key=u=>{try{const x=new URL(u);let p=x.pathname;try{p=decodeURI(p)}catch{}return x.hostname.toLowerCase()+(p.replace(/\/+$/,'')||'/')+x.search}catch{return ''}};
+ const auditBy=new Map([...audits].map(([u,a])=>[key(u),a])),statusBy=new Map([...statuses].map(([u,s])=>[key(u),s]));
+ for(const [u,a] of audits){
+  if(!a.hreflang.length)continue;const me=key(u),alts=a.hreflang.map(h=>key(h.url)).filter(Boolean);
+  if(!alts.includes(me))a.issues.push('HREFLANG_NO_SELF');
+  let noReturn=false,broken=false;
+  for(const k of new Set(alts)){if(k===me)continue;
+   const st=statusBy.get(k);if(st&&(st.hops||st.status===404||st.status===410)){broken=true;continue}
+   const other=auditBy.get(k);if(other&&!other.hreflang.some(h=>key(h.url)===me))noReturn=true}
+  if(noReturn)a.issues.push('HREFLANG_NO_RETURN');if(broken)a.issues.push('HREFLANG_BROKEN_TARGET');
  }
  return {origin,host,path,outside_path:outside,...(render?{render}:{}),robots:{found:robotsFound,error:robotsError,rules:robots.rules.length},sitemap:{source,sitemaps_read:read,urls_found:found.length},
   pages,statuses,audits,lastmod,not_crawled:notCrawled,not_crawled_limit:limited,crawled_at:new Date().toISOString()};

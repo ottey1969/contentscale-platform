@@ -21,7 +21,8 @@ const SITE={
  [O+'/sitemap_index.xml']:{xml:`<?xml version="1.0"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><sitemap><loc>${O}/pages.xml</loc></sitemap><sitemap><loc>https://other.example/s.xml</loc></sitemap></sitemapindex>`},
  [O+'/pages.xml']:{xml:`<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['/','/en/','/old-fees/','/private/report/','/private/open/faq/','/hidden/','/thin/','/dup-a/','/dup-b/','/blocked/','/gone/','https://other.example/x/']
   .map(u=>`<url><loc>${u.startsWith('http')?u:O+u}</loc><lastmod>2026-10-0${u.length%9+1}</lastmod></url>`).join('')}</urlset>`},
- [O+'/']:{page:html({title:'Broker — trade Saudi stocks',desc:'Open an account.',h1:['Trade with Broker'],lang:'ar',hreflang:[['ar',O+'/'],['en',O+'/en/']]})},
+ // lang "en": an English title on a page marked Arabic is a language mismatch (owner 2026-11-21).
+ [O+'/']:{page:html({title:'Broker — trade Saudi stocks',desc:'Open an account.',h1:['Trade with Broker'],lang:'en',hreflang:[['ar',O+'/'],['en',O+'/en/']]})},
  [O+'/en/']:{page:html({title:LONG,h1:[],hreflang:[['ar',O+'/'],['en',O+'/en/']]})},
  [O+'/old-fees/']:{redirect:O+'/en/',status:301},
  [O+'/private/open/faq/']:{page:html({title:'FAQ',desc:'Questions.',h1:['FAQ','More FAQ']})},
@@ -60,10 +61,11 @@ test('page audit: what Google reads on the page, and what stands in the way',()=
  const t=pageAudit(SITE[O+'/thin/'].page,O+'/thin/');
  assert.ok(t.issues.includes('CANONICAL_ELSEWHERE'));assert.ok(t.issues.includes('THIN'));assert.ok(t.words<100,'script and navigation are not counted as text');
  const e=pageAudit(SITE[O+'/en/'].page,O+'/en/');
- assert.ok(e.issues.includes('TITLE_LONG'));assert.ok(e.issues.includes('DESCRIPTION_MISSING'));assert.ok(e.issues.includes('H1_MISSING'));
+ // A long title is a small note, not a problem (owner 2026-11-21).
+ assert.ok(e.notes.includes('TITLE_LONG'));assert.ok(!e.issues.includes('TITLE_LONG'));assert.ok(e.issues.includes('DESCRIPTION_MISSING'));assert.ok(e.issues.includes('H1_MISSING'));
  assert.deepEqual(e.hreflang.map(h=>h.lang),['ar','en']);
  assert.ok(pageAudit(SITE[O+'/private/open/faq/'].page,O+'/private/open/faq/').issues.includes('H1_MULTIPLE'));
- const ok=pageAudit(SITE[O+'/'].page,O+'/');assert.deepEqual(ok.issues,[]);assert.equal(ok.lang,'ar');
+ const ok=pageAudit(SITE[O+'/'].page,O+'/');assert.deepEqual(ok.issues,[]);assert.equal(ok.lang,'en');
  assert.ok(pageAudit('<html><head><title>x</title></head><body><h1>x</h1></body></html>',O+'/z/',{xRobotsTag:'noindex'}).issues.includes('NOINDEX'),'noindex sent as a header');
 });
 
@@ -167,7 +169,7 @@ test('a Search Console export and the domain together: the numbers stay, the pub
  assert.equal(rep.scope,'SITE');
  const by=u=>rep.pages.find(p=>p.url===O+u);
  assert.equal(by('/en/').clicks,20);assert.equal(by('/en/').action,'QUICK_WIN','the Search Console action stays');
- assert.ok(by('/en/').audit.issues.includes('TITLE_LONG'),'and the public facts are shown with it');
+ assert.ok(by('/en/').audit.notes.includes('TITLE_LONG'),'and the public facts are shown with it (a long title as a small note)');
  assert.equal(by('/hidden/').action,'BLOCKED','a page Google is told not to index is the first thing to fix, whatever its numbers');
  assert.equal(by('/thin/').source,'CRAWL');
 });
