@@ -58,7 +58,12 @@ test('the list says with or without Search Console; the page keeps both apart in
  assert.equal(list.find(r=>r.id!==99).search_console,true);
  const page=(await s.req('GET','/gsc',null,OWNER)).body;
  for(const id of ['secWith','secWithout','secPositions','listWith','listWithout','deleteSelected','progress','progressText'])assert.match(page,new RegExp('id="'+id+'"'),id);
- assert.ok(page.indexOf('id="gscFiles"')>page.indexOf('id="secWith"')&&page.indexOf('id="gscFiles"')<page.indexOf('id="secWithout"'),'Search Console files are in section A');
- assert.ok(page.indexOf('id="auditDomain"')>page.indexOf('id="secWithout"'),'the domain is in section B');
+ // Owner 2026-11-21: "B wordt A bovenaan, A wordt B" — without Search Console first (A), with Search Console second (B);
+ // "country en taal voor (niet na)" the search terms.
+ const at=id=>page.indexOf('id="'+id+'"');
+ assert.ok(at('secWithout')<at('auditDomain')&&at('auditDomain')<at('secWith')&&at('secWith')<at('gscFiles'),'A = without (domain), then B = with (files)');
+ assert.match(page,/A · Without Search Console[\s\S]*B · With Search Console/);
+ assert.ok(at('posCountry')<at('posTerms')&&at('posLang')<at('posTerms')&&at('posTerms')<at('posOn'),'country and language before the search terms; the paid tick after them');
+ assert.ok(at('listWithout')<at('listWith'),'the list shows A (without) first');
  for(const js of page.match(/<script>([\s\S]*?)<\/script>/g).map(x=>x.slice(8,-9)))assert.doesNotThrow(()=>new Function(js),'owner page script parses');
 });

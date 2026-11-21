@@ -15,9 +15,11 @@ function createFreeGrowthFirecrawlReader({
  lookup=dns.lookup,
  maxPages=DEFAULT_LIMIT,
  timeoutMs=11000,
+ // Free Growth keeps 10; the owner's GSC report may ask for more (at most 50, paid per page).
+ hardCap=10,
 }={}){
  const active=enabled(env);
- const cap=Math.max(1,Math.min(10,Number(maxPages)||DEFAULT_LIMIT));
+ const cap=Math.max(1,Math.min(Math.min(50,Number(hardCap)||10),Number(maxPages)||DEFAULT_LIMIT));
  const stats={enabled:active,provider:'FIRECRAWL_HOSTED',attempted:0,used:0,fallbacks:0,cache_hits:0,limit:cap,errors:[],pages:[]};
  const cache=new Map();
  const limitedMessage=(url,code)=>{if(stats.errors.length<10)stats.errors.push({host:(()=>{try{return new URL(url).hostname}catch{return 'invalid'}})(),code})};
