@@ -240,7 +240,7 @@ function reportPage(row,{owner,config,growthPath}){
    (x.target_rank?` (${esc(L.in_list.replace('{n}',x.target_rank))})`:'')+(x.hops>1?` · ${esc(L.chain.replace('{n}',x.hops))}`:'')+
    (x.final_status&&x.final_status!==200?` · <span class="flag">${esc(L.target_broken.replace('{s}',x.final_status))}</span>`:x.final_error?` · <span class="flag">${esc(L.target_broken.replace('{s}',L.reasons[x.final_error]||x.final_error))}</span>`:'')+'</div>'};
  const BLOCKING=new Set(['NOINDEX','CANONICAL_ELSEWHERE']);
- const jsLine=p=>p.audit&&p.audit.rendered==='FIRECRAWL'?`<div class="issues"><span class="chip">${esc(A.js_read)}</span>${p.audit.raw_issues&&p.audit.raw_issues.length?` <span class="muted">${esc(A.js_raw.replace('{x}',p.audit.raw_issues.map(c=>A.issues[c]||c).join(' · ')))}</span>`:''}</div>`:'';
+ const jsLine=p=>p.audit&&p.audit.rendered==='BOT_CHECK'?`<div class="issues muted">${esc(A.js_bot)}</div>`:p.audit&&p.audit.rendered==='FIRECRAWL'?`<div class="issues"><span class="chip">${esc(A.js_read)}</span>${p.audit.raw_issues&&p.audit.raw_issues.length?` <span class="muted">${esc(A.js_raw.replace('{x}',p.audit.raw_issues.map(c=>A.issues[c]||c).join(' · ')))}</span>`:''}</div>`:'';
  const noteLine=p=>p.audit&&p.audit.notes&&p.audit.notes.length?`<div class="issues muted">${esc(A.notes_label)}: ${p.audit.notes.map(c=>esc(A.issues[c]||c)).join(' · ')}</div>`:'';
  const issueLine=p=>p.audit&&p.audit.issues.length?`<div class="issues">${p.audit.issues.map(c=>BLOCKING.has(c)?`<span class="flag">${esc(A.issues[c]||c)}</span>`:esc(A.issues[c]||c)).join(' · ')}</div>`:'';
  const posChips=p=>(p.positions||[]).map(x=>`<span class="chip" title="${esc(x.keyword)}">${esc(A.pos_found.replace('{n}',x.position))} · ${esc(x.keyword)}</span>`).join('');
@@ -292,9 +292,9 @@ function reportPage(row,{owner,config,growthPath}){
   <li>${esc(A.src[C.sitemap.source]||'')} ${esc(A.counts.replace('{l}',nf(lang,C.sitemap.urls_found)).replace('{r}',nf(lang,C.pages_read)))}</li>
   ${C.not_crawled_count?`<li>${esc(A.not_crawled.replace('{n}',nf(lang,C.not_crawled_count)))}<ul class="muted">${C.not_crawled.map(x=>'<li class="url">'+esc(pathOf(x.url))+'</li>').join('')}</ul></li>`:''}
   ${C.path&&C.path!=='/'?`<li>${esc(A.path_only.replace('{p}',C.path).replace('{n}',nf(lang,C.outside_path)))}</li>`:''}
-  ${C.render&&C.render.tried!=null?`<li>${esc(A.fc_summary.replace('{u}',nf(lang,C.render.used)).replace('{t}',nf(lang,C.render.tried)))}${owner?` <span class="muted">(${esc(t.owner_view)} · ${esc(A.fc_used.replace('{n}',C.render.tried))})</span>`:''}</li>`:''}
+  ${C.render&&C.render.tried!=null?`<li>${esc(A.fc_summary.replace('{u}',nf(lang,C.render.used)).replace('{t}',nf(lang,C.render.tried)))}${C.render.bot_check?` ${esc(A.fc_bot.replace('{n}',nf(lang,C.render.bot_check)))}`:''}${owner?` <span class="muted">(${esc(t.owner_view)} · ${esc(A.fc_used.replace('{n}',C.render.tried))})</span>`:''}</li>`:''}
   ${owner&&C.render&&C.render.status==='NOT_CONFIGURED'?`<li class="muted">${esc(t.owner_view)} · ${esc(A.fc_none)}</li>`:''}
-  ${C.not_crawled_limit?`<li>${esc(A.limit.replace('{n}',nf(lang,C.not_crawled_limit)))}</li>`:''}</ul>
+  ${C.not_crawled_limit?`<li>${esc(A.limit.replace('{m}',nf(lang,C.max||150)).replace('{n}',nf(lang,C.not_crawled_limit)))}</li>`:''}</ul>
   ${crawlOnly?`<h3>${esc(A.unknown_title)}</h3><p class="muted">${esc(A.unknown)}</p><h3>${esc(t.method_title)}</h3><p class="muted">${esc(A.method)}${k.urls_checked!=null?esc(t.live.method):''}</p>`:''}</div>`:'';
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
  const foot=`<p class="foot">${esc(t.valid_until)} ${esc(day(lang,row.expires_at))} · ${esc(config.brand||'ContentScale')}${owner?' · '+esc(t.owner_view)+' · '+nf(lang,row.views)+' '+esc(t.views):''}</p>`;

@@ -96,6 +96,16 @@ function pageAudit(html,url,{xRobotsTag=null}={}){
  return {title:title.slice(0,300),description:description.slice(0,400),h1:h1.slice(0,5).map(x=>x.slice(0,200)),words,canonical,noindex,lang,hreflang:hreflang.slice(0,20),schema:schema.slice(0,30),issues,notes};
 }
 
+// A bot check (reCAPTCHA, a challenge page) is a refusal: it is never audited as the page and never worked around.
+const BOT_TITLE=/^(recaptcha|just a moment|attention required|access denied|are you a robot|security check|verify you are human|please wait|ddos-guard|checking your browser)/i;
+const BOT_MARK=/g-recaptcha|h-captcha|hcaptcha|cf-challenge|challenge-platform|__cf_chl|cf-turnstile|px-captcha/i;
+function isBotCheck(html){
+ const h=String(html||''),tm=h.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i),title=tm?text(tm[1]):'';
+ if(BOT_TITLE.test(title))return true;
+ if(!BOT_MARK.test(h))return false;
+ const body=(h.match(/<body\b[^>]*>([\s\S]*)<\/body>/i)||[null,h])[1].replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,' ');
+ return (text(body).match(/[\p{L}\p{N}]+/gu)||[]).length<150;
+}
 // ── the site ───────────────────────────────────────────────────────────────────────────────────────────────────────
 function siteOrigin(domain){
  const raw=String(domain||'').trim();if(!raw||raw.length>300)throw Object.assign(Error('INVALID_URL'),{code:'INVALID_URL'});
@@ -144,6 +154,7 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
  const statuses=new Map(),audits=new Map();let i=0;
  const worker=async()=>{while(i<pages.length){const u=pages[i++];
   try{const r=await fetchImpl(u,{compact:true,limit:400000,timeout,redirects:4});
+   if(!(r.redirect_chain&&r.redirect_chain.length)&&isBotCheck(r.html)){statuses.set(u,{error:'BOT_CHECK'});continue}
    statuses.set(u,fromResult(u,r,null));
    if(!(r.redirect_chain&&r.redirect_chain.length))audits.set(u,pageAudit(r.html,u,{xRobotsTag:r.x_robots_tag||null}));
   }catch(e){statuses.set(u,fromResult(u,null,e))}}};
@@ -157,7 +168,8 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
   render={tried:0,used:0,max:renderMax};let k=0;
   const rworker=async()=>{while(k<cands.length){const u=cands[k++],old=audits.get(u);render.tried++;
    try{const r=await renderImpl(u,{compact:true,limit:400000});
-    if(r&&r.source==='FIRECRAWL_HOSTED_API'&&r.html){const na=pageAudit(r.html,u);na.rendered='FIRECRAWL';na.raw_issues=old.issues.slice();audits.set(u,na);render.used++}
+    if(r&&r.source==='FIRECRAWL_HOSTED_API'&&r.html&&isBotCheck(r.html)){old.rendered='BOT_CHECK';render.bot_check=(render.bot_check||0)+1}
+    else if(r&&r.source==='FIRECRAWL_HOSTED_API'&&r.html){const na=pageAudit(r.html,u);na.rendered='FIRECRAWL';na.raw_issues=old.issues.slice();audits.set(u,na);render.used++}
     else old.rendered='NOT_USED';
    }catch{old.rendered='NOT_USED'}}};
   await Promise.all(Array.from({length:Math.min(3,cands.length)},rworker));
@@ -184,7 +196,7 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
    const other=auditBy.get(k);if(other&&!other.hreflang.some(h=>key(h.url)===me))noReturn=true}
   if(noReturn)a.issues.push('HREFLANG_NO_RETURN');if(broken)a.issues.push('HREFLANG_BROKEN_TARGET');
  }
- return {origin,host,path,outside_path:outside,...(render?{render}:{}),robots:{found:robotsFound,error:robotsError,rules:robots.rules.length},sitemap:{source,sitemaps_read:read,urls_found:found.length},
+ return {origin,host,path,max,outside_path:outside,...(render?{render}:{}),robots:{found:robotsFound,error:robotsError,rules:robots.rules.length},sitemap:{source,sitemaps_read:read,urls_found:found.length},
   pages,statuses,audits,lastmod,not_crawled:notCrawled,not_crawled_limit:limited,crawled_at:new Date().toISOString()};
 }
 
@@ -217,4 +229,4 @@ async function fieldData({origin,key='',fetchImpl=global.fetch,timeout=60000}){
    metrics:{...(lcp?{LCP:{ms:lcp.value,category:lcp.category}}:{}),...(inp?{INP:{ms:inp.value,category:inp.category}}:{}),...(cls?{CLS:{score:cls.value,category:cls.category}}:{})}};
  }catch(e){return {status:'UNAVAILABLE',reason:e&&e.name==='TimeoutError'?'TIMEOUT':'REQUEST_FAILED'}}
 }
-module.exports={parseRobots,robotsAllows,sitemapLocs,pageAudit,crawlSite,siteOrigin,checkPositions,fieldData,TITLE_MAX,DESCRIPTION_MAX,THIN_WORDS};
+module.exports={isBotCheck,parseRobots,robotsAllows,sitemapLocs,pageAudit,crawlSite,siteOrigin,checkPositions,fieldData,TITLE_MAX,DESCRIPTION_MAX,THIN_WORDS};
