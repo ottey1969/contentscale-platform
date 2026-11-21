@@ -195,7 +195,7 @@ async function createHireRequest(pool,{checkId,name,email,company,phone,message}
 }
 
 async function listLeads(pool,{limit=200}={}){
- const checks=(await pool.query(`SELECT id,public_id,email,url,query,status,decision,error_code,cached_from IS NOT NULL AS cached,marketing_consent,access_label,created_at
+ const checks=(await pool.query(`SELECT id,public_id,access_key,email,url,query,status,decision,error_code,cached_from IS NOT NULL AS cached,marketing_consent,access_label,created_at,published_on,reminder_due_at
    FROM growth_free_checks ORDER BY id DESC LIMIT $1`,[limit])).rows;
  const hires=(await pool.query(`SELECT h.id,h.check_id,h.name,h.email,h.company,h.phone,h.message,h.status,h.created_at,c.url,c.query,c.decision,c.access_label
    FROM growth_free_hire_requests h LEFT JOIN growth_free_checks c ON c.id=h.check_id ORDER BY h.id DESC LIMIT $1`,[limit])).rows;
