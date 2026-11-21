@@ -290,7 +290,7 @@ function reportPage(row,{owner,config,growthPath}){
 }
 
 const {COUNTRIES}=require('../rank-free/engine.cjs');
-const COUNTRY_OPTIONS=(()=>{const dn=new Intl.DisplayNames(['en'],{type:'region'});return COUNTRIES.map(c=>[c,dn.of(c.toUpperCase())||c]).sort((a,b)=>a[1].localeCompare(b[1])).map(([c,n])=>`<option value="${c}"${c==='nl'?' selected':''}>${n}</option>`).join('')})();
+const COUNTRY_OPTIONS=(()=>{const dn=new Intl.DisplayNames(['en'],{type:'region'});return COUNTRIES.map(c=>[c,dn.of(c.toUpperCase())||c]).sort((a,b)=>a[1].localeCompare(b[1])).map(([c,n])=>`<option value="${c}">${n}</option>`).join('')})();
 function ownerPage(config,api,base){
  return shell('en','Search Console reports',`<div class="top"><div class="wrap"><small style="opacity:.8;letter-spacing:.08em;text-transform:uppercase;font-weight:700">ContentScale · Owner</small><h1>Search Console reports</h1>
 <div class="meta">Upload the Search Console export of any site, add pages by hand, and send the company a private link. Signed in as owner.</div></div></div>
@@ -312,9 +312,9 @@ function ownerPage(config,api,base){
 <p class="muted">Fill in A, B or both. With both, the Search Console numbers stay and the public facts are added per page.</p></fieldset>
 <fieldset id="secPositions" class="sec pos"><legend>Positions in Google (optional, for A and B)</legend>
 <p class="muted">Suggested search terms come from your Search Console files when you add them, otherwise from the H1 and title of the site's pages. Check them before you make the report: only then is anything searched.</p>
-<label><input type="checkbox" id="posOn"> Look up positions in Google for these search terms (Serper: up to 3 paid searches per term)</label>
+<label><input type="checkbox" id="posOn"> <b>Paid:</b> look up positions in Google for these search terms (Serper: up to 3 searches per term). Suggesting terms is free and never turns this on.</label>
 <div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10) <button type="button" id="suggestTerms" class="btn" style="margin-left:6px">Suggest search terms</button><br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
-<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px">${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
+<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px"><option value="" selected>— choose a country —</option>${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
 </fieldset>
 <h3>Live check</h3><label><input type="checkbox" id="checkUrls" checked> Check every URL live: does it redirect (301/302) and to where, or is it gone (404/410)?</label>
 <p class="muted">Each URL is requested once (public https only, at most 150). A site that blocks the request is shown as not checked.</p>
@@ -338,7 +338,7 @@ document.getElementById('suggestTerms').onclick=async function(){var st=document
   var r=await fetch(API+'/suggest-terms',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},
    body:JSON.stringify({domain:document.getElementById('auditDomain').value.trim(),country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim(),files:await Promise.all(files.map(read))})});var d=await r.json();if(!d.success)throw Error(d.error);
   if(!d.terms.length){st.textContent='No usable search terms found. Type them yourself.';return}
-  document.getElementById('posTerms').value=d.terms.map(function(t){return t.term}).join('\\n');document.getElementById('posOn').checked=true;
+  document.getElementById('posTerms').value=d.terms.map(function(t){return t.term}).join('\\n');
   var src={SEARCH_CONSOLE:'Search Console',PAGE_H1:'H1 of',PAGE_TITLE:'title of'};
   st.innerHTML='Suggested — check and edit before you make the report:<br>'+d.terms.map(function(t){return h(t.term)+' <span style="opacity:.7">('+h(src[t.source]||t.source)+(t.page?' '+h(t.page_label||t.page):'')+(t.impressions?', '+t.impressions+' impressions':'')+')</span>'}).join('<br>');
  }catch(e){st.textContent=e.message||'No search terms could be suggested.'}finally{btn.disabled=false;btn.textContent='Suggest search terms'}};
@@ -375,6 +375,10 @@ document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var 
  // Visible progress: reading a site takes up to two minutes; without it the button seems to do nothing (owner 2026-11-21).
  var steps=(files.length?['Reading the Search Console files']:[]).concat(dom?['Reading robots.txt and the sitemap','Reading the pages (up to 150)','Fetching Google’s speed data']:[]).concat(posOn?['Looking up positions in Google']:[]).concat(['Checking redirects and 404','Calculating the order']);
  var tick=function(){var s=Math.round((Date.now()-t0)/1000),i=Math.min(steps.length-1,Math.floor(s/(dom?12:2)));pt.textContent=steps[i]+'… ('+s+' s'+(dom?', up to about 2 minutes':'')+')'};
+ // Paid searches only with the owner's own tick, a chosen country and a confirmation that names the market (owner 2026-11-21).
+ if(posOn){var cs=document.getElementById('posCountry'),pl=document.getElementById('posLang').value.trim(),nterms=Math.min(10,document.getElementById('posTerms').value.split('\\n').filter(function(x){return x.trim()}).length);
+  if(!cs.value){st.textContent='Choose the country for the positions in Google.';cs.focus();return}
+  if(!confirm('This makes up to '+nterms*3+' paid Google searches (Serper) for '+nterms+' search terms in Google '+cs.options[cs.selectedIndex].text+(pl?' ('+pl+')':'')+'. Continue?'))return}
  go.disabled=true;go.innerHTML='<span class="spinner"></span>Working…';st.textContent='';pr.hidden=false;tick();var timer=setInterval(tick,1000);
  try{var body={title:document.getElementById('title').value,site:document.getElementById('site').value,lang:document.getElementById('lang').value,expires_days:document.getElementById('days').value,
   files:await Promise.all(files.map(read)),manual_pages:manual(),site_audit:{domain:document.getElementById('auditDomain').value.trim()},positions:{enabled:document.getElementById('posOn').checked,keywords:document.getElementById('posTerms').value,country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim()||undefined},check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
