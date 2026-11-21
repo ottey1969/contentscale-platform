@@ -90,7 +90,36 @@ function trimCandidates({report,aiGap,items,queryWords,summaryGaps}){
  return out.sort((a,b)=>(b.words||0)-(a.words||0)||a.heading.localeCompare(b.heading));
 }
 
-function buildContentPriorities({summary,aiGap,report}={}){
+// Loose competitor sections that are no topic (owner 2026-11-21, /ai-zichtbaarheid/ brief): calls to action ("Ontvang je
+// eerste maandplan…", "Bekijk voorbeeld"), self-check teasers ("Weet jij hoe zichtbaar je bent…?"), a paragraph caught
+// as a heading, the rival's own brand line ("Jouw coo mpagnon…" on coodigital.nl) or its own way of working ("Zo werken
+// wij"). They stay visible as research observations, never as content advice. Brand and "we" lines only when a single
+// site has them: a way of working that several pages describe is a topic.
+const CTA=/\b(?:bekijk (?:een |het )?voorbeeld|ontvang (?:je|jouw|direct|gratis)|vraag (?:je|jouw|een|direct|gratis)\b.*\baan|download|neem contact|plan (?:een|je|jouw) |boek (?:een|je)|bel (?:ons|direct)|gratis (?:scan|check|adviesgesprek|analyse|audit)|aanmelden|schrijf je in|request (?:a|your)|get your|book (?:a|your)|contact us|sign up|subscribe|free (?:scan|audit|check|consultation)|solicita|cont[aá]ctanos|descarga|reserva (?:una|tu)|pide (?:tu|una))\b/i;
+const SELF_CHECK=/\b(?:weet jij|jouw website|je website|your website|tu (?:sitio|web)|sabes)\b[^?]*\?\s*$/i;
+const GENERIC=/^\s*(?:de |la |el |the )?(?:korte )?(?:samenvatting|conclusie|inleiding|summary|conclusion|introduction|resumen|conclusi[oó]n|introducci[oó]n|tl;?dr|in het kort|in short|en resumen)\s*[:.!]?\s*$/i;
+const WE=/\b(?:wij|we|ons|onze|our|us|nosotros|nuestr[oa]s?)\b/i;
+const paragraph=t=>String(t).split(/\s+/).length>16||/[.!?]\s+\p{Lu}/u.test(String(t));
+function brandLine(title,sites){
+ const tw=String(title).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w=>w.length>=3);
+ return sites.some(s=>{const label=String(s).toLowerCase().replace(/^www\./,'').split('.')[0];return label.length>=5&&tw.some(w=>w!==label&&label.startsWith(w)&&w.length<=label.length-3)||tw.includes(label)});
+}
+function noiseReason(x){
+ if(x.kind!=='TOPIC')return null;
+ const t=String(x.title||'');
+ if(CTA.test(t))return 'A call to action on a competitor page, not a topic.';
+ if(SELF_CHECK.test(t))return 'An invitation to check your own site on a competitor page, not a topic.';
+ if(paragraph(t))return 'A paragraph that was read as a heading, not a topic.';
+ if(GENERIC.test(t))return 'A summary or introduction heading, not a topic.';
+ const single=x.rankingPages+x.aiSites.length<=1&&!x.evidenceCheck;
+ if(single&&brandLine(t,x.sites||[]))return 'The competitor’s own brand line, not a topic.';
+ if(single&&WE.test(t))return 'How one competitor describes itself, not a topic.';
+ return null;
+}
+// A price topic or price fact is answered on the own page that already states the price (see best-own-page.cjs).
+const PRICE_TOPIC=/\b(?:prijs|prijzen|kost|kosten|tarie[fv]\w*|price|prices|pricing|costs?|precios?|tarifas?|coste|costo)\b|prijzen|tarieven/i;
+
+function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
  const s=summary||{},gaps=s.gaps||{},decision=s.decision||null;
  const researchOnly=decision==='DATA_BLOCKED'||decision==='NO_CHANGE';
  const queryWords=words(s.query||(s.checked&&(s.checked.search_term||s.checked.query))||(report&&report.competitor_overview&&report.competitor_overview.query)||'');
@@ -108,7 +137,7 @@ function buildContentPriorities({summary,aiGap,report}={}){
    rankingPages:Number(pr.sources??sites.length)||0,aiSites,fragments:Number(pr.competitor_text_fragments)||0,
    searchWords:pr.search_relevance==='SHARES_WORDS_WITH_SEARCH_TERM',evidenceCheck:it.recommended===true,confidence:it.confidence||null,
    where:element?'On the page (layout or structured data)':whereOf(it),
-   factText:[it.title,...(it.examples||[]).map(e=>e.heading)].join(' '),
+   factText:[it.title,...(it.examples||[]).map(e=>e.heading)].join(' '),sites,
    evidence:evidenceOf([...(it.examples||[]),...(match?match.t.examples||[]:[])],aiGap)});
  }
  // Topics only the pages AI systems cited cover: not lost because no ranking page has them.
@@ -116,7 +145,7 @@ function buildContentPriorities({summary,aiGap,report}={}){
   const t=a.t,fr=(t.examples||[]).filter(e=>String(e.excerpt||'').length>=TEXT_MIN).length;
   items.push({kind:'TOPIC',id:'ai-'+a.i,title:t.topic,coverage:t.coverage==='PARTLY'?'PARTIAL':t.coverage==='MISSING'?'MISSING':'UNKNOWN',
    rankingPages:0,aiSites:a.sites,fragments:fr,searchWords:[...words(t.topic)].some(w=>queryWords.has(w)),evidenceCheck:false,confidence:null,
-   where:'Where it answers the customer question best',factText:[t.topic,...(t.examples||[]).map(e=>e.heading)].join(' '),evidence:evidenceOf(t.examples,aiGap)});
+   where:'Where it answers the customer question best',factText:[t.topic,...(t.examples||[]).map(e=>e.heading)].join(' '),sites:a.sites,evidence:evidenceOf(t.examples,aiGap)});
  }
  // Facts the AI-cited pages state and this page does not: only the owner's own fact may be added.
  for(const f of (aiGap&&aiGap.missing_facts)||[]){
@@ -124,7 +153,10 @@ function buildContentPriorities({summary,aiGap,report}={}){
    evidenceCheck:false,confidence:null,where:'Where a customer looks for it (for example near the contact details)',factText:f.label,forceFact:true,
    evidence:evidenceOf(f.example?[{site:f.example.site}]:[],aiGap)});
  }
- const scored=items.map(x=>{
+ const observations=[];
+ const kept=items.filter(x=>{const why=noiseReason(x);if(why){observations.push({title:x.title,reason:why,sources:x.evidence.map(e=>e.url)});return false}return true});
+ const best=bestOwnPage&&bestOwnPage.status==='FOUND'&&bestOwnPage.url?bestOwnPage:null;
+ const scored=kept.map(x=>{
   const points=[];
   const add=(k,n=1)=>{if(n)points.push(WEIGHT[k]*n)};
   add('ranking_page',x.rankingPages);add('ai_cited_site',x.aiSites.length);
@@ -134,7 +166,8 @@ function buildContentPriorities({summary,aiGap,report}={}){
   const score=points.reduce((a,b)=>a+b,0);
   const needsFact=!!x.forceFact||BUSINESS_FACT.test(x.factText);
   const systems=aiSystemsFor(x.aiSites,aiGap);
-  const action=x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
+  const priceItem=!!best&&(x.id==='fact-price'||(x.kind==='TOPIC'&&PRICE_TOPIC.test(x.title)));
+  const action=priceItem?'LINK_OWN_PRICE':x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
   const why=[];
   if(x.rankingPages)why.push(x.rankingPages+' ranking page'+(x.rankingPages===1?' covers':'s cover')+' it');
   if(x.aiSites.length)why.push(x.aiSites.length+' page'+(x.aiSites.length===1?' cited by AI systems covers':'s cited by AI systems cover')+' it');
@@ -144,14 +177,14 @@ function buildContentPriorities({summary,aiGap,report}={}){
   if(x.fragments>=2)why.push(x.fragments+' fragments of competitor text to work from');
   if(x.kind==='TOPIC')why.push(x.evidenceCheck?'Passed the evidence check (two ranking pages)':'Not confirmed by the evidence check');
   // Separate sentences, with the topic in quotes, so the page can show each sentence in Dutch or Spanish.
-  const parts=[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
+  const parts=action==='LINK_OWN_PRICE'?['Your price page: '+best.url,'Answer “'+x.title+'” there, not on this page.','On this page, add one short line that links to it.']:[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
    action==='ADD_ELEMENT'?'Add this page element yourself: “'+x.title+'”.':
    action==='ADD_OWN_FACT'?'Add your own “'+x.title+'” only if you can confirm it.':
    'Add a section that answers “'+x.title+'” in your own words.'];
-  if(needsFact&&action!=='ADD_OWN_FACT')parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
+  if(needsFact&&action!=='ADD_OWN_FACT'&&action!=='LINK_OWN_PRICE')parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
   parts.push('Do not copy the example pages.');
   const instruction=parts.join(' ');
-  return {kind:x.kind,id:x.id,title:x.title,action,where:x.where,score,tier:tierOf(score),verified:!researchOnly&&x.evidenceCheck,
+  return {kind:x.kind,id:x.id,title:x.title,action,where:action==='LINK_OWN_PRICE'?'Where the price question comes up on this page':x.where,score,tier:tierOf(score),verified:!researchOnly&&x.evidenceCheck,
    needs_business_fact:needsFact,instruction,instruction_parts:parts,why,
    signals:{ranking_pages:x.rankingPages,ai_cited_sites:x.aiSites.length,ai_systems:systems,coverage:x.coverage,competitor_text_fragments:x.fragments,
     shares_search_words:x.searchWords,passed_evidence_check:x.evidenceCheck},
@@ -164,7 +197,9 @@ function buildContentPriorities({summary,aiGap,report}={}){
   method:'Score = 3 × ranking pages that cover it + 2 × pages cited by AI systems that cover it + 2 if missing on your page (1 if partly) '+
    '+ 1 with competitor text to work from + 1 if it shares words with the search term + 2 if it passed the evidence check. '+
    'A count of observed research signals, not a traffic prediction.',
-  items:scored.map(({rank,...x})=>({rank,...x})),trim,keep:(gaps.unique_content||[]).filter(x=>!trim.some(t=>t.heading===x.heading)).map(x=>({heading:x.heading}))};
+  best_own_page:best?{url:best.url,excerpt:best.excerpt||null,
+   line:'Best match on your site for this question: '+best.url+' (it already states your price). Answer the price there; on this page, add one short line that links to it.'}:null,
+  items:scored.map(({rank,...x})=>({rank,...x})),observations,trim,keep:(gaps.unique_content||[]).filter(x=>!trim.some(t=>t.heading===x.heading)).map(x=>({heading:x.heading}))};
 }
 
 // Tracker Growth uses the same list from its own report (owner 2026-11-19: "Growth has the same set-up as Free").
