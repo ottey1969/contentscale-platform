@@ -10,14 +10,24 @@ const {rootOf,parseAiAnswer}=require('./ai-answers.cjs');
 const MAX_PAGES=6;
 const hostOf=u=>{try{return new URL(u).hostname.toLowerCase().replace(/^www\./,'')}catch{return ''}};
 const strip=h=>String(h||'').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ');
-const plain=h=>strip(h).replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim();
+const decode=t=>t.replace(/&#x([0-9a-f]+);/gi,(_m,x)=>String.fromCodePoint(Math.min(parseInt(x,16),0x10ffff))).replace(/&#(\d+);/g,(_m,n)=>String.fromCodePoint(Math.min(Number(n),0x10ffff)))
+ .replace(/&nbsp;/g,' ').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+const plain=h=>decode(strip(h).replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim();
+// The content only: menus, headers, footers, sidebars and forms state no fact of the page (owner 2026-11-21: a "price"
+// came from dev.to's navigation link "OpenAI's $4 Billion Deployment Company").
+const content=h=>plain(strip(h).replace(/<(nav|header|footer|aside|form|menu)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,' '));
+// A question that asks what something is or how it works asks for no business facts (price, licence, arrival time…).
+const INFORMATIONAL=/^\s*(?:what|wat|wie|who|qu[eé]|qui[eé]n|how|hoe|c[oó]mo|why|waarom|por\s*qu[eé]|when|wanneer|cu[aá]ndo|is|are|zijn|es)\b/i;
+const COMMERCIAL=/\b(?:cost|costs|price|prices|pricing|prijs|prijzen|kost|kosten|tarief|tarieven|precio|precios|tarifa|tarifas|cuesta|cuánto|quote|offerte|presupuesto|near me|in de buurt|cerca de m[ií]|hire|huren|contratar|buy|kopen|comprar)\b/i;
+const informational=q=>INFORMATIONAL.test(String(q||''))&&!COMMERCIAL.test(String(q||''));
 const STOP=/^(the|and|for|with|your|you|how|what|why|are|our|van|het|een|voor|met|wat|hoe|die|dat|los|las|del|para|con|que)$/;
 const words=t=>new Set((String(t).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).filter(w=>!STOP.test(w)).map(w=>w.slice(0,5)));
 
 // Facts a reader looks for, detected in the visible text. A fact counts as stated when the text matches; the excerpt
 // shows where, so the owner can check it.
 const FACTS=[
- {key:'price',label:'A price or price range',re:/(?:[$€£]\s?\d[\d.,]*|\b\d[\d.,]*\s?(?:usd|eur|euro|dollars?)\b)/i},
+ // An amount in billions or millions is not a price.
+ {key:'price',label:'A price or price range',re:/(?:[$€£]\s?\d[\d.,]*(?![\d.,])(?!\s*(?:billion|million|bn|mn|mln|miljard|miljoen|millones|mil\s+millones|k)\b)|\b\d[\d.,]*\s?(?:usd|eur|euro|dollars?)\b)/i},
  {key:'response_time',label:'A response or arrival time',re:/\b(?:within|in under|under|binnen|en menos de|en)\s+\d+\s*(?:-\s*\d+\s*)?(?:minutes?|mins?|hours?|hrs?|minuten|uur|minutos|horas)\b|\b\d+\s*(?:-\s*\d+\s*)?(?:minute|hour)s?\s+(?:response|arrival)\b/i},
  {key:'licence',label:'A licence or registration number',re:/\b(?:licen[cs]e[ds]?|registration|registered|HIC|vergunning|licencia)\b[^.]{0,40}?(?:#|no\.?|number|nr\.?|n[ºo°])?\s*[A-Z0-9]{5,}/i},
  {key:'insurance',label:'Insurance or insurance-claim help',re:/\b(?:insured|insurance|verzekerd|verzekering|asegurad[oa]s?|seguro)\b/i},
@@ -26,7 +36,7 @@ const FACTS=[
   html:h=>/<ol\b[^>]*>(?:[\s\S]*?<li\b){3}/i.test(h)}
 ];
 function factsOf(html){
- const t=plain(html),out={};
+ const t=content(html),out={};
  for(const f of FACTS){const m=t.match(f.re);
   if(m){const i=Math.max(0,m.index-60);out[f.key]=t.slice(i,m.index+m[0].length+60).trim()}
   else if(f.html&&f.html(strip(html)))out[f.key]='(numbered list on the page)';}
@@ -48,6 +58,7 @@ const answersFingerprint=(answers,pageUrl,query)=>citedPages(answers,pageUrl,que
 
 async function buildAiGap({answers,pageUrl,query='',engines=[],fetchHtml,ownHtml=null,model=null,limit=MAX_PAGES}){
  const cited=citedPages(answers,pageUrl,query);
+ const FACT_LIST=informational(query)?FACTS.filter(f=>f.key==='process'):FACTS;
  if(!cited.length)return {status:'NO_CITED_PAGES',pages:[],missing_topics:[],missing_facts:[],elements:null};
  const label=new Map(engines.map(e=>[e.id,e.label]));
  if(ownHtml==null){try{ownHtml=String((await fetchHtml(pageUrl))?.html||'')}catch{ownHtml=''}}
@@ -65,7 +76,7 @@ async function buildAiGap({answers,pageUrl,query='',engines=[],fetchHtml,ownHtml
   const facts=factsOf(html);
   return {...base,read:true,status:'Read',html,elements:pageElements(html),
    headings:sections.slice(0,15).map(s=>({text:s.heading,excerpt:s.excerpt,status:onYourPage(s.heading)?'ON_YOUR_PAGE':'MISSING'})),
-   facts:FACTS.filter(f=>facts[f.key]).map(f=>({key:f.key,label:f.label,excerpt:facts[f.key].slice(0,220),on_your_page:!!ownFacts[f.key]}))};
+   facts:FACT_LIST.filter(f=>facts[f.key]).map(f=>({key:f.key,label:f.label,excerpt:facts[f.key].slice(0,220),on_your_page:!!ownFacts[f.key]}))};
  }));
  const read=pages.filter(p=>p.read);
  // Topics, as in the Google gap: the model groups the cited pages' sections into topics and decides per topic whether
@@ -91,7 +102,7 @@ async function buildAiGap({answers,pageUrl,query='',engines=[],fetchHtml,ownHtml
   if(t){if(!t.sites.includes(p.site))t.sites.push(p.site);t.examples.push({site:p.site,heading:h.text,excerpt:h.excerpt})}
   else topics.push({topic:h.text,coverage:'MISSING',words:w,sites:[p.site],examples:[{site:p.site,heading:h.text,excerpt:h.excerpt}]});}
  const missing_topics=topics.sort((a,b)=>b.sites.length-a.sites.length).slice(0,15).map(({words,...t})=>({...t,examples:t.examples.slice(0,3)}));
- const missing_facts=FACTS.filter(f=>!ownFacts[f.key]).map(f=>{const on=read.filter(p=>p.facts.some(x=>x.key===f.key));
+ const missing_facts=FACT_LIST.filter(f=>!ownFacts[f.key]).map(f=>{const on=read.filter(p=>p.facts.some(x=>x.key===f.key));
   return {key:f.key,label:f.label,sites:on.map(p=>p.site),example:on.length?{site:on[0].site,excerpt:on[0].facts.find(x=>x.key===f.key).excerpt}:null}}).filter(f=>f.sites.length);
  const elements=read.length?compareElements(ownElements,read.map(p=>({elements:p.elements}))):null;
  return {status:read.length?'READ':'NOTHING_READABLE',pages:pages.map(({elements,...p})=>p),missing_topics,missing_facts,

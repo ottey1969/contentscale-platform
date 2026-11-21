@@ -105,6 +105,31 @@
     context_contaminated: 'This answer refers to ContentScale\'s own workflow (Pre-Write Brief, AI Answer Inputs), so it was written in a conversation that knew the task, not as a neutral answer to the search query. Ask the query in a new, empty conversation (private window, no memory or earlier chats) and paste that answer.',
     source_conflict: '"No AI Overview shown" is selected, but there is text in the field. Choose Google AI Overview or Gemini, or clear the text.'
   };
+  // An example search quoted in another language than the answer ("How urgent is roof repair?" in a Dutch answer) usually
+  // comes from an earlier chat or the AI's memory, not from this question (owner 2026-11-21). It still counts; it is pointed out.
+  var OTHER_LANGUAGE_WARNING = 'This answer quotes an example in another language than the answer (“{q}”). That usually comes from an earlier chat or the AI\'s memory, not from this question. It still counts; to be sure, ask the question again in a new, empty chat (private window, no memory).';
+  var LANG_WORDS = {
+    en: ['the', 'how', 'what', 'why', 'when', 'does', 'do', 'my', 'your', 'should', 'of', 'and', 'to', 'with', 'near', 'me', 'can', 'which', 'are'],
+    nl: ['de', 'het', 'een', 'hoe', 'wat', 'waarom', 'wanneer', 'van', 'en', 'voor', 'zijn', 'mijn', 'je', 'jouw', 'wordt', 'bij', 'op', 'te', 'dat', 'die', 'niet', 'met', 'kan', 'welke'],
+    es: ['el', 'la', 'los', 'las', 'que', 'qué', 'cómo', 'por', 'para', 'una', 'del', 'mi', 'tu', 'puede', 'cuál', 'cuánto', 'y', 'con']
+  };
+  function langOf(text, min) {
+    var w = words(text), best = null, top = 0, second = 0;
+    Object.keys(LANG_WORDS).forEach(function (l) { var n = w.filter(function (x) { return LANG_WORDS[l].indexOf(x) >= 0; }).length; if (n > top) { second = top; top = n; best = l; } else if (n > second) second = n; });
+    return top >= min && top > second ? best : null;
+  }
+  function exampleInOtherLanguage(a) {
+    var quotes = [], re = /["'“‘«]([^"'”’»\n]{8,140})["'”’»]/g, m;
+    while ((m = re.exec(a))) quotes.push(m[1].trim());
+    if (!quotes.length) return null;
+    var outside = a.replace(re, ' '), lang = langOf(outside, 5);
+    if (!lang) return null;
+    for (var i = 0; i < quotes.length; i++) {
+      var q = quotes[i], ql = langOf(q, 1), qw = words(q);
+      if (ql && ql !== lang && !qw.some(function (x) { return LANG_WORDS[lang].indexOf(x) >= 0; })) return q;
+    }
+    return null;
+  }
   var TOPIC_WARNING = 'This answer shares no word with the search query. It still counts; check that it answers the query (synonyms are fine).';
   var NO_OVERVIEW_NOTE = 'Google showed no AI Overview for this query. That is recorded as checked, not as an AI answer and not as a failed Gemini answer. Paste the Gemini answer to research Google\'s AI.';
   function fold(s) { return String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
@@ -126,8 +151,10 @@
       // A shared word or word stem (first six letters: "optimalisatie" matches "optimaliseren").
       if (qt.length && !qt.some(function (w) { return text.indexOf(w.slice(0, 6)) >= 0; })) warnings.push('topic_unconfirmed');
     }
+    var other = reason ? null : exampleInOtherLanguage(a);
+    if (other) warnings.push('example_other_language');
     return reason ? { valid: false, status: 'invalid', reason: reason, message: REASONS[reason], warnings: [] }
-      : { valid: true, status: 'valid', reason: null, message: warnings.length ? TOPIC_WARNING : null, warnings: warnings };
+      : { valid: true, status: 'valid', reason: null, message: warnings.length ? [warnings.indexOf('topic_unconfirmed') >= 0 ? TOPIC_WARNING : null, other ? OTHER_LANGUAGE_WARNING.replace('{q}', other) : null].filter(Boolean).join(' ') : null, warnings: warnings };
   }
   // One Google field with its source choice. requireSource: new input must name the source (saved research may not).
   function validateGoogle(answer, source, query, requireSource, question) {
