@@ -98,3 +98,25 @@ test('the owner chooses how many pages are read (1 to 150)',async t=>{
  assert.match(page,/<input id="auditMax" type="number" min="1" max="150"/);
  const at=id=>page.indexOf('id="'+id+'"');assert.ok(at('auditMax')>at('secWithout')&&at('auditMax')<at('secWith'));
 });
+
+// Owner 2026-11-21, report KU_xQK…: Firecrawl got a reCAPTCHA page for a dividend page and the report audited the captcha
+// as if it were the page (title "reCAPTCHA"). A bot check is a refusal: never used as the page, never worked around.
+const CAPTCHA=`<html><head><title>reCAPTCHA</title></head><body><div class="g-recaptcha" data-sitekey="x"></div><p>Please verify you are human.</p></body></html>`;
+test('a bot check (reCAPTCHA, challenge page) is never audited as the page',async()=>{
+ const render=async u=>({html:CAPTCHA,final_url:u,status:200,source:'FIRECRAWL_HOSTED_API'});
+ const c=await crawlSite({domain:O+'/en/',fetchImpl:reader(),renderImpl:render,renderMax:10});
+ const a=c.audits.get(O+'/en/sa-stocks-nov-wk3-2026/');
+ assert.equal(a.rendered,'BOT_CHECK');assert.equal(a.title,'- Derayah Financial','the plain read stays');assert.ok(!a.raw_issues);
+ assert.equal(c.render.used,0);assert.equal(c.render.bot_check,3);
+ // The plain reader meeting a bot check: not checked, not audited.
+ const plain=async(u,o={})=>{const r=await reader()(u,o);return u.endsWith('/sa-stocks-nov-wk3-2026/')?{...r,html:CAPTCHA}:r};
+ const p=await crawlSite({domain:O+'/en/',fetchImpl:plain});
+ assert.ok(!p.audits.has(O+'/en/sa-stocks-nov-wk3-2026/'));assert.equal(p.statuses.get(O+'/en/sa-stocks-nov-wk3-2026/').error,'BOT_CHECK');
+});
+test('the report names the bot check and the limit the owner chose',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const app2=null;void app2;
+ const r=await s.post({title:'D',lang:'en',site_audit:{domain:O+'/en/',max:2}});assert.equal(r.success,true);
+ const html=await (await fetch(s.base+r.url)).text();
+ assert.match(html,/limit of 2 pages/);assert.doesNotMatch(html,/limit of 150 pages/);
+});
