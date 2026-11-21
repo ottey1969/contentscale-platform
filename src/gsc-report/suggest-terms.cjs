@@ -46,6 +46,9 @@ function fromSearchConsole(files,host){
  for(const q of [...near,...rest]){const t=cleanTerm(q.query);if(t&&!out.some(o=>o.term===t))out.push({term:t,source:'SEARCH_CONSOLE',impressions:q.impressions,position:q.position});if(out.length>=MAX)break}
  return out;
 }
+// A week or date label from a page series ("Oct WK5 2026") is not something people search for.
+const MONTH=/^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*$/;
+const dateLike=t=>{const w=words(t);const d=w.filter(x=>/\d/.test(x)||MONTH.test(x)||/^wk\d*$/.test(x)||x==='week');return d.length*2>=w.length};
 const segmentsOf=title=>String(title||'').split(/\s+[|–—:·•-]\s+|\s*[|–—·•]\s*/).map(x=>x.trim()).filter(Boolean);
 async function fromSite(domain,{fetchImpl,language}){
  const crawl=await crawlSite({domain,fetchImpl,max:30,maxSitemaps:3}),b=brandOf(crawl.host),out=[],want=wantedScript(language);
@@ -57,7 +60,7 @@ async function fromSite(domain,{fetchImpl,language}){
   const cands=[...a.h1.map(x=>({x,source:'PAGE_H1'})),...segmentsOf(a.title).map(x=>({x,source:'PAGE_TITLE'}))];
   for(const c of cands){const t=cleanTerm(c.x);
    // At least two words: one word ("steps") is a label, not a search.
-   if(!t||words(t).length<2||!usable(t,b)||(want&&scriptOf(t)!==want)||out.some(o=>o.term===t))continue;
+   if(!t||words(t).length<2||dateLike(t)||!usable(t,b)||(want&&scriptOf(t)!==want)||out.some(o=>o.term===t))continue;
    out.push({term:t,source:c.source,page:url,page_label:readable(url)});break}
   if(out.length>=MAX)break;
  }

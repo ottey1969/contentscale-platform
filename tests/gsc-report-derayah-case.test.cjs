@@ -15,6 +15,8 @@ const PAGES={
  '/en/how-us-stock-markets-influence-investor-decisions-in-saudi-arabia/':page('How US stock markets influence investor decisions in Saudi Arabia | Derayah','How US stock markets influence investor decisions in Saudi Arabia'),
  '/en/how-to-diversify-your-investments/':page('Diversify your investments: types and steps | Derayah','Steps'),
  '/en/fees/':page('Trading fees and commissions | Derayah','Trading fees and commissions'),
+ '/en/sa-stocks-dividend-eligibility-payments-oct-wk5-2026/':page('Saudi Stocks: Dividend Eligibility & Payments | Oct WK5 2026','Oct WK5 2026'),
+ '/en/sa-stocks-dividend-eligibility-payments-nov-wk1-2026/':page('Nov WK1 2026 | Derayah','Nov WK1 2026'),
  [enc('/ar/كيف-تنوع-استثماراتك/')]:page('كيف تنوع استثماراتك | دراية','كيف تنوع استثماراتك: ابنِ محفظة مرنة','ar'),
  [enc('/ar/الأسواق-الأمريكية/')]:page('الأسواق الأمريكية وتأثيرها على السوق السعودي | دراية','دراية','ar'),
  '/ar/':page('دراية | استثمر في الأسهم','دراية','ar')};
@@ -29,7 +31,7 @@ test('a path in the domain field limits the read to that part of the site',async
  assert.equal(siteOrigin('derayah.com').path,'/');
  const read=reader();
  const c=await crawlSite({domain:'https://web.derayah.com/en/',fetchImpl:read});
- assert.ok(c.pages.length===4&&c.pages.every(u=>u.startsWith(O+'/en/')),c.pages.join(' '));
+ assert.ok(c.pages.length===6&&c.pages.every(u=>u.startsWith(O+'/en/')),c.pages.join(' '));
  assert.ok(!read.calls.some(u=>u.includes('/ar/')),'pages outside /en/ are not requested');
  assert.equal(c.outside_path,3);assert.equal(c.path,'/en/');
 });
@@ -40,7 +42,9 @@ test('suggested terms: never the brand (also behind a subdomain or in another sc
  assert.ok(t.length>=2,t.join(' | '));
  for(const bad of ['derayah','دراية','steps'])assert.ok(!t.includes(bad),'not suggested: '+bad+' in '+t.join(' | '));
  assert.ok(t.every(x=>!/[؀-ۿ]/.test(x)),'English only: '+t.join(' | '));
- assert.ok(t.includes('invest in saudi and us stocks'));assert.ok(t.includes('trading fees and commissions'));
+ assert.ok(t.includes('invest in saudi and us stocks'));
+ // Week labels of a weekly page series are dates, not searches (screenshot 2026-11-21: "oct wk5 2026", "nov wk1 2026").
+ assert.ok(!t.some(x=>/\bwk\d|\b20\d\d\b/.test(x)),'no date labels: '+t.join(' | '));assert.ok(t.includes('trading fees and commissions'));
  const ar=await suggestTerms({domain:'web.derayah.com',language:'ar',fetchImpl:reader()});
  const ta=ar.terms.map(x=>x.term);
  assert.ok(ta.length>=2&&ta.every(x=>/[؀-ۿ]/.test(x)),'Arabic only: '+ta.join(' | '));

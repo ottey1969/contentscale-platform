@@ -299,22 +299,24 @@ function ownerPage(config,api,base){
 <label>Site (optional)<br><input id="site" maxlength="200" placeholder="acme-roofing.com" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
 <label>Report language<br><select id="lang" style="padding:9px;border-radius:8px"><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></label>
 <label>Link valid for (days)<br><input id="days" type="number" min="1" max="365" value="90" style="padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div>
-<fieldset id="secWith" class="sec with"><legend>A · With Search Console</legend>
+<fieldset id="secWithout" class="sec without"><legend>A · Without Search Console (public read)</legend>
+<p class="muted">Only a domain: robots.txt (followed), the sitemap and up to 150 pages are read in public — redirects, 404, noindex, canonical, title, meta description, H1, amount of text — plus Google's speed data for real visitors. Free. No clicks or impressions: those are only in Search Console.</p>
+<label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
+<p class="muted">Fill in A, B or both. With both, the Search Console numbers stay and the public facts are added per page.</p></fieldset>
+<fieldset id="secWith" class="sec with"><legend>B · With Search Console</legend>
 <p class="muted">The company gave you its Search Console export: clicks, impressions, CTR and position per page. The order of the pages is calculated on these numbers.</p>
 <h3>Search Console files</h3><p class="muted">Search Console → Performance → Export → Download CSV (ZIP). Add as many as you like: one export of the whole site, exports filtered on one page (their search terms are linked to that page), or a CSV with a page and a search-term column. Each file at most 5 MB.</p>
 <input id="gscFiles" type="file" multiple accept=".zip,.csv,.tsv,.txt">
 <h3>Pages added by hand</h3><p class="muted">One per line: URL ; clicks ; impressions ; position ; note. Only the URL is required. A page that is also in the export keeps the numbers of the export.</p>
 <textarea id="manual" rows="5" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="https://acme-roofing.com/new-service/ ;;;; New service, not in Search Console yet"></textarea>
 </fieldset>
-<fieldset id="secWithout" class="sec without"><legend>B · Without Search Console (public read)</legend>
-<p class="muted">Only a domain: robots.txt (followed), the sitemap and up to 150 pages are read in public — redirects, 404, noindex, canonical, title, meta description, H1, amount of text — plus Google's speed data for real visitors. Free. No clicks or impressions: those are only in Search Console.</p>
-<label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
-<p class="muted">Fill in A, B or both. With both, the Search Console numbers stay and the public facts are added per page.</p></fieldset>
 <fieldset id="secPositions" class="sec pos"><legend>Positions in Google (optional, for A and B)</legend>
+<div class="grid2"><div style="display:flex;gap:16px;flex-wrap:wrap;align-items:end"><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px"><option value="" selected>— choose a country —</option>${COUNTRY_OPTIONS}</select></label><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
+<p class="muted" style="margin:4px 0 10px">Choose these first: suggested search terms follow this language, and positions are looked up in this Google.</p>
 <p class="muted">Suggested search terms come from your Search Console files when you add them, otherwise from the H1 and title of the site's pages. Check them before you make the report: only then is anything searched.</p>
-<label><input type="checkbox" id="posOn"> <b>Paid:</b> look up positions in Google for these search terms (Serper: up to 3 searches per term). Suggesting terms is free and never turns this on.</label>
 <div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10) <button type="button" id="suggestTerms" class="btn" style="margin-left:6px">Suggest search terms</button><br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
-<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px"><option value="" selected>— choose a country —</option>${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
+<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div></div>
+<label><input type="checkbox" id="posOn"> <b>Paid:</b> look up positions in Google for these search terms (Serper: up to 3 searches per term). Suggesting terms is free and never turns this on.</label>
 </fieldset>
 <h3>Live check</h3><label><input type="checkbox" id="checkUrls" checked> Check every URL live: does it redirect (301/302) and to where, or is it gone (404/410)?</label>
 <p class="muted">Each URL is requested once (public https only, at most 150). A site that blocks the request is shown as not checked.</p>
@@ -325,8 +327,8 @@ function ownerPage(config,api,base){
 <div id="progress" hidden aria-live="polite"><div class="bar"><span></span></div><p id="progressText"></p></div></form>
 <div id="made"></div></div>
 <div class="card"><h2>Your reports</h2><p><button class="btn" style="background:#b91c1c" type="button" id="deleteSelected" disabled>Delete selected</button> <span id="delSt" class="muted" role="status"></span></p>
-<div id="listWith" class="sec with"><h3>A · With Search Console</h3><div class="muted">Loading…</div></div>
-<div id="listWithout" class="sec without"><h3>B · Without Search Console (public read)</h3><div class="muted">Loading…</div></div></div></div>
+<div id="listWithout" class="sec without"><h3>A · Without Search Console (public read)</h3><div class="muted">Loading…</div></div>
+<div id="listWith" class="sec with"><h3>B · With Search Console</h3><div class="muted">Loading…</div></div></div></div>
 <script>
 var API=${JSON.stringify(api)},BASE=${JSON.stringify(base)};
 function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -357,8 +359,8 @@ function sync(){var n=selected().length,b=document.getElementById('deleteSelecte
 document.getElementById('deleteSelected').onclick=function(){del(selected())};
 async function load(){var A=document.getElementById('listWith'),B=document.getElementById('listWithout');
  try{var r=await fetch(API+'/reports',{credentials:'same-origin',cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error);
-  A.innerHTML='<h3>A · With Search Console</h3>'+rowsHtml(d.reports.filter(function(x){return x.search_console}));
-  B.innerHTML='<h3>B · Without Search Console (public read)</h3>'+rowsHtml(d.reports.filter(function(x){return !x.search_console}));
+  A.innerHTML='<h3>B · With Search Console</h3>'+rowsHtml(d.reports.filter(function(x){return x.search_console}));
+  B.innerHTML='<h3>A · Without Search Console (public read)</h3>'+rowsHtml(d.reports.filter(function(x){return !x.search_console}));
   [A,B].forEach(function(el){
    var all=el.querySelector('[data-all]');if(all)all.onchange=function(){el.querySelectorAll('[data-id]').forEach(function(c){c.checked=all.checked});sync()};
    el.querySelectorAll('[data-id]').forEach(function(c){c.onchange=sync});
