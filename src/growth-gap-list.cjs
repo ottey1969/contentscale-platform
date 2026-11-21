@@ -56,7 +56,8 @@ function buildGapList(report={}){
   if((!t.supported_by_competitors&&!t.word_match_supported)||t.destination?.status==='COVERED')continue;
   const confirmed=t.meaning?.status==='SAME_QUESTION',different=t.meaning?.status==='DIFFERENT_QUESTIONS';
   const it={id:'q-'+t.code,group:'QUESTION',writable:true,
-   title:confirmed?t.reader_question:clip(String(t.label||'').replace(/^Competitors teach\s*/i,'').replace(/^[“"]|[”"]$/g,''),200),
+   // A competitor's section number ("4. …", "Stap 2) …") is not part of the reader's question (owner 2026-11-21).
+   title:confirmed?t.reader_question:clip(withoutListNumber(String(t.label||'').replace(/^Competitors teach\s*/i,'').replace(/^[“"]|[”"]$/g,'')),200),
    reader_question:confirmed?t.reader_question:null,
    status:PAGE[t.destination?.status]||'Not on your page',coverage:t.destination?.status==='PARTIAL'?'PARTIAL':'MISSING',
    confidence:confirmed?'AI_CONFIRMED_SAME_QUESTION':different?'AI_SAYS_DIFFERENT_QUESTIONS':'SHARED_WORDS_ONLY',
