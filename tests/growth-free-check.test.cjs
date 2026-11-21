@@ -1008,3 +1008,26 @@ test('Spanish is Spanish: the check keeps its language for the result page and e
  const api=await s.get('/api/free-growth/checks/'+r.body.id+'?k='+r.body.key);assert.equal(api.body.ui_lang,'es','so an older link opens in Spanish too');
  const missing=await s.get('/api/free-growth/checks/'+r.body.id+'?k=wrong');assert.equal(missing.status,404);
 });
+
+// Owner 2026-11-21: "moet ook ANDERE LANDEN ONDERSTEUNEN / NL EN BE KAN DAT ZO?" — markets NL and BE with Amsterdam as the place.
+test('Free Growth: a city outside the US with NL and BE as markets; the place must be in the first market',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const ok1=await s.post('/api/free-growth/checks',{...ok,market:'nl — Nederland, be — België',language:'Nederlands',search_location:'Amsterdam, nederland'});
+ assert.equal(ok1.status,202,JSON.stringify(ok1.body));await s.service.idle();
+ assert.deepEqual(s.calls.at(-1).market,{countries:['NL','BE'],language:'nl',location:'Amsterdam, Netherlands',location_source:'VISITOR_SELECTED'});
+ const wrongOrder=await s.post('/api/free-growth/checks',{...ok,market:'be — België, nl — Nederland',search_location:'Amsterdam, nederland'});
+ assert.equal(wrongOrder.status,400);assert.match(wrongOrder.body.error,/Netherlands/);assert.match(wrongOrder.body.error,/first/);
+ const noMarket=await s.post('/api/free-growth/checks',{...ok,search_location:'Amsterdam'});
+ assert.equal(noMarket.status,400);assert.match(noMarket.body.error,/target market/);
+ const page=(await s.get('/free-growth?key=open-key-12345&lang=nl')).body;
+ assert.match(page,/Amsterdam/,'the example shows a place outside the US');
+});
+test('Free Growth research: a place outside the US searches Google in that country and language',async()=>{
+ let searched=null;
+ const out=await runFreeGrowthResearch({url:URL_,query:'dakdekker amsterdam',
+  market:{countries:['NL','BE'],language:'nl',location:'Amsterdam, Netherlands',location_source:'VISITOR_SELECTED'}},
+  {...engineDeps,searchLive:async(args)=>{searched=args.market;return engineDeps.searchLive(args)}});
+ assert.equal(out.statusCode,200);
+ assert.equal(searched.location,'Amsterdam, Netherlands');assert.deepEqual(searched.states,[]);
+ assert.deepEqual({country:searched.country,gl:searched.gl,hl:searched.hl},{country:'nl',gl:'nl',hl:'nl'});
+});
