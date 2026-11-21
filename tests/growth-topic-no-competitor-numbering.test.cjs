@@ -29,3 +29,17 @@ test('a single ranking-page section used as an item title loses the list number 
  assert.ok(titles.includes('24/7 soporte'));
  assert.ok(titles.includes('1.500 techos al año'));
 });
+
+// Owner 2026-11-21 (nl.contentscale.site/generative-engine-optimization-geo/, "Wat kost het uitbesteden van GEO?"): the brief's
+// first item was "4. GEO-resultaten, rapportage en kosten" — a reader question matched by shared words kept the competitor's
+// section number, because only AI topics and loose sections had it removed.
+test('a reader question matched by shared words never carries a competitor list number either',()=>{
+ const report={reader_task_coverage:{tasks:[
+  {code:'t1',label:'Competitors teach “4. GEO-resultaten, rapportage en kosten”',supported_by_competitors:true,destination:{status:'PARTIAL'},meaning:null,competitor_support:[]},
+  {code:'t2',label:'Competitors teach “Stap 2) Kies een aanbieder”',word_match_supported:true,destination:{status:'MISSING'},meaning:{status:'DIFFERENT_QUESTIONS',reason:'x'},competitor_support:[]},
+  {code:'t3',label:'Competitors teach “24/7 bereikbaar”',supported_by_competitors:true,destination:{status:'MISSING'},meaning:null,competitor_support:[]}]}};
+ const titles=buildGapList(report).items.filter(i=>i.group==='QUESTION').map(i=>i.title);
+ assert.ok(titles.includes('GEO-resultaten, rapportage en kosten'),titles.join(' | '));
+ assert.ok(titles.includes('Kies een aanbieder'),titles.join(' | '));
+ assert.ok(titles.includes('24/7 bereikbaar'),'a number that is not a list number stays');
+});
