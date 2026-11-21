@@ -1031,3 +1031,19 @@ test('Free Growth research: a place outside the US searches Google in that count
  assert.equal(searched.location,'Amsterdam, Netherlands');assert.deepEqual(searched.states,[]);
  assert.deepEqual({country:searched.country,gl:searched.gl,hl:searched.hl},{country:'nl',gl:'nl',hl:'nl'});
 });
+
+test('price question on an existing page: the API names the own page that already states the price (owner 2026-11-21)',async t=>{
+ const OWN='https://nl.contentscale.site/ai-zichtbaarheid/',GEO='https://nl.contentscale.site/generative-engine-optimization-geo/';
+ const own={[OWN]:'<html><body><main><h1>AI-zichtbaarheid</h1><p>Lees over <a href="/generative-engine-optimization-geo/">GEO-specialist inhuren</a>.</p></main></body></html>',
+  [GEO]:'<html><body><main><h1>GEO-specialist</h1><p>Mijn tarief: vanaf €297 per maand.</p></main></body></html>'};
+ const s=await server({engine:async()=>({statusCode:200,report:{editorial_decision_gate:{decision:'IMPROVE_EXISTING'}}}),
+  engineDeps:{fetchLive:async url=>{if(!own[url])throw Error('x');return {html:own[url],final_url:url}}}});t.after(()=>s.srv.close());
+ const started=await s.post('/api/free-growth/checks',{...ok,url:OWN,query:'Wat kost het om een specialist in te huren voor AI-zichtbaarheid en GEO?'});
+ assert.equal(started.status,202);await s.service.idle();
+ const id=started.body.result_url.match(/r\/(\w+)\?k=(\w+)/);
+ const res=await s.get('/api/free-growth/checks/'+id[1]+'?k='+id[2]);
+ assert.equal(res.body.status,'DONE');
+ assert.equal(res.body.content_priorities.best_own_page.url,GEO);
+ const dl=await s.get('/api/free-growth/checks/'+id[1]+'/report.json?k='+id[2]);
+ assert.equal(dl.body.content_priorities.best_own_page.url,GEO);
+});

@@ -108,7 +108,7 @@ test('the result page shows the list first in the brief, in order, and the compl
  // Owner 2026-11-20: one jump link to the downloadable brief may sit between the head and the list, nothing else.
  assert.match(src,/<p>'\+esc\(o\.line\)\+'<\/p><\/div>'\+\n  '<p class="growth-brief-jump">[^\n]*\n  prioritiesHtml\(d\.content_priorities\)\+/);
  assert.match(src,/if\(all&&d&&d\.content_priorities\)prioritiesText\(d\.content_priorities\)\.forEach/);
- assert.match(src,/content_priorities:row\.status==='DONE'\?buildContentPriorities\(\{summary:shown\.summary,aiGap:shown\.aiGap,report:row\.report\}\):null/);
+ assert.match(src,/content_priorities:row\.status==='DONE'\?buildContentPriorities\(\{summary:shown\.summary,aiGap:shown\.aiGap,report:row\.report,bestOwnPage:bestOwn\}\):null/);
  // Every visible label of the list has a Dutch and Spanish translation.
  const {ROWS}=require('../src/growth-free/ui-texts.cjs');
  for(const k of ['What to put in your content — most to least important','Most important','Important','Useful','Optional','Add a section','Improve an existing section',

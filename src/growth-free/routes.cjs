@@ -510,7 +510,8 @@ function selfItems(g,d){var out=[],ag=d&&d.ai&&d.ai.gap,acts=(d&&d.ai&&d.ai.summ
    auto:!!(st&&LIVE&&LIVE.schema_types.indexOf(st)>=0),
    steps:st?['Copy the code below. Values marked FILL IN are not on your page: fill them in or remove that line. Never add a value that is not true.','WordPress: paste it in a Custom HTML block on this page, or in WPCode as an HTML snippet that runs only on this page. Rank Math and Yoast can set the same in their Schema settings.','Test it with the Schema Markup Validator (validator.schema.org) and Google’s Rich Results Test (search.google.com/test/rich-results).','Reopen this result afterwards: the item is ticked off by itself as soon as your page has it.']:null,
    code:st&&LIVE&&LIVE.snippets?LIVE.snippets[st]||null:null})});
- ((ag&&ag.missing_facts)||[]).forEach(function(f){out.push({auto:!!(LIVE&&LIVE.facts.indexOf(f.key)>=0),id:'fact:'+f.key,title:'State on your page: '+f.label.toLowerCase(),why:'The pages AI cites state it ('+f.sites.join(', ')+'); your page does not. Only add it when it is true for your business.'+(f.example?' Example from '+f.example.site+': “'+f.example.excerpt+'”':''),src:'ai'})});
+ var bestOwn=d&&d.content_priorities&&d.content_priorities.best_own_page;
+ ((ag&&ag.missing_facts)||[]).forEach(function(f){if(f.key==='price'&&bestOwn){out.push({id:'fact:price-link',title:'Link to your price: '+bestOwn.url,why:'Your price page: '+bestOwn.url+' — it already states your price. Answer the price there; on this page, add one short line that links to it.',src:'ai'});return}out.push({auto:!!(LIVE&&LIVE.facts.indexOf(f.key)>=0),id:'fact:'+f.key,title:'State on your page: '+f.label.toLowerCase(),why:'The pages AI cites state it ('+f.sites.join(', ')+'); your page does not. Only add it when it is true for your business.'+(f.example?' Example from '+f.example.site+': “'+f.example.excerpt+'”':''),src:'ai'})});
  ((ag&&ag.missing_topics)||[]).filter(function(t){return !t.item_id}).forEach(function(t){out.push({id:'aitopic:'+t.topic,title:'Cover on your page: '+t.topic,why:'On the pages AI cites ('+t.sites.join(', ')+'), not on your page. Not in the Google list, so Growth does not write it: add it yourself if it fits.'+(t.examples&&t.examples[0]&&t.examples[0].excerpt?' “'+t.examples[0].excerpt+'”':''),src:'ai'})});
  acts.filter(function(a){return a.id!=='choose_ai_topics'&&a.id!=='compare_cited_pages'}).forEach(function(a){out.push({id:'act:'+a.id,title:a.title,why:a.why,steps:a.steps,src:'ai'})});
  return out}
@@ -591,7 +592,7 @@ function wireCompleteBrief(g,s,d){
 function gapBrief(g,s,all,d){var picked={},o=outcomeOf(s,d||{});if(!all)document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
  var items=all?g.items.filter(function(x){return x.group!=='NOT_RELEVANT'}):g.items.filter(function(x){return picked[x.id]});
  var aq=d&&d.ai&&d.ai.ai_question&&d.ai.ai_question.text?String(d.ai.ai_question.text):'';
- var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—')].concat(aq&&aq.toLowerCase()!==String(s.checked.search_term||'').toLowerCase()?['AI systems were asked: “'+aq+'” (Google’s own question for this search term)']:[]).concat(['Outcome: '+o.title,o.line,'',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.','']);
+ var L=['# Complete Growth editorial brief: '+s.url,'','Search term: '+(s.checked.search_term||'—')].concat(aq&&aq.toLowerCase()!==String(s.checked.search_term||'').toLowerCase()?['AI systems were asked: “'+aq+'” (Google’s own question for this search term)']:[]).concat(['Outcome: '+o.title,o.line].concat(d&&d.content_priorities&&d.content_priorities.best_own_page?['',d.content_priorities.best_own_page.line]:[]).concat(['',all?'Complete research dossier — no manual topic selection required.':'Selected topics only.','Ranking pages compared: '+g.ranking_pages_read,'Only verified content opportunities may be published. Unverified findings are research observations; no ranking or AI citation outcome is guaranteed.','']));
  if(all&&d&&d.content_priorities)prioritiesText(d.content_priorities).forEach(function(l){L.push(l)});
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
   list.forEach(function(x){L.push('### '+x.title+(x.recommended?' — editorial priority':' — research observation'), '');
@@ -916,7 +917,7 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
 // One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
 // One list for the editor: what to put into the content, from most to least important (owner 2026-11-19).
 var PRIO_TIER={MOST_IMPORTANT:'Most important',IMPORTANT:'Important',USEFUL:'Useful',OPTIONAL:'Optional'};
-var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact'};
+var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact',LINK_OWN_PRICE:'Link to your price page'};
 // The outcome of the research in plain words (owner 2026-11-20: "alles in normale taal"), never a status code.
 function outcomeOf(s,d){var cov=d&&d.competitors&&d.competitors.coverage,
  items=((s.gaps&&s.gaps.items)||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'});
@@ -930,9 +931,10 @@ function outcomeOf(s,d){var cov=d&&d.competitors&&d.competitors.coverage,
  if(n)return {title:n===1?'1 thing to improve on your page':n+' things to improve on your page',line:'Compared with the pages Google ranks for this search. Most important first. You decide what goes on your page; nothing is published automatically.'};
  return {title:'No clear improvement found',line:'The research found no change that the top Google pages clearly agree on. The list below shows ideas to check.'}}
 function prioritiesHtml(cp){
- if(!cp||!((cp.items||[]).length||(cp.trim||[]).length))return '';
+ if(!cp||!((cp.items||[]).length||(cp.trim||[]).length||cp.best_own_page))return '';
  var research=cp.status==='RESEARCH_ONLY';
  var h='<section class="card growth-priorities" id="growthPriorities" aria-labelledby="growthPrioritiesTitle"><h2 id="growthPrioritiesTitle">What to put in your content — most to least important</h2>'+
+  (cp.best_own_page?'<div class="card prio-best" id="bestOwnPage"><strong>Best match on your site for this question</strong><p><a href="'+esc(cp.best_own_page.url)+'" target="_blank" rel="noopener noreferrer">'+esc(cp.best_own_page.url)+'</a></p><p>It already states your price. Answer the price there; on this page, add one short line that links to it.</p>'+(cp.best_own_page.excerpt?'<p><small class="muted" data-no-translate>“'+esc(cp.best_own_page.excerpt)+'”</small></p>':'')+'</div>':'')+
   '<p class="muted">'+esc(research?'Ideas to check, most useful first. None of them is a must-have: use one only if it fits your business.':'Most important first. Check every point and the facts; nothing is published automatically.')+'</p><ol class="prio-list">';
  cp.items.slice(0,25).forEach(function(x){
   var ev=(x.evidence||[]).slice(0,5);
@@ -943,6 +945,7 @@ function prioritiesHtml(cp){
    (ev.length?'<p><small>Sources:</small></p><ul>'+ev.map(function(e){return '<li><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer">'+esc(e.heading||e.site||e.url)+'</a></li>'}).join('')+'</ul>':'')+'</details></li>';
  });
  h+='</ol>';
+ if((cp.observations||[]).length)h+='<details><summary>Research observations, not content advice ('+cp.observations.length+')</summary><ul>'+cp.observations.map(function(o){return '<li><span data-no-translate>'+esc(o.title)+'</span> — <small>'+esc(o.reason)+'</small></li>'}).join('')+'</ul></details>';
  if((cp.trim||[]).length)h+='<h3>What could be shorter or moved — does not answer this search</h3><p class="muted">Not deleted automatically. Check each section against what the searcher wants.</p><ol class="prio-list">'+
   cp.trim.map(function(t){return '<li class="prio-item prio-trim"><div class="prio-head"><strong>'+esc(t.heading)+'</strong> <span class="prio-action">Shorten or move</span>'+(t.words?' <small>'+esc(t.words)+' words</small>':'')+'</div><p><small>'+esc(t.reason)+'</small></p><p>'+esc(t.instruction)+'</p></li>'}).join('')+'</ol>';
  if((cp.keep||[]).length)h+='<details><summary>Keep as it is ('+cp.keep.length+')</summary><p class="muted">Only on your page; do not remove it while editing.</p><ul>'+cp.keep.map(function(k){return '<li>'+esc(k.heading)+'</li>'}).join('')+'</ul></details>';
@@ -950,7 +953,7 @@ function prioritiesHtml(cp){
  return h;
 }
 function prioritiesText(cp){
- if(!cp||!((cp.items||[]).length||(cp.trim||[]).length))return [];
+ if(!cp||!((cp.items||[]).length||(cp.trim||[]).length||cp.best_own_page))return [];
  var L=['## What to put in your content — most to least important','',cp.status==='RESEARCH_ONLY'?'Ideas to check, most useful first. None of them is a must-have: use one only if it fits your business.':'Most important first. Check every point and the facts; nothing is published automatically.',''];
  cp.items.forEach(function(x){
   L.push(x.rank+'. '+x.title+' — '+(PRIO_TIER[x.tier]||x.tier)+' · '+(PRIO_ACTION[x.action]||x.action)+' · score '+x.score);
@@ -959,6 +962,7 @@ function prioritiesText(cp){
   L.push('   - Why: '+(x.why||[]).join(' · '));
   (x.evidence||[]).slice(0,5).forEach(function(e){L.push('   - Source: '+e.url)});
  });
+ if((cp.observations||[]).length){L.push('','## Research observations, not content advice','');cp.observations.forEach(function(o){L.push('- '+o.title+' — '+o.reason+(o.sources&&o.sources[0]?' Source: '+o.sources[0]:''))})}
  if((cp.trim||[]).length){L.push('','## What could be shorter or moved — does not answer this search','');cp.trim.forEach(function(t){L.push('- '+t.heading+(t.words?' ('+t.words+' words)':'')+' — '+t.reason+' '+t.instruction)})}
  if((cp.keep||[]).length){L.push('','Keep as it is:');cp.keep.forEach(function(k){L.push('- '+k.heading)})}
  L.push('','How the order is calculated: '+cp.method,'');
@@ -1640,6 +1644,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  // AI gap per check: the cited pages are read once per set of cited URLs.
  const aiGapFor0=aiGap.createAiGapCache({engines:ai.ENGINES,fetchHtml:engineDeps.fetchAiCited||engineDeps.fetchLive||fetchPublicGrowthHtml,
   model:()=>engineDeps.aiGapModel!==undefined?engineDeps.aiGapModel:require('../growth-task-meaning.cjs').geminiModel()});
+ // Price question: the own page that already states the price (best-own-page.cjs), read once per check.
+ const bestOwnFor0=require('./best-own-page.cjs').createBestOwnPageCache({fetchHtml:engineDeps.fetchLive||fetchPublicGrowthHtml});
+ const bestOwnFor=row=>row.status==='DONE'?bestOwnFor0({key:'free:'+row.id,pageUrl:row.url,query:searchTermOf(row)}).catch(()=>null):Promise.resolve(null);
  const aiGapFor=(row,answers,{wait=false}={})=>aiGapFor0({key:'free:'+row.id,answers,pageUrl:row.url,query:searchTermOf(row),wait});
  // Step 2 topics an AI-gap topic matches, so it can be added to the visitor's choice.
  function withStepTwo(gap,gaps){
@@ -1691,7 +1698,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:withStyle(viewOf(row.written))});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
-  const aiPart=await aiFor(row),gscPart=await gscFor(row);
+  const [aiPart,gscPart,bestOwn]=await Promise.all([aiFor(row),gscFor(row),bestOwnFor(row)]);
   // AI-written topic names in the language of the check (phase 2 of "Spanish is Spanish"); quotes stay as written.
   let shown={summary:row.summary,aiGap:aiPart&&aiPart.gap};
   if(row.status==='DONE'){try{const map=await topicLang.topicTextsFor({pool,row,lang:row.ui_lang||'en',summary:row.summary,aiGap:aiPart&&aiPart.gap,model:reminders.modelFor(config.textModel!==undefined?config.textModel:config.mailModel)});
@@ -1703,7 +1710,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    sitemap_import:row.report?.sitemap_import||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
    // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
-   content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report}):null,
+   content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report,bestOwnPage:bestOwn}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
@@ -1752,13 +1759,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.get(apiPath+'/checks/:id/report.json',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
-  const aiPart=await aiFor(row),gscPart=await gscFor(row);
+  const [aiPart,gscPart,bestOwn]=await Promise.all([aiFor(row),gscFor(row),bestOwnFor(row)]);
   res.set('Cache-Control','no-store').set('Content-Disposition',`attachment; filename="growth-check-${row.public_id}.json"`)
    .json({generated_by:config.brand+' free Growth check',url:row.url,search_term:row.query||null,checked_at:row.finished_at,
     disclaimer:'Research data only. No ranking or traffic increase is promised. '+(gscPart.latest?(gscPart.latest.used_in_research?'A Search Console export verified for this exact page was used.':gscPart.latest.status==='VERIFIED_FOR_PAGE'?'The latest page-verified Search Console export was not used in the original research.':'A Search Console export was uploaded but is not verified for this exact page; it was not used as evidence.'):'Google Search Console data was not used.'),
     search_console:gscPart,
     selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart),
-    content_priorities:buildContentPriorities({summary:row.summary,aiGap:aiPart&&aiPart.gap,report:row.report}),
+    content_priorities:buildContentPriorities({summary:row.summary,aiGap:aiPart&&aiPart.gap,report:row.report,bestOwnPage:bestOwn}),
     ai_answers:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,summary:aiPart.summary,
      answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
     report:row.report});

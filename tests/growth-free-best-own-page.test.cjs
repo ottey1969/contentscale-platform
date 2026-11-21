@@ -1,0 +1,82 @@
+'use strict';
+// Owner case 2026-11-21 (SYNTHETIC pages modelled on it): "Wat kost het om een specialist in te huren voor AI-zichtbaarheid
+// en GEO?" checked on /ai-zichtbaarheid/, which has no price. The site's GEO service page already states "vanaf €297".
+// The brief must name that page as the best match and point the price items to it, not advise prices on the checked page.
+// Also: loose CTA lines, a rival's brand line and paragraphs from single competitor pages are no content advice.
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path');
+const {findBestOwnPage,isPriceQuestion}=require('../src/growth-free/best-own-page.cjs');
+const {buildContentPriorities}=require('../src/growth-free/content-priorities.cjs');
+const {ROWS,table}=require('../src/growth-free/ui-texts.cjs');
+
+const Q='Wat kost het om een specialist in te huren voor AI-zichtbaarheid en GEO?';
+const OWN='https://nl.contentscale.site/ai-zichtbaarheid/';
+const GEO='https://nl.contentscale.site/generative-engine-optimization-geo/';
+const AIO='https://nl.contentscale.site/ai-overview-optimalisatie/';
+const body=(t)=>'<html><body><nav><a href="/">Home</a></nav><main>'+t+'</main></body></html>';
+const pages={
+ [OWN]:body('<h1>AI-zichtbaarheid</h1><p>Zo word je zichtbaar in ChatGPT en Google AI Overviews. Lees ook over <a href="/generative-engine-optimization-geo/">GEO-specialist inhuren</a>, '+
+  '<a href="/ai-overview-optimalisatie/">AI Overview optimalisatie</a>, <a href="/contact/">contact</a>, <a href="https://es.contentscale.site/geo/">GEO (ES)</a> en <a href="/ai-zichtbaarheid/#top">top</a>.</p>'),
+ [GEO]:body('<h1>GEO-specialist</h1><h2>Mijn tarief</h2><p>Mijn tarief: vanaf €297 per maand, maandelijks opzegbaar.</p>'),
+ [AIO]:body('<h1>AI Overview optimalisatie</h1><p>Een audit kost € 450 eenmalig.</p>'),
+ 'https://nl.contentscale.site/contact/':body('<h1>Contact</h1><p>Mail of WhatsApp.</p>')};
+const fetchHtml=async u=>{if(!pages[u])throw Error('not found');return {html:pages[u]}};
+
+test('price question: the own page that already states the price is the best match (rare subject word wins)',async()=>{
+ assert.equal(isPriceQuestion(Q),true);
+ const r=await findBestOwnPage({pageUrl:OWN,query:Q,fetchHtml});
+ assert.equal(r.status,'FOUND');assert.equal(r.url,GEO);assert.match(r.excerpt,/vanaf €297/);
+ assert.ok(!r.checked.some(u=>/es\.contentscale|#/.test(u)),'another market and the page itself are never read');
+});
+test('no price question, or a price on the checked page itself: nothing is moved',async()=>{
+ assert.equal((await findBestOwnPage({pageUrl:OWN,query:'Wat is AI-zichtbaarheid?',fetchHtml})).status,'NOT_A_PRICE_QUESTION');
+ const withPrice=body('<h1>AI-zichtbaarheid</h1><p>Vanaf €297 per maand.</p><a href="/generative-engine-optimization-geo/">GEO</a>');
+ assert.equal((await findBestOwnPage({pageUrl:OWN,query:Q,ownHtml:withPrice,fetchHtml})).status,'THIS_PAGE_HAS_PRICE');
+ const noLinks=body('<h1>AI-zichtbaarheid</h1><p>Geen prijs hier.</p>');
+ assert.equal((await findBestOwnPage({pageUrl:OWN,query:Q,ownHtml:noLinks,fetchHtml})).status,'NOT_FOUND');
+});
+
+const topic=(id,title,site,extra={})=>({id,group:'MISSING',title,coverage:'MISSING',priority:{sources:1},examples:[{site,heading:title,url:'https://'+site+'/geo-specialist/'}],...extra});
+const summary={query:Q,decision:'IMPROVE_EXISTING',gaps:{items:[
+ topic('1','Wat kost een GEO-specialist?','searchlab.nl',{priority:{sources:2},examples:[{site:'searchlab.nl',heading:'Wat kost een GEO-specialist?'},{site:'estrelle.nl',heading:'Prijzen GEO'}]}),
+ topic('2','Werkt GEO echt, of is het hype?','www.estrelle.nl'),
+ topic('3','Jouw coo mpagnon in het GEO landschap','coodigital.nl'),
+ topic('4','Ontvang je eerste maandplan, volledig uitgewerkt in je mail.','www.marketingcollega.nl'),
+ topic('5','Zo ziet je maandplan eruit. Bekijk voorbeeld','www.marketingcollega.nl'),
+ topic('6','Voor veel bedrijven is een AI-antwoordhub de beste manier om te optimaliseren voor GEO. Zo’n hub is een centrale kennisstructuur, rondom één belangrijk thema. M','wessels-teksten.nl'),
+ topic('7','Weet jij hoe zichtbaar je bent in Google en AI?','www.timmermansmedia.nl'),
+ topic('8','Zo werken wij','www.customerimpact.be'),
+ topic('9','De korte samenvatting','www.customerimpact.be')]}};
+const aiGap={pages:[{site:'citedmetrics.com',url:'https://citedmetrics.com/p',cited_by:['ChatGPT']}],missing_topics:[],
+ missing_facts:[{key:'price',label:'A price or price range',sites:['citedmetrics.com'],example:{site:'citedmetrics.com',excerpt:'$500 per month'}}]};
+
+test('brief: the best own page leads, and price items point to it instead of asking for a price here',async()=>{
+ const best=await findBestOwnPage({pageUrl:OWN,query:Q,fetchHtml});
+ const cp=buildContentPriorities({summary,aiGap,bestOwnPage:best});
+ assert.equal(cp.best_own_page.url,GEO);
+ assert.match(cp.best_own_page.line,/^Best match on your site for this question: https:\/\/nl\.contentscale\.site\/generative-engine-optimization-geo\/ \(it already states your price\)/);
+ const fact=cp.items.find(x=>x.id==='fact-price'),topicPrice=cp.items.find(x=>x.id==='1');
+ for(const x of [fact,topicPrice]){assert.equal(x.action,'LINK_OWN_PRICE',x.title);assert.ok(x.instruction.includes(GEO));
+  assert.match(x.instruction,/add one short line that links to it/);assert.doesNotMatch(x.instruction,/Add your own|Only if this is true/)}
+ // Without a best match nothing changes.
+ const plain=buildContentPriorities({summary,aiGap});
+ assert.equal(plain.best_own_page,null);assert.equal(plain.items.find(x=>x.id==='fact-price').action,'ADD_OWN_FACT');
+});
+test('brief: CTA lines, a rival brand line, paragraphs and generic headings are observations, not advice',()=>{
+ const cp=buildContentPriorities({summary,aiGap:null});
+ const titles=cp.items.map(x=>x.title);
+ assert.ok(titles.includes('Werkt GEO echt, of is het hype?'),'a real question stays advice');
+ assert.ok(titles.includes('Wat kost een GEO-specialist?'));
+ for(const id of ['3','4','5','6','7','8','9']){const t=summary.gaps.items.find(x=>x.id===id).title;
+  assert.ok(!titles.includes(t),'not advice: '+t);assert.ok(cp.observations.some(o=>o.title===t&&o.reason),'kept as observation: '+t)}
+});
+test('result page and brief show the best match, in EN/NL/ES',()=>{
+ const ui=fs.readFileSync(path.join(__dirname,'../src/growth-free/routes.cjs'),'utf8');
+ assert.match(ui,/d\.content_priorities\.best_own_page\.line/,'the brief opens with the best own page');
+ assert.match(ui,/id="bestOwnPage"/);assert.match(ui,/Research observations, not content advice/);
+ assert.match(ui,/LINK_OWN_PRICE:'Link to your price page'/);
+ for(const k of ['Best match on your site for this question','Your price page: {u}','Answer {q} there, not on this page.','On this page, add one short line that links to it.','Link to your price page','Research observations, not content advice ({n})']){
+  const row=ROWS.find(r=>r[0]===k);assert.ok(row,k);assert.ok(row[1]&&row[2],k)}
+ // The browser sees the URL as {u}: the brief line translates.
+ const nl=table().nl;assert.ok(nl['Best match on your site for this question: {u} (it already states your price). Answer the price there; on this page, add one short line that links to it.']);
+});
