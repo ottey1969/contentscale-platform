@@ -115,13 +115,20 @@ function noiseReason(x){
  if(single&&brandLine(t,x.sites||[]))return 'The competitor’s own brand line, not a topic.';
  if(single&&WE.test(t))return 'How one competitor describes itself, not a topic.';
  // One competitor page, not even compared with this page: too little to call it advice (owner 2026-11-21: "zo veel punten").
- if(single&&x.coverage==='UNKNOWN')return 'Only one competitor page has this, and it was not compared with your page.';
+ if(single&&(x.coverage==='UNKNOWN'||x.coverage==='NOT_COMPARED'))return 'Only one competitor page has this, and it was not compared with your page.';
  return null;
 }
 // A price topic or price fact is answered on the own page that already states the price (see best-own-page.cjs).
 // Hiring the service (choosing a specialist, outsourcing, way of working, working together): from a guide page these
 // belong on the service page found for this question, not on the guide.
 const HIRE_TOPIC=/\b(?:specialist\w*|consultant\w*|consultancy|bureau\w*|agency|agencies|agencia\w*|uitbested\w*|inhuren|outsourc\w*|contratar|samenwerk\w*|werkwijze|aanpak|kiezen|kies|choose|choosing|hire|hiring)\b|GEO-(?:specialist|bureau|consultant|traject)/i;
+// A hire topic counts as answered on the service page when a section there shares two meaningful words with it
+// (heading and the start of its text), or half of the topic's words.
+// Words compare on their first six letters ("samenwerking" and "samenwerken").
+const stems=t=>new Set([...words(t)].map(w=>w.slice(0,6)));
+const sectionFor=(title,sections)=>{const t=[...stems(title)];if(!t.length)return null;
+ let bestS=null,bestN=0;for(const s of sections||[]){const w=stems(s.heading+' '+(s.excerpt||''));const n=t.filter(x=>w.has(x)).length;if(n>bestN){bestN=n;bestS=s}}
+ return bestS&&(bestN>=2||bestN/t.length>=0.5)?bestS:null};
 const PRICE_TOPIC=/\b(?:prijs|prijzen|kost|kosten|tarie[fv]\w*|price|prices|pricing|costs?|precios?|tarifas?|coste|costo)\b|prijzen|tarieven/i;
 
 function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
@@ -175,7 +182,8 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
   const systems=aiSystemsFor(x.aiSites,aiGap);
   const priceItem=(!!best||!!onPage)&&(x.id==='fact-price'||(x.kind==='TOPIC'&&PRICE_TOPIC.test(x.title)));
   const hireItem=!priceItem&&!!best&&x.kind==='TOPIC'&&HIRE_TOPIC.test(x.title);
-  const action=priceItem?(best?'LINK_OWN_PRICE':'PRICE_ON_PAGE'):hireItem?'ON_SERVICE_PAGE':x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
+  const there=hireItem?sectionFor(x.title,best.service_sections):null;
+  const action=priceItem?(best?(best.also_on_this_page?'PRICE_LINKED':'LINK_OWN_PRICE'):'PRICE_ON_PAGE'):hireItem?(there?'ON_SERVICE_PAGE_DONE':'ON_SERVICE_PAGE'):x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
   const why=[];
   if(x.rankingPages)why.push(x.rankingPages+' ranking page'+(x.rankingPages===1?' covers':'s cover')+' it');
   if(x.aiSites.length)why.push(x.aiSites.length+' page'+(x.aiSites.length===1?' cited by AI systems covers':'s cited by AI systems cover')+' it');
@@ -185,15 +193,18 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
   if(x.fragments>=2)why.push(x.fragments+' fragments of competitor text to work from');
   if(x.kind==='TOPIC')why.push(x.evidenceCheck?'Passed the evidence check (two ranking pages)':'Not confirmed by the evidence check');
   // Separate sentences, with the topic in quotes, so the page can show each sentence in Dutch or Spanish.
-  const parts=action==='ON_SERVICE_PAGE'?['This is about hiring you, so it belongs on your service page: '+best.url,'Add “'+x.title+'” there, not on this page (check that page with this search term).']:action==='PRICE_ON_PAGE'?['Your page now states a price: “'+String(onPage.excerpt||'').trim()+'”.','Check that it answers “'+x.title+'” fully; add only what is still missing, with your own confirmed facts.']:action==='LINK_OWN_PRICE'?['Your price page: '+best.url,'Answer “'+x.title+'” there, not on this page.','On this page, add one short line that links to it.']:[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
+  const parts=action==='PRICE_LINKED'?['Done: this page already names your price and links to '+best.url,'Nothing to add here; keep the price on that page up to date.']:
+   action==='ON_SERVICE_PAGE_DONE'?['Already on your service page under “'+there.heading+'”: '+best.url,'Check that section answers “'+x.title+'”; nothing to add on this page.']:
+   action==='ON_SERVICE_PAGE'?['This is about hiring you, so it belongs on your service page: '+best.url,'Add “'+x.title+'” there, not on this page (check that page with this search term).']:action==='PRICE_ON_PAGE'?['Your page now states a price: “'+String(onPage.excerpt||'').trim()+'”.','Check that it answers “'+x.title+'” fully; add only what is still missing, with your own confirmed facts.']:action==='LINK_OWN_PRICE'?['Your price page: '+best.url,'Answer “'+x.title+'” there, not on this page.','On this page, add one short line that links to it.']:[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
    action==='ADD_ELEMENT'?'Add this page element yourself: “'+x.title+'”.':
    action==='ADD_OWN_FACT'?'Add your own “'+x.title+'” only if you can confirm it.':
    'Add a section that answers “'+x.title+'” in your own words.'];
-  if(needsFact&&!['ADD_OWN_FACT','LINK_OWN_PRICE','PRICE_ON_PAGE','ON_SERVICE_PAGE'].includes(action))parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
+  const elsewhere=['LINK_OWN_PRICE','PRICE_ON_PAGE','PRICE_LINKED','ON_SERVICE_PAGE','ON_SERVICE_PAGE_DONE'].includes(action);
+  if(needsFact&&action!=='ADD_OWN_FACT'&&!elsewhere)parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
   parts.push('Do not copy the example pages.');
   const instruction=parts.join(' ');
-  return {kind:x.kind,id:x.id,title:x.title,action,where:action==='LINK_OWN_PRICE'?'Where the price question comes up on this page':action==='ON_SERVICE_PAGE'?'On your service page':x.where,score,tier:tierOf(score),verified:!researchOnly&&x.evidenceCheck,
-   needs_business_fact:needsFact,instruction,instruction_parts:parts,why,
+  return {kind:x.kind,id:x.id,title:x.title,action,where:action==='LINK_OWN_PRICE'?'Where the price question comes up on this page':(action==='ON_SERVICE_PAGE'||action==='ON_SERVICE_PAGE_DONE')?'On your service page':x.where,score,tier:tierOf(score),verified:!researchOnly&&x.evidenceCheck,
+   needs_business_fact:needsFact&&!['PRICE_LINKED','PRICE_ON_PAGE','ON_SERVICE_PAGE_DONE'].includes(action),instruction,instruction_parts:parts,why,
    signals:{ranking_pages:x.rankingPages,ai_cited_sites:x.aiSites.length,ai_systems:systems,coverage:x.coverage,competitor_text_fragments:x.fragments,
     shares_search_words:x.searchWords,passed_evidence_check:x.evidenceCheck},
    evidence:x.evidence};
@@ -202,7 +213,7 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
  // 2026-11-21: the guide's own tool features and GEO pillars were advised to shorten for a hire question).
  const trim=best?[]:trimCandidates({report,aiGap,items:gaps.items||[],queryWords,summaryGaps:gaps});
  const trim_note=best?'Nothing is advised to shorten: this page was not checked against its own question. This search question belongs on '+best.url:null;
- const later=x=>x.action==='PRICE_ON_PAGE'?2:x.action==='ON_SERVICE_PAGE'?1:0;
+ const later=x=>({ON_SERVICE_PAGE:1,PRICE_ON_PAGE:2,PRICE_LINKED:2,ON_SERVICE_PAGE_DONE:2})[x.action]||0;
  scored.sort((a,b)=>later(a)-later(b)||b.score-a.score||Number(b.verified)-Number(a.verified)||a.title.localeCompare(b.title));
  scored.forEach((x,i)=>{x.rank=i+1});
  return {status:!scored.length&&!trim.length?'NOTHING_FOUND':researchOnly?'RESEARCH_ONLY':'READY_FOR_EDITORIAL_REVIEW',publish_allowed:false,decision,

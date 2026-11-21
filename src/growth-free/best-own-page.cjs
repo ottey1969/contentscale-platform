@@ -7,6 +7,7 @@
 // Only links on the checked page to the same host (so the same market) are read, at most MAX_READ pages.
 const {factsOf}=require('./ai-gap.cjs');
 const {marketOf}=require('../prewrite-existing-page.cjs');
+const {contentSections}=require('../growth-competitor-overview.cjs');
 
 const MAX_READ=3;
 const fold=s=>String(s||'').normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase();
@@ -76,7 +77,9 @@ async function findBestOwnPage({pageUrl,query,ownHtml=null,fetchHtml,max=MAX_REA
   let html='';try{html=String((await fetchHtml(c.url))?.html||'')}catch{}
   checked.push(c.url);
   const f=html?factsOf(html):{};
-  if(f.price)return {status:'FOUND',url:c.url,excerpt:f.price.slice(0,220),matched_words:c.matched,checked,also_on_this_page:!!own.price};
+  // The service page's sections: hire topics already answered there are marked done (owner 2026-11-21: "staan ze er al").
+  if(f.price)return {status:'FOUND',url:c.url,excerpt:f.price.slice(0,220),matched_words:c.matched,checked,also_on_this_page:!!own.price,
+   service_sections:contentSections(c.url,html).map(s=>({heading:s.heading,excerpt:s.excerpt}))};
  }
  if(own.price)return {status:'THIS_PAGE_HAS_PRICE',excerpt:own.price.slice(0,220)};
  return {status:'NOT_FOUND',checked};
