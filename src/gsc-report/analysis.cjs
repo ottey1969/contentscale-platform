@@ -239,7 +239,7 @@ function applyAudit(report,crawl){
  if(!gsc){report.scope='CRAWL';report.notes=[];Object.assign(report.kpis,{clicks:null,impressions:null,ctr:null,position:null,zero_click_pages:null,top5_click_share:null,source:'NONE'});report.trend=null}
  sortPages(report.pages);
  report.kpis.audit={pages_read:crawl.audits.size,with_issues:withIssues,blocked,by_issue:counts};
- report.crawl={origin:crawl.origin,robots:crawl.robots,sitemap:crawl.sitemap,pages_listed:crawl.pages.length,pages_read:crawl.audits.size,
+ report.crawl={origin:crawl.origin,path:crawl.path||'/',outside_path:crawl.outside_path||0,robots:crawl.robots,sitemap:crawl.sitemap,pages_listed:crawl.pages.length,pages_read:crawl.audits.size,
   not_crawled:crawl.not_crawled.slice(0,50),not_crawled_count:crawl.not_crawled.length,not_crawled_limit:crawl.not_crawled_limit,crawled_at:crawl.crawled_at};
  return report;
 }
