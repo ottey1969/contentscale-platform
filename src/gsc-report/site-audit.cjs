@@ -69,11 +69,17 @@ function pageAudit(html,url,{xRobotsTag=null}={}){
   .replace(/<(script|style|noscript|svg|template|nav|header|footer|form|select)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,' ');
  const words=(text(body).match(/[\p{L}\p{N}][\p{L}\p{N}\p{M}'’-]*/gu)||[]).length;
  // Structured data: the types on the page; an Article twice (theme plus plugin) and JSON-LD that does not parse.
- const schema=[];let schemaInvalid=false,articles=0;
+ const schema=[],articleNodes=[];let schemaInvalid=false,articles=0,schemaDescription='';
  for(const m of h.matchAll(/<script\b[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script\s*>/gi)){
   let j;try{j=JSON.parse(m[1].trim())}catch{schemaInvalid=true;continue}
   const walk=x=>{if(Array.isArray(x))return x.forEach(walk);if(!x||typeof x!=='object')return;
-   const ty=[].concat(x['@type']||[]).map(String).filter(Boolean);if(ty.length){schema.push(...ty);if(ty.some(t=>/^(Article|NewsArticle|BlogPosting)$/.test(t)))articles++}
+   const ty=[].concat(x['@type']||[]).map(String).filter(Boolean);if(ty.length){schema.push(...ty);
+    if(ty.some(t=>/^(Article|NewsArticle|BlogPosting)$/.test(t))){articles++;
+     // Where it comes from, read from its @id: "#richSnippet" / "#schema-123" is how Rank Math names them, "#article" Yoast.
+     const id=typeof x['@id']==='string'&&x['@id'].includes('#')?x['@id'].slice(x['@id'].indexOf('#')):null;
+     const source=!id?null:/^#(richSnippet|schema-\d+)$/.test(id)?'RANK_MATH':id==='#article'?'YOAST':null;
+     articleNodes.push({id,source,headline:String(x.headline||x.name||'').replace(/\s+/g,' ').trim().slice(0,200)})}
+    if(!schemaDescription&&typeof x.description==='string'&&ty.some(t=>/^(Article|NewsArticle|BlogPosting|WebPage)$/.test(t)))schemaDescription=x.description.replace(/\s+/g,' ').trim().slice(0,400)}
    if(x['@graph'])walk(x['@graph'])};
   walk(j);
  }
@@ -92,8 +98,9 @@ function pageAudit(html,url,{xRobotsTag=null}={}){
  if(!h1.length)issues.push('H1_MISSING');else if(h1.length>1)issues.push('H1_MULTIPLE');
  if(words<THIN_WORDS)issues.push('THIN');
  if(articles>1)issues.push('SCHEMA_DUPLICATE_ARTICLE');
+ if(articleNodes.some(n=>!n.headline||/^[\s\-–—|:·•]+/.test(n.headline)))issues.push('ARTICLE_HEADLINE_BROKEN');
  if(schemaInvalid)issues.push('SCHEMA_INVALID');
- return {title:title.slice(0,300),description:description.slice(0,400),h1:h1.slice(0,5).map(x=>x.slice(0,200)),words,canonical,noindex,lang,hreflang:hreflang.slice(0,20),schema:schema.slice(0,30),issues,notes};
+ return {title:title.slice(0,300),description:description.slice(0,400),h1:h1.slice(0,5).map(x=>x.slice(0,200)),words,canonical,noindex,lang,hreflang:hreflang.slice(0,20),schema:schema.slice(0,30),articles:articleNodes.slice(0,5),schema_description:description?'':schemaDescription,issues,notes};
 }
 
 // A bot check (reCAPTCHA, a challenge page) is a refusal: it is never audited as the page and never worked around.
@@ -184,7 +191,8 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
  const segs=t=>String(t||'').split(/\s+[|–—:·•-]\s+|\s*[|–—·•]\s*/).map(x=>x.trim().toLowerCase()).filter(Boolean);
  const segCount=new Map();for(const a of audits.values())for(const s of new Set(segs(a.title)))segCount.set(s,(segCount.get(s)||0)+1);
  const names=new Set([...segCount].filter(([,n])=>n>=Math.max(3,audits.size*0.3)).map(([s])=>s));
- for(const a of audits.values()){const t=String(a.title||'').trim().toLowerCase();if(t&&names.has(t)&&!a.issues.includes('TITLE_BROKEN'))a.issues.push('TITLE_BROKEN')}
+ for(const a of audits.values()){const t=String(a.title||'').trim().toLowerCase();if(t&&names.has(t)&&!a.issues.includes('TITLE_BROKEN'))a.issues.push('TITLE_BROKEN');
+  if((a.articles||[]).some(n=>names.has(n.headline.toLowerCase()))&&!a.issues.includes('ARTICLE_HEADLINE_BROKEN'))a.issues.push('ARTICLE_HEADLINE_BROKEN')}
  const key=u=>{try{const x=new URL(u);let p=x.pathname;try{p=decodeURI(p)}catch{}return x.hostname.toLowerCase()+(p.replace(/\/+$/,'')||'/')+x.search}catch{return ''}};
  const auditBy=new Map([...audits].map(([u,a])=>[key(u),a])),statusBy=new Map([...statuses].map(([u,s])=>[key(u),s]));
  for(const [u,a] of audits){
