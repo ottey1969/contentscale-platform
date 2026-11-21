@@ -83,7 +83,7 @@ async function discoverGrowthCompetitors({query,ownUrl,market=null,locale=null,f
   warning:'Bing RSS is an optional public discovery source; results and order do NOT establish current Google rankings. Page comparison is based on separately retrieved HTML.'};
 }
 
-const lookupLabel=(primary,market,locale)=>market?.location?'US English lookup localised to '+market.location:
+const lookupLabel=(primary,market,locale)=>market?.location?(market.gl&&market.gl!=='us'?countryName(market.gl.toUpperCase())+' lookup (language '+(market.hl||'en')+')':'US English lookup')+' localised to '+market.location:
  locale?.country?countryName(locale.country)+' lookup (language '+primary.hl+', from '+String(locale.source||'').toLowerCase().replace(/_/g,' ')+')':
  'US English lookup (default: the page states no market)';
 // Google sometimes returns organic results as its own redirect links (google.com/goto?url=… or /url?q=…), seen for
@@ -175,7 +175,8 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
  if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  // Serper.dev accepts POST JSON; never put API credentials into URL or logs.
  // The market the page states (growth-search-locale); a US-state market keeps the US lookup with its location.
- const primary=market?{gl:'us',hl:'en'}:{gl:locale?.gl||'us',hl:locale?.hl||'en'};
+ // A place outside the US carries its own country and language (Free Growth search location, owner 2026-11-21).
+ const primary=market?.gl?{gl:market.gl,hl:market.hl||'en'}:market?{gl:'us',hl:'en'}:{gl:locale?.gl||'us',hl:locale?.hl||'en'};
  const wrapped={received:0,resolved:0,unresolved:0};const wrappedWhy={};let wrappedSample=null;
  // Every organic title Google returned (own site excluded), also of results that could not be opened: what Google shows.
  const titles=[],ownHost=(()=>{try{return new URL(ownUrl).hostname.replace(/^www\./,'').toLowerCase()}catch{return ''}})();

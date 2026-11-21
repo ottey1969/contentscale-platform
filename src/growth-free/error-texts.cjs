@@ -57,6 +57,8 @@ const EXACT = {
   'Writing is not available right now. Your selection works with the editor brief.': { nl: 'Schrijven is nu niet beschikbaar. Je keuze werkt met de editor-brief.', es: 'La escritura no está disponible ahora. Tu selección funciona con el brief para el editor.' },
   'Your page could not be read publicly. Enter the search term yourself.': { nl: 'Je pagina kon niet openbaar worden gelezen. Vul de zoekterm zelf in.', es: 'No se pudo leer tu página públicamente. Escribe tú la búsqueda.' },
   'Your page could not be read right now. Try again in a moment.': { nl: 'Je pagina kon nu niet worden gelezen. Probeer het zo opnieuw.', es: 'No se pudo leer tu página ahora. Inténtalo de nuevo en un momento.' },
+  'Choose the target market for this search location, for example nl — Netherlands.': { nl: 'Kies de doelmarkt voor deze zoeklocatie, bijvoorbeeld nl — Nederland.', es: 'Elige el mercado para esta ubicación de búsqueda, por ejemplo es — España.' },
+  'Enter a city or region, for example Amsterdam (with nl — Netherlands as target market) or New Jersey, United States.': { nl: 'Vul een stad of regio in, bijvoorbeeld Amsterdam (met nl — Nederland als doelmarkt) of New Jersey, United States.', es: 'Escribe una ciudad o región, por ejemplo Madrid (con es — España como mercado) o New Jersey, United States.' },
   // Web address checks (engine.cjs).
   'Enter a full web address, e.g. https://example.com/page/': { nl: 'Vul een volledig webadres in, bijv. https://voorbeeld.nl/pagina/', es: 'Escribe una dirección web completa, p. ej. https://ejemplo.es/pagina/' },
   'Enter a public website address': { nl: 'Vul het adres van een openbare website in', es: 'Escribe la dirección de una web pública' },
@@ -69,6 +71,7 @@ const EXACT = {
 const PATTERNS = [
   [/^AI could not write the text: (.*)$/s, { nl: 'AI kon de tekst niet schrijven: $1', es: 'La IA no pudo escribir el texto: $1' }],
   [/^Not enough evidence in this check to write: (.*)$/s, { nl: 'Te weinig bewijs in deze check om te schrijven: $1', es: 'No hay pruebas suficientes en este análisis para escribir: $1' }],
+  [/^This search location is in (.+): put ([a-z]{2}) — (.+) first in the target market\.$/, { nl: 'Deze zoeklocatie ligt in $1: zet $2 — $3 als eerste in de doelmarkt.', es: 'Esta ubicación está en $1: pon $2 — $3 primero en el mercado.' }],
   [/^Search Console file: (.*)$/s, { nl: 'Search Console-bestand: $1', es: 'Archivo de Search Console: $1' }],
   [/^Use the e-mail address of your rank tracker \((.*)\)\.$/, { nl: 'Gebruik het e-mailadres van je rank tracker ($1).', es: 'Usa el email de tu rastreador de posiciones ($1).' }],
   [/^You used the (\d+) free Growth checks from your rank tracker for this week\. Try again in a few days\.$/, { nl: 'Je hebt de $1 gratis Growth-checks van je rank tracker voor deze week gebruikt. Probeer het over een paar dagen opnieuw.', es: 'Ya usaste los $1 análisis Growth gratuitos de tu rastreador de esta semana. Inténtalo dentro de unos días.' }],

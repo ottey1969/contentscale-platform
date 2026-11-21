@@ -14,6 +14,7 @@ const aiGap=require('./ai-gap.cjs');
 const contacts=require('./contacts.cjs');
 const {FORM_TEXTS,FORM_LANGS,formLang}=require('./form-texts.cjs');
 const {translateError}=require('./error-texts.cjs');
+const {readSearchLocation,locationError}=require('./search-location.cjs');
 const uiTexts=require('./ui-texts.cjs');
 const {buildContentPriorities}=require('./content-priorities.cjs');
 const schemaHelp=require('./schema-help.cjs');
@@ -1432,8 +1433,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const kw=clean(b.query,300),hasUrl=!!String(b.url||'').trim(),v=hasUrl?validatePublicUrl(b.url):{error:'NO_URL'};
   if(v.error&&!kw)return res.status(400).json({success:false,error:hasUrl?v.error:'Enter a keyword (search term) or the page address first.'});
   const entries=String(b.market||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),country=validCountries(entries)[0]||null,lang=String(b.language||'').trim()?validLanguage(b.language):null;
-  const location=String(b.search_location||'').trim(),localStates=statesIn(location);
-  if(location&&(location.length>120||localStates.length!==1||!US_STATES[localStates[0]]||(country&&country!=='US')))return res.status(400).json({success:false,error:'Choose a valid US state or city, for example New Jersey, United States.'});
+  const loc=readSearchLocation(b.search_location,validCountries(entries));
+  if(loc&&loc.error)return res.status(400).json({success:false,error:locationError(loc)});
+  const location=loc?loc.location:'';
   let html='';if(!v.error){try{html=String((await (engineDeps.fetchLive||fetchPublicGrowthHtml)(v.url))?.html||'')}catch(e){if(!kw)return res.status(503).json({success:false,error:'Your page could not be read publicly. Enter the search term yourself.'})}}
   const pageLang=((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'').toLowerCase();
   const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',location,
@@ -1496,22 +1498,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const countries=validCountries(entries),language=String(b.language||'').trim()?validLanguage(b.language):null;
   if(entries.length&&countries.length<entries.length){res.status(400).json({success:false,error:'Choose the market from the list, for example nl — Netherlands (several separated by commas).'});return undefined}
   if(String(b.language||'').trim()&&!language){res.status(400).json({success:false,error:'Choose the language from the list, for example Dutch.'});return undefined}
-  const rawLocation=String(b.search_location||'').trim();
-  let location=null;
-  if(rawLocation){
-   if(rawLocation.length>120||/[<>\r\n]/.test(rawLocation)){
-    res.status(400).json({success:false,error:'Enter a state or city, for example New Jersey, United States.'});return undefined;
-   }
-   const matchedStates=statesIn(rawLocation),state=matchedStates[0];
-   if(matchedStates.length!==1||!state||!US_STATES[state]||/\b(?:Canada|United Kingdom|Netherlands|Australia)\b/i.test(rawLocation)){
-    res.status(400).json({success:false,error:'Choose one US state or city and state, for example New Jersey, United States.'});return undefined;
-   }
-   if(countries.length&&countries[0]!=='US'){
-    res.status(400).json({success:false,error:'A US state or city requires United States as the first target market.'});return undefined;
-   }
-   location=rawLocation;
-  }
-  const selected=location&&countries.length===0?['US']:countries;
+  // A city or region in the first target market, in any country (owner 2026-11-21); a US state as before.
+  const loc=readSearchLocation(b.search_location,countries);
+  if(loc&&loc.error){res.status(400).json({success:false,error:locationError(loc)});return undefined}
+  const location=loc?loc.location:null;
+  const selected=location&&countries.length===0?[loc.country]:countries;
   return selected.length||language||location?{countries:selected,language,...(location?{location,location_source:'VISITOR_SELECTED'}:{})}:null;
  }
  // AI answers pasted before the start: at most one per AI system, checked like a paste on the result page.

@@ -76,9 +76,12 @@ async function runFreeGrowthResearch({url,query,market=null,gscRows=[],sitemapUr
   const {statesIn}=require('../growth-serp-quality.cjs');
   const {discoverGrowthCompetitorsWithFallback}=require('../growth-public-search-discovery.cjs');
   const lookup=options.searchLive||discoverGrowthCompetitorsWithFallback;
+  // Outside the US (owner 2026-11-21): Google in the first market's country and language, localised to the place.
+  const first=String((market.countries||[])[0]||'US').toUpperCase();
+  const {glOf}=require('../growth-search-locale.cjs'),{DEFAULT_LANGUAGE}=require('../rank-free/engine.cjs');
   options.searchLive=(args)=>{
-   const states=statesIn(market.location);
-   const local={...(args.market||{}),states,country:'us',location:market.location,source:'VISITOR_SELECTED_SEARCH_LOCATION'};
+   const us=first==='US',gl=us?'us':glOf(first),hl=us?'en':(market.language||DEFAULT_LANGUAGE[gl]||'en');
+   const local={...(args.market||{}),states:us?statesIn(market.location):[],country:gl,...(us?{}:{gl,hl}),location:market.location,source:'VISITOR_SELECTED_SEARCH_LOCATION'};
    return lookup({...args,market:local});
   };
  }
