@@ -917,7 +917,7 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
 // One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
 // One list for the editor: what to put into the content, from most to least important (owner 2026-11-19).
 var PRIO_TIER={MOST_IMPORTANT:'Most important',IMPORTANT:'Important',USEFUL:'Useful',OPTIONAL:'Optional'};
-var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact',LINK_OWN_PRICE:'Link to your price page'};
+var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact',LINK_OWN_PRICE:'Link to your price page',PRICE_ON_PAGE:'Already on your page — check',ON_SERVICE_PAGE:'Belongs on your service page'};
 // The outcome of the research in plain words (owner 2026-11-20: "alles in normale taal"), never a status code.
 function outcomeOf(s,d){var cov=d&&d.competitors&&d.competitors.coverage,
  items=((s.gaps&&s.gaps.items)||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'});
@@ -946,6 +946,7 @@ function prioritiesHtml(cp){
  });
  h+='</ol>';
  if((cp.observations||[]).length)h+='<details><summary>Research observations, not content advice ('+cp.observations.length+')</summary><ul>'+cp.observations.map(function(o){return '<li><span data-no-translate>'+esc(o.title)+'</span> — <small>'+esc(o.reason)+'</small></li>'}).join('')+'</ul></details>';
+ if(cp.trim_note)h+='<p class="muted">'+esc(cp.trim_note)+'</p>';
  if((cp.trim||[]).length)h+='<h3>What could be shorter or moved — does not answer this search</h3><p class="muted">Not deleted automatically. Check each section against what the searcher wants.</p><ol class="prio-list">'+
   cp.trim.map(function(t){return '<li class="prio-item prio-trim"><div class="prio-head"><strong>'+esc(t.heading)+'</strong> <span class="prio-action">Shorten or move</span>'+(t.words?' <small>'+esc(t.words)+' words</small>':'')+'</div><p><small>'+esc(t.reason)+'</small></p><p>'+esc(t.instruction)+'</p></li>'}).join('')+'</ol>';
  if((cp.keep||[]).length)h+='<details><summary>Keep as it is ('+cp.keep.length+')</summary><p class="muted">Only on your page; do not remove it while editing.</p><ul>'+cp.keep.map(function(k){return '<li>'+esc(k.heading)+'</li>'}).join('')+'</ul></details>';
@@ -963,6 +964,7 @@ function prioritiesText(cp){
   (x.evidence||[]).slice(0,5).forEach(function(e){L.push('   - Source: '+e.url)});
  });
  if((cp.observations||[]).length){L.push('','## Research observations, not content advice','');cp.observations.forEach(function(o){L.push('- '+o.title+' — '+o.reason+(o.sources&&o.sources[0]?' Source: '+o.sources[0]:''))})}
+ if(cp.trim_note)L.push('',cp.trim_note);
  if((cp.trim||[]).length){L.push('','## What could be shorter or moved — does not answer this search','');cp.trim.forEach(function(t){L.push('- '+t.heading+(t.words?' ('+t.words+' words)':'')+' — '+t.reason+' '+t.instruction)})}
  if((cp.keep||[]).length){L.push('','Keep as it is:');cp.keep.forEach(function(k){L.push('- '+k.heading)})}
  L.push('','How the order is calculated: '+cp.method,'');

@@ -114,9 +114,14 @@ function noiseReason(x){
  const single=x.rankingPages+x.aiSites.length<=1&&!x.evidenceCheck;
  if(single&&brandLine(t,x.sites||[]))return 'The competitor’s own brand line, not a topic.';
  if(single&&WE.test(t))return 'How one competitor describes itself, not a topic.';
+ // One competitor page, not even compared with this page: too little to call it advice (owner 2026-11-21: "zo veel punten").
+ if(single&&x.coverage==='UNKNOWN')return 'Only one competitor page has this, and it was not compared with your page.';
  return null;
 }
 // A price topic or price fact is answered on the own page that already states the price (see best-own-page.cjs).
+// Hiring the service (choosing a specialist, outsourcing, way of working, working together): from a guide page these
+// belong on the service page found for this question, not on the guide.
+const HIRE_TOPIC=/\b(?:specialist\w*|consultant\w*|consultancy|bureau\w*|agency|agencies|agencia\w*|uitbested\w*|inhuren|outsourc\w*|contratar|samenwerk\w*|werkwijze|aanpak|kiezen|kies|choose|choosing|hire|hiring)\b|GEO-(?:specialist|bureau|consultant|traject)/i;
 const PRICE_TOPIC=/\b(?:prijs|prijzen|kost|kosten|tarie[fv]\w*|price|prices|pricing|costs?|precios?|tarifas?|coste|costo)\b|prijzen|tarieven/i;
 
 function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
@@ -156,6 +161,8 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
  const observations=[];
  const kept=items.filter(x=>{const why=noiseReason(x);if(why){observations.push({title:x.title,reason:why,sources:x.evidence.map(e=>e.url)});return false}return true});
  const best=bestOwnPage&&bestOwnPage.status==='FOUND'&&bestOwnPage.url?bestOwnPage:null;
+ // The live page states a price now (for example added after this research ran): the price items are checks, not open work.
+ const onPage=bestOwnPage&&bestOwnPage.status==='THIS_PAGE_HAS_PRICE'?bestOwnPage:null;
  const scored=kept.map(x=>{
   const points=[];
   const add=(k,n=1)=>{if(n)points.push(WEIGHT[k]*n)};
@@ -166,8 +173,9 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
   const score=points.reduce((a,b)=>a+b,0);
   const needsFact=!!x.forceFact||BUSINESS_FACT.test(x.factText);
   const systems=aiSystemsFor(x.aiSites,aiGap);
-  const priceItem=!!best&&(x.id==='fact-price'||(x.kind==='TOPIC'&&PRICE_TOPIC.test(x.title)));
-  const action=priceItem?'LINK_OWN_PRICE':x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
+  const priceItem=(!!best||!!onPage)&&(x.id==='fact-price'||(x.kind==='TOPIC'&&PRICE_TOPIC.test(x.title)));
+  const hireItem=!priceItem&&!!best&&x.kind==='TOPIC'&&HIRE_TOPIC.test(x.title);
+  const action=priceItem?(best?'LINK_OWN_PRICE':'PRICE_ON_PAGE'):hireItem?'ON_SERVICE_PAGE':x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
   const why=[];
   if(x.rankingPages)why.push(x.rankingPages+' ranking page'+(x.rankingPages===1?' covers':'s cover')+' it');
   if(x.aiSites.length)why.push(x.aiSites.length+' page'+(x.aiSites.length===1?' cited by AI systems covers':'s cited by AI systems cover')+' it');
@@ -177,29 +185,33 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
   if(x.fragments>=2)why.push(x.fragments+' fragments of competitor text to work from');
   if(x.kind==='TOPIC')why.push(x.evidenceCheck?'Passed the evidence check (two ranking pages)':'Not confirmed by the evidence check');
   // Separate sentences, with the topic in quotes, so the page can show each sentence in Dutch or Spanish.
-  const parts=action==='LINK_OWN_PRICE'?['Your price page: '+best.url,'Answer “'+x.title+'” there, not on this page.','On this page, add one short line that links to it.']:[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
+  const parts=action==='ON_SERVICE_PAGE'?['This is about hiring you, so it belongs on your service page: '+best.url,'Add “'+x.title+'” there, not on this page (check that page with this search term).']:action==='PRICE_ON_PAGE'?['Your page now states a price: “'+String(onPage.excerpt||'').trim()+'”.','Check that it answers “'+x.title+'” fully; add only what is still missing, with your own confirmed facts.']:action==='LINK_OWN_PRICE'?['Your price page: '+best.url,'Answer “'+x.title+'” there, not on this page.','On this page, add one short line that links to it.']:[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
    action==='ADD_ELEMENT'?'Add this page element yourself: “'+x.title+'”.':
    action==='ADD_OWN_FACT'?'Add your own “'+x.title+'” only if you can confirm it.':
    'Add a section that answers “'+x.title+'” in your own words.'];
-  if(needsFact&&action!=='ADD_OWN_FACT'&&action!=='LINK_OWN_PRICE')parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
+  if(needsFact&&!['ADD_OWN_FACT','LINK_OWN_PRICE','PRICE_ON_PAGE','ON_SERVICE_PAGE'].includes(action))parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
   parts.push('Do not copy the example pages.');
   const instruction=parts.join(' ');
-  return {kind:x.kind,id:x.id,title:x.title,action,where:action==='LINK_OWN_PRICE'?'Where the price question comes up on this page':x.where,score,tier:tierOf(score),verified:!researchOnly&&x.evidenceCheck,
+  return {kind:x.kind,id:x.id,title:x.title,action,where:action==='LINK_OWN_PRICE'?'Where the price question comes up on this page':action==='ON_SERVICE_PAGE'?'On your service page':x.where,score,tier:tierOf(score),verified:!researchOnly&&x.evidenceCheck,
    needs_business_fact:needsFact,instruction,instruction_parts:parts,why,
    signals:{ranking_pages:x.rankingPages,ai_cited_sites:x.aiSites.length,ai_systems:systems,coverage:x.coverage,competitor_text_fragments:x.fragments,
     shares_search_words:x.searchWords,passed_evidence_check:x.evidenceCheck},
    evidence:x.evidence};
  });
- const trim=trimCandidates({report,aiGap,items:gaps.items||[],queryWords,summaryGaps:gaps});
- scored.sort((a,b)=>b.score-a.score||Number(b.verified)-Number(a.verified)||a.title.localeCompare(b.title));
+ // A question that belongs on another own page says nothing about which sections of this page are needed (owner
+ // 2026-11-21: the guide's own tool features and GEO pillars were advised to shorten for a hire question).
+ const trim=best?[]:trimCandidates({report,aiGap,items:gaps.items||[],queryWords,summaryGaps:gaps});
+ const trim_note=best?'Nothing is advised to shorten: this page was not checked against its own question. This search question belongs on '+best.url:null;
+ const later=x=>x.action==='PRICE_ON_PAGE'?2:x.action==='ON_SERVICE_PAGE'?1:0;
+ scored.sort((a,b)=>later(a)-later(b)||b.score-a.score||Number(b.verified)-Number(a.verified)||a.title.localeCompare(b.title));
  scored.forEach((x,i)=>{x.rank=i+1});
  return {status:!scored.length&&!trim.length?'NOTHING_FOUND':researchOnly?'RESEARCH_ONLY':'READY_FOR_EDITORIAL_REVIEW',publish_allowed:false,decision,
   method:'Score = 3 × ranking pages that cover it + 2 × pages cited by AI systems that cover it + 2 if missing on your page (1 if partly) '+
    '+ 1 with competitor text to work from + 1 if it shares words with the search term + 2 if it passed the evidence check. '+
    'A count of observed research signals, not a traffic prediction.',
   best_own_page:best?{url:best.url,excerpt:best.excerpt||null,
-   line:'Best match on your site for this question: '+best.url+' (it already states your price). Answer the price there; on this page, add one short line that links to it.'}:null,
-  items:scored.map(({rank,...x})=>({rank,...x})),observations,trim,keep:(gaps.unique_content||[]).filter(x=>!trim.some(t=>t.heading===x.heading)).map(x=>({heading:x.heading}))};
+   line:'Best match on your site for this question: '+best.url+' (it already states your price). Answer the price there; on this page, add one short line that links to it.'+(scored.some(x=>x.action==='ON_SERVICE_PAGE')?' Topics about hiring you are marked “Belongs on your service page”: add them there.':'')}:null,
+  items:scored.map(({rank,...x})=>({rank,...x})),observations,trim,trim_note,keep:(gaps.unique_content||[]).filter(x=>!trim.some(t=>t.heading===x.heading)).map(x=>({heading:x.heading}))};
 }
 
 // Tracker Growth uses the same list from its own report (owner 2026-11-19: "Growth has the same set-up as Free").

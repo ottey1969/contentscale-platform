@@ -11,7 +11,7 @@ const {marketOf}=require('../prewrite-existing-page.cjs');
 const MAX_READ=3;
 const fold=s=>String(s||'').normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const words=s=>fold(s).split(/[^\p{L}\p{N}]+/u).filter(w=>w.length>=2);
-const PRICE_Q=/\b(?:wat kost|kost(?:en|te)?|prijs|prijzen|tarief|tarieven|hoeveel|cost|costs|price|prices|pricing|rates?|fees?|cu[aá]nto|cuesta|cuestan|precio|precios|tarifas?|coste|costo)\b/i;
+const PRICE_Q=/\b(?:inhuren|uitbesteden|hire|hiring|outsourc\w*|contratar|wat kost|kost(?:en|te)?|prijs|prijzen|tarief|tarieven|hoeveel|cost|costs|price|prices|pricing|rates?|fees?|cu[aá]nto|cuesta|cuestan|precio|precios|tarifas?|coste|costo)\b/i;
 const isPriceQuestion=q=>PRICE_Q.test(String(q||''));
 // Words that say nothing about the subject: question, price and provider words in nl/es/en.
 const NOISE=new Set(('wat kost kosten kostte prijs prijzen tarief tarieven hoeveel hoe waarom welke beste goedkoop een de het van voor bij in op met per je mijn ik is zijn om te en of inhuren huren laten ' +
@@ -23,6 +23,7 @@ const SPELLED={geo:'generative engine optimization',aeo:'answer engine optimizat
 const PROVIDER=/\b(?:specialist|specialists|consultant|consultants|consultancy|consultor|especialista|expert|experto|adviseur|bureau|agency|agencia|inhuren|hire|contratar)\b/;
 const PRICE_PATH=/\b(?:prijs|prijzen|tarief|tarieven|kosten|pricing|prices|price|precios|tarifas|precio)\b/;
 
+const headOf=h=>{const t=String(h||'');return [(t.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)||[])[1],(t.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)||[])[1]].filter(Boolean).join(' ').replace(/<[^>]+>/g,' ')};
 function subjectWords(query){
  return [...new Set(words(query).filter(w=>!NOISE.has(w)))];
 }
@@ -57,20 +58,27 @@ async function findBestOwnPage({pageUrl,query,ownHtml=null,fetchHtml,max=MAX_REA
  if(ownHtml==null){try{ownHtml=String((await fetchHtml(pageUrl))?.html||'')}catch{ownHtml=''}}
  if(!String(ownHtml).trim())return {status:'OWN_PAGE_UNREADABLE'};
  const own=factsOf(ownHtml);
- if(own.price)return {status:'THIS_PAGE_HAS_PRICE',excerpt:own.price.slice(0,220)};
+ // A guide that mentions the price is not the service page (owner 2026-11-21: after a price line was added to
+ // /ai-zichtbaarheid/, the hire question still belongs on the GEO service page). Only a page that is itself about the
+ // service keeps the question; from a guide, a linked service page with a price wins.
+ const servicePage=PROVIDER.test(fold(pageUrl+' '+headOf(ownHtml)));
+ if(own.price&&servicePage)return {status:'THIS_PAGE_HAS_PRICE',excerpt:own.price.slice(0,220)};
  const subject=subjectWords(query),market=marketOf(pageUrl);
  const links=ownLinks(ownHtml,pageUrl).filter(l=>marketOf(l.url)===market).map(l=>({...l,...scoreLink(l,subject)})).filter(l=>l.matched.length);
  // A subject word that few links have says more than one that many links have ("geo" against "ai").
  const freq=new Map();for(const l of links)for(const w of l.matched)freq.set(w,(freq.get(w)||0)+1);
  for(const l of links)l.score+=l.matched.reduce((a,w)=>a+1/freq.get(w),0);
- const candidates=links.sort((a,b)=>b.score-a.score||a.url.length-b.url.length).slice(0,max);
+ // From a guide that names a price: only links to the service or its price ("GEO-specialist inhuren", "mijn tarief").
+ const pool=own.price?links.filter(l=>{const t=fold(decodeURIComponent(l.url)+' '+l.texts.join(' ')).replace(/[^\p{L}\p{N}]+/gu,' ');return PROVIDER.test(t)||PRICE_PATH.test(t)}):links;
+ const candidates=pool.sort((a,b)=>b.score-a.score||a.url.length-b.url.length).slice(0,max);
  const checked=[];
  for(const c of candidates){
   let html='';try{html=String((await fetchHtml(c.url))?.html||'')}catch{}
   checked.push(c.url);
   const f=html?factsOf(html):{};
-  if(f.price)return {status:'FOUND',url:c.url,excerpt:f.price.slice(0,220),matched_words:c.matched,checked};
+  if(f.price)return {status:'FOUND',url:c.url,excerpt:f.price.slice(0,220),matched_words:c.matched,checked,also_on_this_page:!!own.price};
  }
+ if(own.price)return {status:'THIS_PAGE_HAS_PRICE',excerpt:own.price.slice(0,220)};
  return {status:'NOT_FOUND',checked};
 }
 
