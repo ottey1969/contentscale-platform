@@ -92,3 +92,35 @@ test('price now on the checked page itself (after an edit): price items say so a
  assert.equal(cp.best_own_page,null);
  const row=ROWS.find(r=>r[0]==='Already on your page — check');assert.ok(row&&row[1]&&row[2]);
 });
+test('guide page that now mentions the price still points to the service page for a hire question (owner 2026-11-21)',async()=>{
+ const guide=body('<h1>AI-zichtbaarheid</h1><p>Mijn tarief begint vanaf €297. Details bij <a href="/generative-engine-optimization-geo/#tarief">mijn tarief op de GEO-pagina</a> en <a href="/ai-overview-optimalisatie/">AI Overview</a>.</p>');
+ const r=await findBestOwnPage({pageUrl:OWN,query:Q,ownHtml:guide,fetchHtml});
+ assert.equal(r.status,'FOUND');assert.equal(r.url,GEO);assert.equal(r.also_on_this_page,true);
+ // The service page itself, checked with the same question, keeps its own price.
+ const service=body('<h1>GEO-specialist inhuren</h1><p>Mijn tarief: vanaf €297.</p><a href="/ai-zichtbaarheid/">gids</a>');
+ assert.equal((await findBestOwnPage({pageUrl:GEO,query:Q,ownHtml:service,fetchHtml})).status,'THIS_PAGE_HAS_PRICE');
+});
+test('hire topics point to the service page; one-site topics not compared with the page are observations',async()=>{
+ const s2={...summary,gaps:{items:[...summary.gaps.items,
+  topic('10','Hoe kies je de juiste GEO-specialist en waar let je op','www.estrelle.nl',{priority:{sources:3},recommended:true,examples:[{site:'www.estrelle.nl',heading:'Hoe kies je een GEO-specialist?'},{site:'customerimpact.be',heading:'Waar let je op'}]}),
+  topic('11','Zelf GEO uitvoeren versus uitbesteden aan een specialist','timmermansmedia.nl',{priority:{sources:2}}),
+  topic('12','GEO is geen trucje (helaas)','wessels-teksten.nl',{coverage:'UNKNOWN'}),
+  topic('13','Hoe meet je AI-citaties per maand?','a.example',{priority:{sources:2}})]}};
+ const best=await findBestOwnPage({pageUrl:OWN,query:Q,fetchHtml});
+ const cp=buildContentPriorities({summary:s2,aiGap:null,bestOwnPage:best});
+ for(const id of ['10','11']){const x=cp.items.find(i=>i.id===id);assert.equal(x.action,'ON_SERVICE_PAGE',x.title);assert.ok(x.instruction.includes(GEO));assert.match(x.instruction,/not on this page/)}
+ assert.equal(cp.items.find(i=>i.id==='13').action,'ADD','a topic for this page stays');
+ const last=cp.items.filter(i=>i.action==='ON_SERVICE_PAGE').map(i=>i.rank),open=cp.items.filter(i=>!['ON_SERVICE_PAGE','LINK_OWN_PRICE','PRICE_ON_PAGE'].includes(i.action)).map(i=>i.rank);
+ assert.ok(Math.min(...last)>Math.max(...open),'work for another page comes after work for this page');
+ assert.ok(!cp.items.some(i=>i.id==='12'));assert.ok(cp.observations.some(o=>o.title==='GEO is geen trucje (helaas)'&&/not compared/.test(o.reason)));
+ assert.ok(ROWS.find(r=>r[0]==='Belongs on your service page'));
+});
+test('no shorten advice when the question belongs on another own page',async()=>{
+ const report={competitor_overview:{status:'OBSERVED',ranking_pages:[],topics:[],this_page_sections:[{heading:'Intro',words:50},{heading:'📊 GSC-import',words:21},{heading:'Pijler 1 — Entiteitsopbouw',words:33}]}};
+ const plain=buildContentPriorities({summary,aiGap:null,report});
+ assert.ok(plain.trim.length>=1,'normally shown');
+ const best=await findBestOwnPage({pageUrl:OWN,query:Q,fetchHtml});
+ const cp=buildContentPriorities({summary,aiGap:null,report,bestOwnPage:best});
+ assert.deepEqual(cp.trim,[]);assert.match(cp.trim_note,/belongs on/);
+ assert.ok(ROWS.find(r=>r[0]==='Nothing is advised to shorten: this page was not checked against its own question. This search question belongs on {u}'));
+});
