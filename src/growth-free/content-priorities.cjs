@@ -156,6 +156,8 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
  const observations=[];
  const kept=items.filter(x=>{const why=noiseReason(x);if(why){observations.push({title:x.title,reason:why,sources:x.evidence.map(e=>e.url)});return false}return true});
  const best=bestOwnPage&&bestOwnPage.status==='FOUND'&&bestOwnPage.url?bestOwnPage:null;
+ // The live page states a price now (for example added after this research ran): the price items are checks, not open work.
+ const onPage=bestOwnPage&&bestOwnPage.status==='THIS_PAGE_HAS_PRICE'?bestOwnPage:null;
  const scored=kept.map(x=>{
   const points=[];
   const add=(k,n=1)=>{if(n)points.push(WEIGHT[k]*n)};
@@ -166,8 +168,8 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
   const score=points.reduce((a,b)=>a+b,0);
   const needsFact=!!x.forceFact||BUSINESS_FACT.test(x.factText);
   const systems=aiSystemsFor(x.aiSites,aiGap);
-  const priceItem=!!best&&(x.id==='fact-price'||(x.kind==='TOPIC'&&PRICE_TOPIC.test(x.title)));
-  const action=priceItem?'LINK_OWN_PRICE':x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
+  const priceItem=(!!best||!!onPage)&&(x.id==='fact-price'||(x.kind==='TOPIC'&&PRICE_TOPIC.test(x.title)));
+  const action=priceItem?(best?'LINK_OWN_PRICE':'PRICE_ON_PAGE'):x.kind==='PAGE_ELEMENT'?'ADD_ELEMENT':x.kind==='FACT'?'ADD_OWN_FACT':x.coverage==='PARTIAL'?'IMPROVE':'ADD';
   const why=[];
   if(x.rankingPages)why.push(x.rankingPages+' ranking page'+(x.rankingPages===1?' covers':'s cover')+' it');
   if(x.aiSites.length)why.push(x.aiSites.length+' page'+(x.aiSites.length===1?' cited by AI systems covers':'s cited by AI systems cover')+' it');
@@ -177,11 +179,11 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
   if(x.fragments>=2)why.push(x.fragments+' fragments of competitor text to work from');
   if(x.kind==='TOPIC')why.push(x.evidenceCheck?'Passed the evidence check (two ranking pages)':'Not confirmed by the evidence check');
   // Separate sentences, with the topic in quotes, so the page can show each sentence in Dutch or Spanish.
-  const parts=action==='LINK_OWN_PRICE'?['Your price page: '+best.url,'Answer “'+x.title+'” there, not on this page.','On this page, add one short line that links to it.']:[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
+  const parts=action==='PRICE_ON_PAGE'?['Your page now states a price: “'+String(onPage.excerpt||'').trim()+'”.','Check that it answers “'+x.title+'” fully; add only what is still missing, with your own confirmed facts.']:action==='LINK_OWN_PRICE'?['Your price page: '+best.url,'Answer “'+x.title+'” there, not on this page.','On this page, add one short line that links to it.']:[action==='IMPROVE'?'Extend your existing section with a clear answer about “'+x.title+'”.':
    action==='ADD_ELEMENT'?'Add this page element yourself: “'+x.title+'”.':
    action==='ADD_OWN_FACT'?'Add your own “'+x.title+'” only if you can confirm it.':
    'Add a section that answers “'+x.title+'” in your own words.'];
-  if(needsFact&&action!=='ADD_OWN_FACT'&&action!=='LINK_OWN_PRICE')parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
+  if(needsFact&&action!=='ADD_OWN_FACT'&&action!=='LINK_OWN_PRICE'&&action!=='PRICE_ON_PAGE')parts.push('Only if this is true for your business: use your own confirmed facts, never the numbers or claims of other sites.');
   parts.push('Do not copy the example pages.');
   const instruction=parts.join(' ');
   return {kind:x.kind,id:x.id,title:x.title,action,where:action==='LINK_OWN_PRICE'?'Where the price question comes up on this page':x.where,score,tier:tierOf(score),verified:!researchOnly&&x.evidenceCheck,
@@ -191,7 +193,7 @@ function buildContentPriorities({summary,aiGap,report,bestOwnPage=null}={}){
    evidence:x.evidence};
  });
  const trim=trimCandidates({report,aiGap,items:gaps.items||[],queryWords,summaryGaps:gaps});
- scored.sort((a,b)=>b.score-a.score||Number(b.verified)-Number(a.verified)||a.title.localeCompare(b.title));
+ scored.sort((a,b)=>(a.action==='PRICE_ON_PAGE')-(b.action==='PRICE_ON_PAGE')||b.score-a.score||Number(b.verified)-Number(a.verified)||a.title.localeCompare(b.title));
  scored.forEach((x,i)=>{x.rank=i+1});
  return {status:!scored.length&&!trim.length?'NOTHING_FOUND':researchOnly?'RESEARCH_ONLY':'READY_FOR_EDITORIAL_REVIEW',publish_allowed:false,decision,
   method:'Score = 3 × ranking pages that cover it + 2 × pages cited by AI systems that cover it + 2 if missing on your page (1 if partly) '+

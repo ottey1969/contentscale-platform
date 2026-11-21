@@ -80,3 +80,15 @@ test('result page and brief show the best match, in EN/NL/ES',()=>{
  // The browser sees the URL as {u}: the brief line translates.
  const nl=table().nl;assert.ok(nl['Best match on your site for this question: {u} (it already states your price). Answer the price there; on this page, add one short line that links to it.']);
 });
+test('price now on the checked page itself (after an edit): price items say so and drop below open work',()=>{
+ const now={status:'THIS_PAGE_HAS_PRICE',excerpt:'Mijn tarief begint vanaf €297 en is maandelijks opzegbaar.'};
+ const cp=buildContentPriorities({summary,aiGap,bestOwnPage:now});
+ const priceItems=cp.items.filter(x=>x.id==='fact-price'||x.id==='1');
+ assert.equal(priceItems.length,2);
+ for(const x of priceItems){assert.equal(x.action,'PRICE_ON_PAGE',x.title);assert.match(x.instruction,/Your page now states a price/);assert.match(x.instruction,/vanaf €297/);
+  assert.doesNotMatch(x.instruction,/Add a section|Add your own/)}
+ const open=cp.items.filter(x=>x.action!=='PRICE_ON_PAGE');
+ assert.ok(open.length&&Math.max(...priceItems.map(x=>x.rank))>Math.max(...open.map(x=>x.rank)),'checked items come after open work');
+ assert.equal(cp.best_own_page,null);
+ const row=ROWS.find(r=>r[0]==='Already on your page — check');assert.ok(row&&row[1]&&row[2]);
+});
