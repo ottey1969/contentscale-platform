@@ -57,7 +57,7 @@ test('the list says with or without Search Console; the page keeps both apart in
  assert.equal(list.find(r=>r.id===99).search_console,false);
  assert.equal(list.find(r=>r.id!==99).search_console,true);
  const page=(await s.req('GET','/gsc',null,OWNER)).body;
- for(const id of ['secWith','secWithout','secPositions','listWith','listWithout','deleteSelected'])assert.match(page,new RegExp('id="'+id+'"'),id);
+ for(const id of ['secWith','secWithout','secPositions','listWith','listWithout','deleteSelected','progress','progressText'])assert.match(page,new RegExp('id="'+id+'"'),id);
  assert.ok(page.indexOf('id="gscFiles"')>page.indexOf('id="secWith"')&&page.indexOf('id="gscFiles"')<page.indexOf('id="secWithout"'),'Search Console files are in section A');
  assert.ok(page.indexOf('id="auditDomain"')>page.indexOf('id="secWithout"'),'the domain is in section B');
  for(const js of page.match(/<script>([\s\S]*?)<\/script>/g).map(x=>x.slice(8,-9)))assert.doesNotThrow(()=>new Function(js),'owner page script parses');

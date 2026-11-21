@@ -82,10 +82,12 @@ function pageAudit(html,url,{xRobotsTag=null}={}){
 function siteOrigin(domain){
  const raw=String(domain||'').trim();if(!raw||raw.length>300)throw Object.assign(Error('INVALID_URL'),{code:'INVALID_URL'});
  const u=validateUrl(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)?raw:'https://'+raw);
- return {origin:u.origin,host:u.hostname.toLowerCase()};
+ // A path ("/en/") limits the read to that part of the site.
+ return {origin:u.origin,host:u.hostname.toLowerCase(),path:u.pathname.replace(/[^/]*$/,'')||'/'};
 }
 async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurrency=6,maxSitemaps=10,timeout=8000}={}){
- const {origin,host}=siteOrigin(domain);
+ const {origin,host,path}=siteOrigin(domain);
+ const inPath=u=>{try{return new URL(u).pathname.startsWith(path)}catch{return false}};
  const sameHost=u=>{try{const x=new URL(u);return x.hostname.toLowerCase()===host&&(x.protocol==='https:'||x.protocol==='http:')}catch{return false}};
  const clean=u=>{try{const x=new URL(u,origin);x.hash='';if(x.protocol==='http:')x.protocol='https:';return x.href}catch{return null}};
  // robots.txt
@@ -106,15 +108,16 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
  }
  // No sitemap: the home page and the links on it.
  if(!found.length){
-  try{const r=await fetchImpl(origin+'/',{limit:600000,timeout,redirects:3});
-   found.push({url:clean(r.final_url||origin+'/'),lastmod:null});seenUrls.add(found[0].url);
+  try{const r=await fetchImpl(origin+path,{limit:600000,timeout,redirects:3});
+   found.push({url:clean(r.final_url||origin+path),lastmod:null});seenUrls.add(found[0].url);
    for(const t of tags(r.html,'a')){const href=attrOf(t,'href');if(!href||/^(mailto|tel|javascript):/i.test(href))continue;
     const c=clean(new URL(href,r.final_url||origin+'/').href);if(c&&sameHost(c)&&!seenUrls.has(c)){seenUrls.add(c);found.push({url:c,lastmod:null})}}
    source='HOME_PAGE_LINKS';
   }catch{}
  }
- const pages=[],notCrawled=[],lastmod=new Map();let limited=0;
+ const pages=[],notCrawled=[],lastmod=new Map();let limited=0,outside=0;
  for(const x of found){
+  if(!inPath(x.url)){outside++;continue}
   const u=new URL(x.url);
   if(!robotsAllows(robots,u.pathname+u.search)){notCrawled.push({url:x.url,reason:'ROBOTS_TXT'});continue}
   if(pages.length>=max){limited++;continue}
@@ -132,7 +135,7 @@ async function crawlSite({domain,fetchImpl=fetchPublicGrowthHtml,max=150,concurr
   const by=new Map();for(const [u,a] of audits){const k=a[field].toLowerCase();if(!k)continue;if(!by.has(k))by.set(k,[]);by.get(k).push(u)}
   for(const us of by.values())if(us.length>1)for(const u of us){const a=audits.get(u);a.issues.push(code);a[field+'_shared_with']=us.length-1}
  }
- return {origin,host,robots:{found:robotsFound,error:robotsError,rules:robots.rules.length},sitemap:{source,sitemaps_read:read,urls_found:found.length},
+ return {origin,host,path,outside_path:outside,robots:{found:robotsFound,error:robotsError,rules:robots.rules.length},sitemap:{source,sitemaps_read:read,urls_found:found.length},
   pages,statuses,audits,lastmod,not_crawled:notCrawled,not_crawled_limit:limited,crawled_at:new Date().toISOString()};
 }
 

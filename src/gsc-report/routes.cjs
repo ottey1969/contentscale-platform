@@ -60,7 +60,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
     if(!keywords.length)return res.status(400).json({success:false,error:'Add at least one search term for the positions.'});
     positionsP=audit.checkPositions({keywords,host,gl:market.gl,hl:market.hl,key:serperKey,fetchImpl}).then(r=>({...r,market:{gl:market.gl,hl:market.hl,country_name:market.country_name,language_name:market.language_name}}));
    }
-   if(site){crawlP=audit.crawlSite({domain:site.origin,fetchImpl:siteReader});speedP=audit.fieldData({origin:site.origin,key:pagespeedKey,fetchImpl})}
+   if(site){crawlP=audit.crawlSite({domain,fetchImpl:siteReader});speedP=audit.fieldData({origin:site.origin,key:pagespeedKey,fetchImpl})}
    const crawl=crawlP?await crawlP:null;
    const report=analyze({uploads,manualPages:[...manual,...(crawl?crawl.pages.map(url=>({url,source:'CRAWL'})):[])],site:String(b.site||'')||(site?site.host:'')});
    if(!report.pages.length&&!report.queries.total&&!report.countries.length)
@@ -87,7 +87,8 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
   if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
   const b=req.body||{},files=(Array.isArray(b.files)?b.files:[]).filter(f=>f&&f.content_base64),domain=String(b.domain||'').trim();
   if(!files.length&&!domain)return res.status(400).json({success:false,error:'Enter a domain or add a Search Console export first.'});
-  try{const r=await suggestTerms({files,domain,fetchImpl:siteReader});res.json({success:true,...r})}
+  let language=String(b.language||'').trim().toLowerCase();if(!language&&b.country){const m=readMarket(b.country);if(!m.error)language=m.hl}
+  try{const r=await suggestTerms({files,domain,language,fetchImpl:siteReader});res.json({success:true,...r})}
   catch(e){if(e&&(e.code==='INVALID_URL'||e.code==='PUBLIC_HTTPS_URL_REQUIRED'))return res.status(400).json({success:false,error:'Enter a public https domain, such as example.com.'});
    console.error('[gsc-report] suggest failed',e.message);res.status(500).json({success:false,error:'No search terms could be suggested.'})}
  });
@@ -146,6 +147,10 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .btn{display:inline-block;background:#4338ca;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .btn.big{padding:12px 20px;font-size:15px}.muted{color:#64748b;font-size:13px}details{margin-top:8px}summary{cursor:pointer;color:#4338ca;font-weight:600}
 .flag{color:#b91c1c;font-weight:600}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes slide{0%{left:-40%}100%{left:100%}}@keyframes flash{0%{box-shadow:0 0 0 4px #4338ca}100%{box-shadow:0 0 0 0 transparent}}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+#progress{margin:10px 0 0;max-width:560px}#progress .bar{position:relative;height:8px;background:#e0e7ff;border-radius:999px;overflow:hidden}#progress .bar span{position:absolute;top:0;bottom:0;width:40%;background:#4338ca;border-radius:999px;animation:slide 1.4s ease-in-out infinite}
+#progress p{margin:6px 0 0;font-size:14px;color:#334155}.flash{animation:flash 1.6s ease-out 2}
 .sec{border:2px solid #e2e8f0;border-radius:12px;padding:12px 16px 16px;margin:18px 0}.sec legend{font-weight:800;padding:0 8px;font-size:16px}.sec.with{border-color:#93c5fd;background:#f8fbff}.sec.without{border-color:#fdba74;background:#fffaf5}.sec.pos{border-color:#cbd5e1}div.sec h3{margin-top:0}.live{font-size:13px;margin-top:4px;color:#7c2d12}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .cta{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border-color:#c7d2fe}.foot{color:#64748b;font-size:13px;text-align:center;margin-top:28px}
 @media(max-width:700px){.ptbl thead{display:none}.ptbl,.ptbl tbody,.ptbl tr,.ptbl td{display:block;width:100%}
@@ -168,7 +173,8 @@ try{var r=await fetch('/api/free-growth/admin/login',{method:'POST',credentials:
 var d=await r.json();if(!d.success)throw Error(d.error||'Sign-in failed');location.reload()}catch(err){s.textContent=err.message}}</script>`);
 }
 
-const pathOf=u=>{try{const x=new URL(u);return (x.pathname+x.search)||'/'}catch{return u}};
+// Shown readable (Arabic and other scripts are percent-encoded in a URL); the link itself keeps the real URL.
+const pathOf=u=>{try{const x=new URL(u),p=(x.pathname+x.search)||'/';try{return decodeURI(p)}catch{return p}}catch{return u}};
 const nf=(lang,n,o={})=>n==null?'—':new Intl.NumberFormat(lang==='nl'?'nl-NL':lang==='es'?'es-ES':'en-GB',o).format(n);
 const pct=(lang,n)=>n==null?'—':nf(lang,n,{style:'percent',maximumFractionDigits:2});
 const pos=(lang,n)=>n==null?'—':nf(lang,n,{maximumFractionDigits:1});
@@ -275,6 +281,7 @@ function reportPage(row,{owner,config,growthPath}){
  const crawled=C?`<div class="card"><h2>${esc(A.read_title)}</h2><ul><li>${esc(C.origin)}</li><li>${esc(C.robots.found?A.robots_found.replace('{n}',nf(lang,C.robots.rules)):A.robots_none)}</li>
   <li>${esc(A.src[C.sitemap.source]||'')} ${esc(A.counts.replace('{l}',nf(lang,C.sitemap.urls_found)).replace('{r}',nf(lang,C.pages_read)))}</li>
   ${C.not_crawled_count?`<li>${esc(A.not_crawled.replace('{n}',nf(lang,C.not_crawled_count)))}<ul class="muted">${C.not_crawled.map(x=>'<li class="url">'+esc(pathOf(x.url))+'</li>').join('')}</ul></li>`:''}
+  ${C.path&&C.path!=='/'?`<li>${esc(A.path_only.replace('{p}',C.path).replace('{n}',nf(lang,C.outside_path)))}</li>`:''}
   ${C.not_crawled_limit?`<li>${esc(A.limit.replace('{n}',nf(lang,C.not_crawled_limit)))}</li>`:''}</ul>
   ${crawlOnly?`<h3>${esc(A.unknown_title)}</h3><p class="muted">${esc(A.unknown)}</p><h3>${esc(t.method_title)}</h3><p class="muted">${esc(A.method)}${k.urls_checked!=null?esc(t.live.method):''}</p>`:''}</div>`:'';
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
@@ -283,7 +290,7 @@ function reportPage(row,{owner,config,growthPath}){
 }
 
 const {COUNTRIES}=require('../rank-free/engine.cjs');
-const COUNTRY_OPTIONS=(()=>{const dn=new Intl.DisplayNames(['en'],{type:'region'});return COUNTRIES.map(c=>[c,dn.of(c.toUpperCase())||c]).sort((a,b)=>a[1].localeCompare(b[1])).map(([c,n])=>`<option value="${c}"${c==='nl'?' selected':''}>${n}</option>`).join('')})();
+const COUNTRY_OPTIONS=(()=>{const dn=new Intl.DisplayNames(['en'],{type:'region'});return COUNTRIES.map(c=>[c,dn.of(c.toUpperCase())||c]).sort((a,b)=>a[1].localeCompare(b[1])).map(([c,n])=>`<option value="${c}">${n}</option>`).join('')})();
 function ownerPage(config,api,base){
  return shell('en','Search Console reports',`<div class="top"><div class="wrap"><small style="opacity:.8;letter-spacing:.08em;text-transform:uppercase;font-weight:700">ContentScale · Owner</small><h1>Search Console reports</h1>
 <div class="meta">Upload the Search Console export of any site, add pages by hand, and send the company a private link. Signed in as owner.</div></div></div>
@@ -305,16 +312,17 @@ function ownerPage(config,api,base){
 <p class="muted">Fill in A, B or both. With both, the Search Console numbers stay and the public facts are added per page.</p></fieldset>
 <fieldset id="secPositions" class="sec pos"><legend>Positions in Google (optional, for A and B)</legend>
 <p class="muted">Suggested search terms come from your Search Console files when you add them, otherwise from the H1 and title of the site's pages. Check them before you make the report: only then is anything searched.</p>
-<label><input type="checkbox" id="posOn"> Look up positions in Google for these search terms (Serper: up to 3 paid searches per term)</label>
+<label><input type="checkbox" id="posOn"> <b>Paid:</b> look up positions in Google for these search terms (Serper: up to 3 searches per term). Suggesting terms is free and never turns this on.</label>
 <div class="grid2" style="margin-top:6px"><label>Search terms (one per line, at most 10) <button type="button" id="suggestTerms" class="btn" style="margin-left:6px">Suggest search terms</button><br><textarea id="posTerms" rows="4" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px" placeholder="saudi stock trading app"></textarea></label>
-<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px">${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
+<div id="termSources" class="muted" style="grid-column:1/-1;font-size:13px"></div><div><label>Country<br><select id="posCountry" style="padding:9px;border-radius:8px"><option value="" selected>— choose a country —</option>${COUNTRY_OPTIONS}</select></label><br><label>Language (2 letters, optional)<br><input id="posLang" maxlength="2" placeholder="ar" style="width:70px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label></div></div>
 </fieldset>
 <h3>Live check</h3><label><input type="checkbox" id="checkUrls" checked> Check every URL live: does it redirect (301/302) and to where, or is it gone (404/410)?</label>
 <p class="muted">Each URL is requested once (public https only, at most 150). A site that blocks the request is shown as not checked.</p>
 <h3>Free Growth for the recipient</h3><label><input type="checkbox" id="growthOn"> Let the company research pages in Free Growth from the report</label>
 <label style="margin-left:12px">checks <input id="growthChecks" type="number" min="1" max="20" value="3" style="width:70px;padding:6px;border:1px solid #cbd5e1;border-radius:8px"></label>
 <p class="muted">An invitation is made with this number of checks; it ends with the report. Without it, the company sees your contact button; you always see a Free Growth link per page.</p>
-<p><button class="btn big" type="submit" id="go">Make the report</button> <span id="st" class="muted" role="status"></span></p></form>
+<p><button class="btn big" type="submit" id="go">Make the report</button> <span id="st" class="muted" role="status"></span></p>
+<div id="progress" hidden aria-live="polite"><div class="bar"><span></span></div><p id="progressText"></p></div></form>
 <div id="made"></div></div>
 <div class="card"><h2>Your reports</h2><p><button class="btn" style="background:#b91c1c" type="button" id="deleteSelected" disabled>Delete selected</button> <span id="delSt" class="muted" role="status"></span></p>
 <div id="listWith" class="sec with"><h3>A · With Search Console</h3><div class="muted">Loading…</div></div>
@@ -325,15 +333,15 @@ function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return 
 function read(f){return new Promise(function(ok,no){var r=new FileReader();r.onload=function(){ok({name:f.name,content_base64:String(r.result).split(',')[1]||''})};r.onerror=no;r.readAsDataURL(f)})}
 function manual(){return document.getElementById('manual').value.split('\\n').map(function(l){var p=l.split(';').map(function(x){return x.trim()});
  return p[0]?{url:p[0],clicks:p[1]||null,impressions:p[2]||null,position:p[3]||null,note:p.slice(4).join(';')||null}:null}).filter(Boolean)}
-document.getElementById('suggestTerms').onclick=async function(){var st=document.getElementById('termSources'),btn=this;btn.disabled=true;st.textContent='Looking for search terms…';
+document.getElementById('suggestTerms').onclick=async function(){var st=document.getElementById('termSources'),btn=this;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Looking…';st.textContent='Reading the site for search terms… (up to about 30 s)';
  try{var files=[].slice.call(document.getElementById('gscFiles').files);
   var r=await fetch(API+'/suggest-terms',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},
-   body:JSON.stringify({domain:document.getElementById('auditDomain').value.trim(),files:await Promise.all(files.map(read))})});var d=await r.json();if(!d.success)throw Error(d.error);
+   body:JSON.stringify({domain:document.getElementById('auditDomain').value.trim(),country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim(),files:await Promise.all(files.map(read))})});var d=await r.json();if(!d.success)throw Error(d.error);
   if(!d.terms.length){st.textContent='No usable search terms found. Type them yourself.';return}
-  document.getElementById('posTerms').value=d.terms.map(function(t){return t.term}).join('\\n');document.getElementById('posOn').checked=true;
+  document.getElementById('posTerms').value=d.terms.map(function(t){return t.term}).join('\\n');
   var src={SEARCH_CONSOLE:'Search Console',PAGE_H1:'H1 of',PAGE_TITLE:'title of'};
-  st.innerHTML='Suggested — check and edit before you make the report:<br>'+d.terms.map(function(t){return h(t.term)+' <span style="opacity:.7">('+h(src[t.source]||t.source)+(t.page?' '+h((function(u){try{return new URL(u).pathname}catch(e){return u}})(t.page)):'')+(t.impressions?', '+t.impressions+' impressions':'')+')</span>'}).join('<br>');
- }catch(e){st.textContent=e.message||'No search terms could be suggested.'}finally{btn.disabled=false}};
+  st.innerHTML='Suggested — check and edit before you make the report:<br>'+d.terms.map(function(t){return h(t.term)+' <span style="opacity:.7">('+h(src[t.source]||t.source)+(t.page?' '+h(t.page_label||t.page):'')+(t.impressions?', '+t.impressions+' impressions':'')+')</span>'}).join('<br>');
+ }catch(e){st.textContent=e.message||'No search terms could be suggested.'}finally{btn.disabled=false;btn.textContent='Suggest search terms'}};
 function rowsHtml(list){if(!list.length)return '<p class="muted">No reports.</p>';
  return '<div class="scroll"><table class="tbl"><thead><tr><th><input type="checkbox" data-all aria-label="Select all"></th><th>Title</th><th>Site</th><th>Made</th><th>Valid until</th><th class="num">Views</th><th>Status</th><th></th></tr></thead><tbody>'+list.map(function(x){
   var live=!x.revoked&&!x.expired,full=location.origin+x.url;
@@ -363,7 +371,15 @@ async function load(){var A=document.getElementById('listWith'),B=document.getEl
 document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var st=document.getElementById('st'),go=document.getElementById('go'),files=[].slice.call(document.getElementById('gscFiles').files);
  if(files.some(function(f){return f.size>5*1024*1024})){st.textContent='A file is larger than 5 MB.';return}
  if(files.reduce(function(a,f){return a+f.size},0)>7*1024*1024){st.textContent='Together the files are larger than 7 MB: make two reports.';return}
- go.disabled=true;st.textContent=document.getElementById('auditDomain').value.trim()?'Reading the site and calculating… this can take up to two minutes.':'Reading the files and calculating…';
+ var dom=document.getElementById('auditDomain').value.trim(),posOn=document.getElementById('posOn').checked,t0=Date.now(),pr=document.getElementById('progress'),pt=document.getElementById('progressText');
+ // Visible progress: reading a site takes up to two minutes; without it the button seems to do nothing (owner 2026-11-21).
+ var steps=(files.length?['Reading the Search Console files']:[]).concat(dom?['Reading robots.txt and the sitemap','Reading the pages (up to 150)','Fetching Google’s speed data']:[]).concat(posOn?['Looking up positions in Google']:[]).concat(['Checking redirects and 404','Calculating the order']);
+ var tick=function(){var s=Math.round((Date.now()-t0)/1000),i=Math.min(steps.length-1,Math.floor(s/(dom?12:2)));pt.textContent=steps[i]+'… ('+s+' s'+(dom?', up to about 2 minutes':'')+')'};
+ // Paid searches only with the owner's own tick, a chosen country and a confirmation that names the market (owner 2026-11-21).
+ if(posOn){var cs=document.getElementById('posCountry'),pl=document.getElementById('posLang').value.trim(),nterms=Math.min(10,document.getElementById('posTerms').value.split('\\n').filter(function(x){return x.trim()}).length);
+  if(!cs.value){st.textContent='Choose the country for the positions in Google.';cs.focus();return}
+  if(!confirm('This makes up to '+nterms*3+' paid Google searches (Serper) for '+nterms+' search terms in Google '+cs.options[cs.selectedIndex].text+(pl?' ('+pl+')':'')+'. Continue?'))return}
+ go.disabled=true;go.innerHTML='<span class="spinner"></span>Working…';st.textContent='';pr.hidden=false;tick();var timer=setInterval(tick,1000);
  try{var body={title:document.getElementById('title').value,site:document.getElementById('site').value,lang:document.getElementById('lang').value,expires_days:document.getElementById('days').value,
   files:await Promise.all(files.map(read)),manual_pages:manual(),site_audit:{domain:document.getElementById('auditDomain').value.trim()},positions:{enabled:document.getElementById('posOn').checked,keywords:document.getElementById('posTerms').value,country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim()||undefined},check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
   var r=await fetch(API+'/reports',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:JSON.stringify(body)});
@@ -371,8 +387,9 @@ document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var 
   st.textContent='Report made: '+d.pages+' pages.';
   document.getElementById('made').innerHTML='<div class="card cta"><b>Private link for the company</b><p class="url">'+h(full)+'</p><p><a class="btn big" href="'+h(d.url)+'" target="_blank" rel="noopener">Open the report</a> <button class="btn big" id="cp">Copy link</button></p><p class="muted">'+
    d.files.map(function(f){return h(f.name)+': '+h(f.kind)+(f.reason?' ('+h(f.reason)+')':'')}).join(' · ')+'</p></div>';
-  document.getElementById('cp').onclick=function(){navigator.clipboard.writeText(full);this.textContent='Copied'};load()}
- catch(err){st.textContent=err.message}finally{go.disabled=false}};
+  document.getElementById('cp').onclick=function(){navigator.clipboard.writeText(full);this.textContent='Copied'};load();
+  var m=document.getElementById('made');m.scrollIntoView({behavior:'smooth',block:'center'});m.firstChild.classList.add('flash')}
+ catch(err){st.textContent=err.message||'Something went wrong. Nothing was saved.'}finally{clearInterval(timer);pr.hidden=true;go.disabled=false;go.textContent='Make the report'}};
 load();
 </script>`);
 }

@@ -34,6 +34,9 @@ test('owner makes a report in the browser and the company opens the private link
   await page.setInputFiles('#gscFiles',[path.join(dir,'site.zip'),path.join(dir,'roof.zip')]);
   await page.fill('#manual',S+'/new-service/ ;;;; Nieuwe dienst');await page.check('#growthOn');
   await page.click('#go');await page.waitForSelector('#made a.btn',{timeout:15000}).catch(async e=>{throw Error('status: '+await page.textContent('#st')+' | errors: '+errors.join(';'))});
+  // Owner 2026-11-21 ("dan mis ik de animatie"): progress is shown while working and hidden after; the result is scrolled into view.
+  assert.equal(await page.isHidden('#progress'),true);assert.equal(await page.textContent('#go'),'Make the report');
+  await page.waitForFunction(()=>{const r=document.getElementById('made').getBoundingClientRect();return r.top<innerHeight&&r.bottom>0},null,{timeout:5000});
   const href=await page.getAttribute('#made a.btn','href');assert.match(href,/^\/gsc\/r\//);
   // Owner 2026-11-20: reports with and without Search Console in two separate sections.
   await page.waitForSelector('#listWith table');assert.match(await page.textContent('#listWith'),/Acme Roofing/);assert.doesNotMatch(await page.textContent('#listWithout'),/Acme Roofing/);
