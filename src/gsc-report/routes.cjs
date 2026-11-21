@@ -64,7 +64,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
     if(!keywords.length)return res.status(400).json({success:false,error:'Add at least one search term for the positions.'});
     positionsP=audit.checkPositions({keywords,host,gl:market.gl,hl:market.hl,key:serperKey,fetchImpl}).then(r=>({...r,market:{gl:market.gl,hl:market.hl,country_name:market.country_name,language_name:market.language_name}}));
    }
-   const fc=(b.site_audit&&b.site_audit.firecrawl)||{},fcWanted=!!site&&fc.enabled===true,fcMax=Math.min(50,Math.max(1,parseInt(fc.max,10)||25));
+   const fc=(b.site_audit&&b.site_audit.firecrawl)||{},fcWanted=!!site&&fc.enabled===true,fcMax=Math.min(50,Math.max(1,parseInt(b.site_audit&&b.site_audit.max,10)||150));
    const fcRender=fcWanted&&firecrawlKey?renderer({max:fcMax}):null;
    // The owner chooses how many pages are read (testing: a few; at most 150).
    const auditMax=Math.min(150,Math.max(1,parseInt(b.site_audit&&b.site_audit.max,10)||150));
@@ -149,7 +149,7 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .tbl td{border-bottom:1px solid #eef2f7;padding:8px 6px;vertical-align:top}.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .scroll{overflow-x:auto}.url{word-break:break-all}.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
 .QUICK_WIN{background:#dcfce7;color:#14532d}.SNIPPET{background:#dbeafe;color:#1e3a8a}.ZERO_CLICKS{background:#fee2e2;color:#7f1d1d}.REVIEW{background:#fef3c7;color:#78350f}
-.DEEPER{background:#ede9fe;color:#4c1d95}.REDIRECT{background:#ffedd5;color:#7c2d12}.BLOCKED{background:#fecaca;color:#7f1d1d}.FIX_SNIPPET{background:#dbeafe;color:#1e3a8a}.FIX_STRUCTURE{background:#e0e7ff;color:#3730a3}.THIN{background:#fef3c7;color:#78350f}.NO_ISSUES{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+.DEEPER{background:#ede9fe;color:#4c1d95}.FIX_HREFLANG{background:#ccfbf1;color:#134e4a}.REDIRECT{background:#ffedd5;color:#7c2d12}.BLOCKED{background:#fecaca;color:#7f1d1d}.FIX_SNIPPET{background:#dbeafe;color:#1e3a8a}.FIX_STRUCTURE{background:#e0e7ff;color:#3730a3}.THIN{background:#fef3c7;color:#78350f}.NO_ISSUES{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 .issues{font-size:13px;margin-top:4px}.issues .flag{font-weight:600}.chip.idea{background:#f1f5f9;color:#334155;font-weight:600}.chip{display:inline-block;background:#ecfdf5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
 .facts{font-size:13px;margin:6px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:2px 10px}.facts dt{color:#64748b}.facts dd{margin:0;word-break:break-word}.GONE{background:#fecaca;color:#7f1d1d}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 .btn{display:inline-block;background:#4338ca;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:6px 12px;font-size:13px;white-space:nowrap}
@@ -241,13 +241,14 @@ function reportPage(row,{owner,config,growthPath}){
    (x.final_status&&x.final_status!==200?` · <span class="flag">${esc(L.target_broken.replace('{s}',x.final_status))}</span>`:x.final_error?` · <span class="flag">${esc(L.target_broken.replace('{s}',L.reasons[x.final_error]||x.final_error))}</span>`:'')+'</div>'};
  const BLOCKING=new Set(['NOINDEX','CANONICAL_ELSEWHERE']);
  const jsLine=p=>p.audit&&p.audit.rendered==='FIRECRAWL'?`<div class="issues"><span class="chip">${esc(A.js_read)}</span>${p.audit.raw_issues&&p.audit.raw_issues.length?` <span class="muted">${esc(A.js_raw.replace('{x}',p.audit.raw_issues.map(c=>A.issues[c]||c).join(' · ')))}</span>`:''}</div>`:'';
+ const noteLine=p=>p.audit&&p.audit.notes&&p.audit.notes.length?`<div class="issues muted">${esc(A.notes_label)}: ${p.audit.notes.map(c=>esc(A.issues[c]||c)).join(' · ')}</div>`:'';
  const issueLine=p=>p.audit&&p.audit.issues.length?`<div class="issues">${p.audit.issues.map(c=>BLOCKING.has(c)?`<span class="flag">${esc(A.issues[c]||c)}</span>`:esc(A.issues[c]||c)).join(' · ')}</div>`:'';
  const posChips=p=>(p.positions||[]).map(x=>`<span class="chip" title="${esc(x.keyword)}">${esc(A.pos_found.replace('{n}',x.position))} · ${esc(x.keyword)}</span>`).join('');
  const facts=p=>{const a=p.audit;if(!a)return '';const row=(k,v)=>`<dt>${esc(k)}</dt><dd>${v}</dd>`,no=`<span class="muted">${esc(A.none)}</span>`;
   return `<details><summary>${esc(A.seen)}</summary><dl class="facts">${row(A.f_title,a.title?esc(a.title)+` <span class="muted">(${a.title.length})</span>`:no)}${row(A.f_description,a.description?esc(a.description)+` <span class="muted">(${a.description.length})</span>`:no)}
    ${row(A.f_h1,a.h1.length?a.h1.map(esc).join(' · '):no)}${row(A.words,nf(lang,a.words))}${row(A.f_canonical,a.canonical?esc(a.canonical):no)}${row(A.f_lang,a.lang?esc(a.lang):no)}
-   ${row(A.f_hreflang,a.hreflang.length?a.hreflang.map(h=>esc(h.lang)).join(', '):no)}${p.lastmod?row(A.lastmod,esc(day(lang,p.lastmod))):''}</dl></details>`};
- const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}${jsLine(p)}${issueLine(p)}${posChips(p)}
+   ${row(A.f_hreflang,a.hreflang.length?a.hreflang.map(h=>esc(h.lang)).join(', '):no)}${row(A.f_schema,a.schema&&a.schema.length?a.schema.map(esc).join(', '):no)}${p.lastmod?row(A.lastmod,esc(day(lang,p.lastmod))):''}</dl></details>`};
+ const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
    <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
    ${p.countries&&p.countries.length?`<details><summary>${esc(t.countries)}</summary>${metricRows(lang,t,p.countries)}</details>`:''}
@@ -314,8 +315,8 @@ function ownerPage(config,api,base){
 <p class="muted">Only a domain: robots.txt (followed), the sitemap and up to 150 pages are read in public — redirects, 404, noindex, canonical, title, meta description, H1, amount of text — plus Google's speed data for real visitors. Free. No clicks or impressions: those are only in Search Console.</p>
 <label>Domain<br><input id="auditDomain" maxlength="200" placeholder="derayah.com" style="width:100%;max-width:420px;padding:9px;border:1px solid #cbd5e1;border-radius:8px"></label>
 <label>Pages to read (at most) <input id="auditMax" type="number" min="1" max="150" value="150" style="width:80px;padding:6px;border:1px solid #cbd5e1;border-radius:8px"></label> <span class="muted">Fewer is faster: use 5–10 while testing.</span><br>
-<label><input type="checkbox" id="fcOn"> <b>Paid:</b> read pages again with Firecrawl when they look empty without JavaScript (no H1, little text, no real title)</label> <label style="margin-left:8px">at most <input id="fcMax" type="number" min="1" max="50" value="25" style="width:70px;padding:6px;border:1px solid #cbd5e1;border-radius:8px"> pages</label>
-<p class="muted">Only those pages, one Firecrawl credit each; good pages and pages that refuse readers are never sent. The report then shows what Google sees after JavaScript.</p>
+<label><input type="checkbox" id="fcOn"> <b>Paid:</b> read pages again with Firecrawl when they look empty without JavaScript (no H1, little text, no real title)</label>
+<p class="muted">Only those pages among the pages read (at most 50), one Firecrawl credit each, and you confirm first; good pages and pages that refuse readers are never sent. The report then shows what Google sees after JavaScript.</p>
 <p class="muted">Fill in A, B or both. With both, the Search Console numbers stay and the public facts are added per page.</p></fieldset>
 <fieldset id="secWith" class="sec with"><legend>B · With Search Console</legend>
 <p class="muted">The company gave you its Search Console export: clicks, impressions, CTR and position per page. The order of the pages is calculated on these numbers.</p>
@@ -396,11 +397,11 @@ document.getElementById('nf').onsubmit=async function(e){e.preventDefault();var 
  if(posOn){var cs=document.getElementById('posCountry'),pl=document.getElementById('posLang').value.trim(),nterms=Math.min(10,document.getElementById('posTerms').value.split('\\n').filter(function(x){return x.trim()}).length);
   if(!cs.value){st.textContent='Choose the country for the positions in Google.';cs.focus();return}
   paid.push('up to '+nterms*3+' paid Google searches (Serper) for '+nterms+' search terms in Google '+cs.options[cs.selectedIndex].text+(pl?' ('+pl+')':''))}
- if(fcOn)paid.push('up to '+Math.min(50,Math.max(1,parseInt(document.getElementById('fcMax').value,10)||25))+' pages read with Firecrawl (one credit each)');
+ if(fcOn)paid.push('Firecrawl for the pages that look empty without JavaScript, at most '+Math.min(50,Math.max(1,parseInt(document.getElementById('auditMax').value,10)||150))+' (one credit each)');
  if(paid.length&&!confirm('This report uses: '+paid.join(' and ')+'. Continue?'))return
  go.disabled=true;go.innerHTML='<span class="spinner"></span>Working…';st.textContent='';pr.hidden=false;tick();var timer=setInterval(tick,1000);
  try{var body={title:document.getElementById('title').value,site:document.getElementById('site').value,lang:document.getElementById('lang').value,expires_days:document.getElementById('days').value,
-  files:await Promise.all(files.map(read)),manual_pages:manual(),site_audit:{domain:document.getElementById('auditDomain').value.trim(),max:document.getElementById('auditMax').value,firecrawl:{enabled:document.getElementById('fcOn').checked,max:document.getElementById('fcMax').value}},positions:{enabled:document.getElementById('posOn').checked,keywords:document.getElementById('posTerms').value,country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim()||undefined},check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
+  files:await Promise.all(files.map(read)),manual_pages:manual(),site_audit:{domain:document.getElementById('auditDomain').value.trim(),max:document.getElementById('auditMax').value,firecrawl:{enabled:document.getElementById('fcOn').checked}},positions:{enabled:document.getElementById('posOn').checked,keywords:document.getElementById('posTerms').value,country:document.getElementById('posCountry').value,language:document.getElementById('posLang').value.trim()||undefined},check_urls:document.getElementById('checkUrls').checked,recipient_growth:{enabled:document.getElementById('growthOn').checked,checks:document.getElementById('growthChecks').value}};
   var r=await fetch(API+'/reports',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:JSON.stringify(body)});
   var d=await r.json();if(!d.success)throw Error(d.error);var full=location.origin+d.url;
   st.textContent='Report made: '+d.pages+' pages.';
