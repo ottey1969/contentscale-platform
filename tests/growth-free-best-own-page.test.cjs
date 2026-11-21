@@ -124,3 +124,27 @@ test('no shorten advice when the question belongs on another own page',async()=>
  assert.deepEqual(cp.trim,[]);assert.match(cp.trim_note,/belongs on/);
  assert.ok(ROWS.find(r=>r[0]==='Nothing is advised to shorten: this page was not checked against its own question. This search question belongs on {u}'));
 });
+test('real data: "not compared" is NOT_COMPARED; done work on the guide and on the service page is marked done',async()=>{
+ const P=(t)=>'<p>'+t+' '+'Dit is extra uitleg zodat de sectie lang genoeg is om als inhoud te tellen voor de vergelijking van onderwerpen op de pagina.'+'</p>';
+ const service=body('<h1>GEO-specialist</h1><h2>Zelf doen, een bureau of een consultant?</h2>'+P('Je kunt GEO zelf oppakken, uitbesteden aan een bureau of met een onafhankelijke consultant werken.')+
+  '<h2>Hoe kies je de juiste GEO-specialist?</h2>'+P('Stel deze vijf vragen voordat je iemand inhuurt.')+'<h2>Mijn tarief</h2>'+P('Mijn tarief: vanaf €297 per maand, maandelijks opzegbaar.'));
+ const fetch2=async u=>u===GEO?{html:service}:fetchHtml(u);
+ const guide=body('<h1>AI-zichtbaarheid</h1><p>Mijn tarief begint vanaf €297. Details bij <a href="/generative-engine-optimization-geo/#tarief">mijn tarief op de GEO-pagina</a>.</p>');
+ const best=await findBestOwnPage({pageUrl:OWN,query:Q,ownHtml:guide,fetchHtml:fetch2});
+ assert.equal(best.status,'FOUND');assert.ok(best.service_sections.some(s=>/Hoe kies je/.test(s.heading)));
+ const s3={...summary,gaps:{items:[
+  topic('a','Kosten en tarieven voor het inhuren of uitbesteden van een GEO-specialist','estrelle.nl',{priority:{sources:4},recommended:true,examples:[{site:'estrelle.nl',heading:'Wat kost'},{site:'b.nl',heading:'Prijzen'}]}),
+  topic('b','Hoe kies je de juiste GEO-specialist en waar let je op','estrelle.nl',{priority:{sources:3}}),
+  topic('c','Zelf GEO uitvoeren versus uitbesteden aan een specialist','timmermansmedia.nl',{priority:{sources:2}}),
+  topic('d','Praktijkvoorbeelden en klantbeoordelingen van GEO-trajecten','estrelle.nl',{priority:{sources:2}}),
+  topic('e','GEO is geen trucje (helaas)','wessels-teksten.nl',{coverage:'NOT_COMPARED'})]}};
+ const cp=buildContentPriorities({summary:s3,aiGap,bestOwnPage:best});
+ const by=id=>cp.items.find(x=>x.id===id);
+ for(const id of ['a','fact-price']){assert.equal(by(id).action,'PRICE_LINKED',id);assert.equal(by(id).needs_business_fact,false);assert.match(by(id).instruction,/already/)}
+ for(const id of ['b','c']){assert.equal(by(id).action,'ON_SERVICE_PAGE_DONE',id);assert.match(by(id).instruction,/Already on your service page/)}
+ assert.match(by('b').instruction,/Hoe kies je de juiste GEO-specialist\?/);
+ assert.equal(by('d').action,'ON_SERVICE_PAGE','not on the service page yet: still open');
+ assert.ok(!by('e')&&cp.observations.some(o=>o.title==='GEO is geen trucje (helaas)'),'NOT_COMPARED one-site topic is an observation');
+ const rank=id=>by(id).rank;assert.ok(rank('d')<rank('b')&&rank('d')<rank('a'),'open work first, done work last');
+ for(const k of ['Done — already on your service page','Done — price named and linked'])assert.ok(ROWS.find(r=>r[0]===k),k);
+});

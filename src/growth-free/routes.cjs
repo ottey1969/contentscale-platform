@@ -917,7 +917,7 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
 // One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
 // One list for the editor: what to put into the content, from most to least important (owner 2026-11-19).
 var PRIO_TIER={MOST_IMPORTANT:'Most important',IMPORTANT:'Important',USEFUL:'Useful',OPTIONAL:'Optional'};
-var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact',LINK_OWN_PRICE:'Link to your price page',PRICE_ON_PAGE:'Already on your page — check',ON_SERVICE_PAGE:'Belongs on your service page'};
+var PRIO_ACTION={ADD:'Add a section',IMPROVE:'Improve an existing section',ADD_ELEMENT:'Add a page element',ADD_OWN_FACT:'Add your own fact',LINK_OWN_PRICE:'Link to your price page',PRICE_ON_PAGE:'Already on your page — check',ON_SERVICE_PAGE:'Belongs on your service page',ON_SERVICE_PAGE_DONE:'Done — already on your service page',PRICE_LINKED:'Done — price named and linked'};
 // The outcome of the research in plain words (owner 2026-11-20: "alles in normale taal"), never a status code.
 function outcomeOf(s,d){var cov=d&&d.competitors&&d.competitors.coverage,
  items=((s.gaps&&s.gaps.items)||[]).filter(function(x){return x.group!=='PAGE_ELEMENT'&&x.group!=='NOT_RELEVANT'});
