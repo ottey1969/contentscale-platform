@@ -1047,3 +1047,23 @@ test('price question on an existing page: the API names the own page that alread
  const dl=await s.get('/api/free-growth/checks/'+id[1]+'/report.json?k='+id[2]);
  assert.equal(dl.body.content_priorities.best_own_page.url,GEO);
 });
+
+test('admin: every check links to its result and shows its publication date, so an old result can be reopened (owner 2026-11-21)',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ const jar={cookie:(await s.post('/api/free-growth/admin/login',{key:'admin-secret-0123456789'})).headers.get('set-cookie').split(';')[0]};
+ const w={...jar,'X-Requested-With':'growth-free-admin'};
+ assert.equal((await s.post('/api/free-growth/admin/run',{url:'https://acme.example/a/',query:'wat is a'},w)).status,202);
+ await s.service.idle();
+ s.storage.checks[0].published_on='2026-11-21';s.storage.checks[0].reminder_due_at=new Date('2026-12-23T08:00:00Z');
+ const d=(await s.get('/api/free-growth/admin/leads',jar)).body;
+ const c=d.checks[0];
+ assert.equal(c.result_url,'/free-growth/r/pub1?k=key1abcdefgh');
+ assert.equal(c.published_on,'2026-11-21');
+ assert.equal(c.access_key,undefined,'only the link, not the raw key field');
+ assert.equal((await s.get('/api/free-growth/admin/leads')).status,404,'never without the owner session');
+ const page=await s.get('/free-growth/admin',jar);
+ assert.match(page.body,/c\.result_url/);assert.match(page.body,/Open result/);assert.match(page.body,/No publication date yet/);
+ // The real store selects what the list needs.
+ const src=require('node:fs').readFileSync(require.resolve('../src/growth-free/store.cjs'),'utf8');
+ assert.match(src,/SELECT id,public_id,access_key,email,url,query,status,decision,error_code,cached_from IS NOT NULL AS cached,marketing_consent,access_label,created_at,published_on,reminder_due_at/);
+});
