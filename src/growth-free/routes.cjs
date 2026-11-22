@@ -611,6 +611,7 @@ function gapBrief(g,s,all,d){var picked={},o=outcomeOf(s,d||{});if(!all)document
    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'Google position #'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':'')+(e.url?' — Source: '+e.url:'')+(e.excerpt?' — Excerpt: '+e.excerpt:''))})});L.push('')});
  if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  if((LAST_SELF||[]).length){var dn=selfDone();L.push('## To do yourself (not written by Growth)','');LAST_SELF.forEach(function(x){L.push('- ['+(dn[x.id]?'x':' ')+'] '+x.title+' — '+x.why)});L.push('')}
+ L.push('## When the change is live','','End your work with one line: What was changed: … (one or two sentences on what you added or changed on the page). Paste it into “What did you change on the page?” when you record the publication date.','');
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
  if(all){
   var answers=d&&d.ai&&d.ai.saved_answers||[];
@@ -903,13 +904,14 @@ function sideHtml(label,w,x,undated){if(!x)return '<div><small>'+label+'</small>
  var T=x.totals||{};return '<div><small>'+label+' · '+esc(x.period.start)+' – '+esc(x.period.end)+(x.source==='GSC_REPORT'?'</small><small>From your GSC report “'+esc(x.report_title||'')+'”':'')+(x.period.inferred?' (dates from “'+esc(x.period.inferred)+'” and the export date)':'')+'</small><strong>'+esc(T.impressions)+' shown · '+esc(T.clicks)+' clicks</strong><small>'+(T.position==null?'':'average position '+esc(T.position)+' · ')+(x.search_term_row?'your search term: '+esc(x.search_term_row.impressions)+' shown, '+esc(x.search_term_row.clicks)+' clicks':'your search term is not in this export')+(x.matches_window?'':' · not exactly the 4 weeks '+(label==='Before'?'before':'after')+' the update')+'</small></div>'}
 function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">Record publication and compare results</h2>';
  var today=new Date().toISOString().slice(0,10);
- if(p.published_on){h+='<p class="lead"><strong>Published on '+esc(fmtD(p.published_on))+'.</strong> '+(p.stopped?'The reminder is stopped.':p.reminder_sent_at?'The reminder was sent on '+esc(fmtD(p.reminder_sent_at))+'.':p.reminder_due_at?'One e-mail on '+esc(fmtD(p.reminder_due_at))+' to '+esc(p.email_hint)+': which two periods to export from Search Console.':'No e-mail reminder.')+'</p>';
+ if(p.published_on){h+=(p.note?'<p data-no-translate>'+esc('What was changed: “'+p.note+'”')+'</p>':'');h+='<p class="lead"><strong>Published on '+esc(fmtD(p.published_on))+'.</strong> '+(p.stopped?'The reminder is stopped.':p.reminder_sent_at?'The reminder was sent on '+esc(fmtD(p.reminder_sent_at))+'.':p.reminder_due_at?'One e-mail on '+esc(fmtD(p.reminder_due_at))+' to '+esc(p.email_hint)+': which two periods to export from Search Console.':'No e-mail reminder.')+'</p>';
   if(!p.email_configured&&p.reminder_due_at&&!p.reminder_sent_at)h+='<p class="note">E-mail is not set up on this server, so no e-mail will arrive. Come back to this page after '+esc(fmtD(p.reminder_due_at))+'; the steps below work without it.</p>';
   var c=g&&g.comparison;if(c){h+='<h3>Before and after in Google (Search Console)</h3><div class="grid two">'+sideHtml('Before',c.windows.before,c.before,c.undated)+sideHtml('After',c.windows.after,c.after,null)+'</div><p class="muted">'+esc(c.note)+'</p>';
    if(!c.ready)h+='<p>Export from Search Console: Performance → filter Page → “Exact URL” → this page → Date → Custom → '+(c.before?'':'<strong>'+esc(fmtD(c.windows.before.start))+' – '+esc(fmtD(c.windows.before.end))+'</strong> (before)')+(!c.before&&!c.after?' and ':'')+(c.after?'':'<strong>'+esc(fmtD(c.windows.after.start))+' – '+esc(fmtD(c.windows.after.end))+'</strong> (after, once these 4 weeks have passed)')+' → Export → Download CSV. Upload it under Search Console above.</p>'}
   h+='<p><button type="button" class="ghost" id="pubChange">Change the date</button> <button type="button" class="ghost" id="pubClear">Remove the date</button> <small role="status" id="pubStatus"></small></p>';
   h+='<div id="pubForm" hidden>'}else{h+='<p>Your editor puts the package on your website; nothing is published by this check. Once the change is live, enter the date here. About four weeks later you get one e-mail with the two periods to compare in Search Console, and this page shows them side by side.</p><details id="pubOpen"><summary><strong>The change is live: enter the date</strong></summary><div id="pubForm">'}
  h+='<label for="pubDate">Date the change went live</label><input id="pubDate" type="date" max="'+today+'" value="'+esc(p.published_on||'')+'">';
+ h+='<label for="pubNote">What did you change on the page? (shown in your GSC report)</label><textarea id="pubNote" rows="3" maxlength="500">'+esc(p.note||p.note_suggestion||'')+'</textarea>';
  h+='<label class="check"><input type="checkbox" id="pubRemind" checked><span>E-mail me ('+esc(p.email_hint)+') once, about four weeks later. You can stop it with the link in the e-mail.</span></label>';
  h+='<p><button type="button" id="pubSave">Save the date</button> <small role="status" id="pubSaveStatus"></small></p></div>'+(p.published_on?'':'</details>');
  return h}
@@ -918,7 +920,7 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  var ch=document.getElementById('pubChange');if(ch)ch.onclick=function(){document.getElementById('pubForm').hidden=false};
  var cl=document.getElementById('pubClear');if(cl)cl.onclick=async function(){if(!confirm('Remove the date and the reminder?'))return;await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:true})});reload()};
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
-  try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
+  try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked,note:document.getElementById('pubNote').value})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
 // One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
 // One list for the editor: what to put into the content, from most to least important (owner 2026-11-19).
@@ -1882,7 +1884,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const links={result:row=>baseOf(row)+resultUrl(row),stop:(t,row)=>baseOf(row)+basePath+'/stop/'+encodeURIComponent(t||'')};
  const send=sendEmail||reminders.brevo(fetchImpl);
  const emailConfigured=()=>!!sendEmail||!!process.env.BREVO_API_KEY;
- const publicationOf=row=>({published_on:row.published_on||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
+ const publicationOf=row=>({published_on:row.published_on||null,note:row.published_note||null,note_suggestion:row.published_note?null:require('./publication-note.cjs').noteSuggestion(row,row.ui_lang||'nl')||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
   stopped:!!row.reminder_opt_out_at,email_hint:(Array.isArray(row.emails)&&row.emails.length?row.emails:[row.email]).map(maskEmail).join(', '),email_configured:emailConfigured(),
   windows:row.published_on?reminders.windowsOf(row.published_on):null});
  app.post(apiPath+'/checks/:id/publication',async(req,res)=>{
@@ -1896,7 +1898,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const d=reminders.readPublishedOn(b.published_on);if(d.error)return res.status(400).json({success:false,error:d.error});
   const remind=b.remind!==false;
   try{
-   const saved=await storage.setPublication(pool,{checkId:row.id,publishedOn:d.value,dueAt:remind?reminders.dueAt(d.value):null,base:baseFor(req)});
+   const saved=await storage.setPublication(pool,{checkId:row.id,publishedOn:d.value,dueAt:remind?reminders.dueAt(d.value):null,base:baseFor(req),note:require('./publication-note.cjs').cleanNote(b.note)||null});
    // Started from the rank tracker: the tracked keyword is marked "changed" there with its position on this day.
    if(rankHandoff)await rankHandoff.published(row.public_id,d.value).catch(e=>console.warn('[free-growth] rank tracker link failed',e&&e.message));
    let confirmation=remind?(emailConfigured()?'NOT_ACCEPTED':'EMAIL_NOT_CONFIGURED'):'NO_REMINDER';

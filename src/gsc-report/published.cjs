@@ -26,15 +26,15 @@ async function growthFor(pool,urls,{invite=null}={}){
  const out=new Map(),want=new Set((urls||[]).map(norm).filter(Boolean));
  if(!pool||!want.size)return out;
  let rows=[];
- try{rows=(await pool.query(`SELECT url,public_id,access_key,access_label,invite_id,published_on::text AS published_on,finished_at FROM growth_free_checks
+ try{rows=(await pool.query(`SELECT url,public_id,access_key,access_label,invite_id,published_on::text AS published_on,published_note,finished_at FROM growth_free_checks
    WHERE status='DONE' AND (access_label='admin' OR invite_id IN (SELECT id FROM growth_free_invites WHERE token_hash=$1))
    ORDER BY finished_at DESC NULLS LAST LIMIT 2000`,[invite?hashToken(invite):''])).rows}
  catch(e){return out}
  const link=r=>'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key);
  for(const r of rows){const k=norm(r.url);if(!want.has(k))continue;
-  const x=out.get(k)||{published_on:null,owner_result:null,invite_result:null};
+  const x=out.get(k)||{published_on:null,note:null,owner_result:null,invite_result:null};
   if(r.access_label==='admin'){if(!x.owner_result)x.owner_result=link(r)}else if(r.invite_id!=null){if(!x.invite_result)x.invite_result=link(r)}
-  const d=r.published_on?String(r.published_on).slice(0,10):null;if(d&&(!x.published_on||d>x.published_on))x.published_on=d;
+  const d=r.published_on?String(r.published_on).slice(0,10):null;if(d&&(!x.published_on||d>x.published_on)){x.published_on=d;x.note=r.published_note?String(r.published_note).slice(0,500):null}
   out.set(k,x)}
  return out;
 }
