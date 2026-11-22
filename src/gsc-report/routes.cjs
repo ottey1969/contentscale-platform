@@ -129,7 +129,8 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    await ensure();const owner=isOwner(req);
    const row=await st.openReport(pool,String(req.params.token),{count:!owner});
    if(!row)return res.status(404).type('html').send(gonePage());
-   res.type('html').send(reportPage(row,{owner,config,growthPath}));
+   const published=await (st.publicationsFor||require('./published.cjs').publicationsFor)(pool,((row.report&&row.report.pages)||[]).map(p=>p.url),{invite:row.growth_invite}).catch(()=>new Map());
+   res.type('html').send(reportPage(row,{owner,config,growthPath,published}));
   }catch(e){console.error('[gsc-report] view failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  return {sessionValid};
@@ -204,7 +205,7 @@ function growthLink(p,{lang,owner,invite,growthPath}){
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
-function reportPage(row,{owner,config,growthPath}){
+function reportPage(row,{owner,config,growthPath,published=new Map()}){
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
  const crawlOnly=r.scope==='CRAWL',A=t.audit,done=a=>a==='KEEP'||a==='NO_ISSUES';
@@ -249,7 +250,9 @@ function reportPage(row,{owner,config,growthPath}){
   return `<details><summary>${esc(A.seen)}</summary><dl class="facts">${row(A.f_title,a.title?esc(a.title)+` <span class="muted">(${a.title.length})</span>`:no)}${row(A.f_description,a.description?esc(a.description)+` <span class="muted">(${a.description.length})</span>`:no)}
    ${row(A.f_h1,a.h1.length?a.h1.map(esc).join(' · '):no)}${row(A.words,nf(lang,a.words))}${row(A.f_canonical,a.canonical?esc(a.canonical):no)}${row(A.f_lang,a.lang?esc(a.lang):no)}
    ${row(A.f_hreflang,a.hreflang.length?a.hreflang.map(h=>esc(h.lang)).join(', '):no)}${row(A.f_schema,a.schema&&a.schema.length?a.schema.map(esc).join(', '):no)}${a.articles&&a.articles.length?row(A.f_articles,a.articles.map(n=>`“${n.headline?esc(n.headline):esc(A.no_headline)}”${n.id?` <code>${esc(n.id)}</code>`:''}${n.source==='RANK_MATH'?` (${esc(A.src_rank_math)})`:n.source==='YOAST'?` (${esc(A.src_yoast)})`:''}`).join('<br>')):''}${a.schema_description?row(A.f_schema_desc,esc(a.schema_description)):''}${p.lastmod?row(A.lastmod,esc(day(lang,p.lastmod))):''}</dl></details>`};
- const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
+ // The date this page was updated through Free Growth (see published.cjs).
+ const doneOn=p=>{const d=published.get(require('./published.cjs').norm(p.url));return d?` <span class="chip done">${esc(t.updated_on.replace('{d}',day(lang,d+'T12:00:00Z')))}</span>`:''};
+ const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${doneOn(p)}${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
    <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
    ${p.countries&&p.countries.length?`<details><summary>${esc(t.countries)}</summary>${metricRows(lang,t,p.countries)}</details>`:''}
