@@ -395,6 +395,8 @@ const ROWS = [
   ['Before and after in Google (Search Console)', 'Voor en na in Google (Search Console)', 'Antes y después en Google (Search Console)'],
   ['Upload an export for {t} – {t}, filtered on exactly this page.', 'Upload een export voor {t} – {t}, gefilterd op precies deze pagina.', 'Sube una exportación del {t} al {t}, filtrada exactamente por esta página.'],
   ['Search Console numbers for this exact page, 4 weeks before and after the update. A change is not proof that the update caused it.', 'Search Console-cijfers voor precies deze pagina, 4 weken voor en na de aanpassing. Een verandering is geen bewijs dat de aanpassing de oorzaak is.', 'Cifras de Search Console de esta página exacta, 4 semanas antes y después de la actualización. Un cambio no demuestra que la actualización sea la causa.'],
+  ['What did you change on the page? (shown in your GSC report)', 'Wat heb je op de pagina aangepast? (zichtbaar in je GSC-rapport)', '¿Qué cambiaste en la página? (se muestra en tu informe de GSC)'],
+  ['What was changed: {q}', 'Wat is aangepast: {q}', 'Qué se cambió: {q}'],
   ['From your GSC report {q}', 'Uit je GSC-rapport {q}', 'De tu informe de GSC {q}'],
   ['Export from Search Console: Performance → filter Page → {q} → this page → Date → Custom →', 'Exporteer uit Search Console: Prestaties → filter Pagina → {q} → deze pagina → Datum → Aangepast →', 'Exporta desde Search Console: Rendimiento → filtro Página → {q} → esta página → Fecha → Personalizado →'],
   ['(before)', '(voor)', '(antes)'], ['and', 'en', 'y'],
