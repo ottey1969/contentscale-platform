@@ -99,6 +99,7 @@ function compareUploads(uploads, publishedOn, term) {
   const w = windowsOf(publishedOn), ok = (uploads || []).filter(u => u.status === 'VERIFIED_FOR_PAGE' && u.period_start && u.period_end);
   const pick = side => ok.filter(u => side === 'before' ? u.period_end < publishedOn : u.period_start > publishedOn).slice(-1)[0] || null;
   const view = u => u && { period: { start: u.period_start, end: u.period_end }, totals: u.totals || null, file_name: u.file_name,
+    ...(u.source ? { source: u.source, report_title: u.report_title || null } : {}),
     search_term_row: gscExport.termInExport({ queries: u.queries || [] }, term),
     matches_window: null };
   const before = view(pick('before')), after = view(pick('after'));

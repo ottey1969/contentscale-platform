@@ -390,7 +390,15 @@ const ROWS = [
   ['Save the date', 'Datum opslaan', 'Guardar la fecha'], ['Change the date', 'Datum wijzigen', 'Cambiar la fecha'], ['Remove the date', 'Datum verwijderen', 'Quitar la fecha'],
   ['Choose the date first.', 'Kies eerst de datum.', 'Elige primero la fecha.'], ['Not saved', 'Niet opgeslagen', 'No guardado'],
   ['Before', 'Voor', 'Antes'], ['After', 'Na', 'Después'], ['Period', 'Periode', 'Periodo'], ['Clicks', 'Klikken', 'Clics'], ['Impressions', 'Vertoningen', 'Impresiones'], ['Average position', 'Gemiddelde positie', 'Posición media'],
-  ['No export yet', 'Nog geen export', 'Aún sin exportación'], ['No e-mail reminder.', 'Geen herinnering per e-mail.', 'Sin recordatorio por email.'], ['The reminder is stopped.', 'De herinnering is gestopt.', 'El recordatorio está detenido.'],
+  ['No export yet', 'Nog geen export', 'Aún sin exportación'],
+  // Before/after on the result page (owner 2026-11-22: shown in English on the Dutch page).
+  ['Before and after in Google (Search Console)', 'Voor en na in Google (Search Console)', 'Antes y después en Google (Search Console)'],
+  ['Upload an export for {t} – {t}, filtered on exactly this page.', 'Upload een export voor {t} – {t}, gefilterd op precies deze pagina.', 'Sube una exportación del {t} al {t}, filtrada exactamente por esta página.'],
+  ['Search Console numbers for this exact page, 4 weeks before and after the update. A change is not proof that the update caused it.', 'Search Console-cijfers voor precies deze pagina, 4 weken voor en na de aanpassing. Een verandering is geen bewijs dat de aanpassing de oorzaak is.', 'Cifras de Search Console de esta página exacta, 4 semanas antes y después de la actualización. Un cambio no demuestra que la actualización sea la causa.'],
+  ['From your GSC report {q}', 'Uit je GSC-rapport {q}', 'De tu informe de GSC {q}'],
+  ['Export from Search Console: Performance → filter Page → {q} → this page → Date → Custom →', 'Exporteer uit Search Console: Prestaties → filter Pagina → {q} → deze pagina → Datum → Aangepast →', 'Exporta desde Search Console: Rendimiento → filtro Página → {q} → esta página → Fecha → Personalizado →'],
+  ['(before)', '(voor)', '(antes)'], ['and', 'en', 'y'],
+  ['(after, once these 4 weeks have passed) → Export → Download CSV. Upload it under Search Console above.', '(na, zodra deze 4 weken voorbij zijn) → Exporteren → CSV downloaden. Upload hem hierboven bij Search Console.', '(después, cuando hayan pasado estas 4 semanas) → Exportar → Descargar CSV. Súbela arriba en Search Console.'], ['No e-mail reminder.', 'Geen herinnering per e-mail.', 'Sin recordatorio por email.'], ['The reminder is stopped.', 'De herinnering is gestopt.', 'El recordatorio está detenido.'],
   // Evidence
   ['What was checked — evidence (Google · AI answers {n}/{n} · Search Console)', 'Wat is gecontroleerd — bewijs (Google · AI-antwoorden {n}/{n} · Search Console)', 'Qué se analizó — pruebas (Google · respuestas de IA {n}/{n} · Search Console)'],
   ['What was checked — evidence (Google · AI answers · Search Console)', 'Wat is gecontroleerd — bewijs (Google · AI-antwoorden · Search Console)', 'Qué se analizó — pruebas (Google · respuestas de IA · Search Console)'],
