@@ -48,8 +48,8 @@ function sameNeed(a,b,queryWords){
 // Sections of this page that do not serve this search (owner 2026-11-19): not only what to add, but what makes the page
 // long without answering the searcher. Proposed only from the page comparison: no ranking page and no AI-cited page
 // covers the section, and it shares no word with the search term. Introductions, trust and contact sections and page
-// furniture are never proposed. The advice is to shorten or move, never to delete without checking.
-const PROTECT=/(contact|about us|author|review|testimonial|customers? say|why choose|reviews?|call us|free quote|get (?:a )?quote|estimate|get started|book|schedule|table of contents|related|privacy|terms|want to|ready to|let us|talk to|in this guide|in this article|contents|overview|summary|key takeaways)/i;
+// furniture are never proposed. A table of contents counts in Dutch and Spanish too (owner 2026-11-22: "In dit artikel"). The advice is to shorten or move, never to delete without checking.
+const PROTECT=/(contact|about us|author|review|testimonial|customers? say|why choose|reviews?|call us|free quote|get (?:a )?quote|estimate|get started|book|schedule|table of contents|related|privacy|terms|want to|ready to|let us|talk to|in this guide|in this article|contents|overview|summary|key takeaways|in dit artikel|in deze gids|inhoudsopgave|op deze pagina|en este art[ií]culo|en esta gu[ií]a|^\s*[ií]ndice\s*$|tabla de contenidos?|en esta p[aá]gina)/i;
 // The page's own offer, contact and proof (owner 2026-11-20, contentscale.site homepage): "Done-For-You", "Team Handoff",
 // "Ask your question", "See the Live Tracker", a case-study baseline… No competitor has these headings, and that is the
 // point: they sell, invite or prove. Never proposed for shortening, in English, Dutch or Spanish.

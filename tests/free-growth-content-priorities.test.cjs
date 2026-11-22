@@ -166,3 +166,14 @@ test('PRT emergency roof repair (real, owner 2026-11-19): core process sections 
  // The one topic the AI-cited page covers that this page only partly covers stays in the list.
  assert.ok(p.items.some(x=>x.title==='Tracing leak entry points from the attic side'&&x.action==='IMPROVE'));
 });
+
+test('a table of contents is never advised to shorten, in Dutch and Spanish too (owner 2026-11-22: "In dit artikel")',()=>{
+ const {buildContentPriorities}=require('../src/growth-free/content-priorities.cjs');
+ const report={competitor_overview:{status:'OBSERVED',ranking_pages:[],topics:[],this_page_sections:[{heading:'Intro',words:40},
+  {heading:'In dit artikel',words:17},{heading:'In deze gids',words:36},{heading:'Inhoudsopgave',words:20},{heading:'En este artículo',words:15},{heading:'Índice',words:12},{heading:'Pijler 1 — Entiteitsopbouw',words:33},{heading:'Contenido SEO y búsqueda con IA',words:40}]}};
+ const cp=buildContentPriorities({summary:{query:'wat is een ai overview',decision:'IMPROVE_EXISTING',gaps:{items:[]}},aiGap:null,report});
+ const h=cp.trim.map(t=>t.heading);
+ for(const toc of ['In dit artikel','In deze gids','Inhoudsopgave','En este artículo','Índice'])assert.ok(!h.includes(toc),toc);
+ assert.ok(h.includes('Pijler 1 — Entiteitsopbouw'),'other sections can still be advised');
+ assert.ok(h.includes('Contenido SEO y búsqueda con IA'),'a heading that only contains the word "contenido" is not a table of contents');
+});
