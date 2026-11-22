@@ -8,7 +8,7 @@ const NOTE_EN={
  days:'No daily rows in the upload: totals are the sum of the pages and there is no trend.'};
 const notes=(a,b,c,d)=>({[NOTE_EN.anon]:a,[NOTE_EN.rows]:b,[NOTE_EN.pairs]:c,[NOTE_EN.days]:d});
 const T={
- en:{kicker:'Search Console report',prepared_by:'Prepared for you',made_on:'Made on',days:'days',scope_pages:'Uploaded pages only',
+ en:{kicker:'Search Console report',updated_on:'Updated on {d} (Growth)',prepared_by:'Prepared for you',made_on:'Made on',days:'days',scope_pages:'Uploaded pages only',
   summary:'Summary',summary_line:'{n} pages analysed; {w} of them are worth working on.',start_with:'Start with',
   clicks:'Clicks',clicks_l:'clicks',impressions:'Impressions',avg_position:'Average position',position:'Position',pages_no_clicks:'Pages with impressions but no clicks',
   top5_share:'Share of clicks from the top 5 pages',last7:'Last 7 days vs the 7 before',
@@ -37,7 +37,7 @@ const T={
   notes_title:'Good to know',note_map:{},
   cta_title:'Want help with these pages?',cta_text:'I can research each page and write the improvements with you: every fact checked with you, nothing published without your approval.',cta_button:'Get in touch',
   valid_until:'This private link is valid until',owner_view:'owner view',views:'views'},
- nl:{kicker:'Search Console-rapport',prepared_by:'Voor u opgesteld',made_on:'Gemaakt op',days:'dagen',scope_pages:'Alleen geüploade pagina’s',
+ nl:{kicker:'Search Console-rapport',updated_on:'Aangepast op {d} (Growth)',prepared_by:'Voor u opgesteld',made_on:'Gemaakt op',days:'dagen',scope_pages:'Alleen geüploade pagina’s',
   summary:'Samenvatting',summary_line:'{n} pagina’s geanalyseerd; {w} daarvan zijn het bewerken waard.',start_with:'Begin met',
   clicks:'Klikken',clicks_l:'klikken',impressions:'Vertoningen',avg_position:'Gemiddelde positie',position:'Positie',pages_no_clicks:'Pagina’s met vertoningen maar zonder klik',
   top5_share:'Aandeel klikken van de top 5 pagina’s',last7:'Laatste 7 dagen t.o.v. de 7 ervoor',
@@ -69,7 +69,7 @@ const T={
    'Geen dagcijfers in de upload: de totalen zijn de som van de pagina’s en er is geen trend.'),
   cta_title:'Hulp nodig bij deze pagina’s?',cta_text:'Ik onderzoek elke pagina en schrijf de verbeteringen samen met u: elk feit gecontroleerd met u, niets gepubliceerd zonder uw akkoord.',cta_button:'Neem contact op',
   valid_until:'Deze privélink is geldig tot',owner_view:'weergave eigenaar',views:'keer bekeken'},
- es:{kicker:'Informe de Search Console',prepared_by:'Preparado para usted',made_on:'Creado el',days:'días',scope_pages:'Solo las páginas subidas',
+ es:{kicker:'Informe de Search Console',updated_on:'Actualizada el {d} (Growth)',prepared_by:'Preparado para usted',made_on:'Creado el',days:'días',scope_pages:'Solo las páginas subidas',
   summary:'Resumen',summary_line:'{n} páginas analizadas; en {w} de ellas merece la pena trabajar.',start_with:'Empiece por',
   clicks:'Clics',clicks_l:'clics',impressions:'Impresiones',avg_position:'Posición media',position:'Posición',pages_no_clicks:'Páginas con impresiones pero sin clics',
   top5_share:'Parte de los clics de las 5 páginas principales',last7:'Últimos 7 días frente a los 7 anteriores',
