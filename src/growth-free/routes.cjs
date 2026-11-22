@@ -164,11 +164,12 @@ function aiStartAnswers(){return Array.prototype.slice.call(document.querySelect
 // Market and language names in the visitor's language ("es — España", "español"); the server reads all three languages.
 function regionLabel(entry,lang){const code=String(entry).slice(0,2);if(lang==='en')return entry;try{const n=new Intl.DisplayNames([lang],{type:'region'}).of(code.toUpperCase());return n&&n!==code.toUpperCase()?code+' — '+n:entry}catch(e){return entry}}
 function languageLabel(name,lang){if(lang==='en')return name;const code=validLanguage(name);if(!code||/[(—]/.test(name))return name;try{const n=new Intl.DisplayNames([lang],{type:'language'}).of(code);return n&&n!==code?n:name}catch(e){return name}}
-function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false},lang='en'){
+function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false},lang='en',existing=null){
  const t=FORM_TEXTS[lang]||FORM_TEXTS.en;
  return page(t.title,`
 <p class="kicker">${esc(t.kicker)}</p>
-<h1>${esc(t.h1)}</h1><p class="muted">${esc(t.simpleIntro)}</p>
+<h1>${esc(t.h1)}</h1>
+${existing?`<div class="card" id="existingResult"><strong>${esc(t.existingTitle)}</strong>${existing.finished_at?`<p class="muted">${esc(t.existingWhen.replace('{d}',fmtDay(existing.finished_at)))}</p>`:''}<p><a class="btn" href="${esc(existing.url+'&lang='+lang)}">${esc(t.existingOpen)}</a></p><p class="muted">${esc(t.existingAgain)}</p></div>`:`<div class="card" id="existingLocal" hidden><strong>${esc(t.existingTitle)}</strong><p><a class="btn" id="existingLocalLink" href="#">${esc(t.existingOpen)}</a></p><p class="muted">${esc(t.existingAgain)}</p></div>`}<p class="muted">${esc(t.simpleIntro)}</p>
 <p class="lead">${esc(t.lead)}</p>
 ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(t.inviteLeft.replace('§1',invite.left).replace('§2',invite.max).replace('§3',invite.expires))}${invite.email_hint?' '+esc(t.inviteEmail.replace('§',invite.email_hint)):''}</p>`:''}
 <form id="f" class="card free-simple-start" novalidate><p class="kicker">${esc(t.simpleStart)}</p>
@@ -292,6 +293,11 @@ function simpleFromTracker(d){try{
  var lead=document.querySelector('.lead');if(lead)lead.textContent=FT.trLead;
 }catch(e){}}
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
+// A result this browser already started for the page in the address: offered on top of the form (owner 2026-11-22).
+function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://');if(i>=0)u=u.slice(i+3);if(u.indexOf('www.')===0)u=u.slice(4);u=u.split('#')[0].split('?')[0];while(u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u}
+(function(){try{var box=document.getElementById('existingLocal');if(!box)return;var u=new URLSearchParams(location.search).get('url');if(!u)return;
+ var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),r=M[normPage(u)];if(!r||r.charAt(0)!=='/'||r.charAt(1)==='/')return;
+ var lg=new URLSearchParams(location.search).get('lang');document.getElementById('existingLocalLink').href=r+(lg?'&lang='+encodeURIComponent(lg):'');box.hidden=false}catch(e){}})();
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
@@ -368,7 +374,7 @@ try{
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
 var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
-var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
+var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);try{var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');M[normPage(document.getElementById('url').value)]=d.result_url;localStorage.setItem('growthFreeResults',JSON.stringify(M))}catch(e){}location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
 }
@@ -1394,10 +1400,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').set('Content-Security-Policy',"frame-ancestors 'none'");
    if(status!=='ACTIVE')return res.status(403).type('html').send(inviteClosed(config,status));
    res.type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',{token:String(req.query.invite),label:'',
-    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req)));
+    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req),await existingFor(req,{inviteId:inv.id})));
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  // The form's language: ?lang=, the rank tracker account's language, the browser's, else English.
+ // The latest finished result for the page in ?url=: the owner's (any check) or this invitation's.
+ async function existingFor(req,{owner=false,inviteId=null}={}){
+  const u=req.query&&req.query.url;if(!u||typeof storage.latestDoneFor!=='function'||(!owner&&inviteId==null))return null;
+  try{const r=await storage.latestDoneFor(pool,{url:String(u).slice(0,500),owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
+ }
  const langFor=(req,account=null)=>formLang({query:req.query&&req.query.lang,account,acceptLanguage:req.get&&req.get('accept-language')});
  app.get(basePath,async(req,res)=>{
   // An unapproved public key must not look like a usable check when approval-only mode is enabled.
@@ -1410,11 +1421,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   // The owner (signed in) always gets the form, also on a domain without an access key (the admin page links here).
-  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req)));
+  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req),await existingFor(req,{owner:true})));
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
-  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry,htmlLang:langFor(req)},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req)));
+  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry,htmlLang:langFor(req)},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req),sessionValid(req)?await existingFor(req,{owner:true}):null));
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())

@@ -295,4 +295,11 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+// The latest finished check for this page (owner 2026-11-22: the form offers the existing result instead of starting over).
+// owner: any check; else only checks of this invitation.
+async function latestDoneFor(pool,{url,inviteId=null,owner=false}){
+ if(!owner&&inviteId==null)return null;
+ return (await pool.query(`SELECT public_id,access_key,finished_at,published_on::text AS published_on FROM growth_free_checks
+   WHERE status='DONE' AND lower(rtrim(url,'/'))=lower(rtrim($1,'/')) AND ($2::boolean OR invite_id=$3) ORDER BY finished_at DESC NULLS LAST LIMIT 1`,[String(url||''),!!owner,inviteId])).rows[0]||null;
+}
+module.exports={latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
