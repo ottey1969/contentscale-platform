@@ -25,6 +25,8 @@ async function publicationsFor(pool,urls,{invite=null}={}){
 async function growthFor(pool,urls,{invite=null}={}){
  const out=new Map(),want=new Set((urls||[]).map(norm).filter(Boolean));
  if(!pool||!want.size)return out;
+ // Free Growth setup (columns + the one-time note backfill for nl.contentscale.site) also when only the report is opened.
+ await require('../growth-free/store.cjs').ensureTables(pool).catch(e=>console.warn('[gsc-report] free growth setup failed',e&&e.message));
  let rows=[];
  try{rows=(await pool.query(`SELECT url,public_id,access_key,access_label,invite_id,published_on::text AS published_on,published_note,finished_at FROM growth_free_checks
    WHERE status='DONE' AND (access_label='admin' OR invite_id IN (SELECT id FROM growth_free_invites WHERE token_hash=$1))
