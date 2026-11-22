@@ -142,8 +142,11 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    await ensure();const owner=isOwner(req);
    const row=await st.openReport(pool,String(req.params.token),{count:!owner});
    if(!row)return res.status(404).type('html').send(gonePage());
-   const published=await (st.publicationsFor||require('./published.cjs').publicationsFor)(pool,((row.report&&row.report.pages)||[]).map(p=>p.url),{invite:row.growth_invite}).catch(()=>new Map());
-   res.type('html').send(reportPage(row,{owner,config,growthPath,published}));
+   const urls=((row.report&&row.report.pages)||[]).map(p=>p.url);
+   const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite}).catch(()=>new Map());
+   const published=st.publicationsFor?await st.publicationsFor(pool,urls,{invite:row.growth_invite}).catch(()=>new Map())
+    :new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
+   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth}));
   }catch(e){console.error('[gsc-report] view failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  return {sessionValid};
@@ -211,14 +214,16 @@ function metricRows(lang,t,list,{name='name',flag=true}={}){
   list.map(x=>`<tr><td>${esc(x[name])}${flag&&x.flag?` <span class="flag">· ${esc(t.flag_no_clicks)}</span>`:''}</td><td class="num">${nf(lang,x.clicks)}</td><td class="num">${nf(lang,x.impressions)}</td><td class="num">${pct(lang,x.ctr!=null?x.ctr:(x.impressions?x.clicks/x.impressions:null))}</td><td class="num">${pos(lang,x.position)}</td></tr>`).join('')+
   '</tbody></table></div>';
 }
-function growthLink(p,{lang,owner,invite,growthPath}){
+function growthLink(p,{lang,owner,invite,growthPath,result=null}){
  if(!owner&&!invite)return '';
  const q=p.queries&&p.queries[0]&&p.queries[0].query;
  const href=growthPath+'?'+(owner?'':'invite='+enc(invite)+'&')+'url='+enc(p.url)+(q?'&query='+enc(q):'')+'&lang='+enc(lang);
+ if(result)return `<a class="btn" href="${esc(growthPath+result+'&lang='+lang)}" target="_blank" rel="noopener">${esc(T[lang].open_result)}</a><br><a class="muted" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research_again)}</a>`;
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
-function reportPage(row,{owner,config,growthPath,published=new Map()}){
+function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map()}){
+ if(!published.size&&growth.size)published=new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
  const crawlOnly=r.scope==='CRAWL',A=t.audit,done=a=>a==='KEEP'||a==='NO_ISSUES';
@@ -279,6 +284,8 @@ function reportPage(row,{owner,config,growthPath,published=new Map()}){
  const baLine=p=>{if(!cmp||!cmp.comparable)return '';const x=cmpBy.get(require('./published.cjs').norm(p.url));if(!x)return '';
   if(x.status!=='OK')return `<div class="ba muted">${esc(B.missing)}</div>`;
   return `<div class="ba">${esc(fill(B.line,{cb:nf(lang,x.before.clicks),ib:nf(lang,x.before.impressions),pb:pos(lang,x.before.position)}))} → <b>${esc(fill(B.line_after,{ca:nf(lang,x.after.clicks),ia:nf(lang,x.after.impressions),pa:pos(lang,x.after.position)}))}</b></div>`};
+ // The page's existing Free Growth result: the owner's own for the owner, the invitation's for the company.
+ const resultOf=p=>{const x=growth.get(require('./published.cjs').norm(p.url));if(!x)return null;return owner?(x.owner_result||x.invite_result):x.invite_result};
  const doneOn=p=>{const d=published.get(require('./published.cjs').norm(p.url));return d?` <span class="chip done">${esc(t.updated_on.replace('{d}',day(lang,d+'T12:00:00Z')))}</span>`:''};
  const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${doneOn(p)}${baLine(p)}${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
    <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
@@ -289,7 +296,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map()}){
    ${p.trend?`<div class="muted">${esc(t.last7)}: ${nf(lang,p.trend.last7.clicks)} ${esc(t.clicks_l)}${change(lang,p.trend.clicks_change)}</div>`:''}</td>
    <td class="num" data-l="${esc(t.clicks)}">${nf(lang,p.clicks)}</td><td class="num" data-l="${esc(t.impressions)}">${nf(lang,p.impressions)}</td><td class="num" data-l="CTR">${pct(lang,p.ctr)}</td><td class="num" data-l="${esc(t.position)}">${pos(lang,p.position)}</td>
    <td class="num" data-l="${esc(t.median_ctr)}">${p.median_ctr!=null?pct(lang,p.median_ctr):'<span class="muted">'+esc(p.basis==='NO_DATA'?'—':t.too_few)+'</span>'}</td><td class="num" data-l="${esc(t.click_gap)}">${p.click_gap?'+'+nf(lang,p.click_gap):'—'}</td>
-   <td class="gcell">${growthLink(p,{lang,owner,invite,growthPath})}</td></tr>`;
+   <td class="gcell">${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p)})}</td></tr>`;
  const crawlRow=p=>pageRow(p).replace(/<td class="num" data-l[\s\S]*?<td class="gcell">/,`<td class="num" data-l="${esc(A.words)}">${p.audit?nf(lang,p.audit.words):'—'}</td><td class="num" data-l="${esc(A.lastmod)}">${p.lastmod?esc(day(lang,p.lastmod)):'—'}</td><td class="gcell">`);
  const crawlTable=list=>`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(A.words)}</th><th class="num">${esc(A.lastmod)}</th><th></th></tr></thead><tbody>${list.map(crawlRow).join('')}</tbody></table></div>`;
  const table=list=>crawlOnly?crawlTable(list):`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
