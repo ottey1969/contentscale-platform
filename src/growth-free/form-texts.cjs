@@ -3,6 +3,7 @@
 // from the rank tracker landed on an English form). Owner-only parts of the form stay in English.
 const FORM_TEXTS = {
   en: {
+    existingTitle: 'There is already a Growth result for this page', existingWhen: 'Made on {d}', existingOpen: 'Open the result', existingAgain: 'Or fill in the form below to scan this page again.',
     simpleIntro: 'Start with an existing public page URL, even if ContentScale has never seen this site. Search Console and a sitemap are not required.',
     simpleStart: 'WEBSITE GROWTH CHECK · START HERE',
     simpleChooseUrl: 'Enter a page URL first',
@@ -55,6 +56,7 @@ const FORM_TEXTS = {
     sGscRead: 'The file could not be read.', sNoStart: 'Could not start the check', sTimeout: 'The server did not answer within a minute. Please try again in a moment.',
   },
   nl: {
+    existingTitle: 'Er is al een Growth-resultaat voor deze pagina', existingWhen: 'Gemaakt op {d}', existingOpen: 'Open het resultaat', existingAgain: 'Of vul het formulier hieronder in om deze pagina opnieuw te scannen.',
     simpleIntro: 'Begin met een bestaande openbare pagina-URL, ook als ContentScale deze website nog niet kent. Search Console en een sitemap zijn niet nodig.',
     simpleStart: 'WEBSITE GROWTH-CHECK · BEGIN HIER',
     simpleChooseUrl: 'Vul eerst een pagina-URL in',
@@ -107,6 +109,7 @@ const FORM_TEXTS = {
     sGscRead: 'Het bestand kon niet worden gelezen.', sNoStart: 'De check kon niet starten', sTimeout: 'De server antwoordde niet binnen een minuut. Probeer het zo nog eens.',
   },
   es: {
+    existingTitle: 'Ya hay un resultado de Growth para esta página', existingWhen: 'Creado el {d}', existingOpen: 'Abrir el resultado', existingAgain: 'O rellena el formulario de abajo para analizar esta página de nuevo.',
     simpleIntro: 'Empieza con la URL de una página pública existente, aunque ContentScale todavía no conozca el sitio. No necesitas Search Console ni un sitemap.',
     simpleStart: 'COMPROBACIÓN DE CRECIMIENTO WEB · EMPIEZA AQUÍ',
     simpleChooseUrl: 'Introduce primero la URL de una página',

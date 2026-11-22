@@ -106,6 +106,7 @@ function memoryStore(){
    cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null,ui_lang:o.uiLang||null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
+  async latestDoneFor(_p,{url,inviteId=null,owner=false}){const n=u=>String(u||'').toLowerCase().replace(/\/+$/,'');return [...checks].reverse().find(c=>c.status==='DONE'&&n(c.url)===n(url)&&(owner||(inviteId!=null&&c.invite_id===inviteId)))||null},
   // Same fencing as store.cjs: a token per run; only the active token may store or release (lease expiry via expire()).
   async claimWriting(_p,{checkId}){const c=checks.find(x=>x.id===checkId);if(c.writing_token&&!c.expired)return null;c.expired=false;c.writing_token='tok'+(++id);return c.writing_token},
   async releaseWriting(_p,{checkId,token}){const c=checks.find(x=>x.id===checkId);if(c.writing_token===token)c.writing_token=null},
@@ -1066,4 +1067,21 @@ test('admin: every check links to its result and shows its publication date, so 
  // The real store selects what the list needs.
  const src=require('node:fs').readFileSync(require.resolve('../src/growth-free/store.cjs'),'utf8');
  assert.match(src,/SELECT id,public_id,access_key,email,url,query,status,decision,error_code,cached_from IS NOT NULL AS cached,marketing_consent,access_label,created_at,published_on,reminder_due_at/);
+});
+
+test('the form opens the existing result for this page instead of starting over (owner 2026-11-22)',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ const jar={cookie:(await s.post('/api/free-growth/admin/login',{key:'admin-secret-0123456789'})).headers.get('set-cookie').split(';')[0]};
+ const w={...jar,'X-Requested-With':'growth-free-admin'};
+ assert.equal((await s.post('/api/free-growth/admin/run',{url:URL_,query:'roof repair lodi nj'},w)).status,202);
+ await s.service.idle();
+ const form=(await s.get('/free-growth?url='+encodeURIComponent(URL_)+'&lang=nl',jar)).body;
+ assert.match(form,/id="existingResult"/);assert.match(form,/href="\/free-growth\/r\/pub1\?k=key1abcdefgh&amp;lang=nl"/);
+ assert.match(form,/Er is al een Growth-resultaat voor deze pagina/);assert.match(form,/Open het resultaat/);
+ // Another page, or a visitor without the owner session: no server banner.
+ assert.doesNotMatch((await s.get('/free-growth?url='+encodeURIComponent('https://acme-roofing.example/other/')+'&lang=nl',jar)).body,/id="existingResult"/);
+ assert.doesNotMatch((await s.get('/free-growth?key=open-key-12345&url='+encodeURIComponent(URL_))).body,/id="existingResult"/);
+ // Every visitor: a check started in this browser is remembered for its page and offered on the form.
+ assert.match(form,/growthFreeResults/);
+ for(const m of form.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
 });
