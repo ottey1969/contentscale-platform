@@ -33,3 +33,24 @@ test('result page, brief and texts',()=>{
  assert.match(store,/addColumn\('published_note','TEXT'\)/);assert.match(store,/published_note=\$6/);
  for(const k of ['What did you change on the page? (shown in your GSC report)','What was changed: {q}'])assert.ok(ROWS.find(r=>r[0]===k),k);
 });
+// Owner 2026-11-22: "vul ze" — pages on nl.contentscale.site that already had a publication date get the note from what
+// Growth recorded for that check. Only empty notes, only that host, only when Growth recorded something; never overwritten.
+test('backfill: nl.contentscale.site published checks without a note get the Growth suggestion',async()=>{
+ const {backfillNotes}=require('../src/growth-free/publication-note.cjs');
+ const written={version:2,runs:[{run:1,sections:[{item_id:'1',h2:'Wat kost een AI-overzicht?'}]}]};
+ const rows=[
+  {id:1,url:'https://nl.contentscale.site/a/',published_on:'2026-11-20',published_note:null,written,ui_lang:'nl'},
+  {id:2,url:'https://nl.contentscale.site/b/',published_on:'2026-11-20',published_note:'Eigen tekst',written,ui_lang:'nl'},
+  {id:3,url:'https://contentscale.site/c/',published_on:'2026-11-20',published_note:null,written,ui_lang:'nl'},
+  {id:4,url:'https://nl.contentscale.site/d/',published_on:null,published_note:null,written,ui_lang:'nl'},
+  {id:5,url:'https://nl.contentscale.site/e/',published_on:'2026-11-20',published_note:null,summary:{},ui_lang:'nl'}];
+ const updates=[];
+ const pool={query:async(sql,params)=>{
+  if(/^SELECT/.test(sql.trim())){assert.match(sql,/published_on IS NOT NULL/);assert.match(sql,/published_note IS NULL/);assert.match(sql,/host=\$1/);
+   return {rows:rows.filter(r=>r.published_on&&r.published_note==null&&new URL(r.url).host===params[0])}}
+  assert.match(sql,/published_note IS NULL/,'never overwrites a note');updates.push(params);return {rowCount:1}}};
+ const n=await backfillNotes(pool,{host:'nl.contentscale.site'});
+ assert.equal(n,1);assert.deepEqual(updates,[[1,'Toegevoegd: “Wat kost een AI-overzicht?”.']]);
+ const store=fs.readFileSync(require.resolve('../src/growth-free/store.cjs'),'utf8');
+ assert.match(store,/backfillNotes\(pool,\{host:'nl\.contentscale\.site'\}\)/);
+});

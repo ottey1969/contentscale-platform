@@ -16,4 +16,14 @@ function noteSuggestion(row,lang='nl'){
  if(!titles.length)return '';
  return cleanNote(lead+': '+titles.slice(0,6).map(t=>'“'+t+'”').join(', ')+'.');
 }
-module.exports={noteSuggestion,cleanNote,MAX};
+// Owner 2026-11-22 ("vul ze"): checks that already had a publication date before the note existed get the suggestion,
+// for one host. Only empty notes; an editor's own note is never overwritten. Returns how many were filled.
+async function backfillNotes(pool,{host}){
+ const rows=(await pool.query(`SELECT id,url,written,summary,selected_item_ids,ui_lang FROM growth_free_checks
+   WHERE published_on IS NOT NULL AND published_note IS NULL AND host=$1`,[String(host)])).rows;
+ let n=0;
+ for(const r of rows){const note=noteSuggestion(r,r.ui_lang||'nl');if(!note)continue;
+  const u=await pool.query('UPDATE growth_free_checks SET published_note=$2 WHERE id=$1 AND published_note IS NULL',[r.id,note]);n+=u.rowCount||0}
+ return n;
+}
+module.exports={noteSuggestion,cleanNote,backfillNotes,MAX};

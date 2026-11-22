@@ -104,6 +104,9 @@ function ensureTables(pool){
     queries JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await pool.query('CREATE INDEX IF NOT EXISTS growth_free_gsc_uploads_check_idx ON growth_free_gsc_uploads(check_id,created_at)');
+  // Owner 2026-11-22: notes for nl.contentscale.site pages published before the note field existed (only empty notes).
+  try{const n=await require('./publication-note.cjs').backfillNotes(pool,{host:'nl.contentscale.site'});if(n)console.log('[free-growth] publication notes filled:',n)}
+  catch(e){console.warn('[free-growth] publication note backfill failed',e&&e.message)}
  })().catch(e=>{ensured=null;throw e});
  return ensured;
 }
