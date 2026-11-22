@@ -117,6 +117,19 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    res.json({success:true,deleted:gone.length})}
   catch(e){console.error('[gsc-report] delete failed',e.message);res.status(500).json({success:false,error:'The reports could not be deleted.'})}
  });
+ // A newer Search Console export for an existing report: only its period and the numbers per page are kept (compare.cjs).
+ app.post(apiPath+'/reports/:id/period',async(req,res)=>{
+  if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
+  try{
+   const files=(Array.isArray(req.body&&req.body.files)?req.body.files:[]).filter(f=>f&&f.content_base64);
+   if(!files.length)return res.status(400).json({success:false,error:'Upload the newer Search Console export (Pages and Dates).'});
+   const snap=require('./compare.cjs').snapshot(analyze({uploads:readUploads(files)}));
+   if(!snap.pages.length)return res.status(400).json({success:false,error:'No pages were found in this export.'});
+   await ensure();const r=await st.setAfter(pool,Number(req.params.id),snap);
+   if(!r)return res.status(404).json({success:false,error:'Report not found'});
+   res.json({success:true,period:snap.period,pages:snap.pages.length});
+  }catch(e){console.error('[gsc-report] period failed',e.message);res.status(500).json({success:false,error:'The newer export could not be added. Nothing was changed.'})}
+ });
  app.post(apiPath+'/reports/:id/revoke',async(req,res)=>{
   if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
   try{await ensure();const r=await st.revokeReport(pool,Number(req.params.id));res.json({success:!!r,...(r?{}:{error:'Already revoked or not found'})})}
@@ -152,7 +165,7 @@ h1{font-size:clamp(24px,4vw,34px);line-height:1.2;margin:10px 0 6px}h2{font-size
 .scroll{overflow-x:auto}.url{word-break:break-all}.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
 .QUICK_WIN{background:#dcfce7;color:#14532d}.SNIPPET{background:#dbeafe;color:#1e3a8a}.ZERO_CLICKS{background:#fee2e2;color:#7f1d1d}.REVIEW{background:#fef3c7;color:#78350f}
 .DEEPER{background:#ede9fe;color:#4c1d95}.FIX_HREFLANG{background:#ccfbf1;color:#134e4a}.REDIRECT{background:#ffedd5;color:#7c2d12}.BLOCKED{background:#fecaca;color:#7f1d1d}.FIX_SNIPPET{background:#dbeafe;color:#1e3a8a}.FIX_STRUCTURE{background:#e0e7ff;color:#3730a3}.THIN{background:#fef3c7;color:#78350f}.NO_ISSUES{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
-.issues{font-size:13px;margin-top:4px}.issues .flag{font-weight:600}.chip.idea{background:#f1f5f9;color:#334155;font-weight:600}.chip{display:inline-block;background:#ecfdf5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
+.issues{font-size:13px;margin-top:4px}.ba{font-size:13px;margin-top:4px}.issues .flag{font-weight:600}.chip.idea{background:#f1f5f9;color:#334155;font-weight:600}.chip{display:inline-block;background:#ecfdf5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:12px;font-weight:700;margin:4px 4px 0 0}
 .facts{font-size:13px;margin:6px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:2px 10px}.facts dt{color:#64748b}.facts dd{margin:0;word-break:break-word}.GONE{background:#fecaca;color:#7f1d1d}.NO_DATA{background:#f1f5f9;color:#334155}.KEEP{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 .btn{display:inline-block;background:#4338ca;color:#fff;text-decoration:none;font-weight:700;border-radius:8px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .btn.big{padding:12px 20px;font-size:15px}.muted{color:#64748b;font-size:13px}details{margin-top:8px}summary{cursor:pointer;color:#4338ca;font-weight:600}
@@ -251,8 +264,23 @@ function reportPage(row,{owner,config,growthPath,published=new Map()}){
    ${row(A.f_h1,a.h1.length?a.h1.map(esc).join(' · '):no)}${row(A.words,nf(lang,a.words))}${row(A.f_canonical,a.canonical?esc(a.canonical):no)}${row(A.f_lang,a.lang?esc(a.lang):no)}
    ${row(A.f_hreflang,a.hreflang.length?a.hreflang.map(h=>esc(h.lang)).join(', '):no)}${row(A.f_schema,a.schema&&a.schema.length?a.schema.map(esc).join(', '):no)}${a.articles&&a.articles.length?row(A.f_articles,a.articles.map(n=>`“${n.headline?esc(n.headline):esc(A.no_headline)}”${n.id?` <code>${esc(n.id)}</code>`:''}${n.source==='RANK_MATH'?` (${esc(A.src_rank_math)})`:n.source==='YOAST'?` (${esc(A.src_yoast)})`:''}`).join('<br>')):''}${a.schema_description?row(A.f_schema_desc,esc(a.schema_description)):''}${p.lastmod?row(A.lastmod,esc(day(lang,p.lastmod))):''}</dl></details>`};
  // The date this page was updated through Free Growth (see published.cjs).
+// Before and after for updated pages, when a newer export was added (see compare.cjs).
+ const B=t.ba,cmp=r.after?require('./compare.cjs').compare(r,r.after,published):null,cmpBy=new Map(cmp?cmp.pages.map(x=>[require('./published.cjs').norm(x.url),x]):[]);
+ const fill=(s,o)=>s.replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
+ const posMove=(b,a)=>b==null||a==null?'—':Math.abs(b-a)<0.05?B.same:fill(b>a?B.higher:B.lower,{n:pos(lang,Math.abs(b-a))});
+ const signed=n=>(n>0?'+':'')+nf(lang,n);
+ const baCard=!cmp||!cmp.pages.length?'':`<div class="card" id="beforeAfter"><h2>${esc(B.title)}</h2><p><b>${esc(B.count.replace('{n}',nf(lang,cmp.pages.length)))}</b></p>`+
+  (cmp.comparable?`<div class="scroll"><table class="tbl"><thead><tr><th></th><th class="num">${esc(B.before)}</th><th class="num">${esc(B.after)}</th><th class="num">${esc(B.change)}</th></tr></thead><tbody>
+   <tr><td>${esc(B.clicks)}</td><td class="num">${nf(lang,cmp.totals.before.clicks)}</td><td class="num">${nf(lang,cmp.totals.after.clicks)}</td><td class="num">${signed(cmp.totals.after.clicks-cmp.totals.before.clicks)}</td></tr>
+   <tr><td>${esc(B.impressions)}</td><td class="num">${nf(lang,cmp.totals.before.impressions)}</td><td class="num">${nf(lang,cmp.totals.after.impressions)}</td><td class="num">${signed(cmp.totals.after.impressions-cmp.totals.before.impressions)}</td></tr>
+   <tr><td>${esc(B.position)}</td><td class="num">${pos(lang,cmp.totals.before.position)}</td><td class="num">${pos(lang,cmp.totals.after.position)}</td><td class="num">${esc(posMove(cmp.totals.before.position,cmp.totals.after.position))}</td></tr></tbody></table></div>
+   <p class="muted">${esc(fill(B.periods,{a:day(lang,cmp.before_period.start),b:day(lang,cmp.before_period.end),c:day(lang,cmp.after_period.start),d:day(lang,cmp.after_period.end),n:cmp.after_period.days}))}. ${esc(B.caveat)}</p>`
+   :`<p class="muted">${esc(cmp.reason==='PERIOD_LENGTH'?fill(B.length,{a:cmp.before_period.days,b:cmp.after_period.days}):B.unknown)}</p>`)+'</div>';
+ const baLine=p=>{if(!cmp||!cmp.comparable)return '';const x=cmpBy.get(require('./published.cjs').norm(p.url));if(!x)return '';
+  if(x.status!=='OK')return `<div class="ba muted">${esc(B.missing)}</div>`;
+  return `<div class="ba">${esc(fill(B.line,{cb:nf(lang,x.before.clicks),ib:nf(lang,x.before.impressions),pb:pos(lang,x.before.position)}))} → <b>${esc(fill(B.line_after,{ca:nf(lang,x.after.clicks),ia:nf(lang,x.after.impressions),pa:pos(lang,x.after.position)}))}</b></div>`};
  const doneOn=p=>{const d=published.get(require('./published.cjs').norm(p.url));return d?` <span class="chip done">${esc(t.updated_on.replace('{d}',day(lang,d+'T12:00:00Z')))}</span>`:''};
- const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${doneOn(p)}${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
+ const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${doneOn(p)}${baLine(p)}${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
    <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
    ${p.countries&&p.countries.length?`<details><summary>${esc(t.countries)}</summary>${metricRows(lang,t,p.countries)}</details>`:''}
@@ -302,7 +330,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map()}){
   ${crawlOnly?`<h3>${esc(A.unknown_title)}</h3><p class="muted">${esc(A.unknown)}</p><h3>${esc(t.method_title)}</h3><p class="muted">${esc(A.method)}${k.urls_checked!=null?esc(t.live.method):''}</p>`:''}</div>`:'';
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
  const foot=`<p class="foot">${esc(t.valid_until)} ${esc(day(lang,row.expires_at))} · ${esc(config.brand||'ContentScale')}${owner?' · '+esc(t.owner_view)+' · '+nf(lang,row.views)+' '+esc(t.views):''}</p>`;
- return shell(lang,row.title,head+`<div class="wrap">${summary}${kpis}${order}${positions}${speed}${crawlOnly?crawled:bands+queries+geo+crawled+files}${cta}${foot}</div>`);
+ return shell(lang,row.title,head+`<div class="wrap">${summary}${baCard}${kpis}${order}${positions}${speed}${crawlOnly?crawled:bands+queries+geo+crawled+files}${cta}${foot}</div>`);
 }
 
 const {COUNTRIES}=require('../rank-free/engine.cjs');
@@ -368,6 +396,7 @@ function rowsHtml(list){if(!list.length)return '<p class="muted">No reports.</p>
   var live=!x.revoked&&!x.expired,full=location.origin+x.url;
   return '<tr><td><input type="checkbox" data-id="'+h(x.id)+'" aria-label="Select"></td><td>'+h(x.title)+(x.growth?' <span class="badge QUICK_WIN">Free Growth</span>':'')+'</td><td>'+h(x.site)+'</td><td>'+h(String(x.created_at).slice(0,10))+'</td><td>'+h(String(x.expires_at).slice(0,10))+'</td><td class="num">'+h(x.views)+'</td><td>'+(x.revoked?'Withdrawn':x.expired?'Expired':'Active')+'</td><td>'+
    (live?'<a class="btn" href="'+h(x.url)+'" target="_blank" rel="noopener">Open</a> <button class="btn" data-copy="'+h(full)+'">Copy link</button> <button class="btn" style="background:#b45309" data-revoke="'+h(x.id)+'">Withdraw</button> ':'')+
+   (live&&x.search_console?'<label class="btn" style="background:#0f766e;cursor:pointer">Add a newer period<input type="file" multiple accept=".csv,.zip,.xlsx" data-period="'+h(x.id)+'" hidden></label> ':'')+
    '<button class="btn" style="background:#b91c1c" data-delete="'+h(x.id)+'">Delete</button></td></tr>'}).join('')+'</tbody></table></div>'}
 async function del(ids){var st=document.getElementById('delSt');
  if(!ids.length||!confirm('Delete '+ids.length+' report'+(ids.length>1?'s':'')+' for good? The link stops working and cannot be restored.'))return;
@@ -384,6 +413,9 @@ async function load(){var A=document.getElementById('listWith'),B=document.getEl
    var all=el.querySelector('[data-all]');if(all)all.onchange=function(){el.querySelectorAll('[data-id]').forEach(function(c){c.checked=all.checked});sync()};
    el.querySelectorAll('[data-id]').forEach(function(c){c.onchange=sync});
    el.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){navigator.clipboard.writeText(b.getAttribute('data-copy'));b.textContent='Copied'}});
+   el.querySelectorAll('[data-period]').forEach(function(inp){inp.onchange=async function(){var fs=[].slice.call(inp.files||[]);if(!fs.length)return;
+    try{var files=await Promise.all(fs.map(read));var r=await fetch(API+'/reports/'+inp.getAttribute('data-period')+'/period',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:JSON.stringify({files:files})});
+     var d=await r.json();alert(d.success?'Added: '+d.pages+' pages'+(d.period?' ('+d.period.start+' – '+d.period.end+')':' (no dates in this export)'):d.error)}catch(e){alert('Could not add the export.')}load()}});
    el.querySelectorAll('[data-delete]').forEach(function(b){b.onclick=function(){del([Number(b.getAttribute('data-delete'))])}});
    el.querySelectorAll('[data-revoke]').forEach(function(b){b.onclick=async function(){if(!confirm('Withdraw this link? The company can no longer open the report.'))return;
     await fetch(API+'/reports/'+b.getAttribute('data-revoke')+'/revoke',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'gsc-report'},body:'{}'});load()}})});
