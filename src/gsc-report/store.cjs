@@ -47,4 +47,8 @@ async function deleteReports(pool,ids){
  if(!ids||!ids.length)return [];
  return (await pool.query('DELETE FROM gsc_reports WHERE id=ANY($1::bigint[]) RETURNING id,growth_invite',[ids])).rows.map(r=>({id:Number(r.id),growth_invite:r.growth_invite}));
 }
-module.exports={ensureTables,createReport,openReport,listReports,revokeReport,deleteReports};
+// A newer export (before/after): replaces an earlier one, the report itself stays as it was.
+async function setAfter(pool,id,snap){
+ return (await pool.query(`UPDATE gsc_reports SET report=jsonb_set(report,'{after}',$2::jsonb) WHERE id=$1 RETURNING id`,[id,JSON.stringify(snap)])).rows[0]||null;
+}
+module.exports={ensureTables,createReport,openReport,listReports,revokeReport,deleteReports,setAfter};
