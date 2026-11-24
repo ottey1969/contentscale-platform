@@ -88,3 +88,11 @@ test('owner finds completed research even if originally created through a non-ad
  const recipient=await growthFor(pool,[url],{owner:false});
  assert.equal(recipient.get('https://example.com/page')?.owner_result||null,null);
 });
+
+test('existing research has a direct result link and a separate explicitly fresh research link',()=>{
+ const url=report.pages[0].url;
+ const growth=new Map([[require('../src/gsc-report/published.cjs').norm(url),{owner_result:'/r/saved?k=key'}]]);
+ const html=reportPage({...row,lang:'en'},{owner:true,config:{},growthPath:'/free-growth',growth});
+ assert.match(html,/href="\/free-growth\/r\/saved\?k=key&amp;lang=en"/);
+ assert.match(html,/href="\/free-growth\?[^"]*fresh=1[^"]*"[^>]*>Research<\/a>/);
+});
