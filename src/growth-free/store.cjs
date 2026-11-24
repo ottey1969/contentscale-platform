@@ -60,6 +60,11 @@ function ensureTables(pool){
   await addColumn('reminder_base','TEXT');
   // Up to five addresses entered for the check (the first is `email`, which the daily limits count).
   await addColumn('emails','JSONB');
+  // Minimal contact metadata retained when an owner removes research, not the report or access token.
+  await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_retained_contacts(
+    email TEXT PRIMARY KEY, tips BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL, last_at TIMESTAMPTZ NOT NULL,
+    url TEXT, query TEXT, country TEXT, language TEXT)`);
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -219,6 +224,7 @@ async function listLeads(pool,{limit=200}={}){
 async function forgetEmail(pool,email){
  const h=await pool.query('DELETE FROM growth_free_hire_requests WHERE email=$1',[email]);
  const c=await pool.query("DELETE FROM growth_free_checks WHERE email=$1 OR COALESCE(emails,'[]'::jsonb) ? $1",[email]);
+ await pool.query('DELETE FROM growth_free_retained_contacts WHERE email=LOWER($1)',[email]);
  return {checks:c.rowCount||0,hire_requests:h.rowCount||0};
 }
 
