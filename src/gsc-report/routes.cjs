@@ -237,7 +237,7 @@ function growthLink(p,{lang,owner,invite,growthPath,result=null,auditToken=null}
  if(!owner&&!invite)return '';
  const q=p.queries&&p.queries[0]&&p.queries[0].query;
  const href=growthPath+'?'+(owner?'':'invite='+enc(invite)+'&')+'url='+enc(p.url)+(q?'&query='+enc(q):'')+'&lang='+enc(lang)+(auditToken?'&gsc_audit='+enc(auditToken):'');
- if(result)return `<a class="btn" href="${esc(growthPath+result+'&lang='+lang)}" target="_blank" rel="noopener">${esc(T[lang].open_result)}</a><br><a class="muted" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research_again)}</a>`;
+ if(result)return `<a class="btn" href="${esc(growthPath+result+'&lang='+lang)}" target="_blank" rel="noopener">${esc(T[lang].open_result)}</a><br><a class="muted" href="${esc(href+'&fresh=1')}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
