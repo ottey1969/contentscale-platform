@@ -183,3 +183,23 @@ test('Firecrawl usage route checks owner authorization before requesting statist
  const source=fs.readFileSync(require.resolve('../src/growth-free/routes.cjs'),'utf8');
  assert.match(source,/app\.get\(apiPath\+'\/admin\/firecrawl-usage',async\(req,res\)=>\{\s*if\(!admin\(req,res\)\)return;\s*res\.set\('Cache-Control','private, no-store'\)/);
 });
+
+test('module telemetry attributes shared cache reuse and hosted errors separately',async()=>{
+ const {createFirecrawlManager}=require('../src/firecrawl-manager.cjs');
+ const events=[];
+ const manager=createFirecrawlManager({accounting:{reserve:async()=>{},record:async e=>events.push([e.module,e.event])}});
+ const config={env:{...env,FIRECRAWL_SHARED_CACHE_TTL_SECONDS:'60'},lookup,manager,original:fallback};
+ const a=createFreeGrowthFirecrawlReader({...config,module:'FREE_GROWTH',fetchImpl:ok});
+ const b=createFreeGrowthFirecrawlReader({...config,module:'GSC_AUDIT',fetchImpl:async()=>{throw Error('unexpected request')}});
+ await a.reader(url,opts);await b.reader(url,opts);
+ const c=createFreeGrowthFirecrawlReader({...config,module:'AI_GAP',fetchImpl:async()=>({ok:false,status:429})});
+ await c.reader('https://other.example.com/',opts);
+ assert.deepEqual(events,[['FREE_GROWTH','request'],['FREE_GROWTH','used'],['GSC_AUDIT','cache'],['GSC_AUDIT','used'],['AI_GAP','request'],['AI_GAP','error'],['AI_GAP','fallback']]);
+});
+test('owner dashboard returns module counters and preserves quota totals if telemetry fails',async()=>{
+ const {dashboard}=require('../src/firecrawl-owner-dashboard.cjs');
+ const manager={durableUsage:async()=>({scope:'POSTGRES_SHARED',daily_requests:1,monthly_requests:2,daily_limit:5,monthly_limit:10}),moduleUsage:async()=>[{module:'FREE_GROWTH',requests:2}]};
+ assert.deepEqual((await dashboard({manager,env})).modules,[{module:'FREE_GROWTH',requests:2}]);
+ manager.moduleUsage=async()=>{throw Error('unavailable')};
+ const d=await dashboard({manager,env});assert.equal(d.modules,null);assert.equal(d.monthly.used,2);
+});
