@@ -300,6 +300,9 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const crawlRow=p=>pageRow(p).replace(/<td class="num" data-l[\s\S]*?<td class="gcell">/,`<td class="num" data-l="${esc(A.words)}">${p.audit?nf(lang,p.audit.words):'—'}</td><td class="num" data-l="${esc(A.lastmod)}">${p.lastmod?esc(day(lang,p.lastmod)):'—'}</td><td class="gcell">`);
  const crawlTable=list=>`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(A.words)}</th><th class="num">${esc(A.lastmod)}</th><th></th></tr></thead><tbody>${list.map(crawlRow).join('')}</tbody></table></div>`;
  const table=list=>crawlOnly?crawlTable(list):`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
+ const overFive=(r.pages||[]).filter(p=>Array.isArray(p.audit?.issues)&&p.audit.issues.length>5).sort((a,b)=>b.audit.issues.length-a.audit.issues.length);
+ const overFiveTitle={nl:'Pagina’s met meer dan 5 problemen',es:'Páginas con más de 5 problemas',en:'Pages with more than 5 problems'}[lang];
+ const overFiveSection=overFive.length?`<section class="card" id="pagesOverFiveIssues"><h2>${esc(overFiveTitle)} (${overFive.length})</h2><ul>${overFive.map(p=>`<li><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a> · ${p.audit.issues.length} — ${p.audit.issues.map(c=>esc(A.issues[c]||c)).join(' · ')} ${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p)})}</li>`).join('')}</ul></section>`:'';
  const order=`<div class="card"><h2>${esc(t.order_title)}</h2><p class="muted">${esc(crawlOnly?A.order_intro:t.order_intro)}</p>${work.length?table(work):`<p>${esc(t.nothing_to_do)}</p>`}
   ${keep.length?`<details><summary>${esc(crawlOnly?A.keep_title:t.keep_title)} (${keep.length})</summary>${table(keep)}</details>`:''}</div>`;
  const bands=`<div class="card"><h2>${esc(t.bands_title)}</h2><div class="scroll"><table class="tbl"><thead><tr><th>${esc(t.position)}</th><th class="num">${esc(t.pages)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.compared)}</th></tr></thead><tbody>`+
@@ -337,7 +340,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
   ${crawlOnly?`<h3>${esc(A.unknown_title)}</h3><p class="muted">${esc(A.unknown)}</p><h3>${esc(t.method_title)}</h3><p class="muted">${esc(A.method)}${k.urls_checked!=null?esc(t.live.method):''}</p>`:''}</div>`:'';
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
  const foot=`<p class="foot">${esc(t.valid_until)} ${esc(day(lang,row.expires_at))} · ${esc(config.brand||'ContentScale')}${owner?' · '+esc(t.owner_view)+' · '+nf(lang,row.views)+' '+esc(t.views):''}</p>`;
- return shell(lang,row.title,head+`<div class="wrap">${summary}${baCard}${kpis}${order}${positions}${speed}${crawlOnly?crawled:bands+queries+geo+crawled+files}${cta}${foot}</div>`);
+ return shell(lang,row.title,head+`<div class="wrap">${summary}${baCard}${kpis}${overFiveSection}${order}${positions}${speed}${crawlOnly?crawled:bands+queries+geo+crawled+files}${cta}${foot}</div>`);
 }
 
 const {COUNTRIES}=require('../rank-free/engine.cjs');
