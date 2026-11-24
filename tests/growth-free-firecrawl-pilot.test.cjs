@@ -140,3 +140,21 @@ test('two reader instances share hosted capture but still respect publisher refu
  const blocked=createFreeGrowthFirecrawlReader({...config,original:async()=>{throw Object.assign(Error('HTTP_403'),{code:'HTTP_403'})}});
  await assert.rejects(blocked.reader(url,opts),/HTTP_403/);assert.equal(calls,1);
 });
+
+test('durable accounting survives manager recreation and prevents calls when unavailable',async()=>{
+ const {createFirecrawlManager}=require('../src/firecrawl-manager.cjs');
+ let count=0,loads=0;
+ const accounting={reserve:async()=>{if(count>=1)throw Object.assign(Error('limit'),{code:'FIRECRAWL_LOCAL_REQUEST_LIMIT'});count++},usage:async()=>({daily:count,monthly:count})};
+ const env={FIRECRAWL_API_KEY:'durable',FIRECRAWL_DAILY_REQUEST_LIMIT:'1'};
+ const load=async()=>{loads++;return {html:'ok'}};
+ const first=createFirecrawlManager({accounting,requireAccounting:true});
+ await first.read({env,url,load});
+ const second=createFirecrawlManager({accounting,requireAccounting:true});
+ await assert.rejects(second.read({env,url,load}),/FIRECRAWL_LOCAL_REQUEST_LIMIT/);
+ assert.equal((await second.durableUsage(env)).daily_requests,1);
+ assert.equal((await second.durableUsage(env)).scope,'POSTGRES_SHARED');
+ const broken=createFirecrawlManager({accounting:{reserve:async()=>{throw Error('db down')}},requireAccounting:true});
+ await assert.rejects(broken.read({env,url,load}),/FIRECRAWL_ACCOUNTING_UNAVAILABLE/);
+ await assert.rejects(createFirecrawlManager({requireAccounting:true}).read({env,url,load}),/FIRECRAWL_ACCOUNTING_UNAVAILABLE/);
+ assert.equal(loads,1);
+});
