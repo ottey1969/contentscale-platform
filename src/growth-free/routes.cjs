@@ -1081,6 +1081,25 @@ var nowObs=null;
 function wireNowBar(){var card=document.getElementById('freeNextAction'),bar=document.getElementById('nowBar');if(!bar){bar=document.createElement('div');bar.id='nowBar';bar.className='now-bar';bar.hidden=true;bar.setAttribute('role','region');bar.setAttribute('aria-label','Next action');document.body.appendChild(bar)}
  if(!card||!window.IntersectionObserver)return;if(nowObs)nowObs.disconnect();
  nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''},{threshold:0});nowObs.observe(card)}
+
+function graafHtml(d){
+ var l=({en:{title:'GRAAF ContentScore',first:'First recorded measurement',current:'Current measurement',none:'No measurement yet',scan:'Scan live page',again:'Rescan live page',history:'Scan history',issues:'Findings',copy:'Copy',all:'Copy all',less:'No longer reported',same:'Still reported',more:'Newly reported',wait:'Scanning…',save:'Saving…',error:'Scan or save failed. Try again.',copied:'Copied',note:'A change in reported findings is not independent verification of a fix.'},nl:{title:'GRAAF ContentScore',first:'Eerste vastgelegde meting',current:'Actuele meting',none:'Nog geen meting',scan:'Live pagina scannen',again:'Opnieuw scannen',history:'Scanhistorie',issues:'Bevindingen',copy:'Kopieer',all:'Kopieer alles',less:'Niet meer gemeld',same:'Nog gemeld',more:'Nieuw gemeld',wait:'Scannen…',save:'Opslaan…',error:'Scan of opslag mislukt. Probeer opnieuw.',copied:'Gekopieerd',note:'Een wijziging in bevindingen bewijst niet zelfstandig dat een probleem is opgelost.'},es:{title:'GRAAF ContentScore',first:'Primera medición registrada',current:'Medición actual',none:'Sin medición',scan:'Analizar página',again:'Volver a analizar',history:'Historial',issues:'Hallazgos',copy:'Copiar',all:'Copiar todo',less:'Ya no detectados',same:'Persistentes',more:'Nuevos hallazgos',wait:'Analizando…',save:'Guardando…',error:'Error al analizar o guardar. Inténtalo de nuevo.',copied:'Copiado',note:'Un cambio en los hallazgos no verifica por sí solo una corrección.'}})[PAGE_LANG]||{};
+ var h=d.contentscore_history||[],x=d.contentscore_comparison||{},a=x.baseline,b=x.current;
+ function findings(r){var recs=r.recommendations||[];return '<details><summary>'+recs.length+' '+esc(l.issues)+'</summary><div data-graaf-list><button type="button" data-graaf-all>'+esc(l.all)+'</button><ol>'+recs.map(function(v){return '<li><div data-graaf-text style="white-space:pre-wrap">'+esc(['title','priority','description','action','learning','target'].map(function(k){return v[k]}).filter(Boolean).join(' · '))+'</div><button type="button" data-graaf-copy>'+esc(l.copy)+'</button></li>'}).join('')+'</ol></div></details>'}
+ function measurement(r,label){return '<div><small>'+esc(label)+'</small><strong>'+esc(r.score)+'/100</strong><small>'+esc(r.scanned_at)+' UTC</small>'+findings(r)+'</div>'}
+ var out='<section class="card" id="graafGrowth"><h2>'+esc(l.title)+'</h2>';
+ if(!a)out+='<p>'+esc(l.none)+'</p>';else{out+='<div class="grid">'+measurement(a,l.first)+(h.length>1?measurement(b,l.current):'')+'</div>';if(h.length>1){out+='<p><strong>'+esc((x.delta>0?'+':'')+x.delta)+'/100</strong></p>'+[[l.less,x.noLongerReported],[l.same,x.remaining],[l.more,x.newlyReported]].map(function(z){return '<details><summary>'+esc(z[0])+' ('+(z[1]||[]).length+')</summary><ul>'+(z[1]||[]).map(function(t){return '<li>'+esc(t)+'</li>'}).join('')+'</ul></details>'}).join('')+'<p class="muted">'+esc(l.note)+'</p>'}out+='<details><summary>'+esc(l.history)+' ('+h.length+')</summary>'+h.slice().reverse().map(function(r){return measurement(r,r.scanned_at)}).join('')+'</details>'}
+ return out+'<p><button class="btn" type="button" id="graafScan">'+esc(a?l.again:l.scan)+'</button> <span role="status" id="graafStatus"></span></p></section>';
+}
+function wireGraaf(d){
+ var root=document.getElementById('graafGrowth');if(!root)return;
+ var l=({en:['Scanning…','Saving…','Scan or save failed. Try again.','Copied'],nl:['Scannen…','Opslaan…','Scan of opslag mislukt. Probeer opnieuw.','Gekopieerd'],es:['Analizando…','Guardando…','Error al analizar o guardar.','Copiado']})[PAGE_LANG]||['Scanning…','Saving…','Scan failed.','Copied'];
+ root.onclick=async function(e){var b=e.target.closest('button');if(!b)return;
+ if(b.hasAttribute('data-graaf-copy')||b.hasAttribute('data-graaf-all')){var nodes=b.hasAttribute('data-graaf-copy')?[b.closest('li').querySelector('[data-graaf-text]')]:Array.from(b.closest('[data-graaf-list]').querySelectorAll('[data-graaf-text]'));try{await navigator.clipboard.writeText(nodes.map(function(n){return n.textContent}).join(String.fromCharCode(10,10)));b.textContent=l[3]}catch(e){}return}
+ if(b.id!=='graafScan')return;var status=document.getElementById('graafStatus');b.disabled=true;status.textContent=l[0];
+ try{var scan=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:d.url})}),result=await scan.json();if(!scan.ok||!result.success)throw Error('scan');status.textContent=l[1];var save=await fetch(API+'/contentscore'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({result:result})}),v=await save.json();if(!save.ok||!v.success)throw Error('save');d.contentscore_history=v.contentscore_history;d.contentscore_comparison=v.contentscore_comparison;root.outerHTML=graafHtml(d);wireGraaf(d)}catch(e){status.textContent=l[2];b.disabled=false}
+ };
+}
 function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{};var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
@@ -1129,6 +1148,7 @@ function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{}
  h+='<details id="stepPublish" class="journey-section"'+(published?' open':'')+'>'+stepSum(4,'Publish & measure',published?'Published on '+String(d.publication.published_on).slice(0,10)+' — compare before and after here':'After you put the text on your site: record the date',published)+'<div class="journey-body" id="pubBox">'+pubHtml(d.publication,d.gsc)+'</div></details>';
  h+='<div class="card hire-prominent" id="hire"><div class="hire-who">'+(AUTHOR_IMG?'<img src="'+esc(AUTHOR_IMG)+'" alt="'+esc(AUTHOR_NAME||BRAND)+'" width="64" height="64" loading="lazy" referrerpolicy="no-referrer">':'')+'<div><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Rather not do it yourself?</h2>'+(AUTHOR_NAME?'<p class="hire-name">'+esc(AUTHOR_NAME)+' · '+esc(BRAND)+'</p>':'')+'</div></div>'+String(SERVICE).split('\\n').map(function(l){return '<p>'+esc(l)+'</p>'}).join('')+'<p><button type="button" class="btn" id="hireOpen">Yes, do it for me</button>'+(CONTACT?' <a class="btn ghost" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a>':'')+'</p>'+
  '<form id="hf" hidden><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit" class="btn">Send my request</button> <small role="status" id="hs"></small></p></form></div>';
+ h+=graafHtml(d);
  LAST_SELF=selfItems(s.gaps,d);h+=selfHtml(LAST_SELF);
  // The evidence: one tab per source, closed until opened (also by every "evidence" link).
  h+='<details id="stepResearch" class="card"><summary>What was checked — evidence (Google · Search Console)</summary><div class="rtabs" role="tablist"><button type="button" data-tab="google" aria-selected="true">Google</button><button type="button" data-tab="gsc" aria-selected="false">Search Console</button></div>';
@@ -1141,7 +1161,7 @@ function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{}
  h+='<details class="research-details" id="limits"><summary>Research scope and limitations</summary><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p></details>';
  h+=briefSourcesHtml(s,d);h+=ev;
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();importLegacyDone();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();wireGraaf(d);importLegacyDone();
  var ho=document.getElementById('hireOpen');if(ho)ho.onclick=function(){var f=document.getElementById('hf');f.hidden=false;ho.hidden=true;var n=f.querySelector('input[name=name]');if(n)n.focus()};
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
@@ -1743,6 +1763,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   let shown={summary:row.summary,aiGap:aiPart&&aiPart.gap};
   if(row.status==='DONE'){try{const map=await topicLang.topicTextsFor({pool,row,lang:row.ui_lang||'en',summary:row.summary,aiGap:aiPart&&aiPart.gap,model:reminders.modelFor(config.textModel!==undefined?config.textModel:config.mailModel)});
    shown=topicLang.applyTexts(row.summary,aiPart&&aiPart.gap,map)}catch(e){}}
+  const cs=require('./contentscore.cjs'),csHistory=cs.mergeHistory(row.url,row.contentscore_history,await cs.sharedHistory(pool,row));
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,gsc_declined:!!row.gsc_declined&&!(gscPart&&gscPart.latest),
    ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap,saved_answers:(aiPart.answers||[]).map(function(x){return {engine:x.engine,raw_text:x.raw_text,created_at:x.created_at}})}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
@@ -1752,7 +1773,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
    content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report,bestOwnPage:bestOwn}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
+   contentscore_history:csHistory,contentscore_comparison:cs.compare(csHistory),implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -1910,6 +1931,19 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const publicationOf=row=>({published_on:row.published_on||null,note:row.published_note||null,note_suggestion:row.published_note?null:require('./publication-note.cjs').noteSuggestion(row,row.ui_lang||'nl')||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
   stopped:!!row.reminder_opt_out_at,email_hint:(Array.isArray(row.emails)&&row.emails.length?row.emails:[row.email]).map(maskEmail).join(', '),email_configured:emailConfigured(),
   windows:row.published_on?reminders.windowsOf(row.published_on):null});
+ app.post(apiPath+'/checks/:id/contentscore',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});
+  try{
+   const result=require('../gsc-report/contentscore.cjs').scanResult(req.body?.result,row.url);
+   const cs=require('./contentscore.cjs');
+   const shared=await cs.sharedHistory(pool,row);
+   const saved=await storage.appendContentScore(pool,{checkId:row.id,result});
+   const history=saved?cs.mergeHistory(row.url,saved,shared):null;
+   if(!history)return res.status(409).json({success:false,error:'Scan not saved'});
+   res.set('Cache-Control','no-store').json({success:true,contentscore_history:history,contentscore_comparison:require('./contentscore.cjs').compare(history)});
+  }catch(e){res.status(400).json({success:false,error:'ContentScore could not be saved'})}
+ });
  app.post(apiPath+'/checks/:id/implementation',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});

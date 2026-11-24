@@ -50,6 +50,7 @@ function ensureTables(pool){
   await addColumn('published_on','DATE');
   await addColumn('published_note','TEXT');
   await addColumn('implementation',"JSONB NOT NULL DEFAULT '{}'::jsonb");
+  await addColumn('contentscore_history',"JSONB NOT NULL DEFAULT '[]'::jsonb");
   await addColumn('reminder_due_at','TIMESTAMPTZ');
   await addColumn('reminder_sent_at','TIMESTAMPTZ');
   await addColumn('reminder_attempts','INTEGER NOT NULL DEFAULT 0');
@@ -155,7 +156,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation,contentscore_history FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
@@ -324,4 +325,8 @@ async function treatedQuestions(pool,{url,market=null,owner=false,inviteId=null}
  AND (($3::boolean AND access_label='admin') OR ($4::bigint IS NOT NULL AND invite_id=$4))`,[url,JSON.stringify(market||null),owner,inviteId]);
  return [...new Set(result.rows.map(r=>r.question||r.query).filter(Boolean))];
 }
-module.exports={treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+async function appendContentScore(pool,{checkId,result}){
+ const row=(await pool.query(`UPDATE growth_free_checks SET contentscore_history=COALESCE(contentscore_history,'[]'::jsonb)||jsonb_build_array($2::jsonb) WHERE id=$1 AND status='DONE' RETURNING contentscore_history`,[checkId,JSON.stringify(result)])).rows[0];
+ return row?row.contentscore_history:null;
+}
+module.exports={appendContentScore,treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

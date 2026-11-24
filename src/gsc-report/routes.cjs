@@ -146,7 +146,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const row=await st.openReport(pool,String(req.params.token),{count:false});
    const url=String(req.body?.url||'');
    const page=row?.report?.pages?.find(p=>p.url===url);
-   if(!page||page.action==='REDIRECT'||page.action==='GONE')return res.status(404).json({success:false,error:'Page not eligible'});
+   if(!page||['REDIRECT','GONE','BLOCKED'].includes(page.action)||(page.audit?.issues||[]).length)return res.status(404).json({success:false,error:'Page not eligible'});
    const result=require('./contentscore.cjs').scanResult(req.body?.result,url);
    const saved=await st.saveContentScore(pool,row.token,url,result);
    if(!saved)return res.status(404).json({success:false,error:'Report unavailable'});
@@ -155,7 +155,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
  });
  app.get(basePath+'/r/:token',async(req,res)=>{
   res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').set('Referrer-Policy','no-referrer')
-   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; "+(['all','problems','blocked','redirects','gone'].includes(req.query?.view)?"script-src 'self'; connect-src 'self'":"script-src 'none'"));
+   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; "+((isOwner(req)||['all','problems','blocked','redirects','gone'].includes(req.query?.view))?"script-src 'self'; connect-src 'self'":"script-src 'none'"));
   try{
    await ensure();const owner=isOwner(req);
    const row=await st.openReport(pool,String(req.params.token),{count:!owner});
@@ -164,7 +164,8 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite}).catch(()=>new Map());
    const published=st.publicationsFor?await st.publicationsFor(pool,urls,{invite:row.growth_invite}).catch(()=>new Map())
     :new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
-   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,issueView:req.query?.view,apiPath}));
+   const scores=await require('../growth-free/contentscore.cjs').forReport(pool,row,owner);
+   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,scores,issueView:req.query?.view,apiPath}));
   }catch(e){console.error('[gsc-report] view failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  return {sessionValid};
@@ -240,7 +241,7 @@ function growthLink(p,{lang,owner,invite,growthPath,result=null,auditToken=null}
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
-function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),problemsOnly=false,issueView=null,apiPath='/api/gsc'}){
+function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),scores={},problemsOnly=false,issueView=null,apiPath='/api/gsc'}){
  if(!published.size&&growth.size)published=new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
@@ -308,6 +309,8 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  // The page's existing Free Growth result: the owner's own for the owner, the invitation's for the company.
  const resultOf=p=>{const x=growth.get(require('./published.cjs').norm(p.url));if(!x)return null;return owner?(x.owner_result||x.invite_result):x.invite_result};
  const doneOn=p=>{const d=published.get(require('./published.cjs').norm(p.url));const g=growth.get(require('./published.cjs').norm(p.url));return d?` <span class="chip done">${esc(t.updated_on.replace('{d}',day(lang,d+'T12:00:00Z')))}</span>${g&&g.note?`<div class="done-note">${esc(g.note)}</div>`:''}`:''};
+ const cs=require('./contentscore-ui.cjs');
+ const scoreCell=p=>{const own=r.contentscores?.[p.url];return cs.cell(p,scores[p.url]||(Array.isArray(own)?own[own.length-1]:own),{owner,lang,esc,endpoint:apiPath+'/r/'+enc(row.token||'')+'/contentscore'});};
  const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${doneOn(p)}${baLine(p)}${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
    <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
@@ -317,7 +320,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
    ${p.trend?`<div class="muted">${esc(t.last7)}: ${nf(lang,p.trend.last7.clicks)} ${esc(t.clicks_l)}${change(lang,p.trend.clicks_change)}</div>`:''}</td>
    <td class="num" data-l="${esc(t.clicks)}">${nf(lang,p.clicks)}</td><td class="num" data-l="${esc(t.impressions)}">${nf(lang,p.impressions)}</td><td class="num" data-l="CTR">${pct(lang,p.ctr)}</td><td class="num" data-l="${esc(t.position)}">${pos(lang,p.position)}</td>
    <td class="num" data-l="${esc(t.median_ctr)}">${p.median_ctr!=null?pct(lang,p.median_ctr):'<span class="muted">'+esc(p.basis==='NO_DATA'?'—':t.too_few)+'</span>'}</td><td class="num" data-l="${esc(t.click_gap)}">${p.click_gap?'+'+nf(lang,p.click_gap):'—'}</td>
-   <td class="gcell">${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</td></tr>`;
+   <td class="gcell">${scoreCell(p)}<br>${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</td></tr>`;
  const crawlRow=p=>pageRow(p).replace(/<td class="num" data-l[\s\S]*?<td class="gcell">/,`<td class="num" data-l="${esc(A.words)}">${p.audit?nf(lang,p.audit.words):'—'}</td><td class="num" data-l="${esc(A.lastmod)}">${p.lastmod?esc(day(lang,p.lastmod)):'—'}</td><td class="gcell">`);
  const crawlTable=list=>`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(A.words)}</th><th class="num">${esc(A.lastmod)}</th><th></th></tr></thead><tbody>${list.map(crawlRow).join('')}</tbody></table></div>`;
  const table=list=>crawlOnly?crawlTable(list):`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
@@ -332,10 +335,9 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
   const words={nl:{title:'Websiteproblemen',all:'Alle unieke pagina’s',page:'Pagina',issues:'Problemen',action:'Actie',structure:'Structuur',back:'Terug naar volledig rapport'},en:{title:'Website issues overview',all:'All unique pages',page:'Page',issues:'Problems',action:'Action',structure:'Structure',back:'Back to full report'},es:{title:'Problemas del sitio web',all:'Todas las páginas únicas',page:'Página',issues:'Problemas',action:'Acción',structure:'Estructura',back:'Volver al informe completo'}}[lang];
   const chosen=allPages.filter(p=>selected==='all'||categories[selected](p)).sort((a,b)=>(b.audit?.issues?.length||0)-(a.audit?.issues?.length||0));
   const filters=['all',...Object.keys(categories)].map(key=>`<a class="btn" href="?view=${key}"${key===selected?' aria-current="page" style="background:#312e81;color:white;outline:2px solid #818cf8"':''}>${esc(key==='all'?words.all:categoryNames[key])} (${key==='all'?allPages.length:counts[key]})</a>`).join(' ');
-  const cs=require('./contentscore-ui.cjs');
   const ui=cs.labels[lang];
-  const rows=chosen.map(p=>`<tr data-issue-page="${esc(p.url)}"><td><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a>${doneOn(p)}</td><td>${Object.keys(categories).filter(key=>categories[key](p)).map(key=>`<span class="chip">${esc(categoryNames[key])}</span>`).join(' ')}${liveLine(p)}${jsLine(p)}${noteLine(p)}${posChips(p)}</td><td>${cs.structure(p,A,lang,esc)}${p.audit?facts(p):''}</td><td>${cs.cell(p,r.contentscores?.[p.url],{owner,lang,esc,endpoint:apiPath+'/r/'+enc(row.token||'')+'/contentscore'})}</td><td>${p.action==='REDIRECT'||p.action==='GONE'?esc(label(p)):growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</td></tr>`).join('');
-  return shell(lang,words.title,head+`<div class="wrap"><p><a class="btn" href="?">${esc(words.back)}</a></p><section class="card" id="pagesWithProblems"><h2>${esc(words.title)} (${chosen.length})</h2><p>${filters}</p><div class="scroll"><table class="tbl" id="issueTable"><thead><tr><th>${esc(words.page)}</th><th>${esc(words.issues)}</th><th>${esc(words.structure)}</th><th>GRAAF ContentScore</th><th>${esc(words.action)}</th></tr></thead><tbody>${rows}</tbody></table></div></section></div><script src="/gsc/contentscore.js" defer></script>`);
+  const rows=chosen.map(p=>`<tr data-issue-page="${esc(p.url)}"><td><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a>${doneOn(p)}</td><td>${Object.keys(categories).filter(key=>categories[key](p)).map(key=>`<span class="chip">${esc(categoryNames[key])}</span>`).join(' ')}${liveLine(p)}${jsLine(p)}${noteLine(p)}${posChips(p)}</td><td>${cs.structure(p,A,lang,esc)}${p.audit?facts(p):''}</td><td>${p.action==='REDIRECT'||p.action==='GONE'?esc(label(p)):growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</td></tr>`).join('');
+  return shell(lang,words.title,head+`<div class="wrap"><p><a class="btn" href="?">${esc(words.back)}</a></p><section class="card" id="pagesWithProblems"><h2>${esc(words.title)} (${chosen.length})</h2><p>${filters}</p><div class="scroll"><table class="tbl" id="issueTable"><thead><tr><th>${esc(words.page)}</th><th>${esc(words.issues)}</th><th>${esc(words.structure)}</th><th>${esc(words.action)}</th></tr></thead><tbody>${rows}</tbody></table></div></section></div><script src="/gsc/contentscore.js" defer></script>`);
  }
  const overFive=problemPages.filter(p=>p.audit.issues.length>5);
  const overFiveTitle={nl:'Pagina’s met meer dan 5 problemen',es:'Páginas con más de 5 problemas',en:'Pages with more than 5 problems'}[lang];
@@ -377,7 +379,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
   ${crawlOnly?`<h3>${esc(A.unknown_title)}</h3><p class="muted">${esc(A.unknown)}</p><h3>${esc(t.method_title)}</h3><p class="muted">${esc(A.method)}${k.urls_checked!=null?esc(t.live.method):''}</p>`:''}</div>`:'';
  const cta=`<div class="card cta"><h2>${esc(t.cta_title)}</h2><p>${esc(t.cta_text)}</p><p><a class="btn big" href="${esc(contact)}" target="_blank" rel="noopener">${esc(t.cta_button)}</a></p></div>`;
  const foot=`<p class="foot">${esc(t.valid_until)} ${esc(day(lang,row.expires_at))} · ${esc(config.brand||'ContentScale')}${owner?' · '+esc(t.owner_view)+' · '+nf(lang,row.views)+' '+esc(t.views):''}</p>`;
- return shell(lang,row.title,head+`<div class="wrap">${summary}${baCard}${kpis}${overFiveSection}${order}${positions}${speed}${crawlOnly?crawled:bands+queries+geo+crawled+files}${cta}${foot}</div>`);
+ return shell(lang,row.title,head+`<div class="wrap">${summary}${baCard}${kpis}${overFiveSection}${order}${positions}${speed}${crawlOnly?crawled:bands+queries+geo+crawled+files}${cta}${foot}</div>${owner?'<script src="/gsc/contentscore.js" defer></script>':''}`);
 }
 
 const {COUNTRIES}=require('../rank-free/engine.cjs');
