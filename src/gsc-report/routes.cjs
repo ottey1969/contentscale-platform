@@ -227,7 +227,9 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
  const crawlOnly=r.scope==='CRAWL',A=t.audit,done=a=>a==='KEEP'||a==='NO_ISSUES';
- const work=(r.pages||[]).filter(p=>!done(p.action)),keep=(r.pages||[]).filter(p=>done(p.action));
+ const categories={problems:p=>Array.isArray(p.audit?.issues)&&p.audit.issues.length>0,blocked:p=>p.action==='BLOCKED',redirects:p=>p.action==='REDIRECT',gone:p=>p.action==='GONE'};
+ const eligible=(r.pages||[]).filter(p=>!Object.values(categories).some(fn=>fn(p)));
+ const work=eligible.filter(p=>!done(p.action)),keep=eligible.filter(p=>done(p.action));
  const first=work[0];
  const contact=config.contactUrl||'https://contentscale.site/contact/';
  const head=`<div class="top"><div class="wrap"><div class="brand"><small>${esc(config.brand||'ContentScale')} · ${esc(crawlOnly?A.kicker:t.kicker)}</small>
@@ -303,7 +305,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const table=list=>crawlOnly?crawlTable(list):`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
  const problemPages=(r.pages||[]).filter(p=>Array.isArray(p.audit?.issues)&&p.audit.issues.length>0).sort((a,b)=>b.audit.issues.length-a.audit.issues.length);
  const problemTitle={nl:'Pagina’s met problemen',es:'Páginas con problemas',en:'Pages with problems'}[lang];
- const categories={problems:p=>Array.isArray(p.audit?.issues)&&p.audit.issues.length>0,blocked:p=>p.action==='BLOCKED',redirects:p=>p.action==='REDIRECT',gone:p=>p.action==='GONE'};
+
  const categoryNames={problems:A.kpi_issues,blocked:A.kpi_blocked,redirects:L.kpi_redirects,gone:L.kpi_gone};
  const allPages=(r.pages||[]).filter(p=>Object.values(categories).some(fn=>fn(p)));
  const counts=Object.fromEntries(Object.keys(categories).map(key=>[key,allPages.filter(categories[key]).length]));
