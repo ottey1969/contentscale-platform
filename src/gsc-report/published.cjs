@@ -22,20 +22,22 @@ async function publicationsFor(pool,urls,{invite=null}={}){
 // The latest Free Growth result per page (owner 2026-11-22: from the report straight to the brief, the date and the
 // before/after, instead of a new check). owner_result: the owner's own check, shown to the owner only; invite_result: a
 // check made through this report's invitation, the company's own. published_on: the latest date of either.
-async function growthFor(pool,urls,{invite=null}={}){
+async function growthFor(pool,urls,{invite=null,owner=false}={}){
  const out=new Map(),want=new Set((urls||[]).map(norm).filter(Boolean));
  if(!pool||!want.size)return out;
  // Free Growth setup (columns + the one-time note backfill for nl.contentscale.site) also when only the report is opened.
  await require('../growth-free/store.cjs').ensureTables(pool).catch(e=>console.warn('[gsc-report] free growth setup failed',e&&e.message));
  let rows=[];
- try{rows=(await pool.query(`SELECT url,public_id,access_key,access_label,invite_id,published_on::text AS published_on,published_note,finished_at FROM growth_free_checks
-   WHERE status='DONE' AND (access_label='admin' OR invite_id IN (SELECT id FROM growth_free_invites WHERE token_hash=$1))
-   ORDER BY finished_at DESC NULLS LAST LIMIT 2000`,[invite?hashToken(invite):''])).rows}
+ try{rows=(await pool.query(`SELECT url,public_id,access_key,access_label,invite_id,(invite_id IN (SELECT id FROM growth_free_invites WHERE token_hash=$1 AND revoked_at IS NULL)) AS matching_invite,published_on::text AS published_on,published_note,finished_at FROM growth_free_checks
+   WHERE status='DONE' AND ($2::boolean OR access_label='admin' OR invite_id IN (SELECT id FROM growth_free_invites WHERE token_hash=$1))
+   AND url=ANY($3::text[]) ORDER BY finished_at DESC NULLS LAST`,[invite?hashToken(invite):'',!!owner,Array.from(new Set((urls||[]).flatMap(u=>[u,String(u).replace(/\/+$/,'')||u,String(u).replace(/\/+$/,'')+'/']))) ])).rows}
  catch(e){return out}
  const link=r=>'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key);
  for(const r of rows){const k=norm(r.url);if(!want.has(k))continue;
+  if(!owner&&r.access_label!=='admin'&&r.matching_invite!==true)continue;
   const x=out.get(k)||{published_on:null,note:null,owner_result:null,invite_result:null};
-  if(r.access_label==='admin'){if(!x.owner_result)x.owner_result=link(r)}else if(r.invite_id!=null){if(!x.invite_result)x.invite_result=link(r)}
+  if((r.access_label==='admin'||owner)&&!x.owner_result)x.owner_result=link(r);
+  if(r.invite_id!=null&&invite&&r.matching_invite===true&&!x.invite_result)x.invite_result=link(r);
   const d=r.published_on?String(r.published_on).slice(0,10):null;if(d&&(!x.published_on||d>x.published_on)){x.published_on=d;x.note=r.published_note?String(r.published_note).slice(0,500):null}
   else if(d&&d===x.published_on&&!x.note&&r.published_note){x.note=String(r.published_note).slice(0,500)}
   out.set(k,x)}
