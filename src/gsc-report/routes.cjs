@@ -135,9 +135,27 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
   try{await ensure();const r=await st.revokeReport(pool,Number(req.params.id));res.json({success:!!r,...(r?{}:{error:'Already revoked or not found'})})}
   catch(e){res.status(500).json({success:false,error:'The link could not be revoked.'})}
  });
+ app.get(basePath+'/contentscore.js',(req,res)=>{
+  res.type('application/javascript').send(require('./contentscore-ui.cjs').script);
+ });
+ app.post(apiPath+'/r/:token/contentscore',async(req,res)=>{
+  res.set('Cache-Control','no-store');
+  if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
+  try{
+   await ensure();
+   const row=await st.openReport(pool,String(req.params.token),{count:false});
+   const url=String(req.body?.url||'');
+   const page=row?.report?.pages?.find(p=>p.url===url);
+   if(!page||page.action==='REDIRECT'||page.action==='GONE')return res.status(404).json({success:false,error:'Page not eligible'});
+   const result=require('./contentscore.cjs').scanResult(req.body?.result,url);
+   const saved=await st.saveContentScore(pool,row.token,url,result);
+   if(!saved)return res.status(404).json({success:false,error:'Report unavailable'});
+   res.json({success:true,result});
+  }catch(e){console.error('[gsc-report] save ContentScore failed',e.message);res.status(400).json({success:false,error:'ContentScore could not be saved'})}
+ });
  app.get(basePath+'/r/:token',async(req,res)=>{
   res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').set('Referrer-Policy','no-referrer')
-   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; script-src 'none'");
+   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; "+(['all','problems','blocked','redirects','gone'].includes(req.query?.view)?"script-src 'self'; connect-src 'self'":"script-src 'none'"));
   try{
    await ensure();const owner=isOwner(req);
    const row=await st.openReport(pool,String(req.params.token),{count:!owner});
@@ -146,7 +164,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite}).catch(()=>new Map());
    const published=st.publicationsFor?await st.publicationsFor(pool,urls,{invite:row.growth_invite}).catch(()=>new Map())
     :new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
-   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,issueView:req.query?.view}));
+   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,issueView:req.query?.view,apiPath}));
   }catch(e){console.error('[gsc-report] view failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  return {sessionValid};
@@ -222,7 +240,7 @@ function growthLink(p,{lang,owner,invite,growthPath,result=null,auditToken=null}
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
-function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),problemsOnly=false,issueView=null}){
+function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),problemsOnly=false,issueView=null,apiPath='/api/gsc'}){
  if(!published.size&&growth.size)published=new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
@@ -311,11 +329,13 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const counts=Object.fromEntries(Object.keys(categories).map(key=>[key,allPages.filter(categories[key]).length]));
  const selected=problemsOnly?'problems':issueView;
  if(selected==='all'||Object.hasOwn(categories,selected)){
-  const words={nl:{title:'Websiteproblemen',all:'Alle',page:'Pagina',issues:'Problemen',action:'Actie',structure:'Structuur',back:'Terug naar volledig rapport'},en:{title:'Website issues overview',all:'All',page:'Page',issues:'Problems',action:'Action',structure:'Structure',back:'Back to full report'},es:{title:'Problemas del sitio web',all:'Todos',page:'Página',issues:'Problemas',action:'Acción',structure:'Estructura',back:'Volver al informe completo'}}[lang];
+  const words={nl:{title:'Websiteproblemen',all:'Alle unieke pagina’s',page:'Pagina',issues:'Problemen',action:'Actie',structure:'Structuur',back:'Terug naar volledig rapport'},en:{title:'Website issues overview',all:'All unique pages',page:'Page',issues:'Problems',action:'Action',structure:'Structure',back:'Back to full report'},es:{title:'Problemas del sitio web',all:'Todas las páginas únicas',page:'Página',issues:'Problemas',action:'Acción',structure:'Estructura',back:'Volver al informe completo'}}[lang];
   const chosen=allPages.filter(p=>selected==='all'||categories[selected](p)).sort((a,b)=>(b.audit?.issues?.length||0)-(a.audit?.issues?.length||0));
-  const filters=['all',...Object.keys(categories)].map(key=>`<a class="btn" href="?view=${key}"${key===selected?' aria-current="page"':''}>${esc(key==='all'?words.all:categoryNames[key])} (${key==='all'?allPages.length:counts[key]})</a>`).join(' ');
-  const rows=chosen.map(p=>`<tr data-issue-page="${esc(p.url)}"><td><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a>${doneOn(p)}</td><td>${Object.keys(categories).filter(key=>categories[key](p)).map(key=>`<span class="chip">${esc(categoryNames[key])}</span>`).join(' ')}${issueLine(p)}${liveLine(p)}${jsLine(p)}${noteLine(p)}${posChips(p)}</td><td>${p.audit?facts(p):'—'}</td><td>${p.action==='REDIRECT'||p.action==='GONE'?esc(label(p)):growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</td></tr>`).join('');
-  return shell(lang,words.title,head+`<div class="wrap"><p><a class="btn" href="?">${esc(words.back)}</a></p><section class="card" id="pagesWithProblems"><h2>${esc(words.title)} (${chosen.length})</h2><p>${filters}</p><div class="scroll"><table class="tbl" id="issueTable"><thead><tr><th>${esc(words.page)}</th><th>${esc(words.issues)}</th><th>${esc(words.structure)}</th><th>${esc(words.action)}</th></tr></thead><tbody>${rows}</tbody></table></div></section></div>`);
+  const filters=['all',...Object.keys(categories)].map(key=>`<a class="btn" href="?view=${key}"${key===selected?' aria-current="page" style="background:#312e81;color:white;outline:2px solid #818cf8"':''}>${esc(key==='all'?words.all:categoryNames[key])} (${key==='all'?allPages.length:counts[key]})</a>`).join(' ');
+  const cs=require('./contentscore-ui.cjs');
+  const ui=cs.labels[lang];
+  const rows=chosen.map(p=>`<tr data-issue-page="${esc(p.url)}"><td><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a>${doneOn(p)}</td><td>${Object.keys(categories).filter(key=>categories[key](p)).map(key=>`<span class="chip">${esc(categoryNames[key])}</span>`).join(' ')}${liveLine(p)}${jsLine(p)}${noteLine(p)}${posChips(p)}</td><td>${cs.structure(p,A,lang,esc)}${p.audit?facts(p):''}</td><td>${cs.cell(p,r.contentscores?.[p.url],{owner,lang,esc,endpoint:apiPath+'/r/'+enc(row.token||'')+'/contentscore'})}</td><td>${p.action==='REDIRECT'||p.action==='GONE'?esc(label(p)):growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</td></tr>`).join('');
+  return shell(lang,words.title,head+`<div class="wrap"><p><a class="btn" href="?">${esc(words.back)}</a></p><section class="card" id="pagesWithProblems"><h2>${esc(words.title)} (${chosen.length})</h2><p>${filters}</p><div class="scroll"><table class="tbl" id="issueTable"><thead><tr><th>${esc(words.page)}</th><th>${esc(words.issues)}</th><th>${esc(words.structure)}</th><th>GRAAF ContentScore</th><th>${esc(words.action)}</th></tr></thead><tbody>${rows}</tbody></table></div></section></div><script src="/gsc/contentscore.js" defer></script>`);
  }
  const overFive=problemPages.filter(p=>p.audit.issues.length>5);
  const overFiveTitle={nl:'Pagina’s met meer dan 5 problemen',es:'Páginas con más de 5 problemas',en:'Pages with more than 5 problems'}[lang];
