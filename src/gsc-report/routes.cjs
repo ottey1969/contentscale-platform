@@ -161,7 +161,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const row=await st.openReport(pool,String(req.params.token),{count:!owner});
    if(!row)return res.status(404).type('html').send(gonePage());
    const urls=((row.report&&row.report.pages)||[]).map(p=>p.url);
-   const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite}).catch(()=>new Map());
+   const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite,owner}).catch(()=>new Map());
    const published=st.publicationsFor?await st.publicationsFor(pool,urls,{invite:row.growth_invite}).catch(()=>new Map())
     :new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
    const scores=await require('../growth-free/contentscore.cjs').forReport(pool,row,owner);
