@@ -103,3 +103,40 @@ test('AI gap uses per-run reader and records capture provider separately from ci
  assert.equal(factories,1);
  assert.equal(reads,2);
 });
+
+test('shared manager coalesces simultaneous module reads and preserves capture time',async()=>{
+ const {createFirecrawlManager}=require('../src/firecrawl-manager.cjs');
+ let now=Date.parse('2026-11-24T00:00:00Z'),calls=0;
+ const manager=createFirecrawlManager({now:()=>now});
+ const env={FIRECRAWL_API_KEY:'one',FIRECRAWL_SHARED_CACHE_TTL_SECONDS:'60'};
+ const load=async()=>{calls++;return {html:'<p>capture</p>',retrieved_at:'original'}};
+ const [a,b]=await Promise.all([manager.read({env,url,load}),manager.read({env,url,load})]);
+ assert.equal(calls,1);assert.equal(a.value.retrieved_at,b.value.retrieved_at);
+ assert.equal((await manager.read({env,url,load})).source,'CACHE');
+ now+=61000;await manager.read({env,url,load});assert.equal(calls,2);
+ assert.equal(manager.usage(env).daily_requests,2);
+});
+test('shared manager enforces UTC daily and monthly request limits and separates keys',async()=>{
+ const {createFirecrawlManager}=require('../src/firecrawl-manager.cjs');
+ let now=Date.parse('2026-11-24T23:59:00Z');
+ const manager=createFirecrawlManager({now:()=>now});
+ const env={FIRECRAWL_API_KEY:'first',FIRECRAWL_DAILY_REQUEST_LIMIT:'1',FIRECRAWL_MONTHLY_REQUEST_LIMIT:'2'};
+ const read=(e=env)=>manager.read({env:e,url,load:async()=>({html:'ok'})});
+ await read();await assert.rejects(read(),/FIRECRAWL_LOCAL_REQUEST_LIMIT/);
+ await read({...env,FIRECRAWL_API_KEY:'second'});
+ now+=120000;await read();assert.equal(manager.usage(env).daily_requests,1);
+ now+=86400000;await assert.rejects(read(),/FIRECRAWL_LOCAL_REQUEST_LIMIT/);
+ now=Date.parse('2026-12-01T00:00:00Z');await read();
+ assert.equal(manager.usage(env).monthly_requests,1);
+ assert.equal(manager.usage(env).provider_credits_verified,false);
+});
+test('two reader instances share hosted capture but still respect publisher refusals',async()=>{
+ const {createFirecrawlManager}=require('../src/firecrawl-manager.cjs');
+ const manager=createFirecrawlManager();let calls=0;
+ const config={env:{...env,FIRECRAWL_SHARED_CACHE_TTL_SECONDS:'60'},lookup,manager,fetchImpl:async()=>{calls++;return ok()},original:fallback};
+ const a=createFreeGrowthFirecrawlReader(config),b=createFreeGrowthFirecrawlReader(config);
+ await a.reader(url,opts);await b.reader(url,opts);
+ assert.equal(calls,1);assert.equal(b.stats.shared_cache_hits,1);assert.equal(b.stats.provider_requests,0);
+ const blocked=createFreeGrowthFirecrawlReader({...config,original:async()=>{throw Object.assign(Error('HTTP_403'),{code:'HTTP_403'})}});
+ await assert.rejects(blocked.reader(url,opts),/HTTP_403/);assert.equal(calls,1);
+});
