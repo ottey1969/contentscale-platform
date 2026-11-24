@@ -167,10 +167,28 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const sitemapFallback=await trackerSitemapFallback(rows(5),page.url,rows(3),
     fetchLive===fetchPublicGrowthHtml?u=>fetchPublicGrowthHtml(u,{limit:1024*1024,timeout:4500,redirects:1,allowSitemapXml:true}):null);
   const own=await fetchLive(page.url,RESEARCH_FETCH).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
+  // Preserve the initial native response for technical identity and locale.
+  const nativeOwn=own.live;
+  let contentLive=null,ownResearchReader=null;
+  if(v.canEdit&&fetchLive===fetchPublicGrowthHtml&&nativeOwn?.html){
+   const {createFreeGrowthFirecrawlReader,extractionReason}=require('./growth-free-firecrawl-reader.cjs');
+   if(extractionReason(nativeOwn,RESEARCH_FETCH)){
+    // Reuse the existing native capture rather than fetching the same URL twice.
+    const adapter=createFreeGrowthFirecrawlReader({original:async()=>nativeOwn,maxPages:1});
+    if(adapter.stats.enabled){
+     ownResearchReader=adapter.stats;
+     const capture=await adapter.reader(page.url,RESEARCH_FETCH).catch(()=>null);
+     if(capture?.source==='FIRECRAWL_HOSTED_API'&&
+        normUrl(capture.final_url)===normUrl(nativeOwn.final_url||page.url)){
+      contentLive=capture;
+     }
+    }
+   }
+  }
   // Only use the browser if the static public source is too thin to assess.
   // Prevent mock-network tests from launching real Chromium unintentionally.
   let renderStatus=own.live?'STATIC_HTML_USED':'STATIC_HTML_UNAVAILABLE';
-  if(own.live&&needsGrowthRender(own.live.html)&&
+  if(!contentLive&&own.live&&needsGrowthRender(own.live.html)&&
      (fetchLive===fetchPublicGrowthHtml||renderOwn!==renderPublicGrowthPage)){
    const rendered=await renderOwn(page.url);
    renderStatus=rendered?.status||'RENDER_UNAVAILABLE';
@@ -180,12 +198,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    }else if(renderStatus==='BROWSER_RENDERED_SAME_ORIGIN'){
     renderStatus='BROWSER_NO_ADDITIONAL_READABLE_CONTENT';
    }
-  }else if(own.live&&needsGrowthRender(own.live.html)){
+  }else if(!contentLive&&own.live&&needsGrowthRender(own.live.html)){
    renderStatus='BROWSER_FALLBACK_NOT_CONFIGURED';
   }
+  if(contentLive)renderStatus='FIRECRAWL_CONTENT_RESEARCH';
   // Determine the chosen exact-page query BEFORE competitor discovery.
   // Historical SERPs may be about another brand/product even on the same URL.
-  const seed=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
+  const seed=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:contentLive?nativeOwn:own.live,contentLive,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:[],sitePages:rows(3),previousBrief:page.brief_content});
   const rawFocus=v.queryOverride||seed.growth_decision?.primary_next_action?.query||String(page.keyword||'').trim()||seed.search?.focus_query||'';
   const intentResolution=resolveGrowthPageIntent({keyword:rawFocus,
@@ -217,7 +236,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const market=derivedMarket&&(!configured?.countries?.length||configured.countries[0]==='US')?derivedMarket:null;
   // The country (and language) the page itself states, for pages outside a US-state market; reported with the research.
   // A market the owner set for this page in the Tracker wins; headings, domain and hreflang are evidence only.
-  const locale=targetQuery&&!market?deriveSearchLocale({html:own.live?.html||page.saved_html||'',url:page.url,configured}):null;
+  const locale=targetQuery&&!market?deriveSearchLocale({html:nativeOwn?.html||page.saved_html||'',url:page.url,configured}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
    reason:intentResolution.warning||'No search phrase is justified by observed page content.'
@@ -228,8 +247,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const reader=await readRankingPages({query:targetQuery,discovery,historical,fetchLive,renderOwn,retryDelayMs});
   let comparisons=reader.comparisons,attempted=reader.attempted;const fetchLog=reader.fetchLog,fetchSummaryNow=reader.summary;
   let fetchSummary=reader.fetchSummary;
-  const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
+  const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:contentLive?nativeOwn:own.live,contentLive,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
+  report.research_reader={own:ownResearchReader,competitors:reader.researchReader||null};
   report.tracker_sitemap_fallback=sitemapFallback;
   report.intent_resolution=intentResolution;
   report.page_content.render_status=renderStatus;
@@ -304,7 +324,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const designatedFinal=designatedAlias?(normUrl(designatedAlias)===normUrl(page.url)?page.url:designatedAlias):designated;
   report.autonomous_growth_opportunity=autonomouslyFindGrowthOpportunity({report,discovery,existingPageReviews:sameSiteReviews});
   report.full_section_comparison=compareFullSections({query:targetQuery,ownUrl:page.url,
-   ownHtml:own.live?.html||page.saved_html||'',ownTruncated:own.live?.truncated===true,
+   ownHtml:contentLive?.html||own.live?.html||page.saved_html||'',ownTruncated:(contentLive||own.live)?.truncated===true,
    competitors:comparisons.filter(x=>x.search_source==='SERPER_GOOGLE_ORGANIC'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='BING_PUBLIC_RSS')});
   // Compare the distinct growth intent on its likely existing destination,
   // not only the protected homepage that surfaced the GSC opportunity.
