@@ -47,3 +47,36 @@ test('internal or invalid hosts are never sent to the hosted API',async()=>{
  assert.equal((await reader('https://internal.example/',opts)).source,'LIVE_PUBLIC_HTTPS');
  assert.equal(calls,0);
 });
+
+const {readRankingPages}=require('../src/growth-ranking-page-reader.cjs');
+test('Tracker ranking fallback only reads thin successful pages and respects three-page cap',async()=>{
+ const leads=Array.from({length:8},(_,i)=>({url:'https://site'+i+'.example/roof/',source:'SERPER_GOOGLE_ORGANIC'}));
+ const called=[];
+ const rich='<h1>Roof repair</h1><p>'+('Roof repair requires careful inspection and practical preparation. '.repeat(12))+'</p>';
+ const result=await readRankingPages({query:'roof repair',discovery:{leads},
+  fetchLive:async url=>{
+   if(url===leads[0].url)throw Object.assign(Error('HTTP_403'),{code:'HTTP_403'});
+   return {html:url===leads[1].url?rich:'<h1>Roof repair</h1>',final_url:url,source:'LIVE_PUBLIC_HTTPS'};
+  },
+  renderOwn:async()=>({status:'RENDER_UNAVAILABLE'}),
+  hostedFallback:async(url)=>{called.push(url);return null;}
+ });
+ assert.equal(called.length,3);
+ assert(!called.includes(leads[0].url));
+ assert(!called.includes(leads[1].url));
+ assert.equal(result.comparisons.length,1);
+});
+test('Tracker ranking hosted evidence must match final URL and pass editorial quality',async()=>{
+ const url='https://roof.example/repair/';
+ const rich='<h1>Roof repair</h1><p>'+('Roof repair requires careful inspection and practical preparation. '.repeat(12))+'</p>';
+ const run=final_url=>readRankingPages({query:'roof repair',discovery:{leads:[{url}]},
+  fetchLive:async()=>({html:'<h1>Roof repair</h1>',final_url:url,source:'LIVE_PUBLIC_HTTPS'}),
+  renderOwn:async()=>({status:'RENDER_UNAVAILABLE'}),
+  hostedFallback:async()=>({html:rich,final_url,source:'FIRECRAWL_HOSTED_API',truncated:false})});
+ const good=await run(url);
+ assert.equal(good.comparisons.length,1);
+ assert.equal(good.fetchLog[0].hosted_status,'USED');
+ const wrong=await run('https://other.example/');
+ assert.equal(wrong.comparisons.length,0);
+ assert.equal(wrong.fetchLog[0].hosted_status,'FALLBACK');
+});
