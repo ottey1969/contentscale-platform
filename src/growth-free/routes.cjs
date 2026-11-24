@@ -522,7 +522,8 @@ function selfItems(g,d){var out=[],ag=d&&d.ai&&d.ai.gap,acts=(d&&d.ai&&d.ai.summ
  acts.filter(function(a){return a.id!=='choose_ai_topics'&&a.id!=='compare_cited_pages'}).forEach(function(a){out.push({id:'act:'+a.id,title:a.title,why:a.why,steps:a.steps,src:'ai'})});
  return out}
 function selfKey(){return 'growthFreeSelfDone:'+API}
-function selfDone(){try{return JSON.parse(localStorage.getItem(selfKey())||'{}')}catch(e){return {}}}
+var IMPLEMENTATION={};
+function selfDone(){var out={};Object.keys(IMPLEMENTATION).forEach(function(k){if(IMPLEMENTATION[k].done)out[k]=1});return out}
 function selfHtml(list){if(!list.length)return '';var done0=selfDone(),isDone=function(x){return !!(done0[x.id]||x.auto)},open=list.filter(function(x){return !isDone(x)}),fin=list.filter(isDone);
  var li=function(x){return '<li><label class="check"><input type="checkbox" class="selfDone" data-id="'+esc(x.id)+'"'+(isDone(x)?' checked':'')+(x.auto?' disabled':'')+'><span><span class="chip '+(x.src==='ai'?'ai">AI':'g">Google')+'</span><strong>'+esc(x.title)+'</strong>'+(x.auto?' <small class="step-done">✓ Found on your page now</small>':'')+'<details class="why"><summary>Why and how</summary><small>'+esc(x.why)+'</small>'+((x.steps||[]).length?'<ol>'+x.steps.map(function(t){return '<li><small>'+esc(t)+'</small></li>'}).join('')+'</ol>':'')+
   (x.code?'<pre class="selfCode" data-no-translate style="white-space:pre-wrap;font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:320px;overflow:auto">'+esc(x.code)+'</pre><button type="button" class="ghost selfCopy" data-id="'+esc(x.id)+'">Copy the code</button> <small class="selfCopySt" role="status"></small>':'')+'</details></span></label></li>'};
@@ -535,7 +536,7 @@ function loadLive(d){LIVE_D=d;if(LIVE||!d||d.status!=='DONE')return;fetch(API+'/
  if(NOW_CTX){var dn=selfDone();NOW_CTX.selfOpen=(LAST_SELF||[]).filter(function(y){return !(dn[y.id]||y.auto)}).length;updateNow(document.querySelectorAll('.gapPick:checked').length)}}).catch(function(){})}
 function wireSelf(){document.querySelectorAll('.selfCopy').forEach(function(b){b.onclick=function(e){e.preventDefault();var it=(LAST_SELF||[]).filter(function(x){return x.id===b.getAttribute('data-id')})[0];if(!it||!it.code)return;
   if(navigator.clipboard)navigator.clipboard.writeText(it.code);var st=b.parentNode.querySelector('.selfCopySt');if(st)st.textContent='Copied ✓'}});
- document.querySelectorAll('.selfDone').forEach(function(c){c.onchange=function(){var d=selfDone();if(c.checked)d[c.getAttribute('data-id')]=1;else delete d[c.getAttribute('data-id')];try{localStorage.setItem(selfKey(),JSON.stringify(d))}catch(e){}
+ document.querySelectorAll('.selfDone').forEach(function(c){c.onchange=async function(){var id=c.getAttribute('data-id'),it=(LAST_SELF||[]).find(function(x){return x.id===id}),checked=c.checked;if(!it)return;c.disabled=true;try{var response=await fetch(API+'/implementation'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,title:it.title,done:checked})});var data=await response.json();if(!response.ok||!data.success)throw Error(data.error||'Not saved');IMPLEMENTATION=data.implementation;var pub=document.getElementById('pubNote');if(pub&&!pub.value&&data.note_suggestion)pub.value=data.note_suggestion}catch(e){c.checked=!checked;c.disabled=false;alert('Could not save the task. Please try again.');return}
  var card=document.getElementById('selfDo');if(card&&LAST_SELF){card.outerHTML=selfHtml(LAST_SELF);wireSelf()}}})}
 var LAST_SELF=null;
 // One topic card: title and labels, one line of action; everything else behind "Why?".
@@ -1070,7 +1071,7 @@ var nowObs=null;
 function wireNowBar(){var card=document.getElementById('freeNextAction'),bar=document.getElementById('nowBar');if(!bar){bar=document.createElement('div');bar.id='nowBar';bar.className='now-bar';bar.hidden=true;bar.setAttribute('role','region');bar.setAttribute('aria-label','Next action');document.body.appendChild(bar)}
  if(!card||!window.IntersectionObserver)return;if(nowObs)nowObs.disconnect();
  nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''},{threshold:0});nowObs.observe(card)}
-function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
+function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{};var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
@@ -1729,7 +1730,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
    content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report,bestOwnPage:bestOwn}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
+   implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -1887,6 +1888,16 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const publicationOf=row=>({published_on:row.published_on||null,note:row.published_note||null,note_suggestion:row.published_note?null:require('./publication-note.cjs').noteSuggestion(row,row.ui_lang||'nl')||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
   stopped:!!row.reminder_opt_out_at,email_hint:(Array.isArray(row.emails)&&row.emails.length?row.emails:[row.email]).map(maskEmail).join(', '),email_configured:emailConfigured(),
   windows:row.published_on?reminders.windowsOf(row.published_on):null});
+ app.post(apiPath+'/checks/:id/implementation',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});
+  const b=req.body||{},id=typeof b.id==='string'?b.id:'',title=typeof b.title==='string'?b.title.trim():'';
+  if(!/^(el|fact|aitopic|act):/.test(id)||id.length>400||!title||title.length>500||typeof b.done!=='boolean')return res.status(400).json({success:false,error:'Invalid editor confirmation'});
+  try{const implementation=await storage.saveImplementation(pool,{checkId:row.id,itemId:id,title,done:b.done});
+   if(!implementation)return res.status(409).json({success:false,error:'Confirmation not saved'});
+   res.set('Cache-Control','no-store').json({success:true,implementation,note_suggestion:require('./publication-note.cjs').noteSuggestion({...row,implementation},row.ui_lang||'nl')});
+  }catch(e){res.status(503).json({success:false,error:'Could not save the confirmation'})}
+ });
  app.post(apiPath+'/checks/:id/publication',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
