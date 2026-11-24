@@ -30,3 +30,23 @@ test('lookup: latest date per page, only checks of the owner or of this report i
  const none=await publicationsFor({query:async()=>{throw Object.assign(Error('relation does not exist'),{code:'42P01'})}},['https://a.example/']);
  assert.equal(none.size,0);
 });
+
+test('same publication date retains a recorded note without borrowing an older date note',async()=>{
+ const {growthFor}=require('../src/gsc-report/published.cjs');
+ const url='https://example.com/page/';
+ const pool={query:async sql=>({rows:String(sql).includes('ORDER BY finished_at DESC')?[
+ {url,public_id:'new',access_key:'key',access_label:'admin',published_on:'2026-11-22',published_note:null},
+ {url,public_id:'same',access_key:'key',access_label:'admin',published_on:'2026-11-22',published_note:'Recorded work'},
+ {url,public_id:'old',access_key:'key',access_label:'admin',published_on:'2026-11-21',published_note:'Old work'}
+ ]:[]})};
+ const out=await growthFor(pool,[url]);
+ assert.equal(out.get('https://example.com/page').note,'Recorded work');
+});
+
+test('report lists exact pages with more than five audit issues',()=>{
+ const audit={issues:['A','B','C','D','E','F'],h1:[],hreflang:[],notes:[],words:100};
+ const pages=report.pages.map((p,i)=>({...p,audit:{...audit,issues:audit.issues.slice(0,i?5:6)}}));
+ const html=reportPage({...row,report:{...report,pages}},{owner:true,config:{},growthPath:'/free-growth'});
+ const section=html.match(/<section[^>]*id="pagesOverFiveIssues"[\s\S]*?<\/section>/);
+ assert.ok(section);assert.match(section[0],/wat-is-een-ai-overview/);assert.doesNotMatch(section[0],/ai-zichtbaarheid/);
+});

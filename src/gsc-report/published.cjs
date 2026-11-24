@@ -37,6 +37,7 @@ async function growthFor(pool,urls,{invite=null}={}){
   const x=out.get(k)||{published_on:null,note:null,owner_result:null,invite_result:null};
   if(r.access_label==='admin'){if(!x.owner_result)x.owner_result=link(r)}else if(r.invite_id!=null){if(!x.invite_result)x.invite_result=link(r)}
   const d=r.published_on?String(r.published_on).slice(0,10):null;if(d&&(!x.published_on||d>x.published_on)){x.published_on=d;x.note=r.published_note?String(r.published_note).slice(0,500):null}
+  else if(d&&d===x.published_on&&!x.note&&r.published_note){x.note=String(r.published_note).slice(0,500)}
   out.set(k,x)}
  return out;
 }
