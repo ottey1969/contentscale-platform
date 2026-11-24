@@ -240,7 +240,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',
     reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
   // The ranking pages are read by the shared reader (also used for new pages).
-  const reader=await readRankingPages({query:targetQuery,discovery,historical,fetchLive,renderOwn,retryDelayMs});
+  const hostedFallback=v.canEdit&&fetchLive===fetchPublicGrowthHtml&&
+   process.env.TRACKER_GROWTH_FIRECRAWL_ENABLED==='true'&&String(process.env.FIRECRAWL_API_KEY||'').trim()?
+   async (url,direct)=>{
+    const {createFreeGrowthFirecrawlReader}=require('./growth-free-firecrawl-reader.cjs');
+    const hosted=createFreeGrowthFirecrawlReader({env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},
+     original:async()=>direct,maxPages:1});
+    return hosted.reader(url,RESEARCH_FETCH);
+   }:null;
+  const reader=await readRankingPages({query:targetQuery,discovery,historical,fetchLive,renderOwn,retryDelayMs,hostedFallback});
   let comparisons=reader.comparisons,attempted=reader.attempted;const fetchLog=reader.fetchLog,fetchSummaryNow=reader.summary;
   let fetchSummary=reader.fetchSummary;
   const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
