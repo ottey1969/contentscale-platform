@@ -80,3 +80,26 @@ test('Tracker ranking hosted evidence must match final URL and pass editorial qu
  assert.equal(wrong.comparisons.length,0);
  assert.equal(wrong.fetchLog[0].hosted_status,'FALLBACK');
 });
+
+test('AI gap per-run reader factory is not called for empty source lists',async()=>{
+ const {createAiGapCache}=require('../src/growth-free/ai-gap.cjs');
+ let calls=0;
+ const gap=createAiGapCache({fetchHtml:async()=>{throw Error('unexpected read')}});
+ assert.equal(await gap({key:'owner',answers:[],pageUrl:'https://example.com/',readerForRun:()=>{calls++;throw Error('unexpected factory')}}),null);
+ assert.equal(calls,0);
+});
+test('AI gap uses per-run reader and records capture provider separately from citing engines',async()=>{
+ const {createAiGapCache}=require('../src/growth-free/ai-gap.cjs');
+ const own='https://example.com/roof/',rival='https://competitor.example/roof/';
+ const answers=[{engine:'perplexity',parsed:{validation_status:'valid',sources_verifiable:true,sources:[rival]}}];
+ let factories=0,reads=0;
+ const gap=createAiGapCache({fetchHtml:async()=>{throw Error('base reader not expected')}});
+ const options={key:'owner',answers,pageUrl:own,query:'roof repair',wait:true,readerForRun:()=>{factories++;return async url=>{reads++;return {html:'<h1>Roof repair</h1><h2>Roof inspection</h2><p>'+('Inspect roofing carefully before repairs. '.repeat(50))+'</p>',source:url===rival?'FIRECRAWL_HOSTED_API':'LIVE_PUBLIC_HTTPS'}}}};
+ const result=await gap(options);
+ assert.equal(result.status,'READ');
+ assert.equal(result.pages[0].read_provider,'FIRECRAWL_HOSTED_API');
+ assert.deepEqual(result.pages[0].cited_by,['perplexity']);
+ await gap(options);
+ assert.equal(factories,1);
+ assert.equal(reads,2);
+});
