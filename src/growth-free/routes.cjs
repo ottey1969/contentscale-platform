@@ -1752,7 +1752,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
    content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report,bestOwnPage:bestOwn}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
+   contentscore_history:row.contentscore_history||[],contentscore_comparison:require('./contentscore.cjs').compare(row.contentscore_history),implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -1910,6 +1910,16 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const publicationOf=row=>({published_on:row.published_on||null,note:row.published_note||null,note_suggestion:row.published_note?null:require('./publication-note.cjs').noteSuggestion(row,row.ui_lang||'nl')||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
   stopped:!!row.reminder_opt_out_at,email_hint:(Array.isArray(row.emails)&&row.emails.length?row.emails:[row.email]).map(maskEmail).join(', '),email_configured:emailConfigured(),
   windows:row.published_on?reminders.windowsOf(row.published_on):null});
+ app.post(apiPath+'/checks/:id/contentscore',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});
+  try{
+   const result=require('../gsc-report/contentscore.cjs').scanResult(req.body?.result,row.url);
+   const history=await storage.appendContentScore(pool,{checkId:row.id,result});
+   if(!history)return res.status(409).json({success:false,error:'Scan not saved'});
+   res.set('Cache-Control','no-store').json({success:true,contentscore_history:history,contentscore_comparison:require('./contentscore.cjs').compare(history)});
+  }catch(e){res.status(400).json({success:false,error:'ContentScore could not be saved'})}
+ });
  app.post(apiPath+'/checks/:id/implementation',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});
