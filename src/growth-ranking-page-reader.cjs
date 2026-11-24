@@ -22,8 +22,12 @@ async function readRankingPages({query,discovery,historical=[],fetchLive=fetchPu
   const candidates=[...fresh.map(x=>({...x,search_source:x.source==='SERPAPI_GOOGLE_ORGANIC'?'SERPAPI_GOOGLE_ORGANIC':x.source==='SERPER_GOOGLE_ORGANIC'?'SERPER_GOOGLE_ORGANIC':'BING_PUBLIC_RSS'})),
    ...historical.filter(x=>editorialHost(x.url)&&!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:query,h1:[],h2:[]}).fit)
     .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,10);
+  // One bounded research adapter per run; never change the native reader used for URL identity or baseline.
+  const paidReader=fetchLive===fetchPublicGrowthHtml&&process.env.FREE_GROWTH_FIRECRAWL_ENABLED==='true'
+   ?require('./growth-free-firecrawl-reader.cjs').createFreeGrowthFirecrawlReader():null;
+  const fetchContent=paidReader?.stats.enabled?paidReader.reader:fetchLive;
   const fetchCompetitorOnce=async lead=>{
-   try{const live=await fetchLive(lead.url,RESEARCH_FETCH);
+   try{const live=await fetchContent(lead.url,RESEARCH_FETCH);
     return {url:lead.url,live,quality:assessGrowthCompetitorContent({html:live.html,query:query,truncated:live.truncated}),
      search_source:lead.search_source,search_query:query}}
    catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70),search_source:lead.search_source}}
@@ -71,7 +75,7 @@ async function readRankingPages({query,discovery,historical=[],fetchLive=fetchPu
      outcome:x.live?(x.quality?.eligible?'READABLE':'NOT_READABLE'):'FETCH_FAILED',
      code:x.live?(x.quality?.reason_code||null):(x.reason||'FETCH_FAILED'),
      explanation:x.live?(x.quality?.eligible?null:x.quality?.reason_code):explain(x.reason||''),
-     partial_capture:x.live?.truncated===true,retried_after_http_202:x.retried_after_http_202===true,
+     capture_source:x.live?.source||null,partial_capture:x.live?.truncated===true,retried_after_http_202:x.retried_after_http_202===true,
      rendered_fallback:x.rendered_fallback===true,render_status:renderNotes[x.url]||null,
      readable_words:x.quality?.readable_words??null});
   }
@@ -91,7 +95,7 @@ async function readRankingPages({query,discovery,historical=[],fetchLive=fetchPu
  };
  // Read these candidates (already in the pool) now, e.g. the results of the page's own type.
  const readThese=async leads=>{const results=await Promise.all(leads.map(fetchCompetitor));results.forEach((x,i)=>logFetch(x,leads[i]));attempted=attempted.concat(results);return results};
- return {readThese,get comparisons(){return comparisons},get attempted(){return attempted},fetchLog,get fetchSummary(){return fetchSummary},
+ return {researchReader:paidReader?.stats||null,readThese,get comparisons(){return comparisons},get attempted(){return attempted},fetchLog,get fetchSummary(){return fetchSummary},
   summary:fetchSummaryNow,hasMore:()=>cursor<candidatePool.length,readMore,fetchCompetitor,logFetch,candidatePool};
 }
 module.exports={readRankingPages};
