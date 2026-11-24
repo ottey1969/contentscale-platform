@@ -146,7 +146,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite}).catch(()=>new Map());
    const published=st.publicationsFor?await st.publicationsFor(pool,urls,{invite:row.growth_invite}).catch(()=>new Map())
     :new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
-   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth}));
+   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,problemsOnly:req.query?.view==='problems'}));
   }catch(e){console.error('[gsc-report] view failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  return {sessionValid};
@@ -222,7 +222,7 @@ function growthLink(p,{lang,owner,invite,growthPath,result=null,auditToken=null}
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
-function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map()}){
+function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),problemsOnly=false}){
  if(!published.size&&growth.size)published=new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
@@ -237,7 +237,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const ka=k.audit||{};
  const kpisCrawl=`<div class="kpis">
   <div class="kpi"><span>${esc(A.kpi_read)}</span><b>${nf(lang,ka.pages_read)}</b></div>
-  <div class="kpi"><span>${esc(A.kpi_issues)}</span><b>${nf(lang,ka.with_issues)}</b></div>
+  <div class="kpi"><a href="?view=problems" style="display:block;color:inherit;text-decoration:none"><span>${esc(A.kpi_issues)}</span><b>${nf(lang,ka.with_issues)}</b></a></div>
   <div class="kpi"><span>${esc(A.kpi_blocked)}</span><b>${nf(lang,ka.blocked)}</b></div>
   ${k.urls_checked!=null?`<div class="kpi"><span>${esc(t.live.kpi_redirects)}</span><b>${nf(lang,k.redirects)}</b></div><div class="kpi"><span>${esc(t.live.kpi_gone)}</span><b>${nf(lang,k.gone)}</b></div>`:''}</div>
   ${k.urls_checked!=null?`<p class="muted">${esc(t.live.checked_note.replace('{c}',nf(lang,k.urls_checked)).replace('{n}',nf(lang,k.urls_not_checked)))}</p>`:''}`;
@@ -248,7 +248,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
   <div class="kpi"><span>${esc(t.avg_position)}</span><b>${pos(lang,k.position)}</b></div>
   <div class="kpi"><span>${esc(t.pages_no_clicks)}</span><b>${nf(lang,k.zero_click_pages)}</b></div>
   <div class="kpi"><span>${esc(t.top5_share)}</span><b>${pct(lang,k.top5_click_share)}</b></div>
-  ${k.audit?`<div class="kpi"><span>${esc(A.kpi_issues)}</span><b>${nf(lang,ka.with_issues)}</b></div><div class="kpi"><span>${esc(A.kpi_blocked)}</span><b>${nf(lang,ka.blocked)}</b></div>`:''}
+  ${k.audit?`<div class="kpi"><a href="?view=problems" style="display:block;color:inherit;text-decoration:none"><span>${esc(A.kpi_issues)}</span><b>${nf(lang,ka.with_issues)}</b></a></div><div class="kpi"><span>${esc(A.kpi_blocked)}</span><b>${nf(lang,ka.blocked)}</b></div>`:''}
   ${k.urls_checked!=null?`<div class="kpi"><span>${esc(t.live.kpi_redirects)}</span><b>${nf(lang,k.redirects)}</b></div><div class="kpi"><span>${esc(t.live.kpi_gone)}</span><b>${nf(lang,k.gone)}</b></div>`:''}</div>
   <p class="muted">${esc(k.source==='DAILY_ROWS'?t.totals_daily:t.totals_pages)}${k.urls_checked!=null?' '+esc(t.live.checked_note.replace('{c}',nf(lang,k.urls_checked)).replace('{n}',nf(lang,k.urls_not_checked))):''}${r.trend?' '+esc(t.trend_note.replace('{a}',nf(lang,r.trend.last7.clicks)).replace('{b}',nf(lang,r.trend.previous7.clicks))):''}</p>`;
  const L=t.live,lv=p=>p.live||{};
@@ -300,7 +300,11 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const crawlRow=p=>pageRow(p).replace(/<td class="num" data-l[\s\S]*?<td class="gcell">/,`<td class="num" data-l="${esc(A.words)}">${p.audit?nf(lang,p.audit.words):'—'}</td><td class="num" data-l="${esc(A.lastmod)}">${p.lastmod?esc(day(lang,p.lastmod)):'—'}</td><td class="gcell">`);
  const crawlTable=list=>`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(A.words)}</th><th class="num">${esc(A.lastmod)}</th><th></th></tr></thead><tbody>${list.map(crawlRow).join('')}</tbody></table></div>`;
  const table=list=>crawlOnly?crawlTable(list):`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
- const overFive=(r.pages||[]).filter(p=>Array.isArray(p.audit?.issues)&&p.audit.issues.length>5).sort((a,b)=>b.audit.issues.length-a.audit.issues.length);
+ const problemPages=(r.pages||[]).filter(p=>Array.isArray(p.audit?.issues)&&p.audit.issues.length>0).sort((a,b)=>b.audit.issues.length-a.audit.issues.length);
+ const problemTitle={nl:'Pagina’s met problemen',es:'Páginas con problemas',en:'Pages with problems'}[lang];
+ const problemSection=k.audit?`<section class="card" id="pagesWithProblems"><h2>${esc(problemTitle)} (${problemPages.length})</h2>${problemPages.length?`<ol>${problemPages.map(p=>`<li><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a> · <b>${p.audit.issues.length}</b>${doneOn(p)}<ul>${p.audit.issues.map(c=>`<li>${esc(A.issues[c]||c)}</li>`).join('')}</ul>${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</li>`).join('')}</ol>`:`<p>${esc(t.none)}</p>`}</section>`:'';
+ if(problemsOnly)return shell(lang,problemTitle,head+`<div class="wrap"><p><a class="btn" href="?">${esc({nl:'Terug naar volledig rapport',es:'Volver al informe completo',en:'Back to full report'}[lang])}</a></p>${problemSection||`<section class="card"><h2>${esc(problemTitle)}</h2><p>${esc(t.none)}</p></section>`}</div>`);
+ const overFive=problemPages.filter(p=>p.audit.issues.length>5);
  const overFiveTitle={nl:'Pagina’s met meer dan 5 problemen',es:'Páginas con más de 5 problemas',en:'Pages with more than 5 problems'}[lang];
  const overFiveSection=overFive.length?`<section class="card" id="pagesOverFiveIssues"><h2>${esc(overFiveTitle)} (${overFive.length})</h2><ul>${overFive.map(p=>`<li><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a> · ${p.audit.issues.length} — ${p.audit.issues.map(c=>esc(A.issues[c]||c)).join(' · ')} ${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</li>`).join('')}</ul></section>`:'';
  const order=`<div class="card"><h2>${esc(t.order_title)}</h2><p class="muted">${esc(crawlOnly?A.order_intro:t.order_intro)}</p>${work.length?table(work):`<p>${esc(t.nothing_to_do)}</p>`}

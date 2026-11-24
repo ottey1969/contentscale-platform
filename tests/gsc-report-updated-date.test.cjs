@@ -50,3 +50,18 @@ test('report lists exact pages with more than five audit issues',()=>{
  const section=html.match(/<section[^>]*id="pagesOverFiveIssues"[\s\S]*?<\/section>/);
  assert.ok(section);assert.match(section[0],/wat-is-een-ai-overview/);assert.doesNotMatch(section[0],/ai-zichtbaarheid/);
 });
+
+test('problem KPI links to every affected page, including pages with only one issue',()=>{
+ const pages=report.pages.map((p,i)=>({...p,audit:{issues:i?['A']:['A','B','C'],h1:[],hreflang:[],notes:[],words:100}}));
+ for(const scope of ['CRAWL','SITE']){
+  const html=reportPage({...row,report:{...report,scope,pages,kpis:{audit:{with_issues:2,pages_read:2,blocked:0}}}},{owner:true,config:{},growthPath:'/free-growth'});
+  assert.match(html,/href="\?view=problems"/);
+  assert.doesNotMatch(html,/id="pagesWithProblems"/);
+  const filtered=reportPage({...row,report:{...report,scope,pages,kpis:{audit:{with_issues:2,pages_read:2,blocked:0}}}},{owner:true,config:{},growthPath:"/free-growth",problemsOnly:true});
+  assert.match(filtered,/href="\?"/);
+  const section=filtered.match(/<section[^>]*id="pagesWithProblems"[\s\S]*?<\/section>/);
+  assert.ok(section);assert.match(section[0],/wat-is-een-ai-overview/);assert.match(section[0],/ai-zichtbaarheid/);
+  assert.match(section[0],/\/free-growth\?/);
+  assert.doesNotMatch(html,/id="pagesOverFiveIssues"/);
+ }
+});
