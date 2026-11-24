@@ -315,4 +315,13 @@ async function latestDoneFor(pool,{url,inviteId=null,owner=false}){
  return (await pool.query(`SELECT public_id,access_key,finished_at,published_on::text AS published_on FROM growth_free_checks
    WHERE status='DONE' AND lower(rtrim(url,'/'))=lower(rtrim($1,'/')) AND ($2::boolean OR invite_id=$3) ORDER BY finished_at DESC NULLS LAST LIMIT 1`,[String(url||''),!!owner,inviteId])).rows[0]||null;
 }
-module.exports={saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+// Only publication-confirmed checks of the same owner/invitation, exact page and market.
+async function treatedQuestions(pool,{url,market=null,owner=false,inviteId=null}){
+ if(!owner&&inviteId==null)return [];
+ const result=await pool.query(`SELECT query,report->'customer_question'->>'text' AS question FROM growth_free_checks
+ WHERE status='DONE' AND published_on IS NOT NULL AND rtrim(url,'/')=rtrim($1,'/')
+ AND COALESCE(market,'null'::jsonb)=$2::jsonb
+ AND (($3::boolean AND access_label='admin') OR ($4::bigint IS NOT NULL AND invite_id=$4))`,[url,JSON.stringify(market||null),owner,inviteId]);
+ return [...new Set(result.rows.map(r=>r.question||r.query).filter(Boolean))];
+}
+module.exports={treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
