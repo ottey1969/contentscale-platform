@@ -878,7 +878,7 @@ test('ensureTables: an existing column is not altered again; a missing one is ad
   return {rows:[]}}};
  await store.ensureTables(pool);
  const alters=seen.filter(x=>/ALTER TABLE/.test(x));
- assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing column');
+ assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS implementation JSONB NOT NULL DEFAULT '{}'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing columns');
  delete require.cache[require.resolve('../src/growth-free/store.cjs')];
 });
 

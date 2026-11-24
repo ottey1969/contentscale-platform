@@ -33,6 +33,7 @@ const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
 const topicLang=require('./topic-lang.cjs');
 const {discoverCustomerQuestions,aiQuestionForTerm}=require('../growth-customer-questions.cjs');
+const {filterTreated,questionKey}=require('./treated-questions.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -509,7 +510,7 @@ function exampleText(x){return function(e){return (e.position?'#'+esc(e.position
 // Step summaries say what is done (✓) or what to do; a finished step closes, the next one opens.
 function stepSum(n,title,line,done){return '<summary><span class="journey-num">'+(done?'✓':n)+'</span><span><strong>'+title+'</strong><small'+(done?' class="step-done"':'')+'>'+esc(line)+'</small></span><span class="journey-arrow">⌄</span></summary>'}
 // "Do it yourself": what Growth does not write (page elements, structured data, facts only you know, AI visibility work).
-// Ticked items are remembered in this browser and move to "Done".
+// Ticked items are saved with the shared result and move to "Done".
 function selfItems(g,d){var out=[],ag=d&&d.ai&&d.ai.gap,acts=(d&&d.ai&&d.ai.summary&&d.ai.summary.visibility_actions)||[];
  ((g&&g.items)||[]).filter(function(x){return x.group==='PAGE_ELEMENT'}).forEach(function(x){var st=x.title.indexOf('Structured data: ')===0?x.title.slice(17):null;
   out.push({id:'el:'+x.id,title:st?'Add structured data (schema): '+st:'Add: '+x.title,why:x.status+(x.ranking_pages?' · on '+x.ranking_pages+(x.of?' of '+x.of:'')+' ranking page(s)':''),src:'g',
@@ -522,7 +523,8 @@ function selfItems(g,d){var out=[],ag=d&&d.ai&&d.ai.gap,acts=(d&&d.ai&&d.ai.summ
  acts.filter(function(a){return a.id!=='choose_ai_topics'&&a.id!=='compare_cited_pages'}).forEach(function(a){out.push({id:'act:'+a.id,title:a.title,why:a.why,steps:a.steps,src:'ai'})});
  return out}
 function selfKey(){return 'growthFreeSelfDone:'+API}
-function selfDone(){try{return JSON.parse(localStorage.getItem(selfKey())||'{}')}catch(e){return {}}}
+var IMPLEMENTATION={};
+function selfDone(){var out={};Object.keys(IMPLEMENTATION).forEach(function(k){if(IMPLEMENTATION[k].done)out[k]=1});return out}
 function selfHtml(list){if(!list.length)return '';var done0=selfDone(),isDone=function(x){return !!(done0[x.id]||x.auto)},open=list.filter(function(x){return !isDone(x)}),fin=list.filter(isDone);
  var li=function(x){return '<li><label class="check"><input type="checkbox" class="selfDone" data-id="'+esc(x.id)+'"'+(isDone(x)?' checked':'')+(x.auto?' disabled':'')+'><span><span class="chip '+(x.src==='ai'?'ai">AI':'g">Google')+'</span><strong>'+esc(x.title)+'</strong>'+(x.auto?' <small class="step-done">✓ Found on your page now</small>':'')+'<details class="why"><summary>Why and how</summary><small>'+esc(x.why)+'</small>'+((x.steps||[]).length?'<ol>'+x.steps.map(function(t){return '<li><small>'+esc(t)+'</small></li>'}).join('')+'</ol>':'')+
   (x.code?'<pre class="selfCode" data-no-translate style="white-space:pre-wrap;font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:320px;overflow:auto">'+esc(x.code)+'</pre><button type="button" class="ghost selfCopy" data-id="'+esc(x.id)+'">Copy the code</button> <small class="selfCopySt" role="status"></small>':'')+'</details></span></label></li>'};
@@ -535,9 +537,11 @@ function loadLive(d){LIVE_D=d;if(LIVE||!d||d.status!=='DONE')return;fetch(API+'/
  if(NOW_CTX){var dn=selfDone();NOW_CTX.selfOpen=(LAST_SELF||[]).filter(function(y){return !(dn[y.id]||y.auto)}).length;updateNow(document.querySelectorAll('.gapPick:checked').length)}}).catch(function(){})}
 function wireSelf(){document.querySelectorAll('.selfCopy').forEach(function(b){b.onclick=function(e){e.preventDefault();var it=(LAST_SELF||[]).filter(function(x){return x.id===b.getAttribute('data-id')})[0];if(!it||!it.code)return;
   if(navigator.clipboard)navigator.clipboard.writeText(it.code);var st=b.parentNode.querySelector('.selfCopySt');if(st)st.textContent='Copied ✓'}});
- document.querySelectorAll('.selfDone').forEach(function(c){c.onchange=function(){var d=selfDone();if(c.checked)d[c.getAttribute('data-id')]=1;else delete d[c.getAttribute('data-id')];try{localStorage.setItem(selfKey(),JSON.stringify(d))}catch(e){}
+ document.querySelectorAll('.selfDone').forEach(function(c){c.onchange=async function(){var id=c.getAttribute('data-id'),it=(LAST_SELF||[]).find(function(x){return x.id===id}),checked=c.checked;if(!it)return;c.disabled=true;try{var response=await fetch(API+'/implementation'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,title:it.title,done:checked})});var data=await response.json();if(!response.ok||!data.success)throw Error(data.error||'Not saved');IMPLEMENTATION=data.implementation;var pub=document.getElementById('pubNote');if(pub&&!pub.value&&data.note_suggestion)pub.value=data.note_suggestion}catch(e){c.checked=!checked;c.disabled=false;alert('Could not save the task. Please try again.');return}
  var card=document.getElementById('selfDo');if(card&&LAST_SELF){card.outerHTML=selfHtml(LAST_SELF);wireSelf()}}})}
 var LAST_SELF=null;
+var legacyImporting=false;
+async function importLegacyDone(){if(legacyImporting)return;var saved;try{saved=JSON.parse(localStorage.getItem(selfKey())||'{}')}catch(e){return}var pending=(LAST_SELF||[]).filter(function(x){return saved[x.id]&&!Object.prototype.hasOwnProperty.call(IMPLEMENTATION,x.id)&&!x.auto});if(!pending.length)return;if(!confirm('Import '+pending.length+' previously checked tasks from this browser as editor confirmations? This does not verify publication.'))return;legacyImporting=true;try{for(var it of pending){var response=await fetch(API+'/implementation'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:it.id,title:it.title,done:true})});var data=await response.json();if(!response.ok||!data.success)throw Error('Import failed');IMPLEMENTATION=data.implementation;delete saved[it.id];localStorage.setItem(selfKey(),JSON.stringify(saved));var pub=document.getElementById('pubNote');if(pub&&!pub.value&&data.note_suggestion)pub.value=data.note_suggestion}}catch(e){alert('Some tasks could not be imported. Reopen the result to retry.')}finally{legacyImporting=false;var card=document.getElementById('selfDo');if(card&&LAST_SELF){card.outerHTML=selfHtml(LAST_SELF);wireSelf()}}}
 // One topic card: title and labels, one line of action; everything else behind "Why?".
 function gapCard(x,aiOn,reviewOnly){var why=[];
  if(x.priority&&x.priority.why)why.push('Why: '+x.priority.why.join(' · '));
@@ -1070,7 +1074,7 @@ var nowObs=null;
 function wireNowBar(){var card=document.getElementById('freeNextAction'),bar=document.getElementById('nowBar');if(!bar){bar=document.createElement('div');bar.id='nowBar';bar.className='now-bar';bar.hidden=true;bar.setAttribute('role','region');bar.setAttribute('aria-label','Next action');document.body.appendChild(bar)}
  if(!card||!window.IntersectionObserver)return;if(nowObs)nowObs.disconnect();
  nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''},{threshold:0});nowObs.observe(card)}
-function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
+function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{};var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
@@ -1130,7 +1134,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  h+='<details class="research-details" id="limits"><summary>Research scope and limitations</summary><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p></details>';
  h+=briefSourcesHtml(s,d);h+=ev;
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();importLegacyDone();
  var ho=document.getElementById('hireOpen');if(ho)ho.onclick=function(){var f=document.getElementById('hf');f.hidden=false;ho.hidden=true;var n=f.querySelector('input[name=name]');if(n)n.focus()};
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
@@ -1262,6 +1266,7 @@ if(${js(!!loggedIn)}){load();loadContacts()}
 }
 
 const FAIL_TEXT={
+ QUESTION_ALREADY_TREATED:'All discovered questions have already been treated for this page and market. Enter a different customer question.',
  INTERRUPTED:'The check was interrupted. Please run it again.',
  AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE:'The research service is temporarily unavailable. Please try again later.',
  PAGE_IDENTITY_CHANGED:'The page changed while it was being checked. Please try again.'
@@ -1321,6 +1326,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const attachRank=async(row,ref)=>{if(rankHandoff&&ref&&row&&row.public_id)await rankHandoff.attach(row.public_id,ref).catch(()=>{})};
  if(!config.enabled)return null;
  const queue=[];let running=0;
+ const treatedFor=async scope=>typeof storage.treatedQuestions==='function'?storage.treatedQuestions(pool,scope):[];
  const jobs=new Set();
  // No question typed: the customer question customers ask in Google for what the page offers (People also ask, related
  // searches; one Serper search). AI ideas only for approved access (cost). Nothing found: the research derives a working
@@ -1331,9 +1337,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const country=job.market&&job.market.countries&&job.market.countries[0]||null,lang=job.market&&job.market.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
    const out=await discoverCustomerQuestions({url:job.url,html,keyword:job.topic||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,location:job.market?.location||'',
     ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:job.approved?(engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()):null});
-   const best=(out.questions||[]).find(q=>q.text===out.best_question)||null;
-   return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,
-    others:(out.questions||[]).filter(q=>!best||q.text!==best.text).slice(0,6).map(q=>({text:q.text,label:q.label})),chosen_automatically:true,...(job.topic?{topic:job.topic}:{})};
+   const available=filterTreated(out,job.treated||[]);
+   const best=available.questions.find(q=>q.text===available.best_question)||null;
+   return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,excluded_treated:available.excluded_treated,
+    others:available.questions.filter(q=>!best||q.text!==best.text).slice(0,6).map(q=>({text:q.text,label:q.label})),chosen_automatically:true,...(job.topic?{topic:job.topic}:{})};
   }catch(e){return {text:null,source:'UNAVAILABLE',label:null,others:[],chosen_automatically:true}}
  }
  function pump(){
@@ -1343,6 +1350,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     try{
      await storage.setStatus(pool,job.id,{status:'RUNNING'});
      const chosenQuestion=job.query?null:await autoQuestion(job);
+     if(chosenQuestion&&!chosenQuestion.text&&chosenQuestion.excluded_treated){await storage.setStatus(pool,job.id,{status:'FAILED',error_code:'QUESTION_ALREADY_TREATED'});if(job.inviteId)await storage.refundInvite(pool,job.inviteId);return}
      if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
      // No customer question found for a rank tracker topic: the tracked keyword itself is researched.
      else if(job.topic){job.query=job.topic;if(chosenQuestion)chosenQuestion.text_fallback='TOPIC'}
@@ -1439,9 +1447,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.post(apiPath+'/customer-questions',async(req,res)=>{
   const b=req.body||{};
   const owner=sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin';
+  let invitation=null;
+  await storage.ensureTables(pool);
   if(!owner){
-    await storage.ensureTables(pool);
-    const invitation=b.invite?await storage.getInvite(pool,b.invite):null;
+    invitation=b.invite?await storage.getInvite(pool,b.invite):null;
     if(store.inviteStatus(invitation)!=='ACTIVE')return res.status(403).json({success:false,error:'An approved invitation is required for customer question discovery.'});
    }
   const ip=store.hashIp(req.ip,config.ipSalt),now=Date.now(),h=(cqHits.get(ip)||[]).filter(t=>now-t<3600000);
@@ -1459,7 +1468,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const pageLang=((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'').toLowerCase();
   const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',location,
    ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()});
-  res.set('Cache-Control','no-store').json({success:true,...out});
+  const market=readMarket(b,res);if(market===undefined)return;
+  const treated=v.error?[]:await treatedFor({url:v.url,market,owner,inviteId:invitation?.id||null});
+  res.set('Cache-Control','no-store').json({success:true,...filterTreated(out,treated)});
  });
  app.post(apiPath+'/checks',async(req,res)=>{
   try{
@@ -1602,15 +1613,17 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
   // A verified Search Console export changes the research, so a stored result without it is not reused.
+  const treated=await treatedFor({url:input.url,market:input.market,owner:accessLabel==='admin',inviteId});
+  if(input.query&&treated.some(q=>questionKey(q)===questionKey(input.query)))return res.status(409).json({success:false,code:'QUESTION_ALREADY_TREATED',error:'This question has already been published for this page and market. Choose a different customer question.'});
   const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
-  const cached=fresh||withGsc||input.sitemap||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  const cached=fresh||withGsc||input.sitemap||input.topic||(!input.query&&treated.length)?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null,gscDeclined:!!input.gscDeclined});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
@@ -1729,7 +1742,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
    content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report,bestOwnPage:bestOwn}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
+   implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -1887,6 +1900,16 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const publicationOf=row=>({published_on:row.published_on||null,note:row.published_note||null,note_suggestion:row.published_note?null:require('./publication-note.cjs').noteSuggestion(row,row.ui_lang||'nl')||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
   stopped:!!row.reminder_opt_out_at,email_hint:(Array.isArray(row.emails)&&row.emails.length?row.emails:[row.email]).map(maskEmail).join(', '),email_configured:emailConfigured(),
   windows:row.published_on?reminders.windowsOf(row.published_on):null});
+ app.post(apiPath+'/checks/:id/implementation',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});
+  const b=req.body||{},id=typeof b.id==='string'?b.id:'',title=typeof b.title==='string'?b.title.trim():'';
+  if(!/^(el|fact|aitopic|act):/.test(id)||id.length>400||!title||title.length>500||typeof b.done!=='boolean')return res.status(400).json({success:false,error:'Invalid editor confirmation'});
+  try{const implementation=await storage.saveImplementation(pool,{checkId:row.id,itemId:id,title,done:b.done});
+   if(!implementation)return res.status(409).json({success:false,error:'Confirmation not saved'});
+   res.set('Cache-Control','no-store').json({success:true,implementation,note_suggestion:require('./publication-note.cjs').noteSuggestion({...row,implementation},row.ui_lang||'nl')});
+  }catch(e){res.status(503).json({success:false,error:'Could not save the confirmation'})}
+ });
  app.post(apiPath+'/checks/:id/publication',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
