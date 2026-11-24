@@ -7,6 +7,7 @@ const {patch:fixDomain}=require('./fix-ceo-domain-validation.cjs');
 const {patch:fixForms}=require('./fix-ceo-form-validation.cjs');
 const {patch:fixBrowser}=require('./repair-canonical-browser.cjs');
 const {patch:fixPrewriteSerp}=require('./patch-prewrite-local-serp.cjs');
+const {patch:fixPrewriteFirecrawl}=require('./patch-prewrite-firecrawl.cjs');
 const BROKEN=/Yes — I\\*'m interested in the 20-Page Audit/;
 function prepare(source){
  let built=String(source);
@@ -15,6 +16,7 @@ function prepare(source){
  built=fixForms(built);
  built=fixBrowser(built);
  built=fixPrewriteSerp(built);
+ built=fixPrewriteFirecrawl(built);
  if(BROKEN.test(built)||!built.includes("const _canonicalBrowserManager = require('./browser-manager.cjs')")||
    !built.includes('function isCeoDomainInput(value)'))
    throw Error('CANONICAL_BUILD_VALIDATION_FAILED');
