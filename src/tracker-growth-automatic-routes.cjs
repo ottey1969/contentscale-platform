@@ -167,9 +167,24 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const sitemapFallback=await trackerSitemapFallback(rows(5),page.url,rows(3),
     fetchLive===fetchPublicGrowthHtml?u=>fetchPublicGrowthHtml(u,{limit:1024*1024,timeout:4500,redirects:1,allowSitemapXml:true}):null);
   const own=await fetchLive(page.url,RESEARCH_FETCH).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
+  // Owner-only hosted fallback; reuse the already-read static page and the shared guarded reader.
+  let ownFirecrawl=null;
+  if(v.canEdit&&fetchLive===fetchPublicGrowthHtml&&own.live&&needsGrowthRender(own.live.html)&&
+     process.env.TRACKER_GROWTH_FIRECRAWL_ENABLED==='true'&&String(process.env.FIRECRAWL_API_KEY||'').trim()){
+   const {createFreeGrowthFirecrawlReader}=require('./growth-free-firecrawl-reader.cjs');
+   const direct=own.live;
+   const hosted=createFreeGrowthFirecrawlReader({env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},
+    original:async()=>direct,maxPages:1});
+   const candidate=await hosted.reader(page.url,RESEARCH_FETCH).catch(()=>null);
+   ownFirecrawl=hosted.stats;
+   if(candidate?.source==='FIRECRAWL_HOSTED_API'&&!needsGrowthRender(candidate.html)&&
+      candidate.final_url===direct.final_url&&!candidate.truncated){
+    own.live=candidate;
+   }
+  }
   // Only use the browser if the static public source is too thin to assess.
   // Prevent mock-network tests from launching real Chromium unintentionally.
-  let renderStatus=own.live?'STATIC_HTML_USED':'STATIC_HTML_UNAVAILABLE';
+  let renderStatus=own.live?.source==='FIRECRAWL_HOSTED_API'?'FIRECRAWL_HOSTED_USED':own.live?'STATIC_HTML_USED':'STATIC_HTML_UNAVAILABLE';
   if(own.live&&needsGrowthRender(own.live.html)&&
      (fetchLive===fetchPublicGrowthHtml||renderOwn!==renderPublicGrowthPage)){
    const rendered=await renderOwn(page.url);
@@ -234,6 +249,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.intent_resolution=intentResolution;
   report.page_content.render_status=renderStatus;
   report.summary.render_status=renderStatus;
+  if(ownFirecrawl)report.page_content.firecrawl={attempted:ownFirecrawl.attempted,used:renderStatus==='FIRECRAWL_HOSTED_USED'?1:0,fallbacks:ownFirecrawl.fallbacks};
 
   report.original_tracked_keyword=page.keyword;
   report.search.top_gsc_query=report.search.focus_query;
