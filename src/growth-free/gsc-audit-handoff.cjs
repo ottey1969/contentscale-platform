@@ -13,4 +13,18 @@ async function loadAuditUpload(pool,{token,url,owner=false,invite=null}){
  if(!token||(!owner&&!invite))return null;
  return auditUpload(await openReport(pool,token,{count:false}),{url,owner,invite});
 }
-module.exports={auditUpload,loadAuditUpload};
+// Compare only like-for-like exact-page totals, never interpret different periods as discrepancies.
+function auditDifference(rows){
+ const audit=[...(rows||[])].reverse().find(x=>x.basis==='GSC_AUDIT_EXACT_PAGE');
+ const page=[...(rows||[])].reverse().find(x=>x.basis!=='GSC_AUDIT_EXACT_PAGE'&&x.status==='VERIFIED_FOR_PAGE');
+ if(!audit||!page||!audit.period_start||!audit.period_end||!page.period_start||!page.period_end)return null;
+ if(audit.period_start!==page.period_start||audit.period_end!==page.period_end)return {status:'DIFFERENT_PERIODS'};
+ const differences={};
+ for(const k of ['clicks','impressions','position']){
+  const a=audit.totals?.[k],b=page.totals?.[k];
+  if(a==null||b==null||!Number.isFinite(Number(a))||!Number.isFinite(Number(b)))continue;
+  if(k==='position'?Math.abs(Number(a)-Number(b))>0.1:Number(a)!==Number(b))differences[k]={audit:Number(a),page:Number(b)};
+ }
+ return {status:Object.keys(differences).length?'DIFFERENT_TOTALS':'MATCH',differences};
+}
+module.exports={auditUpload,loadAuditUpload,auditDifference};
