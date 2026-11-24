@@ -53,6 +53,6 @@ async function setAfter(pool,id,snap){
 }
 // Atomic per-page update: preserve concurrent scans and original GSC evidence.
 async function saveContentScore(pool,token,url,result){
- return (await pool.query(`UPDATE gsc_reports SET report=jsonb_set(report,'{contentscores}',COALESCE(report->'contentscores','{}'::jsonb)||jsonb_build_object($2::text,$3::jsonb),true) WHERE token=$1 AND revoked_at IS NULL AND expires_at>NOW() RETURNING id`,[token,url,JSON.stringify(result)])).rows[0]||null;
+ return (await pool.query(`UPDATE gsc_reports SET report=jsonb_set(report,'{contentscores}',COALESCE(report->'contentscores','{}'::jsonb)||jsonb_build_object($2::text,(CASE jsonb_typeof(report->'contentscores'->$2::text) WHEN 'array' THEN report->'contentscores'->$2::text WHEN 'object' THEN jsonb_build_array(report->'contentscores'->$2::text) ELSE '[]'::jsonb END)||jsonb_build_array($3::jsonb)),true) WHERE token=$1 AND revoked_at IS NULL AND expires_at>NOW() RETURNING id`,[token,url,JSON.stringify(result)])).rows[0]||null;
 }
 module.exports={ensureTables,createReport,openReport,listReports,revokeReport,deleteReports,setAfter,saveContentScore};
