@@ -42,3 +42,11 @@ test('same publication date retains a recorded note without borrowing an older d
  const out=await growthFor(pool,[url]);
  assert.equal(out.get('https://example.com/page').note,'Recorded work');
 });
+
+test('report lists exact pages with more than five audit issues',()=>{
+ const audit={issues:['A','B','C','D','E','F'],h1:[],hreflang:[],notes:[],words:100};
+ const pages=report.pages.map((p,i)=>({...p,audit:{...audit,issues:audit.issues.slice(0,i?5:6)}}));
+ const html=reportPage({...row,report:{...report,pages}},{owner:true,config:{},growthPath:'/free-growth'});
+ const section=html.match(/<section[^>]*id="pagesOverFiveIssues"[\s\S]*?<\/section>/);
+ assert.ok(section);assert.match(section[0],/wat-is-een-ai-overview/);assert.doesNotMatch(section[0],/ai-zichtbaarheid/);
+});
