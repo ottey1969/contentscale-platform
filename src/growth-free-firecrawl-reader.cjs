@@ -68,7 +68,7 @@ function createFreeGrowthFirecrawlReader({
       const dest=await lookup(final.hostname,{family:4,all:true,verbatim:true});
       if(!dest?.length||!dest.every(a=>publicV4(a.address)))throw Object.assign(Error('FIRECRAWL_PRIVATE_REDIRECT'),{code:'FIRECRAWL_PRIVATE_REDIRECT'});
       return {html,final_url:final.href,retrieved_at:new Date().toISOString()};
-     }finally{clearTimeout(timeout)}
+     }catch(e){await record('error');throw e}finally{clearTimeout(timeout)}
     }});
     if(managed.source!=='REQUEST'){stats.shared_cache_hits++;await record('cache')}
     const {html,retrieved_at}=managed.value;
