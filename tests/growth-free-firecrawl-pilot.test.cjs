@@ -47,3 +47,57 @@ test('internal or invalid hosts are never sent to the hosted API',async()=>{
  assert.equal((await reader('https://internal.example/',opts)).source,'LIVE_PUBLIC_HTTPS');
  assert.equal(calls,0);
 });
+
+const {createFirecrawlProvider}=require('../src/firecrawl-provider.cjs');
+const dualEnv={...env,FIRECRAWL_API_KEY_BACKUP:'backup-secret',FIRECRAWL_AUTO_FAILOVER:'true',FIRECRAWL_MIN_CREDITS:'50'};
+const balance=n=>({ok:true,json:async()=>({success:true,data:{remainingCredits:n}})});
+test('confirmed low balance selects authorized backup and caches credit check',async()=>{
+ const calls=[];
+ const {scrape,stats}=createFirecrawlProvider({env:dualEnv,fetchImpl:async(u,o)=>{
+  calls.push([u,o.headers.Authorization]);
+  return o.method==='GET'?balance(49):ok();
+ }});
+ assert.equal((await scrape({url})).account,'backup');
+ assert.equal((await scrape({url})).account,'backup');
+ assert.equal(calls.length,3);
+ assert.equal(calls[1][1],'Bearer backup-secret');
+ assert.equal(stats.switches,1);
+ assert.equal(stats.remaining_credits.primary,49);
+ assert.doesNotMatch(JSON.stringify(stats),/secret/);
+});
+test('threshold boundary keeps primary and caches credit check',async()=>{
+ let checks=0;
+ const {scrape}=createFirecrawlProvider({env:dualEnv,fetchImpl:async(u,o)=>{
+  if(o.method==='GET'){checks++;return balance(50)}
+  return ok();
+ }});
+ assert.equal((await scrape({url})).account,'primary');
+ assert.equal((await scrape({url})).account,'primary');
+ assert.equal(checks,1);
+});
+test('402 switches only once; rate limit and publisher block never rotate keys',async()=>{
+ for(const status of [402,429,403,401]){
+  const calls=[];
+  const {scrape}=createFirecrawlProvider({env:dualEnv,fetchImpl:async(u,o)=>{
+   if(o.method==='GET')return balance(500);
+   calls.push(o.headers.Authorization);
+   return calls.length===1?{ok:false,status}:ok();
+  }});
+  if(status===402){assert.equal((await scrape({url})).account,'backup');assert.equal(calls.length,2)}
+  else {await assert.rejects(scrape({url}),{code:'FIRECRAWL_HTTP_'+status});assert.equal(calls.length,1)}
+ }
+});
+test('unavailable balance is not interpreted as zero credits',async()=>{
+ const {scrape,stats}=createFirecrawlProvider({env:dualEnv,fetchImpl:async(u,o)=>o.method==='GET'?{ok:false,status:404}:ok()});
+ assert.equal((await scrape({url})).account,'primary');
+ assert.equal(stats.credit_check_status,'UNAVAILABLE');
+ assert.equal(stats.remaining_credits.primary,null);
+});
+test('disabled failover never calls balance endpoint or backup',async()=>{
+ let calls=0;
+ const {scrape}=createFirecrawlProvider({env:{...dualEnv,FIRECRAWL_AUTO_FAILOVER:'false'},fetchImpl:async(u,o)=>{
+  calls++;assert.equal(o.method,'POST');assert.equal(o.headers.Authorization,'Bearer test-secret');return {ok:false,status:402};
+ }});
+ await assert.rejects(scrape({url}),{code:'FIRECRAWL_HTTP_402'});
+ assert.equal(calls,1);
+});
