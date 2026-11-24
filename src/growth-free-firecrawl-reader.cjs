@@ -6,6 +6,20 @@ const dns=require('node:dns').promises;
 const {fetchPublicGrowthHtml,validateUrl,publicV4,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {createFirecrawlProvider}=require('./firecrawl-provider.cjs');
 const DEFAULT_LIMIT=6;
+// Conservative research heuristic, not a technical SEO verdict.
+function extractionReason(direct,options={}){
+ if(options.forceFirecrawl===true)return 'MANUAL_DEEP_READ';
+ if(!direct?.html)return 'NATIVE_EMPTY';
+ if(direct.truncated)return 'NATIVE_TRUNCATED';
+ const html=direct.html;
+ const visible=html.replace(/<!--[\s\S]*?-->/g,' ').replace(/<(script|style|svg|template|head|nav|footer|aside|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,' ');
+ const main=visible.match(/<(main|article)\b[^>]*>([\s\S]*?)<\/\1\s*>/i);
+ const content=main?main[2]:visible;
+ const words=content.replace(/<[^>]*>/g,' ').replace(/&(?:#\w+|\w+);/g,' ').trim().split(/\s+/).filter(Boolean);
+ if(words.length<120)return 'NATIVE_LOW_VISIBLE_TEXT';
+ if(!/<h[1-6]\b/i.test(content)&&words.length<300)return 'NATIVE_WEAK_STRUCTURE';
+ return null;
+}
 function enabled(env=process.env){
  return env.FREE_GROWTH_FIRECRAWL_ENABLED==='true'&&!!String(env.FIRECRAWL_API_KEY||'').trim();
 }
@@ -29,10 +43,12 @@ function createFreeGrowthFirecrawlReader({
  const reader=async (raw,options=RESEARCH_FETCH)=>{
   if(!active)return original(raw,options);
   // Preserve refusals from publishers: Firecrawl must never be used to bypass a 401/403/406/429.
-  // The pilot still tries Firecrawl on readable public pages to compare capture quality.
+  // Use paid extraction only when native research evidence appears incomplete.
   let direct=null;
   try{direct=await original(raw,options)}
-  catch(e){if(/^HTTP_(401|403|406|429)$/.test(String(e?.code||'')))throw e}
+  catch(e){if(!/^(FETCH_TIMEOUT|ETIMEDOUT|ECONNRESET)$/.test(String(e?.code||'')))throw e}
+  const reason=extractionReason(direct,options);
+  if(!reason){stats.native_skips=(stats.native_skips||0)+1;return direct}
   // The normal reader checks each actual redirect. We also validate the supplied hostname
   // before giving it to an external service. Never send internal/private hosts to Firecrawl.
   let url;
@@ -41,7 +57,7 @@ function createFreeGrowthFirecrawlReader({
    const addresses=await lookup(url.hostname,{family:4,all:true,verbatim:true});
    if(!addresses?.some(a=>publicV4(a.address)))throw Object.assign(Error('PUBLIC_IPV4_UNAVAILABLE'),{code:'PUBLIC_IPV4_UNAVAILABLE'});
   }catch(e){if(direct)return direct;return original(raw,options)}
-  const cacheKey=url.href;
+  const cacheKey=JSON.stringify([url.href,options?.compact===true,options?.limit||RESEARCH_FETCH.limit]);
   if(cache.has(cacheKey)){stats.cache_hits++;return cache.get(cacheKey)}
   if(stats.attempted>=cap)return direct||original(raw,options);
   stats.attempted++;
@@ -65,7 +81,7 @@ function createFreeGrowthFirecrawlReader({
     if(direct?.html&&clean.length<direct.html.length*0.5)throw Object.assign(Error('FIRECRAWL_LESS_COMPLETE'),{code:'FIRECRAWL_LESS_COMPLETE'});
     stats.used++;
     const retrieved_at=new Date().toISOString();
-    stats.pages.push({url:url.href,final_url:final.href,provider:'FIRECRAWL_HOSTED_API',account,status:'USED',retrieved_at,readable_chars:clean.length,truncated:clean.length>limit});
+    stats.pages.push({url:url.href,final_url:final.href,provider:'FIRECRAWL_HOSTED_API',account,reason,status:'USED',retrieved_at,readable_chars:clean.length,truncated:clean.length>limit});
     return {html:clean.slice(0,limit),truncated:clean.length>limit,final_url:final.href,
      requested_url:url.href,status:200,retrieved_at,
      source:'FIRECRAWL_HOSTED_API',capture:{cause:clean.length>limit?'READABLE_HTML_EXCEEDED_LIMIT':null,readable_chars:clean.length,readable_limit:limit}};
@@ -81,4 +97,4 @@ function createFreeGrowthFirecrawlReader({
  };
  return {reader,stats};
 }
-module.exports={enabled,createFreeGrowthFirecrawlReader};
+module.exports={enabled,createFreeGrowthFirecrawlReader,extractionReason};
