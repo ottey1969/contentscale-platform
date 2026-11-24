@@ -10,3 +10,13 @@ test('authorized exact page keeps original period and never borrows domain queri
  assert.equal(auditUpload(row,{url:'https://example.com/A',invite:'wrong'}),null);
  assert.ok(auditUpload(row,{url:'https://example.com/A',invite:'secret'}));
 });
+
+test('differences only compare verified totals for the same period',()=>{
+ const {auditDifference}=require('../src/growth-free/gsc-audit-handoff.cjs');
+ const a={basis:'GSC_AUDIT_EXACT_PAGE',status:'VERIFIED_FOR_PAGE',period_start:'2026-10-01',period_end:'2026-10-31',totals:{clicks:2,impressions:100,position:8}};
+ const b={...a,basis:'EXACT_PAGE_FILTER',totals:{clicks:3,impressions:120,position:8.01}};
+ assert.deepEqual(auditDifference([a,b]),{status:'DIFFERENT_TOTALS',differences:{clicks:{audit:2,page:3},impressions:{audit:100,page:120}}});
+ assert.equal(auditDifference([a,{...b,period_end:'2026-11-01'}]).status,'DIFFERENT_PERIODS');
+ assert.equal(auditDifference([a,{...b,status:'NOT_VERIFIED_FOR_PAGE'}]),null);
+ assert.equal(auditDifference([a,{...b,totals:a.totals}]).status,'MATCH');
+});
