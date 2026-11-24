@@ -35,14 +35,17 @@ function previousGrowthBrief(brief){
   items:take(brief.items),gsc_items:take(brief.gsc_brief),
   warning:'These are saved historical AI/SEO recommendations. Review current source and actual new evidence; a completed Brief must not reopen automatically.'};
 }
-function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,aiRows=[],gscRows=[],competitorPages=[],sitePages=[],previousBrief=null,now=new Date()}={}){
+function analyzeGrowthEvidence({page={},savedHtml=null,live=null,contentLive=null,snapshot=null,aiRows=[],gscRows=[],competitorPages=[],sitePages=[],previousBrief=null,now=new Date()}={}){
  const url=String(page.url||'');
  const saved=inspectSavedGrowthHtml(savedHtml,url);
  const actual=live?.html?inspectSavedGrowthHtml(live.html,url):saved;
  if(live?.html){actual.evidence_scope='LIVE_PUBLIC_HTML_OBSERVED';actual.caution='HTTP HTML retrieved from the public URL; browser rendering and current Google rankings are not verified. Counts may be limited by excerpt length.';}
- const actualHtml=live?.html||savedHtml||'';
+ const actualHtml=contentLive?.html||live?.html||savedHtml||'';
+ const contentSource=contentLive?.source||live?.source||null;
  const source=live?.html?'LIVE_PUBLIC_HTML_OBSERVED':saved.available?'SAVED_HTML_HISTORICAL':'NO_PAGE_HTML';
  const actualText=excerpt(actualHtml);
+ const nativeText=excerpt(live?.html||savedHtml||'');
+ if(contentLive?.html){actualText.title=nativeText.title;actualText.description=nativeText.description;}
  const leads=snapshotCompetitorLeads({page,snapshot});
  const ai=summarizeGrowthAiVisibility({page,rows:aiRows});
  const validQ=(Array.isArray(gscRows)?gscRows:[]).filter(x=>x&&String(x.source_page_url)===url&&x.evidence_scope==='page_verified'&&Number(x.page_id)===Number(page.id)&&Number(x.tracker_client_id)===Number(page.tracker_client_id));
@@ -137,7 +140,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
   summary:{primary_source:source,live_retrieved_at:live?.retrieved_at||null,history_checked_at:snapshot?.checked_at||null,
    exact_gsc_queries:verifiedCount,ai_engines:ai.engines.length,competitor_leads:leads.leads.length,competitors_live_reviewed:comparison.length,
    result:'AUTOMATED_RESEARCH_REPORT',published:false,forecasted_click_gain:null},
-  page_content:{status:source,live_url:live?.final_url||null,signals:actual,headings:actualText},
+  page_content:{status:source,live_url:live?.final_url||null,signals:actual,headings:actualText,content_source:contentSource,content_retrieved_at:contentLive?.retrieved_at||live?.retrieved_at||null},
   search:{focus_query:focus||null,intent,verified_queries:queries.map(q=>({query:q.query,impressions:Number(q.impressions),clicks:Number(q.clicks),position:q.position==null?null:Number(q.position),imported_at:q.imported_at})),
    warnings:plan.warnings,observed_opportunities:safePlanOpportunities},
   competitors:{snapshot_status:leads.status,snapshot_checked_at:leads.checked_at,total_leads:leads.leads.length,
