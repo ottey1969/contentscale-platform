@@ -65,7 +65,7 @@ async function runFreeGrowthResearch({url,query,market=null,gscRows=[],sitemapUr
  // Explicit dependency injection wins in tests and integrations.
  let firecrawl=null;
  if(!options.fetchLive){
-  firecrawl=require('../growth-free-firecrawl-reader.cjs').createFreeGrowthFirecrawlReader();
+  firecrawl=require('../growth-free-firecrawl-reader.cjs').createFreeGrowthFirecrawlReader({module:'FREE_GROWTH'});
   if(firecrawl.stats.enabled)options.fetchLive=firecrawl.reader;
  }
  if(market&&(market.countries?.length||market.language))options.loadPageMarkets=async()=>market;
