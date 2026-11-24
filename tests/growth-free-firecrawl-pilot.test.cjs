@@ -101,3 +101,26 @@ test('disabled failover never calls balance endpoint or backup',async()=>{
  await assert.rejects(scrape({url}),{code:'FIRECRAWL_HTTP_402'});
  assert.equal(calls,1);
 });
+
+test('adequate native content avoids paid extraction',async()=>{
+ let calls=0;
+ const original=async()=>({html:'<main><h1>Roof repair</h1><p>'+('Useful roofing evidence. '.repeat(80))+'</p></main>',source:'LIVE_PUBLIC_HTTPS',truncated:false});
+ const {reader,stats}=createFreeGrowthFirecrawlReader({env,lookup,original,fetchImpl:async()=>{calls++;return ok()}});
+ assert.equal((await reader(url,opts)).source,'LIVE_PUBLIC_HTTPS');
+ assert.equal(calls,0);
+ assert.equal(stats.native_skips,1);
+});
+test('manual deep read overrides adequate native content',async()=>{
+ const original=async()=>({html:'<main><h1>Roof repair</h1><p>'+('Useful evidence. '.repeat(80))+'</p></main>',source:'LIVE_PUBLIC_HTTPS'});
+ const {reader,stats}=createFreeGrowthFirecrawlReader({env,lookup,original,fetchImpl:ok});
+ assert.equal((await reader(url,{...opts,forceFirecrawl:true})).source,'FIRECRAWL_HOSTED_API');
+ assert.equal(stats.pages[0].reason,'MANUAL_DEEP_READ');
+});
+test('publisher refusals and unsafe native redirects never trigger paid extraction',async()=>{
+ for(const code of ['HTTP_403','HTTP_429','PUBLIC_HTTPS_URL_REQUIRED','PUBLIC_IPV4_UNAVAILABLE','REDIRECT_LOOP','NOT_HTML']){
+  let calls=0;
+  const {reader}=createFreeGrowthFirecrawlReader({env,lookup,original:async()=>{throw Object.assign(Error(code),{code})},fetchImpl:async()=>{calls++;return ok()}});
+  await assert.rejects(reader(url,opts),{code});
+  assert.equal(calls,0);
+ }
+});
