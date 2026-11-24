@@ -214,10 +214,10 @@ function metricRows(lang,t,list,{name='name',flag=true}={}){
   list.map(x=>`<tr><td>${esc(x[name])}${flag&&x.flag?` <span class="flag">· ${esc(t.flag_no_clicks)}</span>`:''}</td><td class="num">${nf(lang,x.clicks)}</td><td class="num">${nf(lang,x.impressions)}</td><td class="num">${pct(lang,x.ctr!=null?x.ctr:(x.impressions?x.clicks/x.impressions:null))}</td><td class="num">${pos(lang,x.position)}</td></tr>`).join('')+
   '</tbody></table></div>';
 }
-function growthLink(p,{lang,owner,invite,growthPath,result=null}){
+function growthLink(p,{lang,owner,invite,growthPath,result=null,auditToken=null}){
  if(!owner&&!invite)return '';
  const q=p.queries&&p.queries[0]&&p.queries[0].query;
- const href=growthPath+'?'+(owner?'':'invite='+enc(invite)+'&')+'url='+enc(p.url)+(q?'&query='+enc(q):'')+'&lang='+enc(lang);
+ const href=growthPath+'?'+(owner?'':'invite='+enc(invite)+'&')+'url='+enc(p.url)+(q?'&query='+enc(q):'')+'&lang='+enc(lang)+(auditToken?'&gsc_audit='+enc(auditToken):'');
  if(result)return `<a class="btn" href="${esc(growthPath+result+'&lang='+lang)}" target="_blank" rel="noopener">${esc(T[lang].open_result)}</a><br><a class="muted" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research_again)}</a>`;
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
@@ -296,13 +296,13 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
    ${p.trend?`<div class="muted">${esc(t.last7)}: ${nf(lang,p.trend.last7.clicks)} ${esc(t.clicks_l)}${change(lang,p.trend.clicks_change)}</div>`:''}</td>
    <td class="num" data-l="${esc(t.clicks)}">${nf(lang,p.clicks)}</td><td class="num" data-l="${esc(t.impressions)}">${nf(lang,p.impressions)}</td><td class="num" data-l="CTR">${pct(lang,p.ctr)}</td><td class="num" data-l="${esc(t.position)}">${pos(lang,p.position)}</td>
    <td class="num" data-l="${esc(t.median_ctr)}">${p.median_ctr!=null?pct(lang,p.median_ctr):'<span class="muted">'+esc(p.basis==='NO_DATA'?'—':t.too_few)+'</span>'}</td><td class="num" data-l="${esc(t.click_gap)}">${p.click_gap?'+'+nf(lang,p.click_gap):'—'}</td>
-   <td class="gcell">${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p)})}</td></tr>`;
+   <td class="gcell">${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</td></tr>`;
  const crawlRow=p=>pageRow(p).replace(/<td class="num" data-l[\s\S]*?<td class="gcell">/,`<td class="num" data-l="${esc(A.words)}">${p.audit?nf(lang,p.audit.words):'—'}</td><td class="num" data-l="${esc(A.lastmod)}">${p.lastmod?esc(day(lang,p.lastmod)):'—'}</td><td class="gcell">`);
  const crawlTable=list=>`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(A.words)}</th><th class="num">${esc(A.lastmod)}</th><th></th></tr></thead><tbody>${list.map(crawlRow).join('')}</tbody></table></div>`;
  const table=list=>crawlOnly?crawlTable(list):`<div class="scroll"><table class="tbl ptbl"><thead><tr><th>#</th><th>${esc(t.page)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">CTR</th><th class="num">${esc(t.position)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.click_gap)}</th><th></th></tr></thead><tbody>${list.map(pageRow).join('')}</tbody></table></div>`;
  const overFive=(r.pages||[]).filter(p=>Array.isArray(p.audit?.issues)&&p.audit.issues.length>5).sort((a,b)=>b.audit.issues.length-a.audit.issues.length);
  const overFiveTitle={nl:'Pagina’s met meer dan 5 problemen',es:'Páginas con más de 5 problemas',en:'Pages with more than 5 problems'}[lang];
- const overFiveSection=overFive.length?`<section class="card" id="pagesOverFiveIssues"><h2>${esc(overFiveTitle)} (${overFive.length})</h2><ul>${overFive.map(p=>`<li><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a> · ${p.audit.issues.length} — ${p.audit.issues.map(c=>esc(A.issues[c]||c)).join(' · ')} ${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p)})}</li>`).join('')}</ul></section>`:'';
+ const overFiveSection=overFive.length?`<section class="card" id="pagesOverFiveIssues"><h2>${esc(overFiveTitle)} (${overFive.length})</h2><ul>${overFive.map(p=>`<li><a href="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a> · ${p.audit.issues.length} — ${p.audit.issues.map(c=>esc(A.issues[c]||c)).join(' · ')} ${growthLink(p,{lang,owner,invite,growthPath,result:resultOf(p),auditToken:row.token})}</li>`).join('')}</ul></section>`:'';
  const order=`<div class="card"><h2>${esc(t.order_title)}</h2><p class="muted">${esc(crawlOnly?A.order_intro:t.order_intro)}</p>${work.length?table(work):`<p>${esc(t.nothing_to_do)}</p>`}
   ${keep.length?`<details><summary>${esc(crawlOnly?A.keep_title:t.keep_title)} (${keep.length})</summary>${table(keep)}</details>`:''}</div>`;
  const bands=`<div class="card"><h2>${esc(t.bands_title)}</h2><div class="scroll"><table class="tbl"><thead><tr><th>${esc(t.position)}</th><th class="num">${esc(t.pages)}</th><th class="num">${esc(t.clicks)}</th><th class="num">${esc(t.impressions)}</th><th class="num">${esc(t.median_ctr)}</th><th class="num">${esc(t.compared)}</th></tr></thead><tbody>`+
