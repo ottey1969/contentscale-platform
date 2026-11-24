@@ -76,3 +76,15 @@ test('issue views share one table, filter categories, and never duplicate overla
  const blocked=reportPage(input,{...options,issueView:'blocked'});assert.equal((blocked.match(/<tr data-issue-page=/g)||[]).length,1);
  assert.match(blocked,/wat-is-een-ai-overview/);assert.doesNotMatch(blocked,/ai-zichtbaarheid/);
 });
+
+test('owner finds completed research even if originally created through a non-admin access key; recipient cannot borrow it',async()=>{
+ const {growthFor}=require('../src/gsc-report/published.cjs');
+ const url='https://example.com/page/';
+ const calls=[];
+ const pool={query:async(sql,args)=>{if(!String(sql).includes('ORDER BY finished_at DESC'))return {rows:[]};calls.push({sql,args});return {rows:[{url,public_id:'saved',access_key:'secret',access_label:'public',invite_id:null}]}}};
+ const owner=await growthFor(pool,[url],{owner:true});
+ assert.equal(owner.get('https://example.com/page').owner_result,'/r/saved?k=secret');
+ assert.ok(calls[0].args.includes(true));
+ const recipient=await growthFor(pool,[url],{owner:false});
+ assert.equal(recipient.get('https://example.com/page')?.owner_result||null,null);
+});
