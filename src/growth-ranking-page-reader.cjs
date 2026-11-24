@@ -9,7 +9,7 @@ const {queryFit}=require('./growth-one-action-decision.cjs');
 const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.cjs');
 const {renderPublicGrowthPage}=require('./growth-safe-browser-renderer.cjs');
 
-async function readRankingPages({query,discovery,historical=[],fetchLive=fetchPublicGrowthHtml,renderOwn=renderPublicGrowthPage,retryDelayMs=1500}={}){
+async function readRankingPages({query,discovery,historical=[],fetchLive=fetchPublicGrowthHtml,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,hostedFallback=null}={}){
   // Discussion listings remain in SERP evidence but should not displace readable
   // long-form articles in the limited content-comparison budget.
   const editorialHost=url=>{try{const host=new URL(url).hostname.toLowerCase();
@@ -22,9 +22,26 @@ async function readRankingPages({query,discovery,historical=[],fetchLive=fetchPu
   const candidates=[...fresh.map(x=>({...x,search_source:x.source==='SERPAPI_GOOGLE_ORGANIC'?'SERPAPI_GOOGLE_ORGANIC':x.source==='SERPER_GOOGLE_ORGANIC'?'SERPER_GOOGLE_ORGANIC':'BING_PUBLIC_RSS'})),
    ...historical.filter(x=>editorialHost(x.url)&&!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:query,h1:[],h2:[]}).fit)
     .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,10);
+  const hostedCache=new Map();
+  let hostedBudget=3;
   const fetchCompetitorOnce=async lead=>{
-   try{const live=await fetchLive(lead.url,RESEARCH_FETCH);
-    return {url:lead.url,live,quality:assessGrowthCompetitorContent({html:live.html,query:query,truncated:live.truncated}),
+   try{let live=await fetchLive(lead.url,RESEARCH_FETCH);
+    let quality=assessGrowthCompetitorContent({html:live.html,query:query,truncated:live.truncated});
+    let hostedStatus=null;
+    if(typeof hostedFallback==='function'&&!quality.eligible&&['JS_RENDERED_PAGE_NO_STATIC_TEXT','NO_PARAGRAPH_TEXT'].includes(quality.reason_code)){
+     if(!hostedCache.has(lead.url)&&hostedBudget>0){
+      hostedBudget--;
+      hostedCache.set(lead.url,Promise.resolve().then(()=>hostedFallback(lead.url,live)).catch(()=>null));
+     }
+     if(hostedCache.has(lead.url)){
+      const candidate=await hostedCache.get(lead.url);
+      const q=candidate?.html?assessGrowthCompetitorContent({html:candidate.html,query,truncated:candidate.truncated}):null;
+      if(candidate?.source==='FIRECRAWL_HOSTED_API'&&candidate.final_url===live.final_url&&!candidate.truncated&&q?.eligible){
+       live=candidate;quality=q;hostedStatus='USED';
+      }else hostedStatus='FALLBACK';
+     }
+    }
+    return {url:lead.url,live,quality,hosted_status:hostedStatus,
      search_source:lead.search_source,search_query:query}}
    catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70),search_source:lead.search_source}}
   };
@@ -73,7 +90,7 @@ async function readRankingPages({query,discovery,historical=[],fetchLive=fetchPu
      explanation:x.live?(x.quality?.eligible?null:x.quality?.reason_code):explain(x.reason||''),
      partial_capture:x.live?.truncated===true,retried_after_http_202:x.retried_after_http_202===true,
      rendered_fallback:x.rendered_fallback===true,render_status:renderNotes[x.url]||null,
-     readable_words:x.quality?.readable_words??null});
+     readable_words:x.quality?.readable_words??null,hosted_status:x.hosted_status||null,read_provider:x.live?.source||null});
   }
   const fetchSummaryNow=()=>{const c=k=>fetchLog.filter(x=>x.outcome===k).length;
    const blocked=fetchLog.filter(x=>x.explanation==='BLOCKED_BY_SITE_RESPECTED').length,timeouts=fetchLog.filter(x=>x.explanation==='TIMEOUT').length;
