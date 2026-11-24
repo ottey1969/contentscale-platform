@@ -4,6 +4,7 @@
 // No Firecrawl package, crawler or WordPress plugin is installed.
 const dns=require('node:dns').promises;
 const {fetchPublicGrowthHtml,validateUrl,publicV4,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
+const {createFirecrawlProvider}=require('./firecrawl-provider.cjs');
 const DEFAULT_LIMIT=6;
 function enabled(env=process.env){
  return env.FREE_GROWTH_FIRECRAWL_ENABLED==='true'&&!!String(env.FIRECRAWL_API_KEY||'').trim();
@@ -21,6 +22,8 @@ function createFreeGrowthFirecrawlReader({
  const active=enabled(env);
  const cap=Math.max(1,Math.min(Math.min(50,Number(hardCap)||10),Number(maxPages)||DEFAULT_LIMIT));
  const stats={enabled:active,provider:'FIRECRAWL_HOSTED',attempted:0,used:0,fallbacks:0,cache_hits:0,limit:cap,errors:[],pages:[]};
+ const provider=createFirecrawlProvider({env,fetchImpl,timeoutMs});
+ stats.accounts=provider.stats;
  const cache=new Map();
  const limitedMessage=(url,code)=>{if(stats.errors.length<10)stats.errors.push({host:(()=>{try{return new URL(url).hostname}catch{return 'invalid'}})(),code})};
  const reader=async (raw,options=RESEARCH_FETCH)=>{
@@ -44,19 +47,7 @@ function createFreeGrowthFirecrawlReader({
   stats.attempted++;
   const task=(async()=>{
    try{
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),timeoutMs);
-    let response;
-    try{
-     response=await fetchImpl('https://api.firecrawl.dev/v2/scrape',{
-      method:'POST',
-      headers:{Authorization:'Bearer '+String(env.FIRECRAWL_API_KEY).trim(),'Content-Type':'application/json'},
-      body:JSON.stringify({url:url.href,formats:['html'],onlyMainContent:false,maxAge:0}),
-      signal:controller.signal
-     });
-    }finally{clearTimeout(timeout)}
-    if(!response.ok)throw Object.assign(Error('FIRECRAWL_HTTP_'+response.status),{code:'FIRECRAWL_HTTP_'+response.status});
-    const body=await response.json();
+    const {body,account}=await provider.scrape({url:url.href,formats:['html'],onlyMainContent:false,maxAge:0});
     const data=body?.data||body;
     const html=typeof data?.html==='string'?data.html:'';
     const meta=data?.metadata||{};
@@ -74,7 +65,7 @@ function createFreeGrowthFirecrawlReader({
     if(direct?.html&&clean.length<direct.html.length*0.5)throw Object.assign(Error('FIRECRAWL_LESS_COMPLETE'),{code:'FIRECRAWL_LESS_COMPLETE'});
     stats.used++;
     const retrieved_at=new Date().toISOString();
-    stats.pages.push({url:url.href,final_url:final.href,provider:'FIRECRAWL_HOSTED_API',status:'USED',retrieved_at,readable_chars:clean.length,truncated:clean.length>limit});
+    stats.pages.push({url:url.href,final_url:final.href,provider:'FIRECRAWL_HOSTED_API',account,status:'USED',retrieved_at,readable_chars:clean.length,truncated:clean.length>limit});
     return {html:clean.slice(0,limit),truncated:clean.length>limit,final_url:final.href,
      requested_url:url.href,status:200,retrieved_at,
      source:'FIRECRAWL_HOSTED_API',capture:{cause:clean.length>limit?'READABLE_HTML_EXCEEDED_LIMIT':null,readable_chars:clean.length,readable_limit:limit}};
