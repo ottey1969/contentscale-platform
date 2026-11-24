@@ -71,7 +71,7 @@ test('issue views share one table, filter categories, and never duplicate overla
  const pages=[{...report.pages[0],action:'BLOCKED',audit:a},{...report.pages[1],action:'REDIRECT',live:{hops:1,status:301,final_url:'https://nl.contentscale.site/'}}];
  const input={...row,report:{...report,pages,kpis:{audit:{with_issues:1,blocked:1},urls_checked:2,redirects:1,gone:0}}};
  const options={owner:true,config:{},growthPath:'/free-growth'};
- const main=reportPage(input,options);assert.match(main,/href="\?view=blocked"/);assert.match(main,/href="\?view=redirects"/);assert.doesNotMatch(main,/href="\?view=gone"/);
+ const main=reportPage(input,options);assert.doesNotMatch(main,/href="https:\/\/nl\.contentscale\.site\/wat-is-een-ai-overview\/"/);assert.doesNotMatch(main,/href="https:\/\/nl\.contentscale\.site\/ai-zichtbaarheid\/"/);assert.match(main,/href="\?view=blocked"/);assert.match(main,/href="\?view=redirects"/);assert.doesNotMatch(main,/href="\?view=gone"/);
  const all=reportPage(input,{...options,issueView:'all'});assert.match(all,/id="issueTable"/);assert.equal((all.match(/<tr data-issue-page=/g)||[]).length,2);
  const blocked=reportPage(input,{...options,issueView:'blocked'});assert.equal((blocked.match(/<tr data-issue-page=/g)||[]).length,1);
  assert.match(blocked,/wat-is-een-ai-overview/);assert.doesNotMatch(blocked,/ai-zichtbaarheid/);
