@@ -12,6 +12,7 @@ const MODULE_SCHEMA=`CREATE TABLE IF NOT EXISTS firecrawl_module_usage (
  account_hash text NOT NULL, day_utc date NOT NULL, module text NOT NULL,
  requests bigint NOT NULL DEFAULT 0, used bigint NOT NULL DEFAULT 0,
  fallbacks bigint NOT NULL DEFAULT 0, cache_hits bigint NOT NULL DEFAULT 0,
+ errors bigint NOT NULL DEFAULT 0,
  PRIMARY KEY(account_hash,day_utc,module)
 )`;
 const MODULES=new Set(['FREE_GROWTH','GSC_AUDIT','TRACKER_GROWTH','GOOGLE_COMPETITOR','AI_GAP','UNCLASSIFIED']);
@@ -38,6 +39,7 @@ function createFirecrawlPostgresAccounting(pool){
     await client.query("SELECT pg_advisory_xact_lock(193428657, 558)");
     await client.query(SCHEMA);
     await client.query(MODULE_SCHEMA);
+    await client.query('ALTER TABLE firecrawl_module_usage ADD COLUMN IF NOT EXISTS errors bigint NOT NULL DEFAULT 0');
     await client.query('COMMIT');
    }catch(e){try{await client.query('ROLLBACK')}catch{}throw e}
    finally{client.release()}
@@ -57,8 +59,8 @@ function createFirecrawlPostgresAccounting(pool){
   return {daily:Number(result.rows[0]?.daily_requests||0),monthly:Number(result.rows[0]?.monthly_requests||0)};
  }
  async function record({id,day,module,event}){
-  const column={request:'requests',used:'used',fallback:'fallbacks',cache:'cache_hits'}[event];
-  if(!['requests','used','fallbacks','cache_hits'].includes(column))throw Error('FIRECRAWL_INVALID_EVENT');
+  const column={request:'requests',used:'used',fallback:'fallbacks',cache:'cache_hits',error:'errors'}[event];
+  if(!['requests','used','fallbacks','cache_hits','errors'].includes(column))throw Error('FIRECRAWL_INVALID_EVENT');
   await ensure();
   await pool.query(`INSERT INTO firecrawl_module_usage AS u(account_hash,day_utc,module,${column})
    VALUES($1,$2::date,$3,1) ON CONFLICT(account_hash,day_utc,module)
@@ -68,11 +70,11 @@ function createFirecrawlPostgresAccounting(pool){
   await ensure();
   const result=await pool.query(`SELECT module,
    SUM(requests)::bigint AS requests,SUM(used)::bigint AS used,
-   SUM(fallbacks)::bigint AS fallbacks,SUM(cache_hits)::bigint AS cache_hits,
+   SUM(fallbacks)::bigint AS fallbacks,SUM(cache_hits)::bigint AS cache_hits,SUM(errors)::bigint AS errors,
    COALESCE(SUM(requests) FILTER(WHERE day_utc=$2::date),0)::bigint AS daily_requests
    FROM firecrawl_module_usage WHERE account_hash=$1 AND day_utc >= $3::date
    AND day_utc < ($3::date+INTERVAL '1 month') GROUP BY module ORDER BY module`,[id,day,month+'-01']);
-  return result.rows.map(r=>({module:r.module,requests:Number(r.requests),used:Number(r.used),fallbacks:Number(r.fallbacks),cache_hits:Number(r.cache_hits),daily_requests:Number(r.daily_requests)}));
+  return result.rows.map(r=>({module:r.module,requests:Number(r.requests),used:Number(r.used),fallbacks:Number(r.fallbacks),cache_hits:Number(r.cache_hits),errors:Number(r.errors),daily_requests:Number(r.daily_requests)}));
  }
  return {reserve,usage,record,moduleUsage};
 }
