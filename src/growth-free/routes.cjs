@@ -491,10 +491,11 @@ function wireAi(){wireAiGap();var b=document.getElementById('aiSave');if(!b)retu
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE'){render(d);showStep('freeAiResearch','freeAiResearch')}else{showAiFirst(d,true);showStep('aiFirst','aiFirst')}}catch(err){st.textContent=err.message;b.disabled=false}}}
 function gscHtml(g,declined){var h='<h3 id="gsc">Search Console <small>(optional)</small></h3>';
  if(g&&g.latest){var L=g.latest,T=L.totals||{};
-  h+='<p class="lead"><strong>'+(L.status==='VERIFIED_FOR_PAGE'?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+(L.status==='VERIFIED_FOR_PAGE'&&!L.used_in_research?' This export was uploaded after the research (or belongs to a reused result), so it was not used to decide the page improvements. Start a new check and upload it before research to include its search queries.':'')+'</p>';
+  h+='<p class="lead"><strong>'+(L.status==='VERIFIED_FOR_PAGE'?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+(L.status==='VERIFIED_FOR_PAGE'&&L.source!=='GSC_REPORT'&&!L.used_in_research?' This export was uploaded after the research (or belongs to a reused result), so it was not used to decide the page improvements. Start a new check and upload it before research to include its search queries.':'')+'</p>';
   h+='<div class="grid"><div><small>Period</small><strong>'+(L.period?esc(L.period.start)+' – '+esc(L.period.end):'not in the export')+'</strong></div><div><small>Clicks</small><strong>'+esc(T.clicks)+'</strong></div><div><small>Impressions</small><strong>'+esc(T.impressions)+'</strong></div><div><small>Average position</small><strong>'+(T.position==null?'–':esc(T.position))+'</strong></div></div>';
   if(T.source==='QUERIES_SUM_UNDERCOUNTS')h+='<p class="muted">Totals are the sum of the search terms; Search Console leaves out rare terms, so the real totals are higher. The ZIP export includes the exact totals.</p>';
-  if(L.search_term)h+='<p>'+(L.search_term_row?'Your search term “'+esc(L.search_term)+'”: '+esc(L.search_term_row.impressions)+' impressions, '+esc(L.search_term_row.clicks)+' clicks, position '+esc(L.search_term_row.position==null?'–':L.search_term_row.position)+'.':'Your search term “'+esc(L.search_term)+'” is not in this export (no impressions in this period, or too rare to be listed).')+'</p>';
+  if(L.source==='GSC_REPORT'){h+='<p class="muted">'+esc(L.file_name||'GSC Audit')+' · '+esc({nl:'Paginacijfers uit het auditrapport.',es:'Métricas de esta página del informe.',en:'Page totals from the audit report.'}[${js(lang)}]||'Page totals from the audit report.')+'</p>';if(!L.search_term_row)h+='<p class="note">'+esc({nl:'Aanbevolen: upload alleen een paginaspecifieke export als je de prestaties van deze zoekvraag nauwkeurig wilt onderzoeken. Je hoeft niet opnieuw te uploaden om verder te gaan.',es:'Recomendación: exporta esta página si necesitas métricas exactas de la consulta. Puedes continuar sin subir otro archivo.',en:'Recommendation: upload a page-filtered export only if you need exact query metrics. You can continue without another upload.'}[${js(lang)}])+'</p>'}
+  if(L.search_term&&!(L.source==='GSC_REPORT'&&!L.search_term_row))h+='<p>'+(L.search_term_row?'Your search term “'+esc(L.search_term)+'”: '+esc(L.search_term_row.impressions)+' impressions, '+esc(L.search_term_row.clicks)+' clicks, position '+esc(L.search_term_row.position==null?'–':L.search_term_row.position)+'.':'Your search term “'+esc(L.search_term)+'” is not in this export (no impressions in this period, or too rare to be listed).')+'</p>';
   if((L.top_queries||[]).length)h+='<h3>Search terms with the most impressions</h3><ol>'+L.top_queries.map(function(q){return '<li>'+esc(q.query)+' <small>— '+esc(q.impressions)+' impressions, '+esc(q.clicks)+' clicks'+(q.position==null?'':', position '+esc(q.position))+'</small></li>'}).join('')+'</ol>';
   if(g.uploads>1)h+='<p class="muted">'+esc(g.uploads)+' exports uploaded for this check; the latest is shown. All are kept for the comparison after publication.</p>';
  }else if(declined)h+='<p>You indicated at the start that this page has no Search Console data. The research ran without it; nothing else is needed.</p>';
@@ -1373,6 +1374,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
+      if(job.gscAudit)out.report.gsc_audit_evidence={source:'GSC_REPORT',period:job.gscAudit.period,totals:job.gscAudit.totals,page_url:job.url,query_rows:job.gscAudit.queries.length};
        if(job.sitemap)out.report.sitemap_import={status:job.sitemap.urls.length?'IMPORTED_URL_INVENTORY_ONLY':'SITEMAP_UNAVAILABLE',source:job.sitemap.source||'VISITOR_XML_UPLOAD',file_name:job.sitemap.fileName,urls_found:job.sitemap.totalFound,urls_used:job.sitemap.urls.length,limited:job.sitemap.limited,urls:job.sitemap.urls,note:'Sitemap URLs are site inventory only. No imported page was treated as read, indexed, canonical or verified.'};
       if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
@@ -1597,9 +1599,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const term=searchTermOf(row),comparison=reminders.compareUploads([...fromReports,...list],row.published_on||null,term);
   if(!list.length)return {uploads:0,latest:null,comparison};
   const last=list[list.length-1];
-  return {uploads:list.length,latest:{status:last.status,message:gscExport.MESSAGES[last.status]||'',file_name:last.file_name,uploaded_at:last.created_at,
+  return {uploads:list.length,latest:{status:last.status,source:last.basis==='GSC_AUDIT_EXACT_PAGE'?'GSC_REPORT':'UPLOAD',message:last.basis==='GSC_AUDIT_EXACT_PAGE'?'Page totals from your GSC Audit. Only directly linked search terms are used as query evidence.':gscExport.MESSAGES[last.status]||'',file_name:last.file_name,uploaded_at:last.created_at,
    period:last.period_start?{start:last.period_start,end:last.period_end}:null,totals:last.totals,top_queries:(last.queries||[]).slice(0,10),
-   search_term:term||null,search_term_row:gscExport.termInExport({queries:last.queries||[]},term),used_in_research:last.status==='VERIFIED_FOR_PAGE'&&!row.cached_from&&!!row.finished_at&&new Date(last.created_at).getTime()<=new Date(row.finished_at).getTime()},
+   search_term:term||null,search_term_row:gscExport.termInExport({queries:last.queries||[]},term),used_in_research:last.status==='VERIFIED_FOR_PAGE'&&(last.basis!=='GSC_AUDIT_EXACT_PAGE'||(last.queries||[]).length>0)&&!row.cached_from&&!!row.finished_at&&new Date(last.created_at).getTime()<=new Date(row.finished_at).getTime()},
    history:list.map(x=>({status:x.status,uploaded_at:x.created_at,period:x.period_start?{start:x.period_start,end:x.period_end}:null,totals:x.totals})),comparison};
  }
  function readInput(b,res){
@@ -1629,7 +1631,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscAudit:input.gsc?.upload?.source==='GSC_REPORT'?input.gsc.upload:null,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
@@ -1707,7 +1709,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  function withGscLimits(summary,gscPart){
   if(!summary||!gscPart||!gscPart.latest)return summary;
   const L=gscPart.latest,period=L.period?' ('+L.period.start+' – '+L.period.end+')':'';
-  const line=L.used_in_research?'Your Search Console export, filtered on exactly this page'+period+', was used in the research.':L.status==='VERIFIED_FOR_PAGE'?'The latest Search Console export is verified for this page'+period+' but was not used in the original research; start a new check with this export to research its queries.':'A Search Console export was uploaded'+period+', but it is not filtered on exactly this page, so it was shown and not used as evidence.';
+  const line=L.source==='GSC_REPORT'?'Page totals from GSC Audit'+period+' are available; only directly linked queries are eligible as search-query evidence.':L.used_in_research?'Your Search Console export, filtered on exactly this page'+period+', was used in the research.':L.status==='VERIFIED_FOR_PAGE'?'The latest Search Console export is verified for this page'+period+' but was not used in the original research; start a new check with this export to research its queries.':'A Search Console export was uploaded'+period+', but it is not filtered on exactly this page, so it was shown and not used as evidence.';
   return {...summary,limitations:[...(summary.limitations||[]).filter(x=>!/^Google Search Console was not used/.test(x)),line]};
  }
  const writerReason=explainWriterFailure;
