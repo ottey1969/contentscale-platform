@@ -17,3 +17,25 @@ test('one-time compatibility build produces the same artifact twice',()=>{
  assert(compiled.includes("BROWSER_UNAVAILABLE"));
  assert.equal(compiled,prepare(compiled));
 });
+
+test('only requested growth and SEO audit page routes receive noindex',()=>{
+ const express=require('express');
+ const request=require('supertest');
+ const entry=fs.readFileSync('index.cjs','utf8');
+ const start=entry.indexOf('  // BEGIN page indexing policy');
+ const end=entry.indexOf('  // END page indexing policy');
+ assert.ok(start>=0 && end>start,'production indexing middleware must exist');
+ const app=express();
+ new Function(entry.slice(start,end)).call(app);
+ app.use((req,res)=>res.send('ok'));
+ return Promise.all([
+ ['/seo-audit','noindex, follow'],['/seo-audit/?x=1','noindex, follow'],
+ ['/track/example/growth','noindex, follow'],['/track/another/growth/?x=1','noindex, follow'],
+ ['/track/example',undefined],['/track/example/growth/report',undefined],
+ ['/api/gsc/reports',undefined],['/growth',undefined],['/seo-audit-other',undefined]
+ ].map(async ([url,expected])=>{
+  const res=await request(app).get(url);
+  assert.equal(res.status,200);
+  assert.equal(res.headers['x-robots-tag'],expected,url);
+ }));
+});
