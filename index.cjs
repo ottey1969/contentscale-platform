@@ -11,6 +11,14 @@ const express=require('express');
 const originalInit=express.application.init;
 express.application.init=function(...args){
   originalInit.apply(this,args);
+  // BEGIN page indexing policy
+  this.use((req,res,next)=>{
+    if (/^\/(?:seo-audit|track\/[^/]+\/growth)\/?$/i.test(req.path)) {
+      res.set('X-Robots-Tag','noindex, follow');
+    }
+    next();
+  });
+  // END page indexing policy
   // Minimal runtime fingerprint to correlate GitHub and Railway builds.
   // Do not expose credentials, environment dumps, or server paths.
   this.get('/api/version',(req,res)=>{
