@@ -6,7 +6,7 @@ const positive=(value,fallback,max)=>{
  const n=Number(value);return value!=null&&String(value).trim()!==''&&Number.isSafeInteger(n)&&n>=0?Math.min(n,max):fallback;
 };
 const error=code=>Object.assign(Error(code),{code});
-function createFirecrawlManager({now=Date.now,maxEntries=100,maxCacheBytes=16*1024*1024}={}){
+function createFirecrawlManager({now=Date.now,maxEntries=100,maxCacheBytes=16*1024*1024,accounting=null,requireAccounting=false}={}){
  const cache=new Map(),running=new Map(),accounts=new Map();
  let cachedBytes=0;
  const remove=k=>{const hit=cache.get(k);if(hit){cachedBytes-=hit.bytes;cache.delete(k)}};
@@ -34,9 +34,17 @@ function createFirecrawlManager({now=Date.now,maxEntries=100,maxCacheBytes=16*10
   const hit=cache.get(key);
   if(hit){if(ttl>0&&now()-hit.at<ttl)return {value:hit.value,source:'CACHE'};remove(key)}
   if(running.has(key))return {value:await running.get(key),source:'IN_FLIGHT'};
-  if(a.daily>=dailyLimit||a.monthly>=monthlyLimit)throw error('FIRECRAWL_LOCAL_REQUEST_LIMIT');
-  a.daily++;a.monthly++;
-  const task=Promise.resolve().then(load);
+  const task=Promise.resolve().then(async()=>{
+   if(accounting){
+    try{await accounting.reserve({id,day:a.day,month:a.month,dailyLimit,monthlyLimit})}
+    catch(e){if(e?.code==='FIRECRAWL_LOCAL_REQUEST_LIMIT')throw e;throw error('FIRECRAWL_ACCOUNTING_UNAVAILABLE')}
+   }else{
+    if(requireAccounting)throw error('FIRECRAWL_ACCOUNTING_UNAVAILABLE');
+    if(a.daily>=dailyLimit||a.monthly>=monthlyLimit)throw error('FIRECRAWL_LOCAL_REQUEST_LIMIT');
+    a.daily++;a.monthly++;
+   }
+   return load();
+  });
   running.set(key,task);
   try{
    const value=await task;
@@ -49,7 +57,15 @@ function createFirecrawlManager({now=Date.now,maxEntries=100,maxCacheBytes=16*10
    return {value,source:'REQUEST'};
   }finally{running.delete(key)}
  }
- return {read,usage};
+ async function durableUsage(env=process.env){
+  if(!accounting){if(requireAccounting)throw error('FIRECRAWL_ACCOUNTING_UNAVAILABLE');return usage(env)}
+  const {id,a,dailyLimit,monthlyLimit}=account(env);
+  const counts=await accounting.usage({id,day:a.day,month:a.month});
+  return {...usage(env),daily_requests:counts.daily,monthly_requests:counts.monthly,scope:'POSTGRES_SHARED'};
+ }
+ return {read,usage,durableUsage};
 }
-const firecrawlManager=createFirecrawlManager();
+const {productionAccounting}=require('./firecrawl-postgres-accounting.cjs');
+const durable=productionAccounting();
+const firecrawlManager=createFirecrawlManager({accounting:durable,requireAccounting:process.env.NODE_ENV==='production'});
 module.exports={createFirecrawlManager,firecrawlManager};
