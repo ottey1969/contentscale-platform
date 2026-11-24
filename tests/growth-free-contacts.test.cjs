@@ -77,3 +77,66 @@ test('contacts per country: list, filter, CSV, delete one, delete selection — 
     await pool.end();
   }
 });
+
+
+test('research history: owner-only explicit bulk removal, active checks and rank accounts protected', { skip, timeout: 60000 }, async () => {
+  const pool = new pg.Pool({ connectionString: DB });
+  const express = require('express'), crypto = require('node:crypto');
+  const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
+  const growth = require('../src/growth-free/store.cjs'), rank = require('../src/rank-free/store.cjs').pgStore(pool);
+  const suffix = crypto.randomBytes(8).toString('hex'), email = suffix+'@research-test.example', host = suffix+'.example';
+  let srv, browser;
+  try {
+    await growth.ensureTables(pool);
+    await rank.findAccountByEmail(email);
+    await rank.upsertSignup({email,lang:'en',ipHash:'h',consent:false,verifyHash:'v-'+suffix,host,gl:'us',hl:'en',keywords:['roof repair']});
+    const add = async (status, query) => (await pool.query("INSERT INTO growth_free_checks(public_id,access_key,email,url,host,query,status) VALUES($1,'key',$2,$3,$4,$5,$6) RETURNING id::text", [crypto.randomBytes(16).toString('hex'),email,'https://'+host+'/',host,query,status])).rows[0].id;
+    const done = await add('DONE','first'), failed = await add('FAILED','second'), running = await add('RUNNING','active'), other = await add('DONE','keep');
+    const app = express(); app.use(express.json());
+    registerFreeGrowth(app,pool,{config:{...freeGrowthConfig({}),adminKey:'research-secret-0123456789'}});
+    srv = app.listen(0); const base = 'http://127.0.0.1:'+srv.address().port, endpoint = '/api/free-growth/admin/research-history';
+    const call = async (method, path, body, headers = {}) => fetch(base+path,{method,headers:{'Content-Type':'application/json',...headers},body:body?JSON.stringify(body):undefined});
+    assert.equal((await call('GET',endpoint)).status,404);
+    const login = await call('POST','/api/free-growth/admin/login',{key:'research-secret-0123456789'});
+    const cookie = login.headers.get('set-cookie').split(';')[0], jar={cookie}, write={cookie,'X-Requested-With':'growth-free-admin'};
+    assert.equal((await call('POST',endpoint+'/delete',{ids:[done],confirm:'DELETE'},jar)).status,404);
+    assert.equal((await call('POST',endpoint+'/delete',{ids:[done]},write)).status,400);
+    assert.equal((await call('POST',endpoint+'/delete',{ids:['1 OR 1=1'],confirm:'DELETE'},write)).status,400);
+    const list = await (await call('GET',endpoint,null,jar)).json();
+    assert.equal(list.rows.filter(r=>r.email===email).length,4);
+    assert.ok(list.rows.filter(r=>r.email===email).every(r=>r.result_url && !('access_key' in r)));
+    const { chromium } = require('playwright');
+    browser = await chromium.launch();
+    const page = await browser.newPage();
+    const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+    await page.goto(base+'/free-growth/admin');
+    await page.locator('#lf input[name=key]').fill('research-secret-0123456789');
+    await page.locator('#lf button').click();
+    await page.locator('#rhSearch').fill(host);
+    const group=page.locator('#rhRows details'); await group.waitFor();
+    assert.equal(await group.count(),1);
+    assert.equal(await group.evaluate(e=>e.open),false);
+    await group.locator('summary').click();
+    assert.equal(await group.locator('input[type=checkbox]').count(),4);
+    assert.equal(await group.locator('input:disabled').count(),1);
+    await page.locator('#rhFilterSelect').click();
+    assert.match(await page.locator('#rhCount').textContent(),/3 selected/);
+    await page.locator('#rhClear').click();
+    await group.locator('input[data-rh-id="'+done+'"]').check();
+    await group.locator('input[data-rh-id="'+failed+'"]').check();
+    page.once('dialog',d=>d.accept());
+    await page.locator('#rhDelete').click();
+    await page.waitForFunction(()=>document.getElementById('rhMessage')?.textContent.includes('Deleted 2 of 2'));
+    assert.deepEqual(errors,[]);
+    const del = await (await call('POST',endpoint+'/delete',{ids:[running,done],confirm:'DELETE'},write)).json();
+    assert.equal(del.deleted,0);
+    const remaining=(await pool.query('SELECT id::text FROM growth_free_checks WHERE email=$1 ORDER BY id',[email])).rows.map(r=>r.id);
+    assert.deepEqual(remaining,[running,other]);
+    assert.equal((await pool.query('SELECT COUNT(*)::int n FROM rank_free_accounts WHERE email=$1',[email])).rows[0].n,1);
+  } finally {
+    if(browser) await browser.close(); if(srv) srv.close();
+    await pool.query('DELETE FROM growth_free_checks WHERE email=$1',[email]).catch(()=>{});
+    await pool.query('DELETE FROM rank_free_accounts WHERE email=$1',[email]).catch(()=>{});
+    await pool.end();
+  }
+});
