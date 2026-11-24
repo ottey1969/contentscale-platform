@@ -159,4 +159,28 @@ test('markets: set in order, invalid codes dropped, an empty list removes the se
  assert.equal(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:[]}),null);
  assert.equal(await markets.getPageMarkets(pool,{clientId:client,pageId:page}),null);
 });
+
+test('Firecrawl durable quota: concurrent independent pools enforce daily and monthly caps',async()=>{
+ const {createFirecrawlPostgresAccounting}=require('../src/firecrawl-postgres-accounting.cjs');
+ const {randomUUID}=require('node:crypto');
+ const other=new Pool({connectionString:DB,max:4});
+ const a=createFirecrawlPostgresAccounting(pool),b=createFirecrawlPostgresAccounting(other);
+ const id='test-'+randomUUID(),base={id,day:'2026-11-24',month:'2026-11',dailyLimit:3,monthlyLimit:5};
+ try{
+  const attempts=await Promise.allSettled(Array.from({length:12},(_,i)=>(i%2?a:b).reserve(base)));
+  assert.equal(attempts.filter(x=>x.status==='fulfilled').length,3);
+  for(const x of attempts.filter(x=>x.status==='rejected'))assert.equal(x.reason.code,'FIRECRAWL_LOCAL_REQUEST_LIMIT');
+  assert.deepEqual(await b.usage(base),{daily:3,monthly:3});
+  const next={...base,day:'2026-11-25'};
+  const recreated=createFirecrawlPostgresAccounting(other);
+  await recreated.reserve(next);await a.reserve(next);
+  await assert.rejects(recreated.reserve(next),/FIRECRAWL_LOCAL_REQUEST_LIMIT/);
+  assert.deepEqual(await recreated.usage(next),{daily:2,monthly:5});
+  const month={...base,day:'2026-12-01',month:'2026-12'};
+  await a.reserve(month);assert.deepEqual(await b.usage(month),{daily:1,monthly:1});
+  await assert.rejects(a.reserve({...base,id:id+'-zero',dailyLimit:0}),/FIRECRAWL_LOCAL_REQUEST_LIMIT/);
+ }finally{
+  try{await pool.query('DELETE FROM firecrawl_request_usage WHERE account_hash=$1 OR account_hash=$2',[id,id+'-zero'])}finally{await other.end()}
+ }
+});
 }
