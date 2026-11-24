@@ -155,7 +155,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
  });
  app.get(basePath+'/r/:token',async(req,res)=>{
   res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').set('Referrer-Policy','no-referrer')
-   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; script-src 'self'; connect-src 'self'");
+   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; "+(['all','problems','blocked','redirects','gone'].includes(req.query?.view)?"script-src 'self'; connect-src 'self'":"script-src 'none'"));
   try{
    await ensure();const owner=isOwner(req);
    const row=await st.openReport(pool,String(req.params.token),{count:!owner});
