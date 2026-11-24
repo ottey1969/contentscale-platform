@@ -1223,7 +1223,7 @@ function adminPage(cfg,api,base,loggedIn){
  <p class="muted">Application request limits, not billed credits. UTC periods.</p>
  <p><button type="button" class="ghost" id="firecrawlRefresh">Refresh usage</button></p>
  <div id="firecrawlOwnerUsage" role="status">Loading…</div>
- <p class="muted">Provider credit balance and key validity are not checked here. Module-level usage is not yet available.</p></div>
+ <p class="muted">Provider credit balance and key validity are not checked here. Module counts begin at deployment and may be incomplete if telemetry storage is unavailable.</p></div>
  <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">The same form your visitors use, in owner mode: no limits, AI writing, customer questions, Search Console upload, pasted AI answers kept, and the option to research again. One form, so what you test is what visitors get.</p>
   <p><a class="btn" href="${esc(base)}">Open the check form (owner mode) →</a></p></div>
  <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
@@ -1265,6 +1265,20 @@ var API=${js(api)},H={'Content-Type':'application/json','X-Requested-With':'grow
    if(d.status!=='AVAILABLE'){line(d.status==='KEY_MISSING'?'Configure an API key in Railway.':'Accounting unavailable.');return}
    line('Accounting: '+(d.scope==='POSTGRES_SHARED'?'PostgreSQL (shared)':'process-local'));
    showMeter('Today ('+d.day_utc+')',d.daily);showMeter('Month ('+d.month_utc+')',d.monthly);
+   var heading=document.createElement('h3');heading.textContent='Usage by module';target.appendChild(heading);
+   if(!Array.isArray(d.modules)){line('Module statistics unavailable.');return}
+   var labels={FREE_GROWTH:'Free Growth',GSC_AUDIT:'GSC Audit',TRACKER_GROWTH:'Tracker Growth',GOOGLE_COMPETITOR:'Google Competitor Research',AI_GAP:'AI Gap Research',UNCLASSIFIED:'Other'};
+   var wrap=document.createElement('div');wrap.style.overflowX='auto';
+   var table=document.createElement('table'),head=table.createTHead().insertRow();
+   ['Module','Today requests','Month requests','Accepted reads','Provider errors','Cache reuse','Fallbacks'].forEach(function(label){var th=document.createElement('th');th.textContent=label;th.scope='col';head.appendChild(th)});
+   var body=table.createTBody();
+   Object.keys(labels).forEach(function(key){
+    var m=d.modules.find(function(x){return x.module===key});
+    if(!m&&key==='UNCLASSIFIED')return;
+    var row=body.insertRow();[labels[key],m?.daily_requests??0,m?.requests??0,m?.used??0,m?.errors??0,m?.cache_hits??0,m?.fallbacks??0].forEach(function(value){row.insertCell().textContent=String(value)});
+   });
+   wrap.appendChild(table);target.appendChild(wrap);
+   line('All columns except Today requests cover the UTC month. Cache reuse counts avoided repeat reader attempts, not verified credit savings. Accepted reads include shared-cache results; fallbacks include rejected captures and quota blocks.');
   }catch(e){target.textContent='Firecrawl usage unavailable.'}finally{btn.disabled=false}
  }
  btn.addEventListener('click',refresh);

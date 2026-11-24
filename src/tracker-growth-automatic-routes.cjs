@@ -173,7 +173,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      process.env.TRACKER_GROWTH_FIRECRAWL_ENABLED==='true'&&String(process.env.FIRECRAWL_API_KEY||'').trim()){
    const {createFreeGrowthFirecrawlReader}=require('./growth-free-firecrawl-reader.cjs');
    const direct=own.live;
-   const hosted=createFreeGrowthFirecrawlReader({env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},
+   const hosted=createFreeGrowthFirecrawlReader({module:'TRACKER_GROWTH',env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},
     original:async()=>direct,maxPages:1});
    const candidate=await hosted.reader(page.url,RESEARCH_FETCH).catch(()=>null);
    ownFirecrawl=hosted.stats;
@@ -244,7 +244,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    process.env.TRACKER_GROWTH_FIRECRAWL_ENABLED==='true'&&String(process.env.FIRECRAWL_API_KEY||'').trim()?
    async (url,direct)=>{
     const {createFreeGrowthFirecrawlReader}=require('./growth-free-firecrawl-reader.cjs');
-    const hosted=createFreeGrowthFirecrawlReader({env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},
+    const hosted=createFreeGrowthFirecrawlReader({module:'GOOGLE_COMPETITOR',env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},
      original:async()=>direct,maxPages:1});
     return hosted.reader(url,RESEARCH_FETCH);
    }:null;
@@ -647,7 +647,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      if(!direct?.html||!needsGrowthRender(direct.html)||budget<=0)return direct;
      budget--;
      const {createFreeGrowthFirecrawlReader}=require('./growth-free-firecrawl-reader.cjs');
-     const hosted=createFreeGrowthFirecrawlReader({env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},original:async()=>direct,maxPages:1});
+     const hosted=createFreeGrowthFirecrawlReader({module:'AI_GAP',env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true'},original:async()=>direct,maxPages:1});
      const candidate=await hosted.reader(url,RESEARCH_FETCH).catch(()=>null);
      return candidate?.source==='FIRECRAWL_HOSTED_API'&&candidate.final_url===direct.final_url&&
       !candidate.truncated&&!needsGrowthRender(candidate.html)?candidate:direct;

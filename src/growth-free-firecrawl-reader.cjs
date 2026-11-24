@@ -14,6 +14,7 @@ function createFreeGrowthFirecrawlReader({
  original=fetchPublicGrowthHtml,
  fetchImpl=globalThis.fetch,
  lookup=dns.lookup,
+ module='UNCLASSIFIED',
  maxPages=DEFAULT_LIMIT,
  timeoutMs=11000,
  manager=fetchImpl===globalThis.fetch?firecrawlManager:createFirecrawlManager(),
@@ -24,6 +25,7 @@ function createFreeGrowthFirecrawlReader({
  const cap=Math.max(1,Math.min(Math.min(50,Number(hardCap)||10),Number(maxPages)||DEFAULT_LIMIT));
  const stats={enabled:active,provider:'FIRECRAWL_HOSTED',attempted:0,used:0,fallbacks:0,cache_hits:0,shared_cache_hits:0,provider_requests:0,limit:cap,errors:[],pages:[]};
  const cache=new Map();
+ const record=async event=>{if(typeof manager.record==='function')await manager.record(env,module,event)};
  const limitedMessage=(url,code)=>{if(stats.errors.length<10)stats.errors.push({host:(()=>{try{return new URL(url).hostname}catch{return 'invalid'}})(),code})};
  const reader=async (raw,options=RESEARCH_FETCH)=>{
   if(!active)return original(raw,options);
@@ -41,13 +43,14 @@ function createFreeGrowthFirecrawlReader({
    if(!addresses?.length||!addresses.every(a=>publicV4(a.address)))throw Object.assign(Error('PUBLIC_IPV4_UNAVAILABLE'),{code:'PUBLIC_IPV4_UNAVAILABLE'});
   }catch(e){if(direct)return direct;return original(raw,options)}
   const cacheKey=url.href+'|'+String(options?.compact===true)+'|'+String(options?.limit||RESEARCH_FETCH.limit);
-  if(cache.has(cacheKey)){stats.cache_hits++;return cache.get(cacheKey)}
+  if(cache.has(cacheKey)){stats.cache_hits++;await record('cache');return cache.get(cacheKey)}
   if(stats.attempted>=cap)return direct||original(raw,options);
   stats.attempted++;
   const task=(async()=>{
    try{
     const managed=await manager.read({env,url:url.href,load:async()=>{
      stats.provider_requests++;
+     await record('request');
      const controller=new AbortController();
      const timeout=setTimeout(()=>controller.abort(),timeoutMs);
      try{
@@ -65,9 +68,9 @@ function createFreeGrowthFirecrawlReader({
       const dest=await lookup(final.hostname,{family:4,all:true,verbatim:true});
       if(!dest?.length||!dest.every(a=>publicV4(a.address)))throw Object.assign(Error('FIRECRAWL_PRIVATE_REDIRECT'),{code:'FIRECRAWL_PRIVATE_REDIRECT'});
       return {html,final_url:final.href,retrieved_at:new Date().toISOString()};
-     }finally{clearTimeout(timeout)}
+     }catch(e){await record('error');throw e}finally{clearTimeout(timeout)}
     }});
-    if(managed.source!=='REQUEST')stats.shared_cache_hits++;
+    if(managed.source!=='REQUEST'){stats.shared_cache_hits++;await record('cache')}
     const {html,retrieved_at}=managed.value;
     const final=validateUrl(managed.value.final_url);
     // Revalidate the final destination even when a previous capture is reused.
@@ -80,6 +83,7 @@ function createFreeGrowthFirecrawlReader({
     if(clean.length<300)throw Object.assign(Error('FIRECRAWL_UNREADABLE'),{code:'FIRECRAWL_UNREADABLE'});
     if(direct?.html&&clean.length<direct.html.length*0.5)throw Object.assign(Error('FIRECRAWL_LESS_COMPLETE'),{code:'FIRECRAWL_LESS_COMPLETE'});
     stats.used++;
+    await record('used');
     stats.pages.push({url:url.href,final_url:final.href,provider:'FIRECRAWL_HOSTED_API',status:'USED',cache_source:managed.source,retrieved_at,readable_chars:clean.length,truncated:clean.length>limit});
     return {html:clean.slice(0,limit),truncated:clean.length>limit,final_url:final.href,
      requested_url:url.href,status:200,retrieved_at,
@@ -87,6 +91,7 @@ function createFreeGrowthFirecrawlReader({
    }catch(err){
     const code=String(err?.code||err?.name||'FIRECRAWL_FAILED').slice(0,60);
     limitedMessage(url.href,code);stats.fallbacks++;
+    await record('fallback');
     stats.pages.push({url:url.href,provider:'STANDARD_READER',status:'FIRECRAWL_FALLBACK',reason:code,retrieved_at:new Date().toISOString()});
     return direct||original(raw,options);
    }

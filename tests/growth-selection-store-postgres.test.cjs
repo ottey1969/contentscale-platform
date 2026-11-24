@@ -183,4 +183,22 @@ test('Firecrawl durable quota: concurrent independent pools enforce daily and mo
   try{await pool.query('DELETE FROM firecrawl_request_usage WHERE account_hash=$1 OR account_hash=$2',[id,id+'-zero'])}finally{await other.end()}
  }
 });
+
+test('Firecrawl module telemetry: atomic increments, UTC month isolation and key isolation',async()=>{
+ const {createFirecrawlPostgresAccounting}=require('../src/firecrawl-postgres-accounting.cjs');
+ const id='telemetry-'+require('node:crypto').randomUUID(),a=createFirecrawlPostgresAccounting(pool),b=createFirecrawlPostgresAccounting(pool);
+ const base={id,day:'2026-11-24',month:'2026-11',module:'FREE_GROWTH'};
+ try{
+  await Promise.all(Array.from({length:12},(_,i)=>(i%2?a:b).record({...base,event:'request'})));
+  await a.record({...base,event:'used'});await a.record({...base,event:'error'});await a.record({...base,event:'fallback'});
+  await b.record({...base,module:'GSC_AUDIT',event:'cache'});
+  await b.record({...base,day:'2026-11-25',event:'request'});
+  await b.record({...base,day:'2026-12-01',event:'request'});
+  const rows=await b.moduleUsage(base);
+  assert.deepEqual(rows.find(r=>r.module==='FREE_GROWTH'),{module:'FREE_GROWTH',requests:13,used:1,fallbacks:1,cache_hits:0,errors:1,daily_requests:12});
+  assert.equal(rows.find(r=>r.module==='GSC_AUDIT').cache_hits,1);
+  assert.deepEqual(await a.moduleUsage({...base,id:id+'-other'}),[]);
+  assert.equal((await a.moduleUsage({...base,day:'2026-12-01',month:'2026-12'}))[0].requests,1);
+ }finally{await pool.query('DELETE FROM firecrawl_module_usage WHERE account_hash=$1',[id])}
+});
 }

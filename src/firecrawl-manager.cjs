@@ -63,7 +63,17 @@ function createFirecrawlManager({now=Date.now,maxEntries=100,maxCacheBytes=16*10
   const counts=await accounting.usage({id,day:a.day,month:a.month});
   return {...usage(env),daily_requests:counts.daily,monthly_requests:counts.monthly,scope:'POSTGRES_SHARED'};
  }
- return {read,usage,durableUsage};
+ async function record(env,module,event){
+  if(!accounting?.record)return;
+  const {id,a}=account(env);
+  try{await accounting.record({id,day:a.day,module,event})}catch{/* Optional telemetry must not break quota enforcement or page reading. */}
+ }
+ async function moduleUsage(env=process.env){
+  if(!accounting?.moduleUsage)return null;
+  const {id,a}=account(env);
+  return accounting.moduleUsage({id,day:a.day,month:a.month});
+ }
+ return {read,usage,durableUsage,record,moduleUsage};
 }
 const {productionAccounting}=require('./firecrawl-postgres-accounting.cjs');
 const durable=productionAccounting();
