@@ -8,3 +8,5 @@ test('result navigation stays outside collapsed research panels',()=>{
  assert.match(source,/href="#stepResearch"/);
  assert.match(source,/h\+=researchNavHtml\(\);/);
 });
+
+test('navigation follows light and dark theme tokens',()=>{assert.match(source,/id="growthResearchNav"[^\n]+background:var\(--card\);color:var\(--ink\)/)});
