@@ -268,7 +268,7 @@ ${aiStartScript(t)}
  setTimeout(sync,0);sync();
 })();
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
-(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','search_location','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search);var fresh=document.querySelector('input[name="fresh"]');if(fresh&&q.get('fresh')==='1')fresh.checked=true;['url','query','market','language','search_location','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
 // A market or language filled in from a link ("es — Spain", "Spanish") is shown in the visitor's language.
 (function(){var L=${js(lang)};if(L==='en'||!window.Intl||!Intl.DisplayNames)return;try{var R=new Intl.DisplayNames([L],{type:'region'}),N=new Intl.DisplayNames([L],{type:'language'}),E=new Intl.DisplayNames(['en'],{type:'language'});
  var m=document.getElementById('market');if(m&&m.value)m.value=m.value.split(/\s*,\s*/).map(function(x){var c=(x.match(/^([a-z]{2})\s*[—–-]/i)||[])[1];return c?c.toLowerCase()+' — '+R.of(c.toUpperCase()):x}).join(', ');
