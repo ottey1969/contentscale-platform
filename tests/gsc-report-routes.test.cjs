@@ -71,11 +71,11 @@ test('Free Growth: the owner always gets a research link per page; a recipient o
  assert.doesNotMatch(recipient,/\/free-growth\?/,'no Free Growth link for a recipient without an invitation');
  assert.match(recipient,/contentscale\.site\/contact\//,'the recipient can contact the owner');
  const owner=(await s.req('GET',plain.body.url,null,OWNER)).body;
- assert.match(owner,/href="\/free-growth\?url=https%3A%2F%2Facme-roofing\.example%2Froof-repair%2F&amp;lang=nl"/);
+ assert.match(owner,/href="\/free-growth\?url=https%3A%2F%2Facme-roofing\.example%2Froof-repair%2F&amp;lang=nl&amp;gsc_audit=[A-Za-z0-9_-]+"/);
  const withInvite=await s.req('POST','/api/gsc/reports',body({recipient_growth:{enabled:true,checks:3}}),OWNER);
  assert.equal(s.storage.invites[0].maxChecks,3);assert.equal(s.storage.invites[0].days,30,'the invitation ends with the report');
  const rec2=(await s.req('GET',withInvite.body.url)).body;
- assert.match(rec2,/href="\/free-growth\?invite=invite-token-1-abcdefghijkl&amp;url=https%3A%2F%2Facme-roofing\.example%2Froof-repair%2F&amp;lang=nl"/);
+ assert.match(rec2,/href="\/free-growth\?invite=invite-token-1-abcdefghijkl&amp;url=https%3A%2F%2Facme-roofing\.example%2Froof-repair%2F&amp;lang=nl&amp;gsc_audit=[A-Za-z0-9_-]+"/);
 });
 
 test('bad input is refused with a clear reason; nothing is stored',async t=>{
