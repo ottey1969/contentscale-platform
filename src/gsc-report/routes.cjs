@@ -135,9 +135,24 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
   try{await ensure();const r=await st.revokeReport(pool,Number(req.params.id));res.json({success:!!r,...(r?{}:{error:'Already revoked or not found'})})}
   catch(e){res.status(500).json({success:false,error:'The link could not be revoked.'})}
  });
+ app.post(apiPath+'/r/:token/contentscore',async(req,res)=>{
+  res.set('Cache-Control','no-store');
+  if(!ownerWrite(req))return res.status(404).json({success:false,error:'Not found'});
+  try{
+   await ensure();
+   const row=await st.openReport(pool,String(req.params.token),{count:false});
+   const url=String(req.body?.url||'');
+   const page=row?.report?.pages?.find(p=>p.url===url);
+   if(!page||page.action==='REDIRECT'||page.action==='GONE')return res.status(404).json({success:false,error:'Page not eligible'});
+   const result=require('./contentscore.cjs').scanResult(req.body?.result,url);
+   const saved=await st.saveContentScore(pool,row.token,url,result);
+   if(!saved)return res.status(404).json({success:false,error:'Report unavailable'});
+   res.json({success:true,result});
+  }catch(e){console.error('[gsc-report] save ContentScore failed',e.message);res.status(400).json({success:false,error:'ContentScore could not be saved'})}
+ });
  app.get(basePath+'/r/:token',async(req,res)=>{
   res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').set('Referrer-Policy','no-referrer')
-   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; script-src 'none'");
+   .set('Content-Security-Policy',"default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; script-src 'self'; connect-src 'self'");
   try{
    await ensure();const owner=isOwner(req);
    const row=await st.openReport(pool,String(req.params.token),{count:!owner});
@@ -146,7 +161,7 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite}).catch(()=>new Map());
    const published=st.publicationsFor?await st.publicationsFor(pool,urls,{invite:row.growth_invite}).catch(()=>new Map())
     :new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
-   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,issueView:req.query?.view}));
+   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,issueView:req.query?.view,apiPath}));
   }catch(e){console.error('[gsc-report] view failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  return {sessionValid};
@@ -222,7 +237,7 @@ function growthLink(p,{lang,owner,invite,growthPath,result=null,auditToken=null}
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
-function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),problemsOnly=false,issueView=null}){
+function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),problemsOnly=false,issueView=null,apiPath='/api/gsc'}){
  if(!published.size&&growth.size)published=new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
