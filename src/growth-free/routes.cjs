@@ -165,7 +165,7 @@ function aiStartAnswers(){return Array.prototype.slice.call(document.querySelect
 // Market and language names in the visitor's language ("es — España", "español"); the server reads all three languages.
 function regionLabel(entry,lang){const code=String(entry).slice(0,2);if(lang==='en')return entry;try{const n=new Intl.DisplayNames([lang],{type:'region'}).of(code.toUpperCase());return n&&n!==code.toUpperCase()?code+' — '+n:entry}catch(e){return entry}}
 function languageLabel(name,lang){if(lang==='en')return name;const code=validLanguage(name);if(!code||/[(—]/.test(name))return name;try{const n=new Intl.DisplayNames([lang],{type:'language'}).of(code);return n&&n!==code?n:name}catch(e){return name}}
-function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false},lang='en',existing=null){
+function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false},lang='en',existing=null,audit=null){
  const t=FORM_TEXTS[lang]||FORM_TEXTS.en;
  return page(t.title,`
 <p class="kicker">${esc(t.kicker)}</p>
@@ -200,6 +200,7 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <small>${esc(t.gscHelp)}</small>
  </details>
  </details>
+ ${audit?`<p class="note" id="auditGscAvailable"><strong>${esc({nl:"GSC-data uit Audit beschikbaar",es:"Datos GSC disponibles del informe",en:"GSC data available from Audit"}[lang])}</strong> · ${esc(audit.fileName)}${audit.upload.period?` · ${esc(audit.upload.period.start)} – ${esc(audit.upload.period.end)}`:""}<br>${esc({nl:"Opnieuw uploaden is niet nodig. De cijfers gelden voor deze pagina.",es:"No es necesario volver a subir los datos de esta página.",en:"No need to upload the data for this page again."}[lang])}</p>`:""}
  <label class="check" for="noGsc"><input type="checkbox" id="noGsc" name="no_gsc"> <span>${esc(t.noGsc)}</span></label>
  <label for="email">${esc(t.email)}</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="${esc(t.emailPh)}"><small>${esc(t.emailHelp)}</small>
  <label class="check"><input type="checkbox" id="consent" name="consent" required> <span>${esc(t.consent)}${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':' '+esc(t.perDay.replace('§',cfg.perEmail))}`}</span></label>
@@ -217,6 +218,8 @@ ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p 
 <p class="muted">${esc(t.getNote)}</p></details>
 <script>
 var FT=${js(t)};
+var AUDIT_PAGE=${js(audit?audit.pageUrl:null)},AUDIT_TOKEN=${js(audit?audit.token:null)};
+function auditMatches(){try{return !!AUDIT_PAGE&&new URL(document.getElementById('url').value).href===new URL(AUDIT_PAGE).href}catch(e){return false}}
 ${aiStartScript(t)}
 (function(){
  var u=document.getElementById('url'),btn=document.getElementById('freePrimaryRun'),st=document.getElementById('freeUrlStatus'),
@@ -238,11 +241,12 @@ ${aiStartScript(t)}
   if(!val('market'))missing.push(FT.needMarket);
   if(!/^[^\\s@,]+@[^\\s@,]+\\.[^\\s@,]+/.test(val('email')))missing.push(FT.needEmail);
   if(consent&&!consent.checked)missing.push(FT.needConsent);
-  if(!(gscFile&&gscFile.files&&gscFile.files.length)&&!(noGsc&&noGsc.checked))missing.push(FT.needGsc);
+  if(!auditMatches()&&!(gscFile&&gscFile.files&&gscFile.files.length)&&!(noGsc&&noGsc.checked))missing.push(FT.needGsc);
+  var auditNote=document.getElementById('auditGscAvailable');if(auditNote)auditNote.hidden=!auditMatches();
   var ready=!missing.length;btn.disabled=!ready;
   btn.textContent=ready?(typeof OWNER!=='undefined'&&OWNER?'Run the check (owner)':FT.submit):!valid?FT.simpleChooseUrl:FT.needButton;
   var need=document.getElementById('freeStartMissing');if(need)need.textContent=ready?'':FT.needPrefix+' '+missing.join(' · ');
-  if(noGsc&&gscFile){if(gscFile.files&&gscFile.files.length){noGsc.checked=false;noGsc.disabled=true}else noGsc.disabled=false}
+  if(noGsc&&gscFile){if(auditMatches()||(gscFile.files&&gscFile.files.length)){noGsc.checked=false;noGsc.disabled=true}else noGsc.disabled=false}
   st.textContent=valid?FT.simpleUrlReady:FT.simpleUrlStatus;
   if(open)open.disabled=!((s&&s.value.trim())||valid);
  }
@@ -374,7 +378,7 @@ try{
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_audit:auditMatches()?AUDIT_TOKEN:null,gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);try{var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');M[normPage(document.getElementById('url').value)]=d.result_url;localStorage.setItem('growthFreeResults',JSON.stringify(M))}catch(e){}location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -1410,7 +1414,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').set('Content-Security-Policy',"frame-ancestors 'none'");
    if(status!=='ACTIVE')return res.status(403).type('html').send(inviteClosed(config,status));
    res.type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',{token:String(req.query.invite),label:'',
-    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req),await existingFor(req,{inviteId:inv.id})));
+    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req),await existingFor(req,{inviteId:inv.id}),await auditFor(req,{invite:String(req.query.invite)})));
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  // The form's language: ?lang=, the rank tracker account's language, the browser's, else English.
@@ -1419,6 +1423,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const u=req.query&&req.query.url;if(!u||typeof storage.latestDoneFor!=='function'||(!owner&&inviteId==null))return null;
   try{const r=await storage.latestDoneFor(pool,{url:String(u).slice(0,500),owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
  }
+ async function auditFor(req,{owner=false,invite=null}={}){const token=safeToken(req.query?.gsc_audit),pageUrl=String(req.query?.url||'');if(!token||!pageUrl)return null;try{const a=await require('./gsc-audit-handoff.cjs').loadAuditUpload(pool,{token,url:pageUrl,owner,invite});return a?{...a,token,pageUrl}:null}catch(e){return null}}
  const langFor=(req,account=null)=>formLang({query:req.query&&req.query.lang,account,acceptLanguage:req.get&&req.get('accept-language')});
  app.get(basePath,async(req,res)=>{
   // An unapproved public key must not look like a usable check when approval-only mode is enabled.
@@ -1431,11 +1436,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   // The owner (signed in) always gets the form, also on a domain without an access key (the admin page links here).
-  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req),await existingFor(req,{owner:true})));
+  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req),await existingFor(req,{owner:true}),await auditFor(req,{owner:true})));
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
-  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry,htmlLang:langFor(req)},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req),sessionValid(req)?await existingFor(req,{owner:true}):null));
+  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry,htmlLang:langFor(req)},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req),sessionValid(req)?await existingFor(req,{owner:true}):null,await auditFor(req,{owner:sessionValid(req)})));
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())
@@ -1608,9 +1613,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
    const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return null;
   const query=clean(b.query,300);
-  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,gscDeclined:b.no_gsc===true&&!gsc,sitemap,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
+  return {auditToken:safeToken(b.gsc_audit),email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,gscDeclined:b.no_gsc===true&&!gsc,sitemap,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
  }
- async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
+ async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false,inviteToken=null}){
+  if(input.auditToken&&!input.gsc){const a=await require('./gsc-audit-handoff.cjs').loadAuditUpload(pool,{token:input.auditToken,url:input.url,owner:accessLabel==='admin',invite:inviteToken});if(!a)return res.status(409).json({success:false,error:'The GSC Audit data is unavailable for this exact page. Reopen the audit or upload the page export.'});input.gsc=a;input.gscDeclined=false;}
   // fresh: admin only, researches again even when a stored result exists.
   // A verified Search Console export changes the research, so a stored result without it is not reused.
   const treated=await treatedFor({url:input.url,market:input.market,owner:accessLabel==='admin',inviteId});
@@ -1653,7 +1659,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(inv.email_lock&&!input.emails.includes(inv.email_lock))
    return res.status(403).json({success:false,error:'This invitation only works with the email address it was sent to'});
   await start(res,input,{ipHash:store.hashIp(req.ip,config.ipSalt),marketingConsent:tipsOf(b),
-   accessLabel:'invite: '+inv.label,inviteId:inv.id,
+   accessLabel:'invite: '+inv.label,inviteId:inv.id,inviteToken:String(b.invite),
    beforeRun:async()=>{if(await storage.consumeInvite(pool,inv.id))return true;res.status(403).json({success:false,error:INVITE_TEXT.USED_UP});return false}});
  }
 
