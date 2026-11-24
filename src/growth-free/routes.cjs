@@ -1312,13 +1312,13 @@ async function load(){
  document.getElementById('invites').innerHTML=i.invites.length?i.invites.map(function(v){return '<div class="card"><strong>'+esc(v.label)+'</strong> · '+esc(STATUS[v.status]||v.status)+'<br><small>'+esc(v.used_checks)+' of '+esc(v.max_checks)+' checks used · valid until '+esc(day(v.expires_at))+(v.email_lock?' · only for '+esc(v.email_lock):' · anyone with the link')+(v.last_used_at?' · last used '+esc(day(v.last_used_at)):'')+'</small>'+(v.status==='ACTIVE'?'<p><button class="ghost revoke" data-id="'+esc(v.id)+'">Withdraw</button></p>':'')+'</div>'}).join(''):'<p class="muted">No invitations yet.</p>';
  var d=await get('/admin/leads');
  document.getElementById('leads').innerHTML='<h3>Hire requests ('+d.hires.length+')</h3>'+d.hires.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> &lt;'+esc(h.email)+'&gt; '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url)+' · '+esc(h.decision||'')+' · '+esc(h.access_label||'')+'</small><p>'+esc(h.message||'')+'</p></div>'}).join('')+
- '<h3>Research history</h3><div id="researchHistory"></div>';loadHistory()}
+ '<h3>Research history</h3><div id="researchHistory"></div>';await loadHistory()}
 var historyRows=[],historySelected=new Set(),historyPage=0,historySize=25,historyBusy=false;
 async function loadHistory(){
  var root=document.getElementById('researchHistory');if(!root)return;
  root.textContent='Loading research history…';
  try{var d=await get('/admin/research-history');if(!d.success)throw Error(d.error);historyRows=d.rows;historySelected.clear();historyPage=0;
- root.innerHTML='<p class="muted">Grouped by website. Deleting a check removes its result, AI answers, uploads and reminders; Free Growth contacts are derived from checks. Hire requests and other modules are not deleted. Running checks cannot be deleted.</p><label>Search<input id="rhSearch" placeholder="Website, email, search term"></label><label>Status<select id="rhStatus"><option value="">All statuses</option></select></label><label>Access<select id="rhAccess"><option value="">All users</option></select></label><label>Publication<select id="rhPub"><option value="">All</option><option value="yes">Published</option><option value="no">Not published</option></select></label><label>Websites per page<select id="rhSize"><option>25</option><option>50</option><option>100</option></select></label><p><button type="button" class="ghost" id="rhExpand">Expand all</button> <button type="button" class="ghost" id="rhCollapse">Collapse all</button></p><p><button type="button" id="rhPageSelect">Select page</button> <button type="button" id="rhFilterSelect">Select all filtered</button> <button type="button" id="rhClear">Clear selection</button> <button type="button" id="rhDelete">Bulk Delete</button> <button type="button" id="rhDeleteAll">Delete all research</button></p><p id="rhCount" role="status"></p><div id="rhRows"></div><p><button type="button" id="rhPrev">Previous</button> <span id="rhPages"></span> <button type="button" id="rhNext">Next</button></p><p id="rhMessage" role="status"></p>';
+ root.innerHTML='<p class="muted">Grouped by website. Deleting a check removes its result, AI answers, uploads and reminders; Free Growth contact records are retained separately. Hire requests and other modules are not deleted. Running checks cannot be deleted.</p><label>Search<input id="rhSearch" placeholder="Website, email, search term"></label><label>Status<select id="rhStatus"><option value="">All statuses</option></select></label><label>Access<select id="rhAccess"><option value="">All users</option></select></label><label>Publication<select id="rhPub"><option value="">All</option><option value="yes">Published</option><option value="no">Not published</option></select></label><label>Websites per page<select id="rhSize"><option>25</option><option>50</option><option>100</option></select></label><p><button type="button" class="ghost" id="rhExpand">Expand all</button> <button type="button" class="ghost" id="rhCollapse">Collapse all</button></p><p><button type="button" id="rhPageSelect">Select page</button> <button type="button" id="rhFilterSelect">Select all filtered</button> <button type="button" id="rhClear">Clear selection</button> <button type="button" id="rhDelete">Bulk Delete</button> <button type="button" id="rhDeleteAll">Delete all research</button></p><p id="rhCount" role="status"></p><div id="rhRows"></div><p><button type="button" id="rhPrev">Previous</button> <span id="rhPages"></span> <button type="button" id="rhNext">Next</button></p><p id="rhMessage" role="status"></p>';
  ['rhStatus','rhAccess'].forEach(function(id){var key=id==='rhStatus'?'displayStatus':'access_label';var el=document.getElementById(id);Array.from(new Set(historyRows.map(function(c){return key==='displayStatus'?historyStatus(c):c[key]||'public'}))).sort().forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)})});
  ['rhSearch','rhStatus','rhAccess','rhPub','rhSize'].forEach(function(id){document.getElementById(id).addEventListener(id==='rhSearch'?'input':'change',function(){historyPage=0;historySelected.clear();historySize=Number(document.getElementById('rhSize').value);renderHistory()})});
  document.getElementById('rhExpand').onclick=function(){document.querySelectorAll('#rhRows details').forEach(function(el){el.open=true})};
@@ -1351,7 +1351,7 @@ function renderHistory(){
 }
 async function deleteHistory(ids,all){
  if(historyBusy||!ids.length)return;
- if(!confirm('Permanently delete '+ids.length+' completed/failed checks and their results? Free Growth contacts may disappear if their last check is deleted. Hire requests are retained.'))return;
+ if(!confirm('Permanently delete '+ids.length+' completed/failed checks and their results? Contact records and hire requests are retained.'))return;
  if(all&&prompt('Type DELETE to confirm deletion of all eligible research')!=='DELETE')return;
  historyBusy=true;historyCounts();var msg=document.getElementById('rhMessage');
  try{var d=await post('/admin/research-history/delete',{ids:ids,confirm:'DELETE'});if(!d.success)throw Error(d.error);await load();await loadContacts();var fresh=document.getElementById('rhMessage');if(fresh)fresh.textContent='Deleted '+d.deleted+' of '+ids.length+' selected checks.'}
@@ -2315,8 +2315,27 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const b=req.body||{};
   if(b.confirm!=='DELETE'||!Array.isArray(b.ids)||!b.ids.length||b.ids.some(id=>typeof id!=='string'||!/^[1-9][0-9]{0,17}$/.test(id)))return res.status(400).json({success:false,error:'Valid check IDs and confirmation required'});
   try{await storage.ensureTables(pool);
-   const result=await pool.query("DELETE FROM growth_free_checks WHERE id=ANY($1::bigint[]) AND status IN ('DONE','FAILED') AND writing_since IS NULL",[Array.from(new Set(b.ids))]);
-   res.set('Cache-Control','private, no-store').json({success:true,deleted:result.rowCount||0});
+   const result=await pool.query(`WITH removed AS (
+    DELETE FROM growth_free_checks WHERE id=ANY($1::bigint[]) AND status IN ('DONE','FAILED') AND writing_since IS NULL
+    RETURNING id,email,marketing_consent,created_at,url,query,market,report
+   ), snapshot AS (
+    SELECT LOWER(email) AS email,BOOL_OR(marketing_consent) AS tips,MIN(created_at) AS created_at,MAX(created_at) AS last_at,
+     (ARRAY_AGG(url ORDER BY created_at DESC,id DESC))[1] AS url,
+     (ARRAY_AGG(query ORDER BY created_at DESC,id DESC))[1] AS query,
+     (ARRAY_AGG(UPPER(COALESCE(market->'countries'->>0,report->'search_discovery'->'search_locale'->>'gl','')) ORDER BY created_at DESC,id DESC))[1] AS country,
+     (ARRAY_AGG(COALESCE(market->>'language',report->'search_discovery'->'search_locale'->>'hl','') ORDER BY created_at DESC,id DESC))[1] AS language
+    FROM removed WHERE COALESCE(email,'')<>'' GROUP BY LOWER(email)
+   ), retained AS (
+    INSERT INTO growth_free_retained_contacts AS c(email,tips,created_at,last_at,url,query,country,language)
+     SELECT email,tips,created_at,last_at,url,query,country,language FROM snapshot ORDER BY email
+    ON CONFLICT(email) DO UPDATE SET tips=c.tips OR EXCLUDED.tips,created_at=LEAST(c.created_at,EXCLUDED.created_at),
+     last_at=GREATEST(c.last_at,EXCLUDED.last_at),
+     url=CASE WHEN EXCLUDED.last_at>=c.last_at THEN EXCLUDED.url ELSE c.url END,
+     query=CASE WHEN EXCLUDED.last_at>=c.last_at THEN EXCLUDED.query ELSE c.query END,
+     country=CASE WHEN EXCLUDED.last_at>=c.last_at THEN EXCLUDED.country ELSE c.country END,
+     language=CASE WHEN EXCLUDED.last_at>=c.last_at THEN EXCLUDED.language ELSE c.language END RETURNING email
+   ) SELECT COUNT(*)::int AS deleted FROM removed`,[Array.from(new Set(b.ids))]);
+   res.set('Cache-Control','private, no-store').json({success:true,deleted:result.rows[0].deleted});
   }catch(e){res.status(503).json({success:false,error:'Research deletion unavailable'})}
  });
  app.get(apiPath+'/admin/leads.csv',async(req,res)=>{
