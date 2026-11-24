@@ -70,7 +70,7 @@ test('the shared report shows the 301 and where it goes, in the recipient langua
  const post=b=>globalThis.fetch(base+'/api/gsc/reports',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':KEY},
   body:JSON.stringify({title:'Acme',lang:'nl',files:[{name:'Pages.csv',content_base64:Buffer.from(pages).toString('base64')}],...b})}).then(r=>r.json());
  const made=await post({});assert.equal(made.success,true);
- const html=await (await globalThis.fetch(base+made.url)).text();
+ const html=await (await globalThis.fetch(base+made.url)).text()+await (await globalThis.fetch(base+made.url+'?view=all')).text();
  assert.match(html,/Doorverwezen \(301\)/);
  assert.match(html,/\/roof-repair\//);
  assert.match(html,/Tijdelijk doorverwezen \(302\)/);
