@@ -1219,6 +1219,11 @@ function adminPage(cfg,api,base,loggedIn){
 <div id="login" class="card"${loggedIn?' hidden':''}><form id="lf"><label>Admin key<input name="key" type="password" autocomplete="current-password" required></label><p><button>Log in</button> <small id="ls" role="status"></small></p></form><p class="muted">The session lasts 12 hours on this browser only.</p></div>
 <div id="app"${loggedIn?'':' hidden'}>
  <p><button class="ghost" id="logout" type="button">Log out</button></p>
+ <div class="card" id="firecrawlOwnerCard"><h2 style="margin-top:0">Firecrawl usage</h2>
+ <p class="muted">Application request limits, not billed credits. UTC periods.</p>
+ <p><button type="button" class="ghost" id="firecrawlRefresh">Refresh usage</button></p>
+ <div id="firecrawlOwnerUsage" role="status">Loading…</div>
+ <p class="muted">Provider credit balance and key validity are not checked here. Module-level usage is not yet available.</p></div>
  <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">The same form your visitors use, in owner mode: no limits, AI writing, customer questions, Search Console upload, pasted AI answers kept, and the option to research again. One form, so what you test is what visitors get.</p>
   <p><a class="btn" href="${esc(base)}">Open the check form (owner mode) →</a></p></div>
  <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
@@ -1239,6 +1244,32 @@ function adminPage(cfg,api,base,loggedIn){
 <script>
 ${aiStartScript()}
 var API=${js(api)},H={'Content-Type':'application/json','X-Requested-With':'growth-free-admin'};
+(function(){
+ var target=document.getElementById('firecrawlOwnerUsage'),btn=document.getElementById('firecrawlRefresh');
+ if(!target||!btn)return;
+ function line(text){var p=document.createElement('p');p.textContent=text;target.appendChild(p)}
+ function showMeter(label,m){
+  line(label+': '+m.used+' requests'+(m.limit===null?' · no limit configured':' / '+m.limit+' · '+m.remaining+' remaining · '+m.percent+'% used'));
+  if(m.percent!==null){var bar=document.createElement('progress');bar.max=100;bar.value=Math.min(100,m.percent);bar.setAttribute('aria-label',label+' limit used');target.appendChild(bar)}
+  if(m.status==='LIMIT_REACHED')line('Limit reached — paid requests blocked.');
+  else if(m.status==='WARNING_90'||m.status==='WARNING_80')line('Warning: '+m.percent+'% of request limit used.');
+ }
+ async function refresh(){
+  btn.disabled=true;target.textContent='Loading…';
+  try{
+   var r=await fetch(API+'/admin/firecrawl-usage',{credentials:'same-origin',cache:'no-store'});
+   if(!r.ok)throw Error('Usage unavailable');
+   var d=await r.json();target.textContent='';
+   line('API key: '+(d.key_configured?'configured (validity not checked)':'not configured'));
+   line('Free Growth: '+(d.free_growth_enabled?'enabled':'disabled')+' · Tracker: '+(d.tracker_enabled?'enabled':'disabled'));
+   if(d.status!=='AVAILABLE'){line(d.status==='KEY_MISSING'?'Configure an API key in Railway.':'Accounting unavailable.');return}
+   line('Accounting: '+(d.scope==='POSTGRES_SHARED'?'PostgreSQL (shared)':'process-local'));
+   showMeter('Today ('+d.day_utc+')',d.daily);showMeter('Month ('+d.month_utc+')',d.monthly);
+  }catch(e){target.textContent='Firecrawl usage unavailable.'}finally{btn.disabled=false}
+ }
+ btn.addEventListener('click',refresh);
+ if(!document.getElementById('app').hidden)refresh();
+})();
 (function(){
  var form=document.getElementById('rf'),key='growthFreeAdminDraft:'+location.pathname;
  if(!form)return;
@@ -2191,6 +2222,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    catch(e){res.status(503).json({success:false,error:'Temporarily unavailable'})}
   });
  }
+ app.get(apiPath+'/admin/firecrawl-usage',async(req,res)=>{
+  if(!admin(req,res))return;
+  res.set('Cache-Control','private, no-store');
+  const {dashboard}=require('../firecrawl-owner-dashboard.cjs');
+  const {firecrawlManager}=require('../firecrawl-manager.cjs');
+  return res.json(await dashboard({manager:firecrawlManager}));
+ });
  app.get(apiPath+'/admin/invites',async(req,res)=>{
   if(!admin(req,res))return;
   try{await storage.ensureTables(pool);res.set('Cache-Control','no-store').json({success:true,invites:(await storage.listInvites(pool)).map(i=>({...i,status:store.inviteStatus(i)}))})}
