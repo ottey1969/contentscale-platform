@@ -402,7 +402,7 @@ function openJourney(id){var el=document.getElementById(id);if(!el)return;if(el.
 // Evidence tabs (Google · AI answers · Search Console): one pane visible at a time.
 function rtab(name){document.querySelectorAll('.rtab-pane').forEach(function(p){p.hidden=p.getAttribute('data-tab')!==name});document.querySelectorAll('.rtabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===name))})}
 document.addEventListener('click',function(e){var b=e.target.closest('.rtabs button');if(b)rtab(b.getAttribute('data-tab'))});
-document.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(!a)return;var id=a.getAttribute('href').slice(1);if(!id||!document.getElementById(id))return;e.preventDefault();showStep(id,id)});
+document.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(!a)return;var id=a.getAttribute('href').slice(1);if(!id||!document.getElementById(id))return;e.preventDefault();showStep(id,id);if(a.dataset.researchTab)rtab(a.dataset.researchTab)});
 // Close other main steps synchronously on a deliberate summary click; never in a delayed toggle event.
 // Opening a step closes the others. The step above may be long, so closing it would move the page and leave the
 // visitor far below the step they clicked: the clicked step is kept in place (its header at the top of the screen).
@@ -1100,12 +1100,17 @@ function wireGraaf(d){
  try{var scan=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:d.url})}),result=await scan.json();if(!scan.ok||!result.success)throw Error('scan');status.textContent=l[1];var save=await fetch(API+'/contentscore'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({result:result})}),v=await save.json();if(!save.ok||!v.success)throw Error('save');d.contentscore_history=v.contentscore_history;d.contentscore_comparison=v.contentscore_comparison;root.outerHTML=graafHtml(d);wireGraaf(d)}catch(e){status.textContent=l[2];b.disabled=false}
  };
 }
+function researchNavHtml(){
+ var l=({en:['Saved research & actions','Google research','AI research','Search Console','Recommendations','Write with AI','Editor brief','Publish & measure','GRAAF ContentScore'],nl:['Opgeslagen onderzoek en acties','Google-onderzoek','AI-onderzoek','Search Console','Aanbevelingen','Schrijven met AI','Editorbrief','Publiceren en meten','GRAAF ContentScore'],es:['Investigación guardada y acciones','Investigación de Google','Investigación de IA','Search Console','Recomendaciones','Redactar con IA','Informe editorial','Publicar y medir','GRAAF ContentScore']})[PAGE_LANG]||[];
+ return '<nav id="growthResearchNav" aria-label="'+esc(l[0])+'" style="padding:12px;margin:12px 0;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc"><strong>'+esc(l[0])+'</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"><a class="btn ghost" href="#google">'+esc(l[1])+'</a><a class="btn ghost" href="#freeAiResearch">'+esc(l[2])+'</a><a class="btn ghost" href="#stepResearch" data-research-tab="gsc">'+esc(l[3])+'</a><a class="btn ghost" href="#stepReview">'+esc(l[4])+'</a><a class="btn ghost" href="#stepPrepare">'+esc(l[5])+'</a><a class="btn ghost" href="#briefExport">'+esc(l[6])+'</a><a class="btn ghost" href="#stepPublish">'+esc(l[7])+'</a><a class="btn ghost" href="#graafGrowth">'+esc(l[8])+'</a></div></nav>';
+}
 function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{};var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
  if(d.cached)h+='<p class="note"><strong>Result from earlier today.</strong> This page was checked for the same question and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString()):' in the last 24 hours')+', so that result is shown. A new check of this page is possible tomorrow.</p>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
+ h+=researchNavHtml();
  var ev='';if(d.research_reader){var rd=d.research_reader;
   ev+='<details class="research-details" id="firecrawlResearchStatus"><summary>Page reading · '+(rd.enabled?'Firecrawl pilot':'Standard reader')+'</summary>'+
    '<p class="muted">'+(rd.enabled?'Hosted Firecrawl used on '+esc(rd.used)+' of '+esc(rd.attempted)+' attempted page(s); '+esc(rd.fallbacks)+' used the normal reader instead. Maximum '+esc(rd.limit)+' Firecrawl requests for this check.':'Firecrawl pilot is not enabled for this check. The normal ContentScale reader was used.')+'</p>'+
