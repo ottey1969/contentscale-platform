@@ -70,11 +70,11 @@ async function buildAiGap({answers,pageUrl,query='',engines=[],fetchHtml,ownHtml
  const seen=new Set(),pick=[];for(const c of cited){if(seen.has(c.site))continue;seen.add(c.site);pick.push(c);if(pick.length>=limit)break}
  const pages=await Promise.all(pick.map(async c=>{
   const base={url:c.url,site:c.site,cited_by:[...c.engines].map(e=>label.get(e)||e)};
-  let html='';try{html=String((await fetchHtml(c.url))?.html||'')}catch(e){return {...base,read:false,status:'Could not be opened'}}
+  let html='',readProvider=null;try{const live=await fetchHtml(c.url);html=String(live?.html||'');readProvider=live?.source||null}catch(e){return {...base,read:false,status:'Could not be opened'}}
   const sections=contentSections(c.url,html);
   if(!sections.length&&plain(html).split(' ').length<150)return {...base,read:false,status:'Opened, but too little readable text'};
   const facts=factsOf(html);
-  return {...base,read:true,status:'Read',html,elements:pageElements(html),
+  return {...base,read:true,status:'Read',read_provider:readProvider,html,elements:pageElements(html),
    headings:sections.slice(0,15).map(s=>({text:s.heading,excerpt:s.excerpt,status:onYourPage(s.heading)?'ON_YOUR_PAGE':'MISSING'})),
    facts:FACT_LIST.filter(f=>facts[f.key]).map(f=>({key:f.key,label:f.label,excerpt:facts[f.key].slice(0,220),on_your_page:!!ownFacts[f.key]}))};
  }));
@@ -114,11 +114,11 @@ async function buildAiGap({answers,pageUrl,query='',engines=[],fetchHtml,ownHtml
 // reading (after pasting an answer) or gets RUNNING and the result on the next load.
 function createAiGapCache({fetchHtml,model=null,engines=[],max=300,waitMs=25000}={}){
  const done=new Map(),running=new Map();
- return function gapFor({key,answers,pageUrl,query='',wait=false}){
+ return function gapFor({key,answers,pageUrl,query='',wait=false,readerForRun=null}){
   const fp=answersFingerprint(answers,pageUrl,query);if(!fp)return Promise.resolve(null);
   const k=key+'\u0000'+pageUrl+'\u0000'+fp,hit=done.get(k);if(hit)return Promise.resolve(hit);
   let run=running.get(k);
-  if(!run){run=buildAiGap({answers,pageUrl,query,engines,fetchHtml,model:typeof model==='function'?model():model})
+  if(!run){run=buildAiGap({answers,pageUrl,query,engines,fetchHtml:typeof readerForRun==='function'?readerForRun(fetchHtml):fetchHtml,model:typeof model==='function'?model():model})
     .then(g=>{if(done.size>=max)done.delete(done.keys().next().value);done.set(k,g);return g})
     .catch(e=>{console.warn('[growth] AI gap failed',String(e&&e.message||e));return {status:'FAILED',pages:[],missing_topics:[],missing_facts:[],elements:null}})
     .finally(()=>running.delete(k));running.set(k,run)}
