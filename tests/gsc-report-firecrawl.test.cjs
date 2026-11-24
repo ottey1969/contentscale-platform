@@ -68,7 +68,7 @@ test('the report says which pages were read with JavaScript; only the owner sees
  const on=await s.post({title:'D',lang:'en',site_audit:{domain:O+'/en/',firecrawl:{enabled:true,max:80}}});assert.equal(on.success,true);
  assert.equal(s.made[0].max,50,'at most 50 pages per report');
  const rep=s.rows[s.rows.length-1].report;assert.deepEqual(rep.crawl.render,{tried:3,used:2,max:50});
- const html=await (await fetch(s.base+on.url)).text();
+ const html=await (await fetch(s.base+on.url)).text()+await (await fetch(s.base+on.url+'?view=all')).text();
  assert.match(html,/Read with JavaScript \(Firecrawl\)/);
  assert.match(html,/Without JavaScript:/);
  assert.doesNotMatch(html,/Firecrawl pages used/,'usage is internal');
