@@ -1,18 +1,19 @@
 'use strict';
 // Owner 2026-11-22: "wat er gedaan is in die pagina" — next to the publication date, a short note on what was changed. The
 // editor (anyone with the result link) fills it in where the date is set; a suggestion is made from what Growth itself
-// knows (the H2s it wrote, else the chosen topics). An external AI gets one closing instruction in the brief. The GSC
+// knows (explicit editor confirmations). An external AI gets one closing instruction in the brief. The GSC
 // report shows the note under the "Updated on" chip. It is the editor's own statement: the tool does not verify it.
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {noteSuggestion,cleanNote}=require('../src/growth-free/publication-note.cjs');
 const {reportPage}=require('../src/gsc-report/routes.cjs');
 const {ROWS}=require('../src/growth-free/ui-texts.cjs');
-test('suggestion: the H2s Growth wrote, else the chosen topics; nothing invented',()=>{
+test('suggestion: only confirmed tasks; drafts and selections are not execution evidence',()=>{
  const written={version:2,runs:[{run:1,sections:[{item_id:'1',h2:'Wat niet werkt om in AI-overzichten te komen'},{item_id:'2',h2:'Wat je nu kunt doen'}]}]};
- assert.equal(noteSuggestion({written}),'Toegevoegd: “Wat niet werkt om in AI-overzichten te komen”, “Wat je nu kunt doen”.');
+ assert.equal(noteSuggestion({written}),'');
  const summary={gaps:{items:[{id:'7',title:'Kosten en tarieven'},{id:'8',title:'Monitoren'}]}};
- assert.equal(noteSuggestion({selected_item_ids:['8'],summary},'en'),'Added: “Monitoren”.');
+ assert.equal(noteSuggestion({selected_item_ids:['8'],summary},'en'),'');
+ assert.equal(noteSuggestion({implementation:{a:{title:'Monitoren',done:true},b:{title:'Other',done:false}}},'en'),'Confirmed by editor: “Monitoren”.');
  assert.equal(noteSuggestion({summary}),'');
  assert.equal(cleanNote('  a\n\nb  <script>x</script> '),'a b <script>x</script>'.replace(/\s+/g,' ').trim());
  assert.equal(cleanNote('x'.repeat(900)).length,500);
@@ -39,7 +40,7 @@ test('backfill: nl.contentscale.site published checks without a note get the Gro
  const {backfillNotes}=require('../src/growth-free/publication-note.cjs');
  const written={version:2,runs:[{run:1,sections:[{item_id:'1',h2:'Wat kost een AI-overzicht?'}]}]};
  const rows=[
-  {id:1,url:'https://nl.contentscale.site/a/',published_on:'2026-11-20',published_note:null,written,ui_lang:'nl'},
+  {id:1,url:'https://nl.contentscale.site/a/',published_on:'2026-11-20',published_note:null,written,implementation:{a:{title:'Wat kost een AI-overzicht?',done:true}},ui_lang:'nl'},
   {id:2,url:'https://nl.contentscale.site/b/',published_on:'2026-11-20',published_note:'Eigen tekst',written,ui_lang:'nl'},
   {id:3,url:'https://contentscale.site/c/',published_on:'2026-11-20',published_note:null,written,ui_lang:'nl'},
   {id:4,url:'https://nl.contentscale.site/d/',published_on:null,published_note:null,written,ui_lang:'nl'},
@@ -50,7 +51,7 @@ test('backfill: nl.contentscale.site published checks without a note get the Gro
    return {rows:rows.filter(r=>r.published_on&&r.published_note==null&&new URL(r.url).host===params[0])}}
   assert.match(sql,/published_note IS NULL/,'never overwrites a note');updates.push(params);return {rowCount:1}}};
  const n=await backfillNotes(pool,{host:'nl.contentscale.site'});
- assert.equal(n,1);assert.deepEqual(updates,[[1,'Toegevoegd: “Wat kost een AI-overzicht?”.']]);
+ assert.equal(n,1);assert.deepEqual(updates,[[1,'Door redacteur bevestigd: “Wat kost een AI-overzicht?”.']]);
  const store=fs.readFileSync(require.resolve('../src/growth-free/store.cjs'),'utf8');
  assert.match(store,/backfillNotes\(pool,\{host:'nl\.contentscale\.site'\}\)/);
 });
