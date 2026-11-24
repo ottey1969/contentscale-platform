@@ -33,6 +33,7 @@ const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
 const topicLang=require('./topic-lang.cjs');
 const {discoverCustomerQuestions,aiQuestionForTerm}=require('../growth-customer-questions.cjs');
+const {filterTreated,questionKey}=require('./treated-questions.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -1265,6 +1266,7 @@ if(${js(!!loggedIn)}){load();loadContacts()}
 }
 
 const FAIL_TEXT={
+ QUESTION_ALREADY_TREATED:'All discovered questions have already been treated for this page and market. Enter a different customer question.',
  INTERRUPTED:'The check was interrupted. Please run it again.',
  AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE:'The research service is temporarily unavailable. Please try again later.',
  PAGE_IDENTITY_CHANGED:'The page changed while it was being checked. Please try again.'
@@ -1324,6 +1326,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const attachRank=async(row,ref)=>{if(rankHandoff&&ref&&row&&row.public_id)await rankHandoff.attach(row.public_id,ref).catch(()=>{})};
  if(!config.enabled)return null;
  const queue=[];let running=0;
+ const treatedFor=async scope=>typeof storage.treatedQuestions==='function'?storage.treatedQuestions(pool,scope):[];
  const jobs=new Set();
  // No question typed: the customer question customers ask in Google for what the page offers (People also ask, related
  // searches; one Serper search). AI ideas only for approved access (cost). Nothing found: the research derives a working
@@ -1334,9 +1337,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const country=job.market&&job.market.countries&&job.market.countries[0]||null,lang=job.market&&job.market.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
    const out=await discoverCustomerQuestions({url:job.url,html,keyword:job.topic||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,location:job.market?.location||'',
     ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:job.approved?(engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()):null});
-   const best=(out.questions||[]).find(q=>q.text===out.best_question)||null;
-   return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,
-    others:(out.questions||[]).filter(q=>!best||q.text!==best.text).slice(0,6).map(q=>({text:q.text,label:q.label})),chosen_automatically:true,...(job.topic?{topic:job.topic}:{})};
+   const available=filterTreated(out,job.treated||[]);
+   const best=available.questions.find(q=>q.text===available.best_question)||null;
+   return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,excluded_treated:available.excluded_treated,
+    others:available.questions.filter(q=>!best||q.text!==best.text).slice(0,6).map(q=>({text:q.text,label:q.label})),chosen_automatically:true,...(job.topic?{topic:job.topic}:{})};
   }catch(e){return {text:null,source:'UNAVAILABLE',label:null,others:[],chosen_automatically:true}}
  }
  function pump(){
@@ -1346,6 +1350,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     try{
      await storage.setStatus(pool,job.id,{status:'RUNNING'});
      const chosenQuestion=job.query?null:await autoQuestion(job);
+     if(chosenQuestion&&!chosenQuestion.text&&chosenQuestion.excluded_treated){await storage.setStatus(pool,job.id,{status:'FAILED',error_code:'QUESTION_ALREADY_TREATED'});if(job.inviteId)await storage.refundInvite(pool,job.inviteId);return}
      if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
      // No customer question found for a rank tracker topic: the tracked keyword itself is researched.
      else if(job.topic){job.query=job.topic;if(chosenQuestion)chosenQuestion.text_fallback='TOPIC'}
@@ -1442,9 +1447,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.post(apiPath+'/customer-questions',async(req,res)=>{
   const b=req.body||{};
   const owner=sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin';
+  let invitation=null;
+  await storage.ensureTables(pool);
   if(!owner){
-    await storage.ensureTables(pool);
-    const invitation=b.invite?await storage.getInvite(pool,b.invite):null;
+    invitation=b.invite?await storage.getInvite(pool,b.invite):null;
     if(store.inviteStatus(invitation)!=='ACTIVE')return res.status(403).json({success:false,error:'An approved invitation is required for customer question discovery.'});
    }
   const ip=store.hashIp(req.ip,config.ipSalt),now=Date.now(),h=(cqHits.get(ip)||[]).filter(t=>now-t<3600000);
@@ -1462,7 +1468,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const pageLang=((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'').toLowerCase();
   const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',location,
    ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()});
-  res.set('Cache-Control','no-store').json({success:true,...out});
+  const market=readMarket(b,res);if(market===undefined)return;
+  const treated=v.error?[]:await treatedFor({url:v.url,market,owner,inviteId:invitation?.id||null});
+  res.set('Cache-Control','no-store').json({success:true,...filterTreated(out,treated)});
  });
  app.post(apiPath+'/checks',async(req,res)=>{
   try{
@@ -1605,15 +1613,17 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
   // A verified Search Console export changes the research, so a stored result without it is not reused.
+  const treated=await treatedFor({url:input.url,market:input.market,owner:accessLabel==='admin',inviteId});
+  if(input.query&&treated.some(q=>questionKey(q)===questionKey(input.query)))return res.status(409).json({success:false,code:'QUESTION_ALREADY_TREATED',error:'This question has already been published for this page and market. Choose a different customer question.'});
   const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
-  const cached=fresh||withGsc||input.sitemap||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  const cached=fresh||withGsc||input.sitemap||input.topic||(!input.query&&treated.length)?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null,gscDeclined:!!input.gscDeclined});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
