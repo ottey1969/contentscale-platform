@@ -25,7 +25,7 @@ test('report: a result link instead of only "research this page"; the company ne
   report:{pages:[{rank:1,url:U,action:'NO_CLICKS',clicks:0,impressions:1227,ctr:0,position:64.2,basis:'TOO_FEW'}],bands:[],queries:{},files:[],notes:[],kpis:{}}};
  const owner=reportPage(row,{owner:true,config:{},growthPath:'/free-growth',growth});
  assert.match(owner,/href="\/free-growth\/r\/pubOwner\?k=keyOwner1234&amp;lang=nl"[^>]*>Bekijk onderzoek</);
- assert.match(owner,/>Opnieuw onderzoeken</,'a new check stays possible');
+ assert.match(owner,/href="\/free-growth\?[^"]*fresh=1[^"]*"[^>]*>Onderzoeken<\/a>/,'a new check stays possible and explicitly requests fresh research');
  assert.match(owner,/Aangepast op 22 november 2026/);
  const client=reportPage(row,{owner:false,config:{},growthPath:'/free-growth',growth});
  assert.doesNotMatch(client,/pubOwner|keyOwner/,'never the owner internal check');
