@@ -14,7 +14,9 @@ async function dashboard({manager,env=process.env}){
  if(!configured)return {...base,status:'KEY_MISSING'};
  try{
   const u=await manager.durableUsage(env);
-  return {...base,status:'AVAILABLE',scope:u.scope,day_utc:u.day_utc,month_utc:u.month_utc,
+  let modules=null;
+  if(typeof manager.moduleUsage==='function'){try{modules=await manager.moduleUsage(env)}catch{/* Quota totals remain available. */}}
+  return {...base,modules,status:'AVAILABLE',scope:u.scope,day_utc:u.day_utc,month_utc:u.month_utc,
    daily:meter(u.daily_requests,u.daily_limit),monthly:meter(u.monthly_requests,u.monthly_limit)};
  }catch{return {...base,status:'ACCOUNTING_UNAVAILABLE'};}
 }
