@@ -158,3 +158,28 @@ test('durable accounting survives manager recreation and prevents calls when una
  await assert.rejects(createFirecrawlManager({requireAccounting:true}).read({env,url,load}),/FIRECRAWL_ACCOUNTING_UNAVAILABLE/);
  assert.equal(loads,1);
 });
+
+test('owner usage summary distinguishes quotas, warnings, missing keys and unknown provider credits',async()=>{
+ const {meter,dashboard}=require('../src/firecrawl-owner-dashboard.cjs');
+ assert.equal(meter(79,100).status,'OK');
+ assert.equal(meter(80,100).status,'WARNING_80');
+ assert.equal(meter(90,100).status,'WARNING_90');
+ assert.equal(meter(101,100).remaining,0);
+ assert.equal(meter(0,0).status,'LIMIT_REACHED');
+ assert.equal(meter(5,null).status,'NO_LIMIT_CONFIGURED');
+ const manager={durableUsage:async()=>({scope:'POSTGRES_SHARED',day_utc:'2026-11-24',month_utc:'2026-11',daily_requests:9,daily_limit:10,monthly_requests:40,monthly_limit:50})};
+ const secret='never-show-this-key';
+ const summary=await dashboard({manager,env:{FIRECRAWL_API_KEY:secret,TRACKER_GROWTH_FIRECRAWL_ENABLED:'true'}});
+ assert.equal(summary.daily.status,'WARNING_90');
+ assert.equal(summary.monthly.status,'WARNING_80');
+ assert.equal(summary.provider_credits.remaining,null);
+ assert.equal(summary.key_validity,'NOT_CHECKED');
+ assert(!JSON.stringify(summary).includes(secret));
+ assert.equal((await dashboard({manager,env:{}})).status,'KEY_MISSING');
+ assert.equal((await dashboard({manager:{durableUsage:async()=>{throw Error(secret)}},env:{FIRECRAWL_API_KEY:secret}})).status,'ACCOUNTING_UNAVAILABLE');
+});
+test('Firecrawl usage route checks owner authorization before requesting statistics',()=>{
+ const fs=require('node:fs');
+ const source=fs.readFileSync(require.resolve('../src/growth-free/routes.cjs'),'utf8');
+ assert.match(source,/app\.get\(apiPath\+'\/admin\/firecrawl-usage',async\(req,res\)=>\{\s*if\(!admin\(req,res\)\)return;\s*res\.set\('Cache-Control','private, no-store'\)/);
+});
