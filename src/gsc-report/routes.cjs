@@ -164,7 +164,8 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
    const growth=await (st.growthFor||require('./published.cjs').growthFor)(pool,urls,{invite:row.growth_invite}).catch(()=>new Map());
    const published=st.publicationsFor?await st.publicationsFor(pool,urls,{invite:row.growth_invite}).catch(()=>new Map())
     :new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
-   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,issueView:req.query?.view,apiPath}));
+   const scores=await require('../growth-free/contentscore.cjs').forReport(pool,row,owner);
+   res.type('html').send(reportPage(row,{owner,config,growthPath,published,growth,scores,issueView:req.query?.view,apiPath}));
   }catch(e){console.error('[gsc-report] view failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  return {sessionValid};
@@ -240,7 +241,7 @@ function growthLink(p,{lang,owner,invite,growthPath,result=null,auditToken=null}
  return `<a class="btn" href="${esc(href)}" target="_blank" rel="noopener">${esc(T[lang].research)}</a>`;
 }
 
-function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),problemsOnly=false,issueView=null,apiPath='/api/gsc'}){
+function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new Map(),scores={},problemsOnly=false,issueView=null,apiPath='/api/gsc'}){
  if(!published.size&&growth.size)published=new Map([...growth].filter(([,x])=>x.published_on).map(([k,x])=>[k,x.published_on]));
  const lang=LANGS.includes(row.lang)?row.lang:'en',t=T[lang],r=row.report||{},k=r.kpis||{},invite=row.growth_invite||null;
  const C=r.crawl;
@@ -309,7 +310,7 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const resultOf=p=>{const x=growth.get(require('./published.cjs').norm(p.url));if(!x)return null;return owner?(x.owner_result||x.invite_result):x.invite_result};
  const doneOn=p=>{const d=published.get(require('./published.cjs').norm(p.url));const g=growth.get(require('./published.cjs').norm(p.url));return d?` <span class="chip done">${esc(t.updated_on.replace('{d}',day(lang,d+'T12:00:00Z')))}</span>${g&&g.note?`<div class="done-note">${esc(g.note)}</div>`:''}`:''};
  const cs=require('./contentscore-ui.cjs');
- const scoreCell=p=>cs.cell(p,r.contentscores?.[p.url],{owner,lang,esc,endpoint:apiPath+'/r/'+enc(row.token||'')+'/contentscore'});
+ const scoreCell=p=>{const own=r.contentscores?.[p.url];return cs.cell(p,scores[p.url]||(Array.isArray(own)?own[own.length-1]:own),{owner,lang,esc,endpoint:apiPath+'/r/'+enc(row.token||'')+'/contentscore'});};
  const pageRow=p=>`<tr><td class="num">${p.rank}</td><td class="pcell"><a class="url" href="${esc(p.url)}" title="${esc(p.url)}" target="_blank" rel="noopener nofollow">${esc(pathOf(p.url))}</a><br><span class="badge ${esc(p.action)}">${esc(label(p))}</span>${doneOn(p)}${baLine(p)}${liveLine(p)}${jsLine(p)}${issueLine(p)}${noteLine(p)}${posChips(p)}
    <div class="muted">${esc(crawlOnly&&p.action==='NO_DATA'?A.todo_unread:t.todo[p.action])}${p.note?' · '+esc(p.note):''}${p.source==='MANUAL'?' · '+esc(t.manual):''}</div>
    ${p.queries&&p.queries.length?`<details><summary>${esc(t.page_queries)} (${p.queries.length})</summary>${metricRows(lang,t,p.queries,{name:'query',flag:false})}</details>`:''}
