@@ -150,7 +150,7 @@ test('durable accounting survives manager recreation and prevents calls when una
  const first=createFirecrawlManager({accounting,requireAccounting:true});
  await first.read({env,url,load});
  const second=createFirecrawlManager({accounting,requireAccounting:true});
- await assert.rejects(second.read({env,url,load}),/FIRECRAWL_LOCAL_REQUEST_LIMIT/);
+ await assert.rejects(second.read({env,url,load}),{code:'FIRECRAWL_LOCAL_REQUEST_LIMIT'});
  assert.equal((await second.durableUsage(env)).daily_requests,1);
  assert.equal((await second.durableUsage(env)).scope,'POSTGRES_SHARED');
  const broken=createFirecrawlManager({accounting:{reserve:async()=>{throw Error('db down')}},requireAccounting:true});
