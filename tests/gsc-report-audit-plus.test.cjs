@@ -82,7 +82,8 @@ test('(3) long titles are small notes: they do not drive the order or count as p
  assert.equal(by('/en/name-only/').action,'FIX_SNIPPET');
  assert.ok(rep.kpis.audit.with_notes>=1);
  const html=await (await fetch(s.base+r.url)).text();
- for(const x of ['Language versions (hreflang)','Does not link back','Title is broken','Small notes'])assert.match(html,new RegExp(x.replace(/[()]/g,'\\$&')),x);
+ const details=await (await fetch(s.base+r.url+'?view=all')).text();
+ for(const x of ['Language versions (hreflang)','Does not link back','Title is broken','Small notes'])assert.match(html+details,new RegExp(x.replace(/[()]/g,'\\$&')),x);
 });
 
 test('Firecrawl: no maximum to fill in; it uses the pages to read (at most 50) and asks first',async t=>{

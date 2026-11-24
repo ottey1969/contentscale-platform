@@ -37,7 +37,7 @@ test('the report shows the headline, the source of each Article, and the descrip
  const a=pageAudit(html,U);
  const out=reportPage({title:'Derayah',lang:'nl',created_at:new Date(),expires_at:new Date(Date.now()+864e5),views:0,
   report:{scope:'CRAWL',site:'web.derayah.com',kpis:{audit:{pages_read:1,with_issues:1,blocked:0}},pages:[{url:U,rank:1,action:'FIX_SNIPPET',queries:[],audit:a}],queries:{},bands:[],files:[],notes:[]}},
-  {owner:false,config:{brand:'ContentScale'},growthPath:'/free-growth'});
+  {owner:false,config:{brand:'ContentScale'},growthPath:'/free-growth',issueView:'all'});
  assert.match(out,/Article-headline is kapot/);
  assert.match(out,/#richSnippet/);assert.match(out,/#schema-2717113/);assert.match(out,/lijkt Rank Math/);
  assert.match(out,/Beschrijving in de structured data/);assert.match(out,/cash dividend payment dates/);

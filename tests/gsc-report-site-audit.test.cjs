@@ -131,7 +131,7 @@ test('a report from a domain alone: public facts, Google field data and position
  assert.deepEqual(by('/en/').positions,[{keyword:'saudi stock trading app',position:4}]);
  assert.equal(rep.positions.rows.find(r=>r.keyword==='broker fees').status,'NOT_IN_RESULTS');
  assert.equal(rep.speed.status,'FOUND');assert.equal(rep.speed.metrics.LCP.ms,3100);
- const html=await s.view(made.url);
+ const html=await s.view(made.url)+await s.view(made.url+'?view=all');
  assert.match(html,/Zonder Search Console/);
  assert.match(html,/Staat op noindex/);
  assert.match(html,/Canonical wijst naar een andere pagina/);
