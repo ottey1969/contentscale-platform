@@ -1763,6 +1763,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   let shown={summary:row.summary,aiGap:aiPart&&aiPart.gap};
   if(row.status==='DONE'){try{const map=await topicLang.topicTextsFor({pool,row,lang:row.ui_lang||'en',summary:row.summary,aiGap:aiPart&&aiPart.gap,model:reminders.modelFor(config.textModel!==undefined?config.textModel:config.mailModel)});
    shown=topicLang.applyTexts(row.summary,aiPart&&aiPart.gap,map)}catch(e){}}
+  const cs=require('./contentscore.cjs'),csHistory=cs.mergeHistory(row.url,row.contentscore_history,await cs.sharedHistory(pool,row));
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,gsc_declined:!!row.gsc_declined&&!(gscPart&&gscPart.latest),
    ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap,saved_answers:(aiPart.answers||[]).map(function(x){return {engine:x.engine,raw_text:x.raw_text,created_at:x.created_at}})}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
@@ -1772,7 +1773,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
    content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report,bestOwnPage:bestOwn}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   contentscore_history:row.contentscore_history||[],contentscore_comparison:require('./contentscore.cjs').compare(row.contentscore_history),implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
+   contentscore_history:csHistory,contentscore_comparison:cs.compare(csHistory),implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -1935,7 +1936,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'Research has not finished'});
   try{
    const result=require('../gsc-report/contentscore.cjs').scanResult(req.body?.result,row.url);
-   const history=await storage.appendContentScore(pool,{checkId:row.id,result});
+   const cs=require('./contentscore.cjs');
+   const shared=await cs.sharedHistory(pool,row);
+   const saved=await storage.appendContentScore(pool,{checkId:row.id,result});
+   const history=saved?cs.mergeHistory(row.url,saved,shared):null;
    if(!history)return res.status(409).json({success:false,error:'Scan not saved'});
    res.set('Cache-Control','no-store').json({success:true,contentscore_history:history,contentscore_comparison:require('./contentscore.cjs').compare(history)});
   }catch(e){res.status(400).json({success:false,error:'ContentScore could not be saved'})}
