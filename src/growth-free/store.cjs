@@ -49,6 +49,7 @@ function ensureTables(pool){
   // Measurement after publication (visitor's choice): the date the change went live and one e-mail about 4 weeks later.
   await addColumn('published_on','DATE');
   await addColumn('published_note','TEXT');
+  await addColumn('implementation',"JSONB NOT NULL DEFAULT '{}'::jsonb");
   await addColumn('reminder_due_at','TIMESTAMPTZ');
   await addColumn('reminder_sent_at','TIMESTAMPTZ');
   await addColumn('reminder_attempts','INTEGER NOT NULL DEFAULT 0');
@@ -154,7 +155,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
@@ -167,6 +168,14 @@ async function getCheck(pool,publicId,key){
 async function saveSelection(pool,{checkId,itemIds}){
  const row=(await pool.query("UPDATE growth_free_checks SET selected_item_ids=$2::jsonb WHERE id=$1 AND status='DONE' RETURNING selected_item_ids",[checkId,JSON.stringify(itemIds)])).rows[0];
  return row?row.selected_item_ids:null;
+}
+
+// Atomic per-item update; shared result links see the same confirmed state.
+async function saveImplementation(pool,{checkId,itemId,title,done}){
+ const item={title,done,at:new Date().toISOString()};
+ const row=(await pool.query(`UPDATE growth_free_checks SET implementation=COALESCE(implementation,'{}'::jsonb)||jsonb_build_object($2::text,$3::jsonb)
+ WHERE id=$1 AND status='DONE' RETURNING implementation`,[checkId,itemId,JSON.stringify(item)])).rows[0];
+ return row?row.implementation:null;
 }
 
 // Counts one writing run and keeps its result; refuses when the limit is reached (atomic).
@@ -306,4 +315,4 @@ async function latestDoneFor(pool,{url,inviteId=null,owner=false}){
  return (await pool.query(`SELECT public_id,access_key,finished_at,published_on::text AS published_on FROM growth_free_checks
    WHERE status='DONE' AND lower(rtrim(url,'/'))=lower(rtrim($1,'/')) AND ($2::boolean OR invite_id=$3) ORDER BY finished_at DESC NULLS LAST LIMIT 1`,[String(url||''),!!owner,inviteId])).rows[0]||null;
 }
-module.exports={latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
