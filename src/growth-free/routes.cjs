@@ -1312,7 +1312,49 @@ async function load(){
  document.getElementById('invites').innerHTML=i.invites.length?i.invites.map(function(v){return '<div class="card"><strong>'+esc(v.label)+'</strong> · '+esc(STATUS[v.status]||v.status)+'<br><small>'+esc(v.used_checks)+' of '+esc(v.max_checks)+' checks used · valid until '+esc(day(v.expires_at))+(v.email_lock?' · only for '+esc(v.email_lock):' · anyone with the link')+(v.last_used_at?' · last used '+esc(day(v.last_used_at)):'')+'</small>'+(v.status==='ACTIVE'?'<p><button class="ghost revoke" data-id="'+esc(v.id)+'">Withdraw</button></p>':'')+'</div>'}).join(''):'<p class="muted">No invitations yet.</p>';
  var d=await get('/admin/leads');
  document.getElementById('leads').innerHTML='<h3>Hire requests ('+d.hires.length+')</h3>'+d.hires.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> &lt;'+esc(h.email)+'&gt; '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url)+' · '+esc(h.decision||'')+' · '+esc(h.access_label||'')+'</small><p>'+esc(h.message||'')+'</p></div>'}).join('')+
- '<h3>Checks ('+d.checks.length+')</h3>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'<br>'+(c.result_url?'<a class="btn ghost" href="'+esc(c.result_url)+'&lang=nl" target="_blank" rel="noopener">Open result</a> ':'')+'<small>'+(c.published_on?'Published '+esc(String(c.published_on).slice(0,10))+(c.reminder_due_at?' · reminder '+esc(String(c.reminder_due_at).slice(0,10)):' · no reminder'):'No publication date yet: open the result to set it')+'</small></div>'}).join('')}
+ '<h3>Research history</h3><div id="researchHistory"></div>';loadHistory()}
+var historyRows=[],historySelected=new Set(),historyPage=0,historySize=25,historyBusy=false;
+async function loadHistory(){
+ var root=document.getElementById('researchHistory');if(!root)return;
+ root.textContent='Loading research history…';
+ try{var d=await get('/admin/research-history');if(!d.success)throw Error(d.error);historyRows=d.rows;historySelected.clear();historyPage=0;
+ root.innerHTML='<p class="muted">Grouped by website. Deleting a check removes its result, AI answers, uploads and reminders; Free Growth contacts are derived from checks. Hire requests and other modules are not deleted. Running checks cannot be deleted.</p><label>Search<input id="rhSearch" placeholder="Website, email, search term"></label><label>Status<select id="rhStatus"><option value="">All statuses</option></select></label><label>Access<select id="rhAccess"><option value="">All users</option></select></label><label>Publication<select id="rhPub"><option value="">All</option><option value="yes">Published</option><option value="no">Not published</option></select></label><label>Websites per page<select id="rhSize"><option>25</option><option>50</option><option>100</option></select></label><p><button type="button" id="rhPageSelect">Select page</button> <button type="button" id="rhFilterSelect">Select all filtered</button> <button type="button" id="rhClear">Clear selection</button> <button type="button" id="rhDelete">Bulk Delete</button> <button type="button" id="rhDeleteAll">Delete all research</button></p><p id="rhCount" role="status"></p><div id="rhRows"></div><p><button type="button" id="rhPrev">Previous</button> <span id="rhPages"></span> <button type="button" id="rhNext">Next</button></p><p id="rhMessage" role="status"></p>';
+ ['rhStatus','rhAccess'].forEach(function(id){var key=id==='rhStatus'?'displayStatus':'access_label';var el=document.getElementById(id);Array.from(new Set(historyRows.map(function(c){return key==='displayStatus'?historyStatus(c):c[key]||'public'}))).sort().forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)})});
+ ['rhSearch','rhStatus','rhAccess','rhPub','rhSize'].forEach(function(id){document.getElementById(id).addEventListener(id==='rhSearch'?'input':'change',function(){historyPage=0;historySelected.clear();historySize=Number(document.getElementById('rhSize').value);renderHistory()})});
+ document.getElementById('rhPageSelect').onclick=function(){historyVisible().forEach(historySelectGroup);renderHistory()};
+ document.getElementById('rhFilterSelect').onclick=function(){historyGroups().forEach(historySelectGroup);renderHistory()};
+ document.getElementById('rhClear').onclick=function(){historySelected.clear();renderHistory()};
+ document.getElementById('rhDelete').onclick=function(){deleteHistory(Array.from(historySelected),false)};
+ document.getElementById('rhDeleteAll').onclick=function(){deleteHistory(historyRows.filter(historyEligible).map(function(c){return String(c.id)}),true)};
+ document.getElementById('rhPrev').onclick=function(){historyPage--;renderHistory()};
+ document.getElementById('rhNext').onclick=function(){historyPage++;renderHistory()};
+ document.getElementById('rhRows').addEventListener('change',function(e){var id=e.target.getAttribute('data-rh-id');if(id){if(e.target.checked)historySelected.add(id);else historySelected.delete(id);historyCounts()}});
+ document.getElementById('rhRows').addEventListener('click',function(e){var b=e.target.closest('button[data-rh-delete]');if(b)deleteHistory([b.getAttribute('data-rh-delete')],false);var g=e.target.closest('button[data-rh-group]');if(g){var found=historyGroups().find(function(x){return x[0]===g.getAttribute('data-rh-group')});if(found)deleteHistory(found[1].filter(historyEligible).map(function(c){return String(c.id)}),false)}});
+ renderHistory();
+ }catch(e){root.textContent='Research history unavailable: '+e.message}
+}
+function historyStatus(c){return c.decision||c.error_code||c.status}
+function historyEligible(c){return ['DONE','FAILED'].includes(c.status)&&!c.writing_since}
+function historyGroups(){
+ var q=document.getElementById('rhSearch').value.toLowerCase().trim(),st=document.getElementById('rhStatus').value,a=document.getElementById('rhAccess').value,p=document.getElementById('rhPub').value,m=new Map();
+ historyRows.forEach(function(c){if(q&&![c.host,c.url,c.email,c.query].some(function(v){return String(v||'').toLowerCase().includes(q)}))return;if(st&&historyStatus(c)!==st)return;if(a&&(c.access_label||'public')!==a)return;if(p&&!!c.published_on!==(p==='yes'))return;var h=c.host||c.url;if(!m.has(h))m.set(h,[]);m.get(h).push(c)});return Array.from(m.entries())
+}
+function historyVisible(){return historyGroups().slice(historyPage*historySize,(historyPage+1)*historySize)}
+function historySelectGroup(g){g[1].filter(historyEligible).forEach(function(c){historySelected.add(String(c.id))})}
+function historyCounts(){document.getElementById('rhCount').textContent=historySelected.size+' selected · '+historyRows.length+' total checks';document.getElementById('rhDelete').disabled=historyBusy||!historySelected.size;document.getElementById('rhDeleteAll').disabled=historyBusy||!historyRows.some(historyEligible)}
+function renderHistory(){
+ var groups=historyGroups(),pages=Math.max(1,Math.ceil(groups.length/historySize));historyPage=Math.max(0,Math.min(historyPage,pages-1));document.getElementById('rhPages').textContent=(historyPage+1)+' / '+pages+' · '+groups.length+' websites';document.getElementById('rhPrev').disabled=historyPage===0;document.getElementById('rhNext').disabled=historyPage>=pages-1;
+ document.getElementById('rhRows').innerHTML=historyVisible().map(function(g){return '<details style="border-bottom:1px solid var(--line);padding:10px 0"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+' checks · '+esc(String(g[1][0].created_at).slice(0,10))+'</summary><p><button type="button" class="ghost" data-rh-group="'+esc(g[0])+'">Delete matching website checks</button></p>'+g[1].map(function(c){var id=String(c.id),eligible=historyEligible(c);return '<div style="padding:8px;border-top:1px solid var(--line)"><label><input type="checkbox" style="width:auto" data-rh-id="'+esc(id)+'" '+(historySelected.has(id)?'checked ':'')+(eligible?'':'disabled')+'> '+esc(c.query||c.url)+'</label><small>'+esc(c.email)+' · '+esc(c.access_label||'public')+' · '+esc(String(c.created_at).slice(0,10))+' · '+esc(historyStatus(c))+' · '+(c.published_on?'Published '+esc(String(c.published_on).slice(0,10)):'Not published')+'</small><br><small>'+esc(c.url)+'</small><br>'+(c.result_url?'<a class="btn ghost" href="'+esc(c.result_url)+'" target="_blank" rel="noopener noreferrer">Open result</a> ':'')+(eligible?'<button type="button" class="ghost" data-rh-delete="'+esc(id)+'">Delete</button>':'<small>Active or unavailable for deletion</small>')+'</div>'}).join('')+'</details>'}).join('')||'<p>No matching research.</p>';historyCounts()
+}
+async function deleteHistory(ids,all){
+ if(historyBusy||!ids.length)return;
+ if(!confirm('Permanently delete '+ids.length+' completed/failed checks and their results? Free Growth contacts may disappear if their last check is deleted. Hire requests are retained.'))return;
+ if(all&&prompt('Type DELETE to confirm deletion of all eligible research')!=='DELETE')return;
+ historyBusy=true;historyCounts();var msg=document.getElementById('rhMessage');
+ try{var d=await post('/admin/research-history/delete',{ids:ids,confirm:'DELETE'});if(!d.success)throw Error(d.error);await load();await loadContacts();var fresh=document.getElementById('rhMessage');if(fresh)fresh.textContent='Deleted '+d.deleted+' of '+ids.length+' selected checks.'}
+ catch(e){msg.textContent='Delete failed: '+e.message}finally{historyBusy=false;if(document.getElementById('rhCount'))historyCounts()}
+}
+
 document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load();loadContacts()});
 document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
 var rfForm=document.getElementById('rf');if(rfForm)rfForm.addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
@@ -2257,6 +2299,22 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     published_on:c.published_on||null,reminder_due_at:c.reminder_due_at||null}));
    res.set('Cache-Control','no-store').json({success:true,...d,checks})}
   catch(e){res.status(503).json({success:false,error:e.message})}
+ });
+ app.get(apiPath+'/admin/research-history',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{await storage.ensureTables(pool);
+   const rows=(await pool.query("SELECT id::text, public_id, access_key, email, host, url, query, status, decision, error_code, access_label, created_at, published_on, writing_since FROM growth_free_checks ORDER BY created_at DESC,id DESC")).rows.map(({access_key,...c})=>({...c,result_url:c.public_id&&access_key?basePath+'/r/'+encodeURIComponent(c.public_id)+'?k='+encodeURIComponent(access_key):null}));
+   res.set('Cache-Control','private, no-store').json({success:true,rows});
+  }catch(e){res.status(503).json({success:false,error:'Research history unavailable'})}
+ });
+ app.post(apiPath+'/admin/research-history/delete',async(req,res)=>{
+  if(!admin(req,res))return;
+  const b=req.body||{};
+  if(b.confirm!=='DELETE'||!Array.isArray(b.ids)||!b.ids.length||b.ids.some(id=>typeof id!=='string'||!/^[1-9][0-9]{0,17}$/.test(id)))return res.status(400).json({success:false,error:'Valid check IDs and confirmation required'});
+  try{await storage.ensureTables(pool);
+   const result=await pool.query("DELETE FROM growth_free_checks WHERE id=ANY($1::bigint[]) AND status IN ('DONE','FAILED') AND writing_since IS NULL",[Array.from(new Set(b.ids))]);
+   res.set('Cache-Control','private, no-store').json({success:true,deleted:result.rowCount||0});
+  }catch(e){res.status(503).json({success:false,error:'Research deletion unavailable'})}
  });
  app.get(apiPath+'/admin/leads.csv',async(req,res)=>{
   if(!admin(req,res))return;
