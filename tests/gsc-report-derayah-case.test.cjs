@@ -58,7 +58,7 @@ test('the report shows Arabic URLs readable, not percent-encoded',()=>{
  const url=O+enc('/ar/كيف-تنوع-استثماراتك/');
  const html=reportPage({title:'Derayah',lang:'en',created_at:new Date(),expires_at:new Date(Date.now()+864e5),views:0,
   report:{scope:'CRAWL',site:'web.derayah.com',kpis:{audit:{pages_read:1,with_issues:1,blocked:0}},pages:[{url,rank:1,action:'FIX_SNIPPET',queries:[],audit:{title:'t',description:'',h1:['x'],words:300,canonical:null,lang:'ar',hreflang:[],issues:['DESCRIPTION_MISSING']}}],queries:{},bands:[],files:[],notes:[]}},
-  {owner:false,config:{brand:'ContentScale'},growthPath:'/free-growth'});
+  {owner:false,config:{brand:'ContentScale'},growthPath:'/free-growth',issueView:'all'});
  assert.match(html,/\/ar\/كيف-تنوع-استثماراتك\//);
  assert.match(html,new RegExp('href="'+url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'"'),'the link itself stays the real URL');
 });
