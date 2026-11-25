@@ -63,3 +63,26 @@ Een herstelstatus geldt uitsluitend voor het expliciet genoemde defect. Alle wij
 - CI: de bestaande pipeline bevat aparte browser-, PostgreSQL-, Network-, canonical- en regressiegates. De Gemini Live-HTTP-regressie, de GSC- en Brief-kwaliteitschecks en lint zijn aan de bestaande algemene workflow toegevoegd. Alle 10 controles waren groen op codecommit `864e500`, inclusief de browser- en PostgreSQL-jobs. GitHub toont de resultaten per commit. [PR-controles](https://github.com/ottey1969/contentscale-platform/pull/570/checks)
 - De baseline van Perfect Roofing Team, productiehistorie en WordPress zijn niet gewijzigd. De regressie gebruikt testrecords. Provideracceptatie van Gemini Live en daadwerkelijk productiegebruik zijn niet gevalideerd. Als de eerdere route met een echte credential was uitgerold, valt credentialrotatie onder het beheer van de provider. Er is in deze slice geen echte credential opgevraagd. Het actieve Live-model blijft configureerbaar via `GEMINI_LIVE_MODEL` en een expliciete `GEMINI_KEY_LIVE` is vereist.
 - Openstaand zijn de runtime-inventarisatie van de volledige applicatie, handmatige browserdekking per hoofdreis, de resterende auth- en datagrenscontrole, providerstoringen per integratie, en zuivere end-to-end runs van de gehele prospect- en Network-ketens. Historische resultaten zonder bewezen koppeling houden hun bestaande toegangsvoorwaarde.
+
+## Aanvulling: controle met bestaande gegevens
+
+Via alleen-lezen HTTPS-verzoeken zijn negen echte pagina's opgevraagd. Alle negen antwoordden met HTTP 200 op de gevraagde URL. Deze waarnemingen betreffen de toen actieve publieke versie.
+
+| Publieke bron | Waarneming |
+| --- | --- |
+| [ContentScale-app](https://app.contentscale.site/) | Engelse taal, één H1 en canonieke URL van de app |
+| [Free Growth](https://app.contentscale.site/free-growth) | Eén H1 en geen metabeschrijving in de productie-HTML. De opgehaalde HTML is met echte Chromium uitgevoerd op 390 en 1440 pixels, met het bestaande PRT-adres in het veld. De pagina had geen horizontale overflow of JavaScript-uitzonderingen. De knop bleef zonder e-mail en toestemming uitgeschakeld. Het formulier is niet verstuurd. |
+| [GSC Audit](https://app.contentscale.site/gsc) | Eén H1 en `X-Robots-Tag: noindex, nofollow` |
+| [SEO Audit](https://app.contentscale.site/seo-audit) | `X-Robots-Tag: noindex, follow`. Chromium vond in de opgehaalde HTML geen canonical of H1 in de DOM. De oude auditparser telde twee H1-tags uit rapportgeneratorstrings en een voorbeeldcanonical mee. |
+| [ContentScale Network](https://app.contentscale.site/network) | Eén H1, `noindex,follow` en canonical naar [de publieke WordPress-pagina](https://contentscale.site/network/). De toegangs- en publicatieketen is in productie niet uitgevoerd. |
+| [EN](https://contentscale.site/), [NL](https://nl.contentscale.site/), [ES](https://es.contentscale.site/) | De drie homepages hebben elk één H1, een eigen canonieke URL en afwisselende hreflang-links met EN als x-default. |
+| [Perfect Roofing Team](https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/) | Eén H1, een metabeschrijving, de exacte canonical en geen hreflang in de opgehaalde HTML. De publieke HTML geeft geen toegang tot de beschermde Tracker-baseline of de productiemeethistorie. |
+
+Chromium kon in deze omgeving niet rechtstreeks naar de live URL's navigeren wegens de lokale certificaatketen. De HTTPS-opvraag slaagde via curl. Voor DOM- en formuliercontrole is precies de daarmee opgehaalde HTML aan Chromium geleverd, met overige netwerkverzoeken geblokkeerd. Er zijn geen externe providers aangeroepen, formulieren ingestuurd of productierecords bewerkt.
+
+| Defect | Oorzaak | Prioriteit | Oplossing en verificatie | Status | Commit / PR |
+| --- | --- | --- | --- | --- | --- |
+| GSC Audit telde broncodestrings als on-page evidence | Structurele analyse zocht tags in de volledige HTML-bron inclusief uitvoerbare scripts en inerte HTML | P1 | Structurele analyse gebruikt pagina-elementen. JSON-LD blijft afzonderlijk beschikbaar. Regressie gebruikt het bestaande, uitgeleverde SEO Audit-bestand. Analyse van dezelfde live-HTML geeft na de reparatie dezelfde H1- en canonical-uitkomst als Chromium | FIXED AND VERIFIED | `06b88a0` / #570 |
+| Free Growth miste de openbare metabeschrijving; privéformulieren konden indexeerbaar renderen | De indexeringskeuze was afgeleid uit de titel, die publiek en privé hetzelfde is | P1 | EN/NL/ES-beschrijving uit de zichtbare tekst voor de openbare variant; sleutel- en andere besloten routes renderen met noindex. HTTP-regressie voor openbare en sleutelvariant | FIXED AND VERIFIED | `dd5f8ae` / #570 |
+
+De gerichte regressierun slaagde met 90 van 90. Daarin zijn de bestaande, in de repository vastgelegde PRT Free Growth-gegevens gebruikt door de concurrentielabel- en Tracker Brief-consistentietests. Dit is historische invoer en geen nieuwe klantmeting. De huidige live werking van privé-Tracker, GSC-resultaten, Admin, Network-uitnodigingen en providerrekeningen staat op **BLOCKED** zonder passende leesrechten of goedgekeurde exports. De wijzigingen in deze tabel staan op de PR-branch.
