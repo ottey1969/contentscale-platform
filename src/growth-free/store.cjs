@@ -65,6 +65,10 @@ function ensureTables(pool){
     email TEXT PRIMARY KEY, tips BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL, last_at TIMESTAMPTZ NOT NULL,
     url TEXT, query TEXT, country TEXT, language TEXT)`);
+  // One revocable read-only calendar subscription; only the token fingerprint is stored.
+  await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_calendar_subscription(
+    singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK(singleton),
+    token_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
