@@ -1,5 +1,9 @@
 'use strict';
 
+const { isDeepStrictEqual } = require('node:util');
+const { pageAudit } = require('./gsc-report/site-audit.cjs');
+const { jsonLd } = require('./growth-free/schema-help.cjs');
+
 const { createHash } = require('node:crypto');
 const { compactPublicHtml, fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
 const { VERSION, exactUrl, parseImplementationReport, ownerReport } = require('./implementation-report.cjs');
@@ -56,19 +60,40 @@ function editorInstructions(brief, domain) {
   ].join('\n');
 }
 
+function approvedMarkup(html, url) {
+  const clean = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(template|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
+  const markup = pageAudit(clean.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''), url);
+  return { ...markup, nodes: jsonLd(clean).filter(node => node['@type']) };
+}
+
 async function verifyApprovedContent(url, approvedHtml, fetchHtml, normalise) {
-  const draft = normalise(compactPublicHtml(approvedHtml));
-  if (draft.length < 200) return null;
-  const live = await fetchHtml(url, { redirects: 0, limit: 600000, compact: true });
+  const bodyText = html => normalise(compactPublicHtml(html)
+    .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, '')
+    .replace(/<(script|title|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, ''));
+  const draft = bodyText(approvedHtml);
+  const expected = approvedMarkup(approvedHtml, url);
+  const fields = ['title', 'description', 'canonical'].filter(field => expected[field]);
+  if (draft.length < 200 && !fields.length && !expected.nodes.length) return null;
+
+  const live = await fetchHtml(url, { redirects: 0, limit: 2500000 });
   if (live.status !== 200 || live.final_url !== url || live.redirect_chain?.length || live.truncated) return null;
-  const observed = normalise(compactPublicHtml(live.html));
-  if (!(' ' + observed + ' ').includes(' ' + draft + ' ')) return null;
+  const found = approvedMarkup(live.html, url);
+  const checks = Object.fromEntries(fields.map(field => [field, expected[field] === found[field]]));
+  if (expected.nodes.length) {
+    checks.json_ld = expected.nodes.every(node => found.nodes.some(candidate => isDeepStrictEqual(node, candidate)));
+  }
+  const contentPresent = draft.length >= 200 && (' ' + bodyText(live.html) + ' ').includes(' ' + draft + ' ');
+  const matched = Object.values(checks);
+  if (!contentPresent && !matched.includes(true)) return null;
   return {
-    status: 'approved_content_present',
+    status: contentPresent ? 'approved_content_present' :
+      matched.every(Boolean) ? 'approved_markup_present' : 'approved_markup_partially_present',
     url,
     observed_at: live.retrieved_at,
     source: 'LIVE_PUBLIC_HTTPS',
-    content_hash: createHash('sha256').update(draft).digest('hex')
+    ...(draft.length >= 200 ? { content_check: contentPresent } : {}),
+    ...(contentPresent ? { content_hash: createHash('sha256').update(draft).digest('hex') } : {}),
+    ...(matched.length ? { markup_checks: checks } : {})
   };
 }
 
@@ -195,8 +220,10 @@ function registerRoutes(app, pool, resolveBrief, { normalise, fetchHtml = fetchP
       if (index < 0 || !row.specialist_html || !normalise) {
         return res.status(409).json({ success: false, status: 'verification_pending' });
       }
-      let verification = row.implementation_reports[index].live_verification;
-      if (!verification) {
+      const entry = row.implementation_reports[index];
+      const previous = entry.live_verification;
+      let verification = previous;
+      if (!previous || previous.content_check === false || Object.values(previous.markup_checks || {}).includes(false)) {
         try {
           verification = await verifyApprovedContent(row.published_url, row.specialist_html, fetchHtml, normalise);
         } catch {
@@ -205,15 +232,26 @@ function registerRoutes(app, pool, resolveBrief, { normalise, fetchHtml = fetchP
         if (!verification || !(Date.parse(verification.observed_at) >= Date.parse(row.published_at))) {
           return res.status(422).json({ success: false, status: 'verification_pending' });
         }
+        if (previous && Date.parse(verification.observed_at) <= Date.parse(previous.observed_at)) {
+          return res.status(409).json({ success: false, status: 'verification_pending' });
+        }
+        if (previous && verification.status === previous.status && verification.content_check === previous.content_check &&
+          isDeepStrictEqual(verification.markup_checks, previous.markup_checks)) {
+          return res.set('Cache-Control', 'no-store').json({ success: true, verification: previous });
+        }
         const key = [String(index), 'live_verification'];
         const saved = await pool.query(
-          `UPDATE prewrite_briefs SET implementation_reports=jsonb_set(implementation_reports,$3::text[],$4::jsonb)
+          `UPDATE prewrite_briefs SET implementation_reports=jsonb_set(
+              CASE WHEN $9::jsonb IS NULL THEN implementation_reports ELSE
+                jsonb_set(implementation_reports,ARRAY[$7::text,'live_verification_history'],
+                  COALESCE(implementation_reports->$7::int->'live_verification_history','[]'::jsonb)||jsonb_build_array($9::jsonb))
+              END,$3::text[],$4::jsonb)
             WHERE id=$1 AND client_id=$2 AND status='published' AND published_url=$5 AND specialist_html=$6
               AND implementation_reports->$7::int->'report'=$8::jsonb
-              AND implementation_reports->$7::int->'live_verification' IS NULL
+              AND implementation_reports->$7::int->'live_verification' IS NOT DISTINCT FROM $9::jsonb
             RETURNING implementation_reports #> $3::text[] AS verification`,
           [...ids, key, JSON.stringify(verification), row.published_url, row.specialist_html, index,
-            JSON.stringify(row.implementation_reports[index].report)]);
+            JSON.stringify(entry.report), previous ? JSON.stringify(previous) : null]);
         if (!saved.rowCount) {
           const current = await pool.query(
             `SELECT implementation_reports #> $3::text[] AS verification FROM prewrite_briefs

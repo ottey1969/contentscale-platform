@@ -53,8 +53,57 @@ async function loadProofSources(pool, { clientId, pageId, url, events }) {
   return { tracker_client_id: clientId, tracker_page_id: pageId, url, ...out };
 }
 
-function registerProofSourceRoutes(app, pool) {
-  app.post('/api/tracker-client/:token/pages/:pageId/case-study/proof-sources', async (req, res) => {
+async function ownedPage(db, token, pageId, lock = false) {
+  if (!/^\d{1,10}$/.test(pageId) || Number(pageId) > 2147483647) return null;
+  const { rows: [page] } = await db.query(
+    `SELECT p.id,p.url,p.tracker_client_id
+       FROM tracker_pages p JOIN tracker_clients c ON c.id=p.tracker_client_id
+      WHERE c.token=$1 AND c.status IS DISTINCT FROM 'deleted' AND p.id=$2` +
+      (lock ? ' FOR UPDATE OF p' : ''), [token, pageId]);
+  return page;
+}
+
+async function loadPageProofSources(pool, page) {
+  const url = exactUrl(page.url);
+  const { rows: events } = await pool.query(
+    `SELECT e.event_type,e.event_data
+       FROM tracker_case_study_events e LEFT JOIN tracker_case_studies c ON c.id=e.case_study_id
+      WHERE e.event_type=$4 AND e.event_data->>'url'=$3
+        AND COALESCE(c.tracker_client_id,(to_jsonb(e)->>'tracker_client_id')::int)=$1
+        AND COALESCE(c.tracker_page_id,e.tracker_page_id)=$2
+      ORDER BY e.event_at,e.id`, [page.tracker_client_id, page.id, url, EVENT]);
+  return loadProofSources(pool, { clientId: page.tracker_client_id, pageId: page.id, url, events });
+}
+
+const PROOF_EVENTS_SCHEMA = `
+  SET LOCAL lock_timeout = '5s';
+  ALTER TABLE tracker_case_study_events
+    ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER,
+    ALTER COLUMN case_study_id DROP NOT NULL
+`;
+
+function registerProofSourceRoutes(app, pool, { ensureCaseSchema } = {}) {
+  const path = '/api/tracker-client/:token/pages/:pageId';
+  let schemaReady;
+  function ensureProofSchema() {
+    if (!schemaReady) schemaReady = (async () => {
+      if (ensureCaseSchema) await ensureCaseSchema();
+      await pool.query(PROOF_EVENTS_SCHEMA);
+    })().catch(error => { schemaReady = null; throw error; });
+    return schemaReady;
+  }
+  app.get(path + '/proof-sources', async (req, res) => {
+    try {
+      const page = await ownedPage(pool, req.params.token, req.params.pageId);
+      if (!page) return res.status(404).json({ success: false });
+      const proof_sources = await loadPageProofSources(pool, page);
+      return res.set('Cache-Control', 'no-store').json({ success: true, proof_sources });
+    } catch (error) {
+      console.error('[tracker-proof-source]', error.code || error.name);
+      return res.status(503).json({ success: false });
+    }
+  });
+  app.post([path + '/case-study/proof-sources', path + '/proof-sources'], async (req, res) => {
     const { type, id, key } = req.body || {};
     if (!TYPES.has(type) || typeof key !== 'string' || !key || key.length > 128 ||
         (type === 'free_growth' && (typeof id !== 'string' || !id || id.length > 40))) {
@@ -63,10 +112,7 @@ function registerProofSourceRoutes(app, pool) {
     let db;
     let committed = false;
     try {
-      const { rows: [page] } = await pool.query(
-        `SELECT p.id,p.url,p.tracker_client_id
-           FROM tracker_pages p JOIN tracker_clients c ON c.id=p.tracker_client_id
-          WHERE c.token=$1 AND c.status IS DISTINCT FROM 'deleted' AND p.id=$2`, [req.params.token, req.params.pageId]);
+      const page = await ownedPage(pool, req.params.token, req.params.pageId);
       if (!page) return res.status(404).json({ success: false });
       const url = exactUrl(page.url);
       const source = type === 'free_growth' ? (await pool.query(
@@ -76,28 +122,28 @@ function registerProofSourceRoutes(app, pool) {
         ? growth.sameKey(source.access_key, key) && exact(source.url, url)
         : auditPageEvidence(source.report, url));
       if (!permitted) return res.status(404).json({ success: false });
+      await ensureProofSchema();
       db = await pool.connect();
       await db.query('BEGIN');
       const ref = { type, source_id: String(source.id), url };
       await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [EVENT + ':' + type + ':' + ref.source_id]);
+      const current = await ownedPage(db, req.params.token, req.params.pageId, true);
+      if (!current || current.tracker_client_id !== page.tracker_client_id || current.url !== page.url) {
+        return res.status(409).json({ success: false });
+      }
       const existing = (await db.query(
-        `SELECT c.tracker_client_id,c.tracker_page_id,e.event_data->>'url' AS url
-           FROM tracker_case_study_events e JOIN tracker_case_studies c ON c.id=e.case_study_id
+        `SELECT COALESCE(c.tracker_client_id,e.tracker_client_id) AS tracker_client_id,
+                COALESCE(c.tracker_page_id,e.tracker_page_id) AS tracker_page_id,e.event_data->>'url' AS url
+           FROM tracker_case_study_events e LEFT JOIN tracker_case_studies c ON c.id=e.case_study_id
           WHERE e.event_type=$1 AND e.event_data->>'type'=$2 AND e.event_data->>'source_id'=$3`,
         [EVENT, type, ref.source_id])).rows;
       if (existing.some(link => link.tracker_client_id !== page.tracker_client_id ||
         (link.url === url && link.tracker_page_id !== page.id))) {
         return res.status(409).json({ success: false });
       }
-      const { rows: [cs] } = await db.query(
-        `SELECT c.id FROM tracker_case_studies c JOIN tracker_pages p
-             ON p.id=c.tracker_page_id AND p.tracker_client_id=c.tracker_client_id
-          WHERE c.tracker_client_id=$1 AND c.tracker_page_id=$2 AND c.canonical_url=$3 AND p.url=$3
-            AND c.status='active' FOR UPDATE OF c`, [page.tracker_client_id, page.id, url]);
-      if (!cs) return res.status(404).json({ success: false });
       if (!existing.some(link => link.url === url && link.tracker_page_id === page.id)) {
-        await db.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data)
-                        VALUES($1,$2,$3,$4,$5::jsonb)`, [cs.id, page.id, EVENT, type, JSON.stringify(ref)]);
+        await db.query(`INSERT INTO tracker_case_study_events(tracker_client_id,tracker_page_id,event_type,source,event_data)
+                        VALUES($1,$2,$3,$4,$5::jsonb)`, [page.tracker_client_id, page.id, EVENT, type, JSON.stringify(ref)]);
       }
       await db.query('COMMIT');
       committed = true;
@@ -115,4 +161,4 @@ function registerProofSourceRoutes(app, pool) {
   });
 }
 
-module.exports = { EVENT, auditPageEvidence, loadProofSources, registerProofSourceRoutes };
+module.exports = { EVENT, auditPageEvidence, loadProofSources, loadPageProofSources, registerProofSourceRoutes };

@@ -4045,18 +4045,35 @@ require('./prewrite-customer-question.cjs').registerPrewriteCustomerQuestion(app
 require('./tracker-growth-execution.cjs').registerGrowthExecution(app,pool);
 require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 require('./tracker-growth-gsc-direct.cjs').registerGrowthGscDirect(app,pool);
+function _trackerLiveProofText(proof, lang) {
+  var labels = {
+    en: ['Approved content found in live HTML','SEO title','Meta description','Canonical URL','JSON-LD','Matched','No match'],
+    nl: ['Goedgekeurde inhoud gevonden in de live HTML','SEO-titel','Metabeschrijving','Canonieke URL','JSON-LD','Komt overeen','Komt niet overeen'],
+    es: ['Contenido aprobado encontrado en el HTML público','Título SEO','Metadescripción','URL canónica','JSON-LD','Coincide','No coincide']
+  };
+  var text = labels[lang] || labels.en;
+  var results = proof.status === 'approved_content_present' ? [text[0]] : [];
+  ['title','description','canonical','json_ld'].forEach(function(key, index) {
+    if (proof.markup_checks && typeof proof.markup_checks[key] === 'boolean') {
+      results.push(text[index + 1] + ' · ' + text[proof.markup_checks[key] ? 5 : 6]);
+    }
+  });
+  return results.concat(proof.observed_at || []).join(' · ');
+}
 const trackerProofSources=require('./tracker-proof-sources.cjs');
-trackerProofSources.registerProofSourceRoutes(app,pool);
-app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{
+trackerProofSources.registerProofSourceRoutes(app,pool,{ensureCaseSchema:_ensureCaseStudySchema});
+app.get(['/api/tracker-client/:token/pages/:pageId/case-study','/api/tracker-client/:token/pages/:pageId/proof-history'],async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  const {rows:[page]}=await pool.query('SELECT id,url,tracker_client_id FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[cr.rows[0].id,req.params.pageId]);
+  if(!page)return res.status(404).json({success:false,error:'Tracker page not found'});
   const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events','tracker_case_study_content_versions']});if(!_schema.ready)return res.status(503).json({success:false,schema_ready:false,error:'Controlled case-study schema migration required',missing_tables:_schema.missing_tables});
   const csR=await pool.query(`SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1`,[cr.rows[0].id,req.params.pageId]);
-  if(!csR.rows.length)return res.status(404).json({success:false,error:'No active case study for this page'});
-  const cs=csR.rows[0];
-  const ev=await pool.query(`SELECT id,event_type,event_at,source,event_data,content_hash FROM tracker_case_study_events WHERE case_study_id=$1 ORDER BY event_at ASC,id ASC LIMIT 500`,[cs.id]);
-  const versions=await pool.query(`SELECT id,version_type,captured_at,source,canonical_url,content_hash,octet_length(html_content) AS html_bytes,version_data
-    FROM tracker_case_study_content_versions WHERE case_study_id=$1 ORDER BY captured_at ASC,id ASC LIMIT 500`,[cs.id]);
+  const cs=csR.rows[0]||null;
+  if(!cs&&req.path.endsWith('/case-study'))return res.status(404).json({success:false,error:'No active case study for this page'});
+  const ev=cs?await pool.query(`SELECT id,event_type,event_at,source,event_data,content_hash FROM tracker_case_study_events WHERE case_study_id=$1 ORDER BY event_at ASC,id ASC LIMIT 500`,[cs.id]):{rows:[]};
+  const versions=cs?await pool.query(`SELECT id,version_type,captured_at,source,canonical_url,content_hash,octet_length(html_content) AS html_bytes,version_data
+    FROM tracker_case_study_content_versions WHERE case_study_id=$1 ORDER BY captured_at ASC,id ASC LIMIT 500`,[cs.id]):{rows:[]};
   const snap=await pool.query(`SELECT id,checked_at,google_position,google_clicks,google_impressions,score,ai_google_overview_cited,ai_perplexity_cited,ai_bing_cited,ai_brave_cited,scanner_version,scoring_version
     FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at ASC,id ASC LIMIT 500`,[req.params.pageId]).catch(()=>({rows:[]}));
   const aiEvidence=await pool.query(`SELECT id,engine,revision_cycle,evidence_method,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,verified_at,updated_at,is_cleared
@@ -4065,19 +4082,13 @@ app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{t
   const implementationReports=await pool.query(`SELECT id AS brief_id, language,
       COALESCE(to_jsonb(b)->'implementation_reports','[]'::jsonb) AS history
     FROM prewrite_briefs b WHERE b.client_id=$1 AND b.tracker_page_id=$2 AND b.published_url=$3
-    ORDER BY b.published_at ASC,id ASC`,[cr.rows[0].id,req.params.pageId,cs.canonical_url]);
+    ORDER BY b.published_at ASC,id ASC`,[cr.rows[0].id,req.params.pageId,page.url]);
   const {ownerReport}=require('./implementation-report.cjs');
   const prewriteImplementations=implementationReports.rows.flatMap(row=>row.history.map(item=>({
     brief_id:row.brief_id,...item,owner_report:ownerReport(item.report,row.language)
   })));
-  const linked=await pool.query(`SELECT e.event_type,e.event_data FROM tracker_case_study_events e
-    JOIN tracker_case_studies c ON c.id=e.case_study_id
-    WHERE c.tracker_client_id=$1 AND c.tracker_page_id=$2 AND c.canonical_url=$3 AND e.event_type=$4
-    ORDER BY e.event_at,e.id`,[cr.rows[0].id,req.params.pageId,cs.canonical_url,trackerProofSources.EVENT]);
-  const proofSources=await trackerProofSources.loadProofSources(pool,{
-    clientId:cr.rows[0].id,pageId:req.params.pageId,url:cs.canonical_url,events:linked.rows
-  });
-  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
+  const proofSources=await trackerProofSources.loadPageProofSources(pool,page);
+  res.set('Cache-Control','no-store').json({success:true,page_url:page.url,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // Passwordless, read-only milestone report. The random token is the share credential.
@@ -9678,7 +9689,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       (result.history||[]).forEach(function(item){
         var report=document.createElement('pre');
         report.style.whiteSpace='pre-wrap';
-        report.textContent=item.owner_report+(item.live_verification?NL+NL+pwText(5)+' · '+item.live_verification.observed_at:'');
+        var observations=(item.live_verification_history||[]).concat(item.live_verification||[]);
+        report.textContent=[item.owner_report].concat(observations.map(function(proof){return _trackerLiveProofText(proof,pwLanguage);})).join(NL+NL);
         preview.appendChild(report);
       });
     }).catch(function(){preview.textContent='Could not load';});
@@ -9694,10 +9706,11 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function openScore(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Score my work'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:6px">Add the brief + score recommendations to your improved HTML, paste it below, then Scan. We score it with the real GRAAF engine \\u2014 no manual numbers. Before = your live page now; After = your improved HTML.</p><p style="font-size:11px;color:#6b7280;margin-bottom:8px">Tool: <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="color:#a78bfa">app.contentscale.site</a></p><textarea id="bdScoreIn" placeholder="<!-- paste your IMPROVED HTML here -->"></textarea><div id="bdScoreResult" style="margin-top:10px"></div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn score" id="bdScoreGo">Scan &amp; score</button>'; ov.classList.add('on'); var ta=document.getElementById('bdScoreIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdScoreGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your improved HTML first'); return; } var btn=this; btn.textContent='Scanning...'; btn.disabled=true; var rb=document.getElementById('bdScoreResult'); rb.innerHTML='<span style="color:#9ca3af;font-size:12px">Running GRAAF scan...</span>'; post(pageId,'score-work',{html:html}).then(function(r){ btn.textContent='Scan & score'; btn.disabled=false; if(!r||!r.success){ rb.innerHTML='<span style="color:#f87171;font-size:12px">'+((r&&r.error)||'Could not score')+'</span>'; return; } var b=r.before,a=r.after,dl=r.delta; var h='<div class="bd-score-line" style="font-size:14px">'; if(b!=null) h+='<span class="bd-score-pill" style="color:#9ca3af">Before '+b+'</span>'; if(b!=null&&a!=null) h+='<span style="color:#6b7280">\\u2192</span>'; if(a!=null) h+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; if(dl!=null){ var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); h+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; } h+='</div>'; if(b==null) h+='<p style="font-size:11px;color:#6b7280;margin-top:6px">Could not fetch your live page for a Before score \\u2014 the After score is still real.</p>'; rb.innerHTML=h; load(); }); }; }
   function viewHtml(id,pw){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submitted content':'Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(nothing submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
   var pwLanguage=(navigator.language||'en').split('-')[0];
+  ${_trackerLiveProofText.toString()}
   var pwLabels={
-    en:['Paste the Implementation Report JSON','Record reported publication','Save implementation report','Could not save the report','Check approved content live','Approved content found in live HTML','Live verification is pending','View report'],
-    nl:['Plak het Implementation Report als JSON','Gemelde publicatie vastleggen','Implementatierapport opslaan','Rapport opslaan mislukt','Controleer goedgekeurde inhoud live','Goedgekeurde inhoud gevonden in de live HTML','Live verificatie staat open','Bekijk rapport'],
-    es:['Pega el informe de implementación en JSON','Registrar la publicación comunicada','Guardar informe de implementación','No se pudo guardar el informe','Verificar el contenido aprobado en vivo','Se encontró el contenido aprobado en el HTML público','Verificación en vivo pendiente','Ver informe']
+    en:['Paste the Implementation Report JSON','Record reported publication','Save implementation report','Could not save the report','Check approved changes live','Approved content found in live HTML','Live verification is pending','View report'],
+    nl:['Plak het Implementation Report als JSON','Gemelde publicatie vastleggen','Implementatierapport opslaan','Rapport opslaan mislukt','Controleer goedgekeurde wijzigingen live','Goedgekeurde inhoud gevonden in de live HTML','Live verificatie staat open','Bekijk rapport'],
+    es:['Pega el informe de implementación en JSON','Registrar la publicación comunicada','Guardar informe de implementación','No se pudo guardar el informe','Verificar los cambios aprobados en vivo','Se encontró el contenido aprobado en el HTML público','Verificación en vivo pendiente','Ver informe']
   };
   function pwText(index){return (pwLabels[pwLanguage]||pwLabels.en)[index];}
   function publish(id,pw){
@@ -46005,6 +46018,7 @@ function startCaseStudy(pageId){
     alert((d&&d.message)||'Case study started.');if(typeof loadPages==='function')loadPages();
   }).catch(function(e){alert(e.message||'Could not start case study');});
 }
+${_trackerLiveProofText.toString()}
 function openCaseStudy(pageId){
   var ov=document.getElementById('caseStudyOv');
   if(!ov){
@@ -46014,7 +46028,7 @@ function openCaseStudy(pageId){
     document.body.appendChild(ov);
   }
   var box=document.getElementById('caseStudyBox');box.innerHTML='<div style="padding:28px;text-align:center;color:#7dd3fc;">Loading protected baseline and history...</div>';ov.style.display='flex';
-  api('/pages/'+pageId+'/case-study','GET').then(function(d){
+  api('/pages/'+pageId+'/proof-history','GET').then(function(d){
     if(!d||!d.success)throw new Error((d&&d.error)||'Could not load case study');
     var cs=d.case_study||{},b=cs.baseline_data||{};if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}
     var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[],aiRows=d.ai_evidence||[],evidenceCorrected=events.some(function(e){return e.event_type==='evidence_classification_corrected';});
@@ -46092,11 +46106,29 @@ function openCaseStudy(pageId){
         +(engines?'<h4>'+_csEscH(labels[8])+'</h4><ul>'+engines+'</ul>':'')+'</details>';
     }).join('');
     var prewriteReports=(d.prewrite_implementations||[]).map(function(item){
-      var proof=item.live_verification,lang=(document.documentElement.lang||navigator.language||'en').split('-')[0];
-      var labels={en:'Approved content found in live HTML',nl:'Goedgekeurde inhoud gevonden in de live HTML',es:'Contenido aprobado encontrado en el HTML público'};
+      var observations=(item.live_verification_history||[]).concat(item.live_verification||[]),lang=(navigator.language||'en').split('-')[0];
       return '<details><summary>'+_csEscH(utcStamp(item.recorded_at))+'</summary><pre style="white-space:pre-wrap">'+_csEscH(item.owner_report)+'</pre>'
-        +(proof?'<p>'+_csEscH((labels[lang]||labels.en)+' · '+utcStamp(proof.observed_at))+'</p>':'')+'</details>';
+         +observations.map(function(proof){return '<p>'+_csEscH(_trackerLiveProofText(proof,lang))+'</p>';}).join('')+'</details>';
     }).join('');
+    var historyLabels={en:['Proof & History','Tracker measurements','Close'],nl:['Bewijs en historie','Tracker-metingen','Sluiten'],es:['Evidencias e historial','Mediciones de Tracker','Cerrar']};
+    var historyText=historyLabels[proofLocale]||historyLabels.en;
+    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+prewriteReports;
+    if(!d.case_study){
+      var trackerMeasurements=snaps.map(function(row){
+        var date=utcStamp(row.checked_at);
+        var figures=[row.google_position,row.google_clicks,row.google_impressions,row.score];
+        var titles=[labels[5],labels[3],labels[4],'ContentScore'];
+        return '<li>'+_csEscH(date+' · '+figures.map(function(value,i){return titles[i]+' '+(value==null?'—':value);}).join(' · '))+'</li>';
+      }).join('');
+      var trackerAi=aiRows.filter(function(row){return !row.is_cleared;}).map(function(row){
+        var citation=row.exact_page_cited==null?'—':labels[row.exact_page_cited?9:10];
+        return '<li>'+_csEscH(row.engine+' · '+(row.verified_at?utcStamp(row.verified_at):'—')+' · '+citation)+'</li>';
+      }).join('');
+      box.innerHTML='<button type="button" id="trackerProofClose">'+_csEscH(historyText[2])+'</button><h2>'+_csEscH(historyText[0])+'</h2><p>'+_csEscH(d.page_url)+'</p>'
+        +sourceHtml+(trackerMeasurements?'<h3>'+_csEscH(historyText[1])+'</h3><ul>'+trackerMeasurements+'</ul>':'')
+        +(trackerAi?'<h3>'+_csEscH(labels[8])+'</h3><ul>'+trackerAi+'</ul>':'');
+      document.getElementById('trackerProofClose').onclick=function(){ov.style.display='none';};
+    }else
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">'+_csEscH(caseName)+'</h2>'+(isPerfectRoofing?'<div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div>':'')+'<div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LOCKED BASELINE · '+_csEscH(utcStamp(cs.baseline_at))+'</div>'
@@ -46106,8 +46138,7 @@ function openCaseStudy(pageId){
       +'<div style="margin-top:14px;padding:10px;background:#111827;border-left:3px solid #f59e0b;border-radius:6px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Current guardrail:</b> '+_csEscH(evidenceCorrected?'Preserve the historical baseline, but do not claim an exact-page AIO citation until a verifiable source URL supports it. Measure recommendation, Local/Maps visibility, domain citation and exact-page citation separately.':(b.treatment_guardrail||'Preserve proven wins and measure incremental changes.'))+'</div>'
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 7px;">Five-engine AI evidence</h3>'+engineTable
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Immutable HTML versions</h3>'+(versionList||'<div style="color:#fbbf24;font-size:11px;">No pre-publication HTML saved yet. Use “Save live version before publishing” right before you publish.</div>')
-      +'<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth
-      +(prewriteReports?'<div style="margin:16px 0">'+prewriteReports+'</div>':'')
+      +sourceHtml
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Proof timeline</h3>'+(timeline||'<div style="color:#64748b;font-size:11px;">No events yet.</div>')
       +'<div style="font-size:10px;color:#64748b;margin-top:14px;">'+snaps.length+' dated Tracker snapshot(s) linked · '+events.length+' protected event(s) · '+versions.length+' immutable HTML version(s)</div>';
     document.getElementById('caseStudyLinkProof').onclick=async function(){
@@ -46116,7 +46147,7 @@ function openCaseStudy(pageId){
         var link=new URL(input), match=link.pathname.match(/[/]r[/]([^/]+)[/]?$/);
         if(!match)throw Error();
         var id=decodeURIComponent(match[1]),key=link.searchParams.get('k');
-        await api('/pages/'+pageId+'/case-study/proof-sources','POST',{type:key?'free_growth':'gsc_audit',id:id,key:key||id});
+        await api('/pages/'+pageId+'/proof-sources','POST',{type:key?'free_growth':'gsc_audit',id:id,key:key||id});
         openCaseStudy(pageId);
       }catch(e){alert(labels[2]);}
     };
@@ -49719,6 +49750,11 @@ function renderPages() {
       badges += '<span class="cs-cs-badge" style="background:#111827;color:#94a3b8;border:1px dashed #475569;font-weight:700;" title="This page has no usable GSC position or impression evidence. Import or refresh GSC before assigning a priority tier.">UNCLASSIFIED \\u2014 GSC DATA REQUIRED</span> ';
     }
     if (p.case_study_active) badges += '<button type="button" onclick="event.stopPropagation();openCaseStudy(' + p.id + ')" style="cursor:pointer;background:rgba(14,165,233,.12);color:#7dd3fc;border:1px solid #0284c7;border-radius:5px;padding:2px 8px;font-size:9px;font-weight:900;letter-spacing:.05em;" title="Protected baseline and append-only proof history">CASE STUDY ACTIVE</button> ';
+    else {
+      var proofButtonLabels={en:'Proof &amp; History',nl:'Bewijs en historie',es:'Evidencias e historial'};
+      var proofButtonLocale=(navigator.language||'en').split('-')[0];
+      badges += '<button type="button" onclick="event.stopPropagation();openCaseStudy(' + p.id + ')">'+(proofButtonLabels[proofButtonLocale]||proofButtonLabels.en)+'</button> ';
+    }
     if (pos) badges += '<span class="cs-badge" title="LIVE Google position for your tracked keyword \\u201c' + (p.keyword||'') + '\\u201d \\u2014 measured at the last scan. Note: the GSC \\u201cpos\\u201d below is different: an average across ALL queries this page appears for (28 days), so it is usually worse than this number." style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">LIVE #' + pos + '</span> ';
     else if(p.gsc_position!==null&&p.gsc_position!==undefined&&p.gsc_position!==''&&!isNaN(parseFloat(p.gsc_position))) badges += '<span class="cs-cs-badge" style="background:#0d1117;color:#f59e0b;border:1px solid #f59e0b55;" title="Average Google Search Console position across all queries for this page; this is not a live rank check for the tracked keyword.">GSC AVG ' + parseFloat(p.gsc_position).toFixed(1) + '</span> ';
     else badges += '<span class="cs-cs-badge grey" title="No live rank measurement is available for the tracked keyword. This does not prove that the page is absent from Google.">Live rank not measured</span> ';

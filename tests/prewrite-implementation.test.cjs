@@ -83,7 +83,7 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     await pool.query("INSERT INTO tracker_pages(tracker_client_id,url,baseline_data) VALUES (1,$1,'{\"score\":42}'),(2,$1,'{\"score\":59}')", [url]);
     const { rows: before } = await pool.query('SELECT * FROM tracker_pages ORDER BY id');
     const approvedHtml = '<p>' + 'This is the approved emergency page content. '.repeat(8) + '</p>';
-    await pool.query('UPDATE prewrite_briefs SET specialist_html=$1 WHERE id=1', [approvedHtml]);
+    await pool.query('UPDATE prewrite_briefs SET specialist_html=$1 WHERE id=1', ['<title>Approved title</title>' + approvedHtml]);
     const live = { status: 200, final_url: url, redirect_chain: [], retrieved_at: '2026-01-02T00:00:00Z', html: approvedHtml };
     let liveRequests = 0;
     const app = express();
@@ -114,10 +114,16 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     await api.post(base.replace('owner', 'other') + '1/verify-live').expect(404);
     const verification = (await api.post(base + '1/verify-live').expect(200)).body.verification;
     assert.equal(verification.status, 'approved_content_present');
-    assert.deepEqual((await api.post(base + '1/verify-live').expect(200)).body.verification, verification);
-    assert.equal(liveRequests, 1);
+    assert.equal(verification.markup_checks.title, false);
+    live.html = '<title>Approved title</title>' + approvedHtml;
+    live.retrieved_at = '2026-01-03T00:00:00Z';
+    const complete = (await api.post(base + '1/verify-live').expect(200)).body.verification;
+    assert.equal(complete.markup_checks.title, true);
+    assert.deepEqual((await api.post(base + '1/verify-live').expect(200)).body.verification, complete);
+    assert.equal(liveRequests, 2);
     const verifiedHistory = (await api.get(base + '1/implementation-report').expect(200)).body.history;
-    assert.deepEqual(verifiedHistory[1].live_verification, verification);
+    assert.deepEqual(verifiedHistory[1].live_verification, complete);
+    assert.deepEqual(verifiedHistory[1].live_verification_history, [verification]);
     assert.deepEqual((await pool.query('SELECT * FROM tracker_pages ORDER BY id')).rows, before);
     await api.post(base + '2/publish').send({ report: { ...published, url: newUrl } }).expect(200);
     const { rows: [page] } = await pool.query('SELECT * FROM tracker_pages WHERE tracker_client_id=1 AND url=$1', [newUrl]);
@@ -146,4 +152,21 @@ test('live proof requires exact public response and the approved content, with n
   assert.equal(await verify({ ...live, truncated: true }), null);
   assert.equal(await verify({ ...live, html: '<!--' + content + '-->' }), null);
   assert.equal(await verify(live, '<p>Too little to verify</p>'), null);
+});
+
+test('live proof compares explicitly approved metadata and complete structured-data nodes', async () => {
+  const { verifyApprovedContent } = require('../src/prewrite-implementation.cjs');
+  const normalise = html => html.replace(/<[^>]+>/g, ' ').trim();
+  const snippet = '<title>Emergency roofing</title><meta name="description" content="Approved description">' +
+    '<link rel="canonical" href="' + url + '">' +
+    '<script type="application/ld+json">{"@type":"Service","name":"Roof repair"}</script>';
+  const verify = html => verifyApprovedContent(url, snippet, async () => ({
+    html, status: 200, final_url: url, retrieved_at: '2026-01-02T00:00:00Z'
+  }), normalise);
+  const all = await verify(snippet.replace('"@type":"Service","name":"Roof repair"', '"name":"Roof repair","@type":"Service"'));
+  assert.equal(all.status, 'approved_markup_present');
+  assert.deepEqual(all.markup_checks, { title: true, description: true, canonical: true, json_ld: true });
+  const partial = await verify(snippet.replace('Approved description', 'Different').replace('Roof repair', 'Other service'));
+  assert.deepEqual(partial.markup_checks, { title: true, description: false, canonical: true, json_ld: false });
+  assert.equal(await verify('<!--' + snippet + '-->'), null);
 });
