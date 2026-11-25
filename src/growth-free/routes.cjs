@@ -636,7 +636,7 @@ function gapBrief(g,s,all,d){var picked={},o=outcomeOf(s,d||{});if(!all)document
    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'Google position #'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':'')+(e.url?' — Source: '+e.url:'')+(e.excerpt?' — Excerpt: '+e.excerpt:''))})});L.push('')});
  if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  if((LAST_SELF||[]).length){var dn=selfDone();L.push('## To do yourself (not written by Growth)','');LAST_SELF.forEach(function(x){L.push('- ['+(dn[x.id]?'x':' ')+'] '+x.title+' — '+x.why)});L.push('')}
- L.push('## When the change is live','','End your work with one line: What was changed: … (one or two sentences on what you added or changed on the page). Paste it into “What did you change on the page?” when you record the publication date.','');
+ L.push('## Implementation Report — return after doing the work','','Return a standalone JSON object, without Markdown fences. Record actual changes only, not recommendations. Use the exact page URL. Never invent a publication time, commit, evidence or live verification. If publication is not confirmed, use implemented or not_published and null published_at. The editor imports this report and confirms the publication separately.','',JSON.stringify({schema:'contentscale.implementation.v1',url:s.url,status:'not_published',published_at:null,summary:'Replace with actual changes in 1–500 characters',change_types:['content'],evidence:null},null,2),'','Allowed change_types: content, technical_seo, schema, geo, ux, general. For confirmed publication use status published and the actual UTC time YYYY-MM-DDTHH:mm:ssZ. Evidence may contain a commit reference or deployment proof, if available.','');
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
  if(all){
   var answers=d&&d.ai&&d.ai.saved_answers||[];
@@ -935,13 +935,35 @@ function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">Record publicati
    if(!c.ready)h+='<p>Export from Search Console: Performance → filter Page → “Exact URL” → this page → Date → Custom → '+(c.before?'':'<strong>'+esc(fmtD(c.windows.before.start))+' – '+esc(fmtD(c.windows.before.end))+'</strong> (before)')+(!c.before&&!c.after?' and ':'')+(c.after?'':'<strong>'+esc(fmtD(c.windows.after.start))+' – '+esc(fmtD(c.windows.after.end))+'</strong> (after, once these 4 weeks have passed)')+' → Export → Download CSV. Upload it under Search Console above.</p>'}
   h+='<p><button type="button" class="ghost" id="pubChange">Change the date</button> <button type="button" class="ghost" id="pubClear">Remove the date</button> <small role="status" id="pubStatus"></small></p>';
   h+='<div id="pubForm" hidden>'}else{h+='<p>Your editor puts the package on your website; nothing is published by this check. Once the change is live, enter the date here. About four weeks later you get one e-mail with the two periods to compare in Search Console, and this page shows them side by side.</p><details id="pubOpen"><summary><strong>The change is live: enter the date</strong></summary><div id="pubForm">'}
- h+='<label for="pubDate">Date the change went live</label><input id="pubDate" type="date" max="'+today+'" value="'+esc(p.published_on||'')+'">';
- h+='<label for="pubNote">What did you change on the page? (shown in your GSC report)</label><textarea id="pubNote" rows="3" maxlength="500">'+esc(p.note||p.note_suggestion||'')+'</textarea>';
+ h+='<label for="pubDate">Date the page changes went live (UTC)</label><input id="pubDate" type="date" max="'+today+'" value="'+esc(p.published_on||'')+'">';
+ h+='<label for="pubNote">What changes were implemented on this page?</label><p class="muted">Record actual page changes. Search Console and AI visibility measurements help assess their impact; these are not changes to Search Console itself.</p><textarea id="pubNote" rows="3" maxlength="500">'+esc(p.note||p.note_suggestion||'')+'</textarea>';
+ h+='<details><summary>Import Implementation Report</summary><label for="pubReport">Paste the external AI JSON report</label><textarea id="pubReport" rows="7" maxlength="16000"></textarea><p><button type="button" class="ghost" id="pubImport">Import report into fields</button> <small id="pubImportStatus" role="status"></small></p><div id="pubOwnerReport" hidden><h3>Website owner change report</h3><label for="pubOwnerLang">Report language</label><select id="pubOwnerLang"><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select><textarea id="pubOwnerText" rows="10" readonly></textarea><p><button type="button" class="ghost" id="pubOwnerCopy">Copy owner report</button> <button type="button" class="ghost" id="pubOwnerDownload">Download owner report</button> <small id="pubOwnerStatus" role="status"></small></p></div><p class="muted">Import prepares the fields only. Review them before saving; an external AI report does not verify the live page.</p></details>';
  h+='<label class="check"><input type="checkbox" id="pubRemind" checked><span>E-mail me ('+esc(p.email_hint)+') once, about four weeks later. You can stop it with the link in the e-mail.</span></label>';
  h+='<p><button type="button" id="pubSave">Save the date</button> <small role="status" id="pubSaveStatus"></small></p></div>'+(p.published_on?'':'</details>');
  return h}
 function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  var reload=async function(){var d=await (await fetch(API+Q,{cache:'no-store'})).json();var box=document.getElementById('pubBox');if(box&&d.success){box.innerHTML=pubHtml(d.publication,d.gsc);wirePub()}var el=document.getElementById('published');if(el)el.scrollIntoView()};
+ var imp=document.getElementById('pubImport'),ownerCopies=null;
+ var ownerLang=document.getElementById('pubOwnerLang'),ownerText=document.getElementById('pubOwnerText');
+ if(ownerLang){ownerLang.value=['en','nl','es'].includes(PAGE_LANG)?PAGE_LANG:'en';ownerLang.onchange=function(){if(ownerCopies)ownerText.value=ownerCopies[ownerLang.value]||ownerCopies.en};
+ document.getElementById('pubOwnerCopy').onclick=async function(){try{await navigator.clipboard.writeText(ownerText.value);document.getElementById('pubOwnerStatus').textContent='Owner report copied.'}catch(e){document.getElementById('pubOwnerStatus').textContent='Copy unavailable; download the report.'}};
+ document.getElementById('pubOwnerDownload').onclick=function(){var u=URL.createObjectURL(new Blob([ownerText.value],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download='website-change-report-'+ownerLang.value+'.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},2000)};
+ }
+ if(imp)imp.onclick=async function(){
+  var st=document.getElementById('pubImportStatus'),raw=document.getElementById('pubReport').value;
+  imp.disabled=true;ownerCopies=null;document.getElementById('pubOwnerReport').hidden=true;ownerText.value='';st.textContent='Validating report…';
+  try{
+   var res=await fetch(API+'/implementation-report/preview'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({report:raw})});
+   var data=await res.json();if(!res.ok||!data.success)throw Error(data.error||'Invalid report');
+   var report=data.report;
+   ownerCopies=data.owner_reports;ownerText.value=ownerCopies[ownerLang.value]||ownerCopies.en;document.getElementById('pubOwnerReport').hidden=false;
+   if(report.status!=='published'){st.textContent='Owner report ready. Publication not confirmed; no publication date was filled.';return}
+   var date=document.getElementById('pubDate'),note=document.getElementById('pubNote');
+   if((date.value||note.value)&&!confirm('Replace the current unsaved date and summary with this report?')){st.textContent='Import cancelled.';return}
+   date.value=report.published_on;note.value=report.summary;
+   st.textContent='Report imported into fields. Review and save only if the page is live. Not independently verified.';
+  }catch(e){st.textContent=e.message||'Could not import report'}finally{imp.disabled=false}
+ };
  var ch=document.getElementById('pubChange');if(ch)ch.onclick=function(){document.getElementById('pubForm').hidden=false};
  var cl=document.getElementById('pubClear');if(cl)cl.onclick=async function(){if(!confirm('Remove the date and the reminder?'))return;await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:true})});reload()};
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
@@ -2116,6 +2138,18 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    res.set('Cache-Control','no-store').json({success:true,implementation,note_suggestion:require('./publication-note.cjs').noteSuggestion({...row,implementation},row.ui_lang||'nl')});
   }catch(e){res.status(503).json({success:false,error:'Could not save the confirmation'})}
  });
+ app.post(apiPath+'/checks/:id/implementation-report/preview',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  try{
+   const raw=req.body&&req.body.report;
+   if(typeof raw!=='string')throw Error('Paste a JSON report');
+   const report=require('../implementation-report.cjs').parseImplementationReport(raw,row.url);
+   const {ownerReport}=require('../implementation-report.cjs');
+   const owner_reports=Object.fromEntries(['en','nl','es'].map(lang=>[lang,ownerReport(report,lang)]));
+   res.set('Cache-Control','no-store').json({success:true,report,owner_reports});
+  }catch(e){res.status(400).json({success:false,error:'Invalid implementation report: '+String(e.message).slice(0,180)})}
+ });
  app.post(apiPath+'/checks/:id/publication',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
@@ -2134,7 +2168,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const fresh=await storage.getCheck(pool,req.params.id,req.query.k)||row;
    if(remind&&emailConfigured()){
     const lang=reminders.languageOf(fresh);
-    const m=await localizeMail(reminders.confirmationMessage({url:row.url,publishedOn:d.value,stopLink:links.stop(saved.reminder_token,saved),lang:reminders.T[lang]?lang:'en'}),lang);
+    const m=await localizeMail(reminders.confirmationMessage({url:row.url,publishedOn:d.value,note:fresh.published_note,stopLink:links.stop(saved.reminder_token,saved),lang:reminders.T[lang]?lang:'en'}),lang);
     if(await Promise.resolve(send({to:reminders.recipientsOf({...saved,access_label:row.access_label,invite_id:row.invite_id}),subject:m.subject,html:m.html})).catch(()=>false))confirmation='SENT'}
    res.set('Cache-Control','no-store').json({success:true,publication:publicationOf(fresh),confirmation,gsc:await gscFor(fresh)});
   }catch(e){console.error('[free-growth] publication failed',e.message);res.status(503).json({success:false,error:'The date could not be saved. Please try again.'})}

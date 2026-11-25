@@ -82,14 +82,26 @@ const T = {
 };
 const wrap = body => '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#111;max-width:620px">' + body + '</div>';
 
-function reminderMessage({ url, query, publishedOn, resultLink, stopLink, lang = 'en' }) {
+// The saved editor note is a declaration of work, not proof of ranking or live publication.
+function changeSummary(note, lang) {
+  const value = typeof note === 'string' ? note.trim().slice(0,500) : '';
+  if (!value) return '';
+  const labels = {
+    en: ['Recorded page changes','As reported by the editor; not independently verified.'],
+    nl: ['Geregistreerde paginawijzigingen','Zoals opgegeven door de redacteur; niet onafhankelijk geverifieerd.'],
+    es: ['Cambios registrados en la página','Según lo declarado por el editor; sin verificación independiente.']
+  };
+  const l = labels[lang] || labels.en;
+  return '<h3>' + l[0] + '</h3><p>' + esc(value) + '</p><p><small>' + l[1] + '</small></p>';
+}
+function reminderMessage({ url, query, publishedOn, note, resultLink, stopLink, lang = 'en' }) {
   const t = T[lang] || T.en, l = T[lang] ? lang : 'en', w = windowsOf(publishedOn), d = x => longDate(x, l);
-  return { subject: t.subject, html: wrap('<p>' + t.hello + '</p><p>' + t.intro(url, query, d(publishedOn)) + '</p><h3>' + t.steps + '</h3><ol><li>' + t.s1 + '</li><li>' + t.s2(url) + '</li><li>' +
+  return { subject: t.subject, html: wrap('<p>' + t.hello + '</p><p>' + t.intro(url, query, d(publishedOn)) + '</p>' + changeSummary(note,l) + '<h3>' + t.steps + '</h3><ol><li>' + t.s1 + '</li><li>' + t.s2(url) + '</li><li>' +
     t.s3(d(w.before.start), d(w.before.end)) + '</li><li>' + t.s4(d(w.after.start), d(w.after.end)) + '</li><li>' + t.s5(resultLink) + '</li></ol><p>' + t.noGsc + '</p><p><small>' + t.honest + '</small></p><p><small>' + t.once + ' ' + t.stop(stopLink) + '</small></p>') };
 }
-function confirmationMessage({ url, publishedOn, stopLink, lang = 'en' }) {
+function confirmationMessage({ url, publishedOn, note, stopLink, lang = 'en' }) {
   const t = T[lang] || T.en, l = T[lang] ? lang : 'en';
-  return { subject: t.cSubject, html: wrap('<p>' + t.hello + '</p><p>' + t.cIntro(url, longDate(publishedOn, l), longDate(dueAt(publishedOn), l)) + '</p><p><small>' + t.stop(stopLink) + '</small></p>') };
+  return { subject: t.cSubject, html: wrap('<p>' + t.hello + '</p><p>' + t.cIntro(url, longDate(publishedOn, l), longDate(dueAt(publishedOn), l)) + '</p>' + changeSummary(note,l) + '<p><small>' + t.stop(stopLink) + '</small></p>') };
 }
 
 // Before/after from the uploaded exports: only exports filtered on exactly this page count; each period must fall on its
@@ -143,7 +155,7 @@ async function sendDueFreeReminders(pool, storage, { send, links, now = new Date
     const lang = languageOf(row);
     // Written languages (en/nl/es) go as written; any other language is translated and checked, else English.
     const own = T[lang] ? lang : null, write = msg => own ? msg : localize(msg, lang, { model: modelFor(model) });
-    const m = await write(reminderMessage({ url: row.url, query: String(row.query || (row.summary && row.summary.checked && row.summary.checked.search_term) || ''), publishedOn: row.published_on,
+    const m = await write(reminderMessage({ url: row.url, query: String(row.query || (row.summary && row.summary.checked && row.summary.checked.search_term) || ''), publishedOn: row.published_on, note: row.published_note,
       resultLink: links.result(row), stopLink: links.stop(row.reminder_token, row), lang: own || 'en' }));
     const ok = await Promise.resolve(send({ to: recipientsOf(row), subject: m.subject, html: m.html })).catch(() => false);
     await storage.markReminder(pool, { id: row.id, sent: ok });
