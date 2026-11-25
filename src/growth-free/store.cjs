@@ -244,7 +244,7 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null,note=nul
    WHERE id=$1 RETURNING emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base,publishedOn?(note||null):null])).rows[0]||null;
 }
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
- return (await pool.query(`SELECT id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base,ui_lang FROM growth_free_checks
+ return (await pool.query(`SELECT id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,published_note,reminder_token,reminder_base,ui_lang FROM growth_free_checks
    WHERE reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND status='DONE' ORDER BY reminder_due_at LIMIT $2`,[now,limit])).rows;
 }
 async function markReminder(pool,{id,sent}){
