@@ -937,21 +937,27 @@ function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">Record publicati
   h+='<div id="pubForm" hidden>'}else{h+='<p>Your editor puts the package on your website; nothing is published by this check. Once the change is live, enter the date here. About four weeks later you get one e-mail with the two periods to compare in Search Console, and this page shows them side by side.</p><details id="pubOpen"><summary><strong>The change is live: enter the date</strong></summary><div id="pubForm">'}
  h+='<label for="pubDate">Date the page changes went live (UTC)</label><input id="pubDate" type="date" max="'+today+'" value="'+esc(p.published_on||'')+'">';
  h+='<label for="pubNote">What changes were implemented on this page?</label><p class="muted">Record actual page changes. Search Console and AI visibility measurements help assess their impact; these are not changes to Search Console itself.</p><textarea id="pubNote" rows="3" maxlength="500">'+esc(p.note||p.note_suggestion||'')+'</textarea>';
- h+='<details><summary>Import Implementation Report</summary><label for="pubReport">Paste the external AI JSON report</label><textarea id="pubReport" rows="7" maxlength="16000"></textarea><p><button type="button" class="ghost" id="pubImport">Import report into fields</button> <small id="pubImportStatus" role="status"></small></p><p class="muted">Import prepares the fields only. Review them before saving; an external AI report does not verify the live page.</p></details>';
+ h+='<details><summary>Import Implementation Report</summary><label for="pubReport">Paste the external AI JSON report</label><textarea id="pubReport" rows="7" maxlength="16000"></textarea><p><button type="button" class="ghost" id="pubImport">Import report into fields</button> <small id="pubImportStatus" role="status"></small></p><div id="pubOwnerReport" hidden><h3>Website owner change report</h3><label for="pubOwnerLang">Report language</label><select id="pubOwnerLang"><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select><textarea id="pubOwnerText" rows="10" readonly></textarea><p><button type="button" class="ghost" id="pubOwnerCopy">Copy owner report</button> <button type="button" class="ghost" id="pubOwnerDownload">Download owner report</button> <small id="pubOwnerStatus" role="status"></small></p></div><p class="muted">Import prepares the fields only. Review them before saving; an external AI report does not verify the live page.</p></details>';
  h+='<label class="check"><input type="checkbox" id="pubRemind" checked><span>E-mail me ('+esc(p.email_hint)+') once, about four weeks later. You can stop it with the link in the e-mail.</span></label>';
  h+='<p><button type="button" id="pubSave">Save the date</button> <small role="status" id="pubSaveStatus"></small></p></div>'+(p.published_on?'':'</details>');
  return h}
 function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  var reload=async function(){var d=await (await fetch(API+Q,{cache:'no-store'})).json();var box=document.getElementById('pubBox');if(box&&d.success){box.innerHTML=pubHtml(d.publication,d.gsc);wirePub()}var el=document.getElementById('published');if(el)el.scrollIntoView()};
- var imp=document.getElementById('pubImport');
+ var imp=document.getElementById('pubImport'),ownerCopies=null;
+ var ownerLang=document.getElementById('pubOwnerLang'),ownerText=document.getElementById('pubOwnerText');
+ if(ownerLang){ownerLang.value=['en','nl','es'].includes(PAGE_LANG)?PAGE_LANG:'en';ownerLang.onchange=function(){if(ownerCopies)ownerText.value=ownerCopies[ownerLang.value]||ownerCopies.en};
+ document.getElementById('pubOwnerCopy').onclick=async function(){try{await navigator.clipboard.writeText(ownerText.value);document.getElementById('pubOwnerStatus').textContent='Owner report copied.'}catch(e){document.getElementById('pubOwnerStatus').textContent='Copy unavailable; download the report.'}};
+ document.getElementById('pubOwnerDownload').onclick=function(){var u=URL.createObjectURL(new Blob([ownerText.value],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download='website-change-report-'+ownerLang.value+'.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},2000)};
+ }
  if(imp)imp.onclick=async function(){
   var st=document.getElementById('pubImportStatus'),raw=document.getElementById('pubReport').value;
-  imp.disabled=true;st.textContent='Validating report…';
+  imp.disabled=true;ownerCopies=null;document.getElementById('pubOwnerReport').hidden=true;ownerText.value='';st.textContent='Validating report…';
   try{
    var res=await fetch(API+'/implementation-report/preview'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({report:raw})});
    var data=await res.json();if(!res.ok||!data.success)throw Error(data.error||'Invalid report');
    var report=data.report;
-   if(report.status!=='published')throw Error('Publication is not confirmed. Wait until the page is live before registering a publication date.');
+   ownerCopies=data.owner_reports;ownerText.value=ownerCopies[ownerLang.value]||ownerCopies.en;document.getElementById('pubOwnerReport').hidden=false;
+   if(report.status!=='published'){st.textContent='Owner report ready. Publication not confirmed; no publication date was filled.';return}
    var date=document.getElementById('pubDate'),note=document.getElementById('pubNote');
    if((date.value||note.value)&&!confirm('Replace the current unsaved date and summary with this report?')){st.textContent='Import cancelled.';return}
    date.value=report.published_on;note.value=report.summary;
@@ -2139,7 +2145,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const raw=req.body&&req.body.report;
    if(typeof raw!=='string')throw Error('Paste a JSON report');
    const report=require('../implementation-report.cjs').parseImplementationReport(raw,row.url);
-   res.set('Cache-Control','no-store').json({success:true,report});
+   const {ownerReport}=require('../implementation-report.cjs');
+   const owner_reports=Object.fromEntries(['en','nl','es'].map(lang=>[lang,ownerReport(report,lang)]));
+   res.set('Cache-Control','no-store').json({success:true,report,owner_reports});
   }catch(e){res.status(400).json({success:false,error:'Invalid implementation report: '+String(e.message).slice(0,180)})}
  });
  app.post(apiPath+'/checks/:id/publication',async(req,res)=>{
