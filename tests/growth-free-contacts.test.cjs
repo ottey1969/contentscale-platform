@@ -114,6 +114,20 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     assert.equal((await call('POST',hirePath+'/status',{id:hire,status:'INVALID'},write)).status,400);
     const rankOverview=await (await call('GET','/api/free-growth/admin/email-overview?source=rank',null,jar)).json();
     assert.ok(rankOverview.rows.some(r=>r.email===email&&r.status==='Unconfirmed'));
+    const signupPath='/api/free-growth/admin/rank-signups';
+    const signup=rankOverview.rows.find(r=>r.email===email);
+    assert.equal(signup.is_new,true);
+    const beforeSeen=await (await call('GET',signupPath,null,jar)).json();
+    assert.ok(beforeSeen.unseen>=1);
+    assert.equal((await call('POST',signupPath+'/seen',{ids:[signup.id]},jar)).status,404);
+    const ack=await (await call('POST',signupPath+'/seen',{ids:[signup.id]},write)).json();
+    assert.equal(ack.seen,1);
+    const updatedRank=await (await call('GET','/api/free-growth/admin/email-overview?source=rank',null,jar)).json();
+    assert.equal(updatedRank.rows.find(r=>r.id===signup.id).is_new,false);
+    assert.equal(updatedRank.rows.find(r=>r.id===signup.id).status,'Unconfirmed');
+    const afterSeen=await (await call('GET',signupPath,null,jar)).json();
+    assert.equal(afterSeen.unseen,beforeSeen.unseen-1);
+
     await pool.query("UPDATE growth_free_checks SET published_on=CURRENT_DATE,reminder_due_at=NOW()+INTERVAL '28 days' WHERE id=$1",[other]);
     const growthOverview=await (await call('GET','/api/free-growth/admin/email-overview?source=growth',null,jar)).json();
     assert.ok(growthOverview.rows.some(r=>r.email===email&&r.status==='Scheduled'));
@@ -182,6 +196,7 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     await pool.query('DELETE FROM growth_free_hire_requests WHERE email=$1',[email]).catch(()=>{});
     await pool.query('DELETE FROM growth_free_retained_contacts WHERE email=$1',[email]).catch(()=>{});
     await pool.query('DELETE FROM growth_free_checks WHERE email=$1',[email]).catch(()=>{});
+    await pool.query('DELETE FROM growth_free_rank_signup_seen WHERE account_id IN (SELECT id FROM rank_free_accounts WHERE email=$1)',[email]).catch(()=>{});
     await pool.query('DELETE FROM rank_free_accounts WHERE email=$1',[email]).catch(()=>{});
     await pool.end();
   }
