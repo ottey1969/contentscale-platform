@@ -303,9 +303,7 @@ function simpleFromTracker(d){try{
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 // A result this browser already started for the page in the address: offered on top of the form (owner 2026-11-22).
 function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://');if(i>=0)u=u.slice(i+3);if(u.indexOf('www.')===0)u=u.slice(4);u=u.split('#')[0].split('?')[0];while(u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u}
-(function(){try{var box=document.getElementById('existingLocal');if(!box)return;var u=new URLSearchParams(location.search).get('url');if(!u)return;
- var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),r=M[normPage(u)];if(!r||r.charAt(0)!=='/'||r.charAt(1)==='/')return;
- var lg=new URLSearchParams(location.search).get('lang');document.getElementById('existingLocalLink').href=r+(lg?'&lang='+encodeURIComponent(lg):'');box.hidden=false}catch(e){}})();
+
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
@@ -313,6 +311,20 @@ function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://')
 // filled in. Only in this browser; a link with values wins; works without storage too.
 var REMEMBER=['url','query','market','language','search_location','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
+// Reopen a saved result from this browser, also on the bare landing URL.
+function showSavedResult(){
+ var box=document.getElementById('existingLocal'),link=document.getElementById('existingLocalLink'),field=document.getElementById('url');if(!box||!link)return;
+ box.hidden=true;
+ try{
+  var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),u=field&&field.value||new URLSearchParams(location.search).get('url')||'',r=u?M[normPage(u)]:null;
+  if(!u){var keys=Object.keys(M);r=keys.length?M[keys[keys.length-1]]:null}
+  if(typeof r!=='string'||!r.startsWith('/')||r.startsWith('//'))return;
+  var dest=new URL(r,location.origin),prefix=${js(base)}+'/r/';
+  if(dest.origin!==location.origin||!dest.pathname.startsWith(prefix)||!dest.searchParams.get('k'))return;
+  dest.searchParams.set('lang',${js(lang)});link.href=dest.pathname+dest.search;box.hidden=false;
+ }catch(e){}
+}
+showSavedResult();var savedResultField=document.getElementById('url');if(savedResultField){savedResultField.addEventListener('input',showSavedResult);savedResultField.addEventListener('change',showSavedResult)}
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}if(!aiKeyChanged())rememberAi()}
 // Pasted AI answers are kept in this browser too, with the page and customer question they answer: after a refresh or a
 // failed start they come back only for the same page and question. When either changes, the answers are removed instead of
@@ -382,7 +394,7 @@ try{
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
 var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_audit:auditMatches()?AUDIT_TOKEN:null,gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
-var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);try{var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');M[normPage(document.getElementById('url').value)]=d.result_url;localStorage.setItem('growthFreeResults',JSON.stringify(M))}catch(e){}location.href=d.result_url}
+var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);try{var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');var savedPage=normPage(document.getElementById('url').value);delete M[savedPage];M[savedPage]=d.result_url;localStorage.setItem('growthFreeResults',JSON.stringify(M))}catch(e){}location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
 }
@@ -1349,11 +1361,11 @@ if(document.getElementById('calendarRevoke'))document.getElementById('calendarRe
 };
 async function loadMail(section){
  var root=section.querySelector('.mailRows'),source=section.getAttribute('data-mail-section');root.textContent='Loading…';
- try{var d=await get('/admin/email-overview?source='+encodeURIComponent(source));if(!d.success)throw Error(d.error);
+ try{var response=await fetch(API+'/admin/email-overview?source='+encodeURIComponent(source),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(20000)});var d=await response.json();if(!response.ok||!d.success)throw Error(d.error);
  root.innerHTML='<p class="muted">'+esc(d.note)+'</p>'+(source==='rank'?'<p><button type="button" class="ghost" data-rank-seen-all>Mark all loaded signups as seen</button> <span class="rankSeenStatus" role="status"></span></p>':'')+'<label>Search<input placeholder="Email, website or URL"></label><div class="mailList"></div>';
  var input=root.querySelector('input'),list=root.querySelector('.mailList');if(source==='rank')rankBadge(d.rows.filter(function(r){return r.is_new}).length);
  function draw(){var q=input.value.toLowerCase().trim(),groups=new Map();d.rows.forEach(function(r){if(q&&![r.email,r.host,r.url].some(function(v){return String(v||'').toLowerCase().includes(q)}))return;var h=r.host||'Unknown website';if(!groups.has(h))groups.set(h,[]);groups.get(h).push(r)});
- list.innerHTML=Array.from(groups.entries()).map(function(g){return '<details class="card" style="padding:10px"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+'</summary>'+g[1].map(function(r){return '<div style="border-top:1px solid var(--line);padding:8px"><strong>'+esc(r.email||'Email not stored')+'</strong> · '+esc(r.status)+(r.is_new?' <strong style="color:#b91c1c">● New</strong> <button type="button" class="ghost" data-rank-seen="'+esc(r.id)+'">Mark as seen</button>':'')+'<br><small>'+esc(r.url||'')+'</small><br><small>'+esc(r.detail||'')+'</small></div>'}).join('')+'</details>'}).join('')||'<p>No matching records.</p>'}
+ list.innerHTML=Array.from(groups.entries()).map(function(g){return '<details class="card" style="padding:10px"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+'</summary>'+g[1].map(function(r){return '<div style="border-top:1px solid var(--line);padding:8px"><strong>'+esc(r.email||'Email not stored')+'</strong> · '+esc(r.status)+(r.module?' · '+esc(r.module):'')+(r.is_new?' <strong style="color:#b91c1c">● New</strong> <button type="button" class="ghost" data-rank-seen="'+esc(r.id)+'">Mark as seen</button>':'')+'<br><small>'+esc(r.url||'')+'</small><br><small>'+esc(r.detail||'')+'</small></div>'}).join('')+'</details>'}).join('')||'<p>No matching records.</p>'}
  input.addEventListener('input',draw);draw();
  if(source==='rank')root.onclick=async function(e){
   var btn=e.target.closest('[data-rank-seen],[data-rank-seen-all]');if(!btn||btn.disabled)return;
@@ -1365,7 +1377,7 @@ async function loadMail(section){
   }catch(err){status.textContent='Could not save; reopen this section to refresh'}finally{btn.disabled=false}
  };
 
- }catch(e){root.textContent='Email overview unavailable'}
+ }catch(e){root.textContent='Email overview unavailable or timed out. ';var retry=document.createElement('button');retry.type='button';retry.textContent='Retry';retry.onclick=function(){loadMail(section)};root.appendChild(retry)}
 }
 var historyRows=[],historySelected=new Set(),historyPage=0,historySize=25,historyBusy=false;
 async function loadHistory(){
@@ -2430,8 +2442,24 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(source==='growth'){
     await storage.ensureTables(pool);
     const records=(await pool.query("SELECT id,email,emails,access_label,invite_id,url,host,status,published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,reminder_attempts FROM growth_free_checks WHERE reminder_due_at IS NOT NULL ORDER BY reminder_due_at,id")).rows;
-    rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
-    note='One-time measurement reminders, grouped by website. Dates in UTC.';
+    rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,module:'Free Growth',due_at:r.reminder_due_at,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
+    note='Measurement reminders from Free Growth and Tracker Growth, grouped by website. Dates in UTC. Only saved reminders appear; a published page without a reminder is not scheduled.';
+    try{
+     const trackerTables=(await pool.query("SELECT to_regclass('tracker_growth_reminders') IS NOT NULL AND to_regclass('tracker_growth_publications') IS NOT NULL AND to_regclass('tracker_pages') IS NOT NULL AND to_regclass('tracker_clients') IS NOT NULL AS available")).rows[0];
+     if(trackerTables.available){
+      const tracker=(await pool.query(`SELECT r.id,r.emails,r.due_at,r.sent_at,r.attempts,g.published_at,g.query,p.url,c.status AS client_status
+       FROM tracker_growth_reminders r JOIN tracker_growth_publications g ON g.id=r.publication_id AND g.tracker_client_id=r.tracker_client_id
+       JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id
+       JOIN tracker_clients c ON c.id=r.tracker_client_id ORDER BY r.due_at,r.id`)).rows;
+      for(const r of tracker){
+       let host;try{host=new URL(r.url).hostname.toLowerCase().replace(/^www\\./,'')}catch(e){host=r.url||'Unknown website'}
+       for(const email of (Array.isArray(r.emails)?r.emails:[])){
+        rows.push({email,host,url:r.url,module:'Tracker Growth',due_at:r.due_at,status:r.sent_at?'Sent':r.attempts>=3?'Failed':['deleted','paused','disabled'].includes(r.client_status)?'Stopped':'Scheduled',detail:'Published '+date(r.published_at)+' · Due '+date(r.due_at)+' · Sent '+date(r.sent_at)+' · Query '+(r.query||'—')});
+       }
+      }
+     }else note+=' Tracker Growth tables are not available on this instance.';
+    }catch(e){note+=' Tracker Growth could not be loaded; Free Growth results remain available.'}
+    rows.sort((a,b)=>new Date(a.due_at)-new Date(b.due_at));
    }else if(source==='rank'){
     await storage.ensureTables(pool);
     const records=(await pool.query("SELECT a.id::text AS id,a.email,a.created_at,a.verified_at,a.opted_out_at,a.marketing_consent,(s.account_id IS NULL) AS is_new,p.host,p.last_digest_at,p.digest_fail_at,p.digest_fail_count,COUNT(k.id) FILTER (WHERE k.active)::int AS active_keywords,MAX(k.next_check_at) FILTER (WHERE k.active) AS last_next_check FROM rank_free_accounts a LEFT JOIN growth_free_rank_signup_seen s ON s.account_id=a.id LEFT JOIN rank_free_projects p ON p.account_id=a.id LEFT JOIN rank_free_keywords k ON k.project_id=p.id GROUP BY a.id,p.id,s.account_id ORDER BY (s.account_id IS NULL) DESC,a.created_at DESC")).rows;

@@ -11,6 +11,7 @@ const express=require('express');
 const originalInit=express.application.init;
 express.application.init=function(...args){
   originalInit.apply(this,args);
+  this.use(require('./src/home-language.cjs').homeRoute);
   // BEGIN page indexing policy
   this.use((req,res,next)=>{
     if (/^\/(?:seo-audit|track\/[^/]+\/growth)\/?$/i.test(req.path)) {

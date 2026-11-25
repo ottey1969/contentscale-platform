@@ -13,7 +13,15 @@ test('the start form has a "no Search Console" tick in step 4 and sends it only 
  const ft=require('../src/growth-free/form-texts.cjs');
  const all=JSON.stringify(ft);
  for(const t of ['I have no Search Console data for this page','Ik heb geen Search Console-gegevens voor deze pagina','No tengo datos de Search Console para esta página'])assert.ok(all.includes(t),t);
- assert.ok(all.includes('AI answers are collected automatically.'),'step 4 says why it is not needed to start');
+ for(const [lang,evidence,optional] of [
+  ['en','Add real AI answers and their sources','Sitemap and Search Console exports are optional.'],
+  ['nl','Voeg echte AI-antwoorden en hun bronnen toe','Sitemap en Search Console-export zijn optioneel.'],
+  ['es','Añade respuestas reales de IA y sus fuentes','El sitemap y la exportación de Search Console son opcionales.']
+ ]) {
+  const hint=ft.FORM_TEXTS[lang].simpleOptionalHint;
+  assert.ok(hint.includes(evidence),lang+': step 4 requests real evidence');
+  assert.ok(hint.includes(optional),lang+': step 4 explains Search Console remains optional');
+ }
 });
 
 test('the choice is stored with the check',async()=>{
