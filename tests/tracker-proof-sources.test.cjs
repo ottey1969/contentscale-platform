@@ -41,7 +41,7 @@ test('proof linking requires both capabilities and never updates the protected b
       CREATE TABLE tracker_case_studies (id INT, tracker_client_id INT, tracker_page_id INT, canonical_url TEXT, status TEXT, baseline_data JSONB);
       CREATE TABLE tracker_case_study_events (id BIGSERIAL,case_study_id INT NOT NULL,tracker_page_id INT,event_type TEXT,event_at TIMESTAMPTZ DEFAULT NOW(),source TEXT,event_data JSONB);
       CREATE TABLE growth_free_checks (id BIGINT,public_id TEXT,access_key TEXT,url TEXT,status TEXT,query TEXT,finished_at TIMESTAMPTZ,summary JSONB,publication_history JSONB,contentscore_history JSONB);
-      CREATE TABLE growth_free_ai_answers (check_id BIGINT,engine TEXT,raw_text TEXT,parsed JSONB,created_at TIMESTAMPTZ);
+      CREATE TABLE growth_free_ai_answers (check_id BIGINT,engine TEXT,raw_text TEXT,parsed JSONB,created_at TIMESTAMPTZ DEFAULT NOW(),UNIQUE(check_id,engine));
       CREATE TABLE growth_free_gsc_uploads (id INT,check_id BIGINT,file_name TEXT,status TEXT,basis TEXT,period_start DATE,period_end DATE,totals JSONB,queries JSONB,created_at TIMESTAMPTZ);
       INSERT INTO tracker_clients VALUES(1,'first',NULL),(2,'second',NULL);
     `);
@@ -92,9 +92,18 @@ test('proof linking requires both capabilities and never updates the protected b
     await api.post('/api/tracker-client/first/pages/8/proof-sources').send(ordinary).expect(200);
     await api.post('/api/tracker-client/first/pages/8/proof-sources').send(ordinary).expect(200);
     await api.post('/api/tracker-client/second/pages/9/proof-sources').send(ordinary).expect(409);
+    const growthStore = require('../src/growth-free/store.cjs');
+    await pool.query(`ALTER TABLE growth_free_ai_answers ADD COLUMN observation_history JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    const observation = { checkId: 2, engine: 'chatgpt' };
+    const withoutCitation = { resources_status: 'MISSING', sources_verifiable: false, sources: [] };
+    const withCitation = { resources_status: 'LISTED', sources_verifiable: true, sources: [ordinaryUrl] };
+    await growthStore.saveAiAnswer(pool, { ...observation, rawText: 'First answer', parsed: withoutCitation });
+    await growthStore.saveAiAnswer(pool, { ...observation, rawText: 'Second answer', parsed: withCitation });
+    await growthStore.saveAiAnswer(pool, { ...observation, rawText: 'Second answer', parsed: withCitation });
     const ordinaryProof = await api.get('/api/tracker-client/first/pages/8/proof-sources').expect(200);
     assert.equal(ordinaryProof.body.proof_sources.free_growth.length, 1);
     assert.equal(ordinaryProof.body.proof_sources.free_growth[0].query, 'ordinary query');
+    assert.deepEqual(ordinaryProof.body.proof_sources.free_growth[0].ai.map(item => item.exact_url_listed), [null, true]);
     await api.get('/api/tracker-client/second/pages/8/proof-sources').expect(404);
     assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM tracker_case_studies')).rows[0].count, 3);
     await pool.query('UPDATE gsc_reports SET revoked_at=NOW()');

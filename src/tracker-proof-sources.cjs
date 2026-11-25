@@ -43,7 +43,7 @@ async function loadProofSources(pool, { clientId, pageId, url, events }) {
            FROM growth_free_checks WHERE id=$1 AND status='DONE'`, [ref.source_id])).rows[0];
       if (!row || !exact(row.url, url)) continue;
       const gsc = (await growth.listGscUploads(pool, ref.source_id)).filter(item => item.status === 'VERIFIED_FOR_PAGE');
-      const ai = (await growth.listAiAnswers(pool, ref.source_id)).map(({ engine, parsed, created_at }) => ({
+      const ai = (await growth.listAiAnswerObservations(pool, ref.source_id)).map(({ engine, parsed, created_at }) => ({
         engine, recorded_at: created_at, source_status: parsed?.resources_status ?? null,
         exact_url_listed: parsed?.sources_verifiable === true ? (parsed.sources || []).some(source => exact(source, url)) : null
       }));
