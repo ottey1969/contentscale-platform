@@ -117,8 +117,18 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     assert.equal(await group.count(),1);
     assert.equal(await group.evaluate(e=>e.open),false);
     await group.locator('summary').click();
-    assert.equal(await group.locator('input[type=checkbox]').count(),4);
-    assert.equal(await group.locator('input:disabled').count(),1);
+    assert.equal(await group.locator('input[data-rh-id]').count(),4);
+    assert.equal(await group.locator('input[data-rh-select-group]').count(),1);
+    assert.equal(await group.locator('input[data-rh-id]:disabled').count(),1);
+    await page.locator('#rhCollapse').click();
+    assert.equal(await group.evaluate(e=>e.open),false);
+    await group.locator('input[data-rh-select-group]').check();
+    assert.match(await page.locator('#rhCount').textContent(),/3 selected/);
+    await page.locator('#rhExpand').click();
+    assert.equal(await group.evaluate(e=>e.open),true);
+    assert.equal(await group.locator('input[data-rh-id]:checked').count(),3);
+    await group.locator('input[data-rh-select-group]').uncheck();
+    assert.match(await page.locator('#rhCount').textContent(),/0 selected/);
     await page.locator('#rhFilterSelect').click();
     assert.match(await page.locator('#rhCount').textContent(),/3 selected/);
     await page.locator('#rhClear').click();
@@ -132,9 +142,23 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     assert.equal(del.deleted,0);
     const remaining=(await pool.query('SELECT id::text FROM growth_free_checks WHERE email=$1 ORDER BY id',[email])).rows.map(r=>r.id);
     assert.deepEqual(remaining,[running,other]);
+    await pool.query("UPDATE growth_free_checks SET status='DONE' WHERE id=$1",[running]);
+    const finalRemoval=await (await call('POST',endpoint+'/delete',{ids:[running,other],confirm:'DELETE'},write)).json();
+    assert.equal(finalRemoval.deleted,2);
+    const contacts=await (await call('GET','/api/free-growth/admin/contacts?source=growth',null,jar)).json();
+    const retained=contacts.rows.find(r=>r.email===email);
+    assert.ok(retained,'contact remains after the last research is removed');
+    assert.equal(retained.checks,0);
+    assert.equal(retained.url,'https://'+host+'/');
+    const erased=await (await call('POST','/api/free-growth/admin/contacts/delete',{source:'growth',id:email},write)).json();
+    assert.equal(erased.deleted,1);
+    const after=await (await call('GET','/api/free-growth/admin/contacts?source=growth',null,jar)).json();
+    assert.ok(!after.rows.some(r=>r.email===email),'explicit contact removal clears retained metadata');
+
     assert.equal((await pool.query('SELECT COUNT(*)::int n FROM rank_free_accounts WHERE email=$1',[email])).rows[0].n,1);
   } finally {
     if(browser) await browser.close(); if(srv) srv.close();
+    await pool.query('DELETE FROM growth_free_retained_contacts WHERE email=$1',[email]).catch(()=>{});
     await pool.query('DELETE FROM growth_free_checks WHERE email=$1',[email]).catch(()=>{});
     await pool.query('DELETE FROM rank_free_accounts WHERE email=$1',[email]).catch(()=>{});
     await pool.end();

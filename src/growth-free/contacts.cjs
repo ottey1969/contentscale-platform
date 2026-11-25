@@ -18,17 +18,19 @@ const RANK_SQL = `SELECT a.id::text AS id, a.email, a.lang, (a.marketing_consent
   GROUP BY a.id, p.id ORDER BY a.created_at DESC LIMIT ${MAX_ROWS}`;
 // Free Growth: one row per e-mail address, with its latest check (page, search term, country, language).
 const GROWTH_SQL = `WITH c AS (
-   SELECT id, LOWER(email) AS email, url, query, marketing_consent, created_at,
+   SELECT id, LOWER(email) AS email, url, query, marketing_consent AS tips, created_at, created_at AS last_at, 1 AS checks,
     UPPER(COALESCE(market->'countries'->>0, report->'search_discovery'->'search_locale'->>'gl', '')) AS country,
     COALESCE(market->>'language', report->'search_discovery'->'search_locale'->>'hl', '') AS language
-   FROM growth_free_checks WHERE COALESCE(email,'')<>'')
-  SELECT email AS id, email, BOOL_OR(marketing_consent) AS tips, COUNT(*)::int AS checks, MIN(created_at) AS created_at, MAX(created_at) AS last_at,
-   (ARRAY_AGG(url ORDER BY id DESC))[1] AS url, (ARRAY_AGG(query ORDER BY id DESC))[1] AS query,
-   (ARRAY_AGG(country ORDER BY id DESC))[1] AS country, (ARRAY_AGG(language ORDER BY id DESC))[1] AS language
-  FROM c GROUP BY email ORDER BY MAX(created_at) DESC LIMIT ${MAX_ROWS}`;
+   FROM growth_free_checks WHERE COALESCE(email,'')<>''
+   UNION ALL
+   SELECT 0::bigint,email,url,query,tips,created_at,last_at,0,country,language FROM growth_free_retained_contacts)
+  SELECT email AS id, email, BOOL_OR(tips) AS tips, SUM(checks)::int AS checks, MIN(created_at) AS created_at, MAX(last_at) AS last_at,
+   (ARRAY_AGG(url ORDER BY last_at DESC,id DESC))[1] AS url, (ARRAY_AGG(query ORDER BY last_at DESC,id DESC))[1] AS query,
+   (ARRAY_AGG(country ORDER BY last_at DESC,id DESC))[1] AS country, (ARRAY_AGG(language ORDER BY last_at DESC,id DESC))[1] AS language
+  FROM c GROUP BY email ORDER BY MAX(last_at) DESC LIMIT ${MAX_ROWS}`;
 
 async function rows(pool, source) {
-  try { return (await pool.query(source === 'rank' ? RANK_SQL : GROWTH_SQL)).rows.map(r => ({ ...r, country: countryOf(r.country) })); }
+  try { if(source === 'growth') await require('./store.cjs').ensureTables(pool); return (await pool.query(source === 'rank' ? RANK_SQL : GROWTH_SQL)).rows.map(r => ({ ...r, country: countryOf(r.country) })); }
   catch (e) { if (missingTable(e)) return []; throw e; }
 }
 // All contacts of a source, the countries with their numbers, and the selection (country, tips only).
@@ -49,9 +51,11 @@ async function deleteContact(pool, { source, id }) {
   if (source === 'growth') {
     const email = String(id || '').trim().toLowerCase(); if (!email.includes('@')) return 0;
     try {
+      await require('./store.cjs').ensureTables(pool);
       const h = await pool.query('DELETE FROM growth_free_hire_requests WHERE LOWER(email)=$1', [email]);
       const c = await pool.query("DELETE FROM growth_free_checks WHERE LOWER(email)=$1 OR COALESCE(emails,'[]'::jsonb) ? $1", [email]);
-      return (c.rowCount || 0) + (h.rowCount || 0) > 0 ? 1 : 0;
+      const retained = await pool.query('DELETE FROM growth_free_retained_contacts WHERE email=$1',[email]);
+      return (c.rowCount || 0) + (h.rowCount || 0) + (retained.rowCount || 0) > 0 ? 1 : 0;
     } catch (e) { if (missingTable(e)) return 0; throw e; }
   }
   return 0;
