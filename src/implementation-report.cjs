@@ -41,4 +41,4 @@ function ownerReport(report,lang='en'){
  const l=labels[lang],keys=['content','technical_seo','schema','geo','ux','general'];
  return [l.title,'',l.url+': '+report.url,l.date+': '+(report.published_at||l.pending),l.status+': '+l[report.status],'',l.changes+':',report.summary,'',l.types+': '+report.change_types.map(t=>categories[lang][keys.indexOf(t)]).join(', '),l.proof+': '+(report.evidence||l.none),'',l.next].join('\n');
 }
-module.exports={VERSION,parseImplementationReport,ownerReport};
+module.exports={VERSION,exactUrl,parseImplementationReport,ownerReport};

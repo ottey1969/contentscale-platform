@@ -1,0 +1,170 @@
+'use strict';
+
+const { VERSION, exactUrl, parseImplementationReport, ownerReport } = require('./implementation-report.cjs');
+
+function resolveTarget(brief, domain) {
+  if (typeof domain !== 'string' || !domain.trim()) throw new Error('The Tracker website is missing');
+  const site = new URL(exactUrl(/^https?:\/\//i.test(domain) ? domain : 'https://' + domain));
+  const decision = brief.content_decision || {};
+  const treatment = String(decision.recommended_treatment || '').toUpperCase();
+  if (treatment === 'CREATE_NEW_PAGE') {
+    const slug = String(brief.meta_package?.url_slug || '').replace(/^\/(?!\/)/, '').replace(/\/$/, '');
+    if (!slug || !slug.split('/').every(part => /^[\p{L}\p{N}_-]+$/u.test(part))) {
+      throw new Error('The approved Brief needs a valid page slug');
+    }
+    return { mode: 'CREATE', url: new URL('/' + slug + '/', site).href };
+  }
+  if (['EXPAND_EXISTING_PAGE', 'OPTIMIZE_EXISTING_PAGE'].includes(treatment)) {
+    const url = new URL(exactUrl(decision.closest_existing_url));
+    if (url.hostname.replace(/^www\./, '') !== site.hostname.replace(/^www\./, '') || url.port !== site.port || url.search) {
+      throw new Error('The approved target must belong to this Tracker website');
+    }
+    return { mode: treatment === 'EXPAND_EXISTING_PAGE' ? 'EXPAND' : 'OPTIMIZE', url: url.href };
+  }
+  throw new Error('The Brief needs an approved page decision');
+}
+
+function readReport(raw, brief, domain, language) {
+  const target = resolveTarget(brief, domain);
+  const report = parseImplementationReport(raw, target.url);
+  return { target, report, owner_report: ownerReport(report, language) };
+}
+
+function publicationReport(raw, brief, domain, language) {
+  const result = readReport(raw, brief, domain, language);
+  if (result.report.status !== 'published') throw new Error('An explicit publication report is required');
+  return result;
+}
+
+function editorInstructions(brief, domain) {
+  const { mode, url } = resolveTarget(brief, domain);
+  const actions = (Array.isArray(brief.surgical_changes) ? brief.surgical_changes : [])
+    .filter(item => typeof item?.change === 'string')
+    .map(item => '- ' + [item.where, item.change].filter(value => typeof value === 'string').join(': '));
+  return [
+    mode + ' ' + url,
+    mode === 'CREATE' ? 'Create the page using the approved blueprint below.' :
+      'Edit the existing page in place. Preserve content outside the approved changes.',
+    ...actions,
+    'Return the page content for approval. Perform CMS changes or publication only when authorized.',
+    'After execution, return a separate JSON Implementation Report with schema "' + VERSION + '" and url "' + url + '".',
+    'Set status to implemented when edits have been applied, not_published when publication has not occurred and edits are still a draft, or published only after confirmed publication.',
+    'Include summary (actual changes, up to 500 characters), change_types (one or more of content, technical_seo, schema, geo, ux, general), and evidence (available editor evidence or null).',
+    'Use published_at as the actual UTC timestamp YYYY-MM-DDTHH:mm:ssZ for confirmed publication, and null otherwise. Never infer publication, supply invented evidence, or claim independent verification.'
+  ].join('\n');
+}
+
+module.exports = { resolveTarget, readReport, publicationReport, editorInstructions };
+
+function response(result, trackerPageId) {
+  return {
+    success: true, ...result, status: result.report.status, tracker_page_id: trackerPageId,
+    published_url: trackerPageId ? result.report.url : null, tracker_entered: Boolean(trackerPageId)
+  };
+}
+
+function registerRoutes(app, pool, resolveBrief) {
+  const path = '/api/tracker-client/:token/prewrite-brief/:id';
+  async function save(req, res, publishing) {
+    let db;
+    let committed = false;
+    try {
+      const scope = await resolveBrief(req.params.token, req.params.id);
+      if (scope.error) return res.status(scope.code).json({ success: false, error: scope.error });
+      db = await pool.connect();
+      await db.query('BEGIN');
+      const { rows: [row] } = await db.query(
+        `SELECT b.status, b.keyword, b.brief_json, b.language, b.tracker_page_id,
+                b.implementation_reports, c.domain
+           FROM prewrite_briefs b JOIN tracker_clients c ON c.id=b.client_id
+          WHERE b.id=$1 AND b.client_id=$2 FOR UPDATE OF b`, [scope.briefId, scope.clientId]);
+      if (!row || !['approved', 'published'].includes(row.status)) {
+        return res.status(409).json({ success: false, error: 'The Brief requires lead approval' });
+      }
+      let result;
+      try {
+        const parse = publishing ? publicationReport : readReport;
+        result = parse(req.body?.report, row.brief_json, row.domain, row.language);
+      } catch (error) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      const { target, report } = result;
+      const reports = row.implementation_reports || [];
+      const serializedReport = JSON.stringify(report);
+      const seen = (await db.query(
+        "SELECT 1 FROM jsonb_array_elements($1::jsonb) entry WHERE entry->'report'=$2::jsonb",
+        [JSON.stringify(reports), serializedReport])).rowCount > 0;
+      if (seen) {
+        await db.query('COMMIT');
+        committed = true;
+        return res.json(response(result, publishing ? row.tracker_page_id : null));
+      }
+      if (row.status === 'published' || (!publishing && report.status === 'published')) {
+        return res.status(409).json({ success: false, error: 'Confirm a publication through the publication action for an approved Brief' });
+      }
+
+      let trackerPageId = null;
+      if (publishing) {
+        const intent = row.brief_json.search_intent?.primary || row.brief_json.search_intent;
+        const values = [scope.clientId, target.url, row.keyword, typeof intent === 'string' ? intent : null, scope.briefId];
+        const inserted = await db.query(
+          `INSERT INTO tracker_pages (tracker_client_id,url,keyword,intent,check_frequency,next_check_at,
+                                      is_active,implementation_status,prewrite_brief_id,created_at)
+           VALUES ($1,$2,$3,$4,'weekly',NOW(),TRUE,'baseline_pending',$5,NOW())
+           ON CONFLICT (tracker_client_id,url) WHERE tracker_client_id IS NOT NULL DO NOTHING
+           RETURNING id`, values);
+        const page = inserted.rows[0] || (await db.query(
+          'SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', values.slice(0, 2))).rows[0];
+        trackerPageId = page.id;
+        await db.query(
+          "UPDATE prewrite_briefs SET status='published', published_at=$3, published_url=$4, tracker_page_id=$5 WHERE id=$1 AND client_id=$2",
+          [scope.briefId, scope.clientId, report.published_at, report.url, trackerPageId]);
+      }
+      await db.query(
+        `UPDATE prewrite_briefs SET implementation_reports=implementation_reports ||
+            jsonb_build_array(jsonb_build_object('recorded_at',to_char(NOW() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+                                                 'report',$3::jsonb))
+          WHERE id=$1 AND client_id=$2`, [scope.briefId, scope.clientId, serializedReport]);
+      await db.query('COMMIT');
+      committed = true;
+      return res.json(response(result, trackerPageId));
+    } catch (error) {
+      console.error('[prewrite-implementation]', error.message);
+      return res.status(500).json({ success: false, error: 'Could not save the implementation report' });
+    } finally {
+      if (db) {
+        let rollbackError;
+        try { if (!committed) await db.query('ROLLBACK'); } catch (error) { rollbackError = error; }
+        db.release(rollbackError);
+      }
+    }
+  }
+  app.get(path + '/implementation-report', async (req, res) => {
+    try {
+      const scope = await resolveBrief(req.params.token, req.params.id);
+      if (scope.error) return res.status(scope.code).json({ success: false, error: scope.error });
+      const { rows: [row] } = await pool.query(
+        `SELECT b.brief_json, b.language, b.implementation_reports, c.domain
+           FROM prewrite_briefs b JOIN tracker_clients c ON c.id=b.client_id
+          WHERE b.id=$1 AND b.client_id=$2`, [scope.briefId, scope.clientId]);
+      if (!row) return res.status(404).json({ success: false, error: 'Brief not found' });
+      let instructions = null;
+      try { instructions = editorInstructions(row.brief_json, row.domain); } catch {}
+      const { keyword, content_decision, search_intent, meta_package, ai_answer, opening_passage, page_blueprint, fact_safety } = row.brief_json;
+      res.set('Cache-Control', 'no-store').json({
+        success: true, instructions,
+        editor_brief: { keyword, content_decision, search_intent, meta_package, ai_answer, opening_passage, page_blueprint, fact_safety },
+        history: row.implementation_reports.map(item => ({
+          ...item, owner_report: ownerReport(item.report, row.language)
+        }))
+      });
+    } catch (error) {
+      console.error('[prewrite-implementation]', error.message);
+      res.status(500).json({ success: false, error: 'Could not load the implementation reports' });
+    }
+  });
+  app.post(path + '/implementation-report', (req, res) => save(req, res, false));
+  app.post(path + '/publish', (req, res) => save(req, res, true));
+}
+
+module.exports.registerRoutes = registerRoutes;

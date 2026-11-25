@@ -4060,7 +4060,15 @@ app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{t
   const aiEvidence=await pool.query(`SELECT id,engine,revision_cycle,evidence_method,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,verified_at,updated_at,is_cleared
     FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual'
     ORDER BY revision_cycle ASC,COALESCE(updated_at,verified_at,created_at) ASC NULLS LAST,id ASC`,[cr.rows[0].id,req.params.pageId]).catch(()=>({rows:[]}));
-  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,history_protected:true});
+  const implementationReports=await pool.query(`SELECT id AS brief_id, language,
+      COALESCE(to_jsonb(b)->'implementation_reports','[]'::jsonb) AS history
+    FROM prewrite_briefs b WHERE b.client_id=$1 AND b.tracker_page_id=$2 AND b.published_url=$3
+    ORDER BY b.published_at ASC,id ASC`,[cr.rows[0].id,req.params.pageId,cs.canonical_url]);
+  const {ownerReport}=require('./implementation-report.cjs');
+  const prewriteImplementations=implementationReports.rows.flatMap(row=>row.history.map(item=>({
+    brief_id:row.brief_id,...item,owner_report:ownerReport(item.report,row.language)
+  })));
+  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // Passwordless, read-only milestone report. The random token is the share credential.
@@ -5909,7 +5917,8 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/claim', async (req, res)
     if (row.status === 'in_progress' && row.claimed_by && row.claimed_by !== name) {
       return res.status(409).json({ success: false, error: 'Already claimed by ' + row.claimed_by, claimed_by: row.claimed_by });
     }
-    await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW() WHERE id=$2", [name, r.briefId]);
+    const changed = await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW() WHERE id=$2 AND status IS DISTINCT FROM 'published'", [name, r.briefId]);
+    if (!changed.rowCount) return res.status(409).json({ success: false, error: 'This Brief already has a recorded publication' });
     res.json({ success: true, status: 'in_progress', claimed_by: name });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -5919,10 +5928,12 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/assign', async (req, res
     if (r.error) return res.status(r.code).json({ success: false, error: r.error });
     const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
     if (!name) {
-      await pool.query("UPDATE prewrite_briefs SET status='open', claimed_by=NULL, claimed_at=NULL, assigned_at=NULL, deadline=NULL, rejected_at=NULL, reject_reason=NULL WHERE id=$1", [r.briefId]);
+      const changed = await pool.query("UPDATE prewrite_briefs SET status='open', claimed_by=NULL, claimed_at=NULL, assigned_at=NULL, deadline=NULL, rejected_at=NULL, reject_reason=NULL WHERE id=$1 AND status IS DISTINCT FROM 'published'", [r.briefId]);
+      if (!changed.rowCount) return res.status(409).json({ success: false, error: 'This Brief already has a recorded publication' });
       return res.json({ success: true, status: 'open' });
     }
-    await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW(), assigned_at=NOW(), deadline=COALESCE(deadline, NOW()+interval '24 hours'), rejected_at=NULL, reject_reason=NULL WHERE id=$2", [name, r.briefId]);
+    const changed = await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW(), assigned_at=NOW(), deadline=COALESCE(deadline, NOW()+interval '24 hours'), rejected_at=NULL, reject_reason=NULL WHERE id=$2 AND status IS DISTINCT FROM 'published'", [name, r.briefId]);
+    if (!changed.rowCount) return res.status(409).json({ success: false, error: 'This Brief already has a recorded publication' });
     const pr = await pool.query('SELECT deadline FROM prewrite_briefs WHERE id=$1', [r.briefId]);
     res.json({ success: true, status: 'in_progress', claimed_by: name, deadline: (pr.rows[0]||{}).deadline });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -5933,7 +5944,8 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/submit', async (req, res
     if (r.error) return res.status(r.code).json({ success: false, error: r.error });
     const html = String((req.body && req.body.html) || '');
     if (!html.trim()) return res.status(400).json({ success: false, error: 'Paste your written content first' });
-    await pool.query("UPDATE prewrite_briefs SET status='submitted', specialist_html=$1, submitted_at=NOW() WHERE id=$2", [html, r.briefId]);
+    const changed = await pool.query("UPDATE prewrite_briefs SET status='submitted', specialist_html=$1, submitted_at=NOW() WHERE id=$2 AND status IS DISTINCT FROM 'published'", [html, r.briefId]);
+    if (!changed.rowCount) return res.status(409).json({ success: false, error: 'This Brief already has a recorded publication' });
     res.json({ success: true, status: 'submitted' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -5951,7 +5963,8 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/approve', async (req, re
     const r = await _resolvePWBrief(req.params.token, req.params.id);
     if (r.error) return res.status(r.code).json({ success: false, error: r.error });
     const name = String((req.body && req.body.name) || '').trim().slice(0, 80) || 'Lead';
-    await pool.query("UPDATE prewrite_briefs SET status='approved', approved_at=NOW(), approved_by=$1 WHERE id=$2", [name, r.briefId]);
+    const changed = await pool.query("UPDATE prewrite_briefs SET status='approved', approved_at=NOW(), approved_by=$1 WHERE id=$2 AND status IS DISTINCT FROM 'published'", [name, r.briefId]);
+    if (!changed.rowCount) return res.status(409).json({ success: false, error: 'This Brief already has a recorded publication' });
     res.json({ success: true, status: 'approved', approved_by: name });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -5960,41 +5973,12 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/reject', async (req, res
     const r = await _resolvePWBrief(req.params.token, req.params.id);
     if (r.error) return res.status(r.code).json({ success: false, error: r.error });
     const reason = String((req.body && req.body.reason) || '').trim().slice(0, 600);
-    await pool.query("UPDATE prewrite_briefs SET status='in_progress', rejected_at=NOW(), reject_reason=$1, submitted_at=NULL, specialist_html=NULL WHERE id=$2", [reason || null, r.briefId]);
+    const changed = await pool.query("UPDATE prewrite_briefs SET status='in_progress', rejected_at=NOW(), reject_reason=$1, submitted_at=NULL, specialist_html=NULL WHERE id=$2 AND status IS DISTINCT FROM 'published'", [reason || null, r.briefId]);
+    if (!changed.rowCount) return res.status(409).json({ success: false, error: 'This Brief already has a recorded publication' });
     res.json({ success: true, status: 'in_progress', reason: reason });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.post('/api/tracker-client/:token/prewrite-brief/:id/publish', async (req, res) => {
-  try {
-    const r = await _resolvePWBrief(req.params.token, req.params.id);
-    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
-    const cur = await pool.query('SELECT status, keyword, brief_json FROM prewrite_briefs WHERE id=$1', [r.briefId]);
-    const st = (cur.rows[0] || {}).status;
-    if (st !== 'approved' && st !== 'published') return res.status(409).json({ success: false, error: 'Brief must be approved by the lead before publishing' });
-    const publishedUrl = String((req.body && req.body.published_url) || '').trim();
-    if (!publishedUrl || !/^https?:\/\//i.test(publishedUrl)) return res.status(400).json({ success:false, error:'Paste the full live URL. A new Pre-Write page must enter Tracker before it can build Baseline, Proof & History.' });
-    const existing = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND LOWER(url)=LOWER($2) LIMIT 1', [r.clientId,publishedUrl]);
-    let trackerPageId = existing.rows[0] && existing.rows[0].id;
-    if (!trackerPageId) {
-      const bj=(cur.rows[0]&&cur.rows[0].brief_json)||{};
-      const intent=(bj.search_intent&&bj.search_intent.primary)||bj.search_intent||null;
-      const added=await pool.query(`INSERT INTO tracker_pages
-        (tracker_client_id,url,keyword,intent,check_frequency,next_check_at,is_active,implementation_status,prewrite_brief_id,created_at)
-        VALUES ($1,$2,$3,$4,'weekly',NOW(),TRUE,'baseline_pending',$5,NOW()) RETURNING id`,
-        [r.clientId,publishedUrl,(cur.rows[0]&&cur.rows[0].keyword)||'',typeof intent==='string'?intent:null,r.briefId]);
-      trackerPageId=added.rows[0].id;
-    } else {
-      const bj=(cur.rows[0]&&cur.rows[0].brief_json)||{};
-      const expands=String((bj.content_decision&&bj.content_decision.recommended_treatment)||'').toUpperCase()==='EXPAND_EXISTING_PAGE';
-      await pool.query(`UPDATE tracker_pages SET prewrite_brief_id=$1,
-        treatment=CASE WHEN $2 THEN 'EXPAND' ELSE treatment END,
-        implementation_at=NOW(), updated_at=NOW() WHERE id=$3 AND tracker_client_id=$4`,
-        [r.briefId,expands,trackerPageId,r.clientId]);
-    }
-    await pool.query("UPDATE prewrite_briefs SET status='published', published_at=NOW(), published_url=$1, tracker_page_id=$2 WHERE id=$3", [publishedUrl,trackerPageId,r.briefId]);
-    res.json({ success:true, status:'published', published_url:publishedUrl, tracker_page_id:trackerPageId, tracker_entered:true, baseline_status:'pending_first_scan', message:'Published URL entered Tracker. Its first scan becomes the baseline for Proof & History.' });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
+require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief);
 app.post('/api/tracker-client/:token/prewrite-brief/:id/deadline', async (req, res) => {
   try {
     const r = await _resolvePWBrief(req.params.token, req.params.id);
@@ -9613,6 +9597,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(st==='open') return '<span class="bd-wait" style="color:#6b7280">Waiting to be assigned by the lead</span>';
     if(st==='in_progress') return (pw?'':'<button class="bd-btn score" onclick="openScore('+id+')">📊 Score my work</button>')+'<button class="bd-btn done" onclick="openSubmit('+id+','+pw+')">'+(pw?'Submit written content':'Submit finished HTML')+'</button><button class="bd-btn sec" onclick="reopen('+id+','+pw+')">Release</button>';
     if(st==='submitted') return (pw?'':'<button class="bd-btn score" onclick="openScore('+id+')">📊 Re-score</button>')+'<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button><button class="bd-btn sec" onclick="openSubmit('+id+','+pw+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
+    if(st==='approved'&&pw) return '<button class="bd-btn pub" onclick="publish('+id+',true)">'+pwText(1)+'</button><button class="bd-btn sec" onclick="recordPWImplementation('+id+')">'+pwText(2)+'</button><button class="bd-btn sec" onclick="viewHtml('+id+',true)">View</button>';
     if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+id+','+pw+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
     if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
     return '<button class="bd-btn sec" onclick="reopen('+id+','+pw+')">Reopen</button>'; }
@@ -9663,8 +9648,31 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function viewBoardBrief(id){var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(id);})[0];if(!d)return;var ov=_ensureOv();document.getElementById('bdOvTitle').textContent='Citation Brief';document.getElementById('bdOvBody').innerHTML=_boardBriefHtml(d);document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyBriefNow" style="border-color:#7c3aed;color:#c4b5fd">Copy brief</button>';ov.classList.add('on');document.getElementById('bdCopyBriefNow').onclick=function(){copyBrief(id,this);};}
   function _pwVisualB(b){ if(!b)return '(could not load brief)'; var e=esc,cd=b.content_decision||{},fs=b.fact_safety||{},mp=b.meta_package||{},aa=b.ai_answer||{}; var h='<div style="line-height:1.55"><div style="background:#0b1220;border:1px solid #374151;border-radius:10px;padding:12px;margin-bottom:10px"><div style="font-size:10px;color:#9ca3af;font-weight:800">CONTENT DECISION / TREATMENT</div><div style="font-size:17px;font-weight:900;color:#4ade80">'+e(String(cd.recommended_treatment||'STRATEGIST REVIEW').replace(/_/g,' '))+'</div><div style="font-size:11px;color:#cbd5e1">Cannibalization: '+e(cd.cannibalization_risk||'insufficient_data')+'</div>'+(cd.closest_existing_url&&cd.closest_existing_url!=='none'?'<div style="font-size:11px;color:#93c5fd;word-break:break-all">'+e(cd.closest_existing_url)+'</div>':'')+(cd.reason?'<div style="font-size:11px;color:#9ca3af;margin-top:5px">'+e(cd.reason)+'</div>':'')+'</div><div style="font-size:10px;color:#9ca3af;font-weight:800;margin:10px 0 5px">TARGET & INTENT</div><div><strong>'+e(b.keyword||'')+'</strong> · '+e((b.search_intent&&b.search_intent.primary)||b.search_intent||'')+'</div>'; if(mp.seo_title||mp.h1)h+='<div style="font-size:10px;color:#9ca3af;font-weight:800;margin:12px 0 5px">META PACKAGE</div><div><strong>SEO title:</strong> '+e(mp.seo_title||'')+'<br><strong>H1:</strong> '+e(mp.h1||'')+'<br><strong>Slug:</strong> '+e(mp.url_slug||'')+'</div>'; if(aa.primary_question||aa.direct_answer)h+='<div style="font-size:10px;color:#9ca3af;font-weight:800;margin:12px 0 5px">AI ANSWER</div><div><strong>'+e(aa.primary_question||'')+'</strong><br>'+e(aa.direct_answer||'')+'</div>'; if(Array.isArray(b.page_blueprint))h+='<div style="font-size:10px;color:#9ca3af;font-weight:800;margin:12px 0 5px">PAGE BLUEPRINT</div>'+b.page_blueprint.map(function(x,i){return '<div style="padding:7px 0;border-top:1px solid #1f2937"><strong>'+(i+1)+'. '+e(x.h2||'')+'</strong><br><span style="color:#9ca3af">'+e(x.purpose||'')+'</span></div>';}).join(''); var vf=fs.verified_business_facts||[],v1=fs.verify_first||[],bl=fs.blocked_claims||[]; if(vf.length||v1.length||bl.length){h+='<div style="font-size:10px;color:#9ca3af;font-weight:800;margin:12px 0 5px">CLAIMS & FACT SAFETY</div>';if(vf.length)h+='<div style="color:#86efac">VERIFIED<br>'+vf.map(function(x){return '✓ '+e(x)}).join('<br>')+'</div>';if(v1.length)h+='<div style="color:#fbbf24;margin-top:5px">VERIFY FIRST<br>'+v1.map(function(x){return '⚠ '+e(x)}).join('<br>')+'</div>';if(bl.length)h+='<div style="color:#fca5a5;margin-top:5px">DO NOT USE<br>'+bl.map(function(x){return '✕ '+e(x)}).join('<br>')+'</div>';}return h+'</div>'; }
   function _pwPlainB(b){var cd=b.content_decision||{},fs=b.fact_safety||{},mp=b.meta_package||{},aa=b.ai_answer||{},lines=['PRE-WRITE BRIEF','','CONTENT DECISION / TREATMENT',String(cd.recommended_treatment||'STRATEGIST REVIEW').replace(/_/g,' '),'Cannibalization risk: '+(cd.cannibalization_risk||'insufficient_data')];if(cd.closest_existing_url&&cd.closest_existing_url!=='none')lines.push('Existing URL: '+cd.closest_existing_url);if(cd.reason)lines.push(cd.reason);lines.push('','TARGET & INTENT','Keyword: '+(b.keyword||''),'Intent: '+((b.search_intent&&b.search_intent.primary)||b.search_intent||''),'','META PACKAGE','SEO title: '+(mp.seo_title||''),'Meta description: '+(mp.meta_description||''),'H1: '+(mp.h1||''),'Slug: '+(mp.url_slug||''),'','AI ANSWER',aa.primary_question||'',aa.direct_answer||((b.opening_passage||{}).direct_answer)||'','', 'PAGE BLUEPRINT');(b.page_blueprint||[]).forEach(function(x,i){lines.push((i+1)+'. '+(x.h2||''));if(x.purpose)lines.push('   Purpose: '+x.purpose);if(x.cover&&x.cover.length)lines.push('   Cover: '+x.cover.join(' · '));if(x.citation_hook)lines.push('   Citation hook: '+x.citation_hook);});lines.push('','CLAIMS & FACT SAFETY');(fs.verified_business_facts||[]).forEach(function(x){lines.push('VERIFIED: '+x);});(fs.verify_first||[]).forEach(function(x){lines.push('VERIFY FIRST: '+x);});(fs.blocked_claims||[]).forEach(function(x){lines.push('DO NOT USE: '+x);});return lines.join(NL);}
-  function _copyPWBoard(){var b=window._boardPWBrief;if(!b)return;navigator.clipboard.writeText(_pwPlainB(b)).then(function(){alert('Pre-Write Brief copied');});}
-  function viewPWDetail(id){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Pre-Write Brief'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPWPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="_copyPWBoard()">Copy brief</button><button class="bd-btn sec" onclick="closeOv()">Close</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id).then(function(r){return r.json();}).then(function(d){window._boardPWBrief=(d&&d.brief)||null;document.getElementById('bdPWPrev').innerHTML=_pwVisualB(window._boardPWBrief);}).catch(function(){document.getElementById('bdPWPrev').textContent='Could not load';}); }
+  function _copyPWBoard(){var b=window._boardPWBrief;if(!b)return;navigator.clipboard.writeText((window._boardPWInstructions?window._boardPWInstructions+NL+NL:'')+_pwPlainB(b)).then(function(){alert('Pre-Write Brief copied');});}
+  function viewPWDetail(id){
+    var ov=_ensureOv();
+    document.getElementById('bdOvTitle').textContent='Pre-Write Brief';
+    document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPWPrev">Loading...</div>';
+    document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" id="bdCopyPW" disabled onclick="_copyPWBoard()">Copy brief</button><button class="bd-btn sec" onclick="closeOv()">Close</button>';
+    ov.classList.add('on');
+    window._boardPWBrief=null;window._boardPWInstructions=null;
+    var preview=document.getElementById('bdPWPrev');
+    var prefix='/api/tracker-client/'+TOKEN;
+    var get=function(path){return fetch(prefix+path).then(function(r){return r.json();});};
+    get('/prewrite-brief/'+id+'/implementation-report').then(function(result){
+      if(preview!==document.getElementById('bdPWPrev'))return;
+      window._boardPWBrief=result.editor_brief||null;
+      window._boardPWInstructions=result.instructions||null;
+      preview.innerHTML=_pwVisualB(window._boardPWBrief);
+      document.getElementById('bdCopyPW').disabled=!window._boardPWBrief;
+      (result.history||[]).forEach(function(item){
+        var report=document.createElement('pre');
+        report.style.whiteSpace='pre-wrap';
+        report.textContent=item.owner_report;
+        preview.appendChild(report);
+      });
+    }).catch(function(){preview.textContent='Could not load';});
+  }
   function ensureName(){ if(_name) return true; var n=prompt('Enter your name to see the work assigned to you:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
   function post(id,action,body,pw){ return fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
   function claim(id,pw){ if(!ensureName())return; post(id,'claim',{name:_name},pw).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
@@ -9675,7 +9683,34 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function openSubmit(id,pw){ if(!ensureName())return; var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submit written content':'Submit finished HTML'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:8px">'+(pw?'Paste the page content you wrote from this brief. The lead reviews and approves it before you publish.':'Paste your finished, processed HTML. The lead reviews and approves it before you publish.')+'</p><textarea id="bdHtmlIn" placeholder="'+(pw?'<!-- paste your written content here -->':'<!-- paste your finished HTML here -->')+'"></textarea>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Cancel</button><button class="bd-btn done" id="bdSubmitGo">Submit for review</button>'; ov.classList.add('on'); var ta=document.getElementById('bdHtmlIn'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdSubmitGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your content first'); return; } this.textContent='Submitting...'; this.disabled=true; post(id,pw?'submit':'submit-html',pw?{html:html}:{name:_name,html:html},pw).then(function(r){ if(!r.success) alert(r.error||'Failed'); closeOv(); load(); }); }; }
   function openScore(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Score my work'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:6px">Add the brief + score recommendations to your improved HTML, paste it below, then Scan. We score it with the real GRAAF engine \\u2014 no manual numbers. Before = your live page now; After = your improved HTML.</p><p style="font-size:11px;color:#6b7280;margin-bottom:8px">Tool: <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="color:#a78bfa">app.contentscale.site</a></p><textarea id="bdScoreIn" placeholder="<!-- paste your IMPROVED HTML here -->"></textarea><div id="bdScoreResult" style="margin-top:10px"></div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn score" id="bdScoreGo">Scan &amp; score</button>'; ov.classList.add('on'); var ta=document.getElementById('bdScoreIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdScoreGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your improved HTML first'); return; } var btn=this; btn.textContent='Scanning...'; btn.disabled=true; var rb=document.getElementById('bdScoreResult'); rb.innerHTML='<span style="color:#9ca3af;font-size:12px">Running GRAAF scan...</span>'; post(pageId,'score-work',{html:html}).then(function(r){ btn.textContent='Scan & score'; btn.disabled=false; if(!r||!r.success){ rb.innerHTML='<span style="color:#f87171;font-size:12px">'+((r&&r.error)||'Could not score')+'</span>'; return; } var b=r.before,a=r.after,dl=r.delta; var h='<div class="bd-score-line" style="font-size:14px">'; if(b!=null) h+='<span class="bd-score-pill" style="color:#9ca3af">Before '+b+'</span>'; if(b!=null&&a!=null) h+='<span style="color:#6b7280">\\u2192</span>'; if(a!=null) h+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; if(dl!=null){ var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); h+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; } h+='</div>'; if(b==null) h+='<p style="font-size:11px;color:#6b7280;margin-top:6px">Could not fetch your live page for a Before score \\u2014 the After score is still real.</p>'; rb.innerHTML=h; load(); }); }; }
   function viewHtml(id,pw){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submitted content':'Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(nothing submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
-  function publish(id,pw){var body={name:_name};if(pw){var u=prompt('Paste the full live URL. It will enter Tracker now; the first scan becomes its baseline:','https://');if(u===null)return;body.published_url=u.trim();if(!/^https?:[/][/]/i.test(body.published_url)){alert('Enter a full URL beginning with https://');return;}}else if(!confirm('Publish this brief? Do this once the page is live.'))return;post(id,'publish',body,pw).then(function(r){if(!r.success){alert(r.error||'Could not publish');return;}if(pw)alert('Published page entered Tracker. Its first scan becomes the baseline for Proof & History.');load();});}
+  var pwLanguage=(navigator.language||'en').split('-')[0];
+  var pwLabels={
+    en:['Paste the Implementation Report JSON','Record reported publication','Save implementation report','Could not save the report'],
+    nl:['Plak het Implementation Report als JSON','Gemelde publicatie vastleggen','Implementatierapport opslaan','Rapport opslaan mislukt'],
+    es:['Pega el informe de implementación en JSON','Registrar la publicación comunicada','Guardar informe de implementación','No se pudo guardar el informe']
+  };
+  function pwText(index){return (pwLabels[pwLanguage]||pwLabels.en)[index];}
+  function publish(id,pw){
+    if(pw){
+      var report=prompt(pwText(0));
+      if(!report)return;
+      post(id,'publish',{report:report},true).then(function(r){
+        if(!r.success){alert(r.error||pwText(3));return;}
+        alert(r.owner_report);load();
+      }).catch(function(){alert(pwText(3));});
+      return;
+    }
+    if(!confirm('Publish this brief? Do this once the page is live.'))return;
+    post(id,'publish',{name:_name},false).then(function(r){if(!r.success){alert(r.error||'Could not publish');return;}load();});
+  }
+  function recordPWImplementation(id){
+    var report=prompt(pwText(0));
+    if(!report)return;
+    post(id,'implementation-report',{report:report},true).then(function(r){
+      if(!r.success){alert(r.error||pwText(3));return;}
+      alert(r.owner_report);load();
+    }).catch(function(){alert(pwText(3));});
+  }
   function copyBrief(pageId, btn){
     var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(pageId);})[0];
     if(!d){if(btn)btn.textContent='Not found';return;}
@@ -12221,6 +12256,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS reject_reason TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS implementation_reports JSONB NOT NULL DEFAULT '[]'::jsonb`).catch(()=>{});
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS published_url TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS tracker_page_id INTEGER`).catch(()=>{});
   // v503 — persistent, revocable-by-rotation read-only share credential for one saved Brief.
@@ -46005,6 +46041,9 @@ function openCaseStudy(pageId){
     function yesNo(v){return v===true||v==='true'||v==='t'||v===1||v==='1';}
     function evidenceCell(v){return '<span style="font-weight:900;color:'+(yesNo(v)?'#4ade80':'#f87171')+'">'+(yesNo(v)?'YES':'NO')+'</span>';}
     var engineTable='<div style="overflow-x:auto;border:1px solid #1e3a8a;border-radius:9px;"><table style="width:100%;border-collapse:collapse;min-width:700px;font-size:10px;"><thead><tr style="background:#0b1220;color:#94a3b8;text-align:left;"><th style="padding:8px;">ENGINE</th><th style="padding:8px;">REVISION</th><th style="padding:8px;">RECOMMENDED</th><th style="padding:8px;">LOCAL / MAPS</th><th style="padding:8px;">DOMAIN CITED</th><th style="padding:8px;">EXACT PAGE</th><th style="padding:8px;">VERIFIED</th></tr></thead><tbody>'+engineOrder.map(function(k){var r=latestByEngine[k],isCurrent=r&&Number(r.revision_cycle||1)===currentRevision;if(!r)return '<tr style="border-top:1px solid #172033;"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td colspan="6" style="padding:8px;color:#fbbf24;">NOT CHECKED — manual evidence required</td></tr>';return '<tr style="border-top:1px solid #172033;opacity:'+(isCurrent?'1':'.58')+';"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td style="padding:8px;color:'+(isCurrent?'#7dd3fc':'#94a3b8')+';">'+(isCurrent?'CURRENT · R':'PRIOR · R')+_csEscH(r.revision_cycle||1)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_recommended)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_local_result)+'</td><td style="padding:8px;">'+evidenceCell(r.domain_cited)+'</td><td style="padding:8px;">'+evidenceCell(r.exact_page_cited)+'</td><td style="padding:8px;color:#94a3b8;white-space:nowrap;">'+_csEscH(utcStamp(r.updated_at||r.verified_at))+'</td></tr>';}).join('')+'</tbody></table></div><div style="font-size:10px;color:'+(currentCount===5?'#4ade80':'#fbbf24')+';margin-top:7px;font-weight:800;">Revision '+currentRevision+': '+currentCount+'/5 manually checked'+(currentCount===5?' · complete':' · recheck all five engines after publication')+'. Prior revisions are comparison evidence only.</div>';
+    var prewriteReports=(d.prewrite_implementations||[]).map(function(item){
+      return '<details><summary>'+_csEscH(utcStamp(item.recorded_at))+'</summary><pre style="white-space:pre-wrap">'+_csEscH(item.owner_report)+'</pre></details>';
+    }).join('');
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">'+_csEscH(caseName)+'</h2>'+(isPerfectRoofing?'<div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div>':'')+'<div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LOCKED BASELINE · '+_csEscH(utcStamp(cs.baseline_at))+'</div>'
@@ -46014,6 +46053,7 @@ function openCaseStudy(pageId){
       +'<div style="margin-top:14px;padding:10px;background:#111827;border-left:3px solid #f59e0b;border-radius:6px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Current guardrail:</b> '+_csEscH(evidenceCorrected?'Preserve the historical baseline, but do not claim an exact-page AIO citation until a verifiable source URL supports it. Measure recommendation, Local/Maps visibility, domain citation and exact-page citation separately.':(b.treatment_guardrail||'Preserve proven wins and measure incremental changes.'))+'</div>'
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 7px;">Five-engine AI evidence</h3>'+engineTable
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Immutable HTML versions</h3>'+(versionList||'<div style="color:#fbbf24;font-size:11px;">No pre-publication HTML saved yet. Use “Save live version before publishing” right before you publish.</div>')
+      +(prewriteReports?'<div style="margin:16px 0">'+prewriteReports+'</div>':'')
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Proof timeline</h3>'+(timeline||'<div style="color:#64748b;font-size:11px;">No events yet.</div>')
       +'<div style="font-size:10px;color:#64748b;margin-top:14px;">'+snaps.length+' dated Tracker snapshot(s) linked · '+events.length+' protected event(s) · '+versions.length+' immutable HTML version(s)</div>';
   }).catch(function(e){box.innerHTML='<div style="color:#f87171;">'+_csEscH(e.message)+'</div>';});
@@ -48420,9 +48460,13 @@ function copyPrewriteBrief(btn) {
     } catch(e) { done(false); }
   }
 }
-function copyPrewriteForExternalAi(btn){
+async function copyPrewriteForExternalAi(btn){
   var brief=_lastPrewriteBriefExternalText||_lastPrewriteBriefText||'';
   if(!brief){if(btn){btn.textContent='No Brief to copy';setTimeout(function(){btn.textContent='Copy for external AI';},1600);}return;}
+  var implementation=null;
+  if(!_pwbNetworkPlacement()&&_pwbCurrentBriefId){
+    try{implementation=await api('/prewrite-brief/'+encodeURIComponent(_pwbCurrentBriefId)+'/implementation-report');}catch(_e){}
+  }
   var prompt=[
     'Write the complete Publisher Edition from the APPROVED ContentScale Pre-Write Brief below.',
     '',
@@ -48439,6 +48483,11 @@ function copyPrewriteForExternalAi(btn){
     'APPROVED CONTENTSCALE PRE-WRITE BRIEF:',
     brief
   ].join('\\n');
+  if(implementation&&implementation.instructions){
+    prompt=implementation.instructions+'\\n\\n'+prompt.replace(
+      '- Return the complete publication-ready article body. Do not explain the instructions.',
+      '- Return the complete publication-ready article body for approval and follow the Implementation Report instructions above after execution.');
+  }
   var finish=function(ok){if(!btn)return;var o='Copy for external AI';btn.textContent=ok?'✓ External AI prompt copied':'⚠ Copy failed';setTimeout(function(){btn.textContent=o;},1800);};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(prompt).then(function(){finish(true);}).catch(function(){finish(false);});return;}
   try{var ta=document.createElement('textarea');ta.value=prompt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();var ok=document.execCommand('copy');document.body.removeChild(ta);finish(ok);}catch(e){finish(false);}
