@@ -4068,9 +4068,22 @@ app.get(['/api/tracker-client/:token/pages/:pageId/case-study','/api/tracker-cli
   const {rows:[page]}=await pool.query('SELECT id,url,tracker_client_id FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[cr.rows[0].id,req.params.pageId]);
   if(!page)return res.status(404).json({success:false,error:'Tracker page not found'});
   const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events','tracker_case_study_content_versions']});if(!_schema.ready)return res.status(503).json({success:false,schema_ready:false,error:'Controlled case-study schema migration required',missing_tables:_schema.missing_tables});
-  const csR=await pool.query(`SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1`,[cr.rows[0].id,req.params.pageId]);
+  const activeOnly=req.path.endsWith('/case-study');
+  const requestedId=activeOnly?undefined:req.query.case_id;
+  if(requestedId!==undefined&&(typeof requestedId!=='string'||!/^\d{1,10}$/.test(requestedId)||Number(requestedId)>2147483647||Number(requestedId)<1)){
+    return res.status(400).json({success:false,error:'Invalid case study'});
+  }
+  const scope=[page.tracker_client_id,page.id];
+  const studies=activeOnly?[]:(await pool.query(`SELECT id,status,baseline_at FROM tracker_case_studies
+    WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status IN ('active','completed')
+    ORDER BY (status='active') DESC,id DESC`,scope)).rows;
+  const selectedId=requestedId===undefined?studies[0]?.id:Number(requestedId);
+  const csR=activeOnly
+    ?await pool.query(`SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1`,scope)
+    :selectedId?await pool.query(`SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2
+      AND id=$3 AND status IN ('active','completed')`,[...scope,selectedId]):{rows:[]};
   const cs=csR.rows[0]||null;
-  if(!cs&&req.path.endsWith('/case-study'))return res.status(404).json({success:false,error:'No active case study for this page'});
+  if(!cs&&(activeOnly||requestedId!==undefined))return res.status(404).json({success:false,error:activeOnly?'No active case study for this page':'Case study not found for this page'});
   const ev=cs?await pool.query(`SELECT id,event_type,event_at,source,event_data,content_hash FROM tracker_case_study_events WHERE case_study_id=$1 ORDER BY event_at ASC,id ASC LIMIT 500`,[cs.id]):{rows:[]};
   const versions=cs?await pool.query(`SELECT id,version_type,captured_at,source,canonical_url,content_hash,octet_length(html_content) AS html_bytes,version_data
     FROM tracker_case_study_content_versions WHERE case_study_id=$1 ORDER BY captured_at ASC,id ASC LIMIT 500`,[cs.id]):{rows:[]};
@@ -4088,7 +4101,7 @@ app.get(['/api/tracker-client/:token/pages/:pageId/case-study','/api/tracker-cli
     brief_id:row.brief_id,...item,owner_report:ownerReport(item.report,row.language)
   })));
   const proofSources=await trackerProofSources.loadPageProofSources(pool,page);
-  res.set('Cache-Control','no-store').json({success:true,page_url:page.url,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
+  res.set('Cache-Control','no-store').json({success:true,page_url:page.url,case_study:cs,case_studies:studies,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // Passwordless, read-only milestone report. The random token is the share credential.
@@ -4112,7 +4125,13 @@ app.get('/case-study-report/:reportToken',async(req,res)=>{try{
        +'; latest '+(gscAt?'GSC update':'Tracker snapshot')+' '+(observedAt?new Date(observedAt).toISOString().slice(0,10):'unknown')
        +'. Do not interpret unchanged clicks or impressions as a current 30-day performance result. Refresh exact-page GSC evidence before drawing conclusions.');
    const case_study_evidence_freshness_warning='<section role="status" style="background:#3d2b11;color:#ffefbf;border:1px solid #b57a22;padding:14px 18px;border-radius:10px;margin:18px 0"><strong>Evidence freshness:</strong> '+esc(freshnessMessage)+'</section>';
-  const ai0=Object.values(b.ai_evidence||{}).filter(v=>v&&v.exact_page_cited).length,ai1=(Array.isArray(c.ai_evidence)?c.ai_evidence:[]).filter(v=>v&&v.exact_page_cited).length;
+  const engines=['google_aio','chatgpt','perplexity','claude','copilot'];
+  const citationCount=evidence=>{
+    const outcomes=engines.map(engine=>evidence[engine]?.exact_page_cited);
+    return outcomes.every(value=>typeof value==='boolean')?outcomes.filter(value=>value).length:null;
+  };
+  const currentAi=Object.fromEntries((Array.isArray(c.ai_evidence)?c.ai_evidence:[]).filter(row=>row?.engine).map(row=>[row.engine,row]));
+  const ai0=citationCount(b.ai_evidence||{}),ai1=citationCount(currentAi);
   res.set('Cache-Control','no-store');res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>30-day Case Study — ${esc(x.domain)}</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e5eef9;font:15px/1.6 Inter,Segoe UI,sans-serif}.w{max-width:940px;margin:auto;padding:28px}.hero,.card{background:#0b1929;border:1px solid #263b55;border-radius:16px;padding:24px;margin-bottom:16px}.hero{background:linear-gradient(135deg,#0b2440,#312e81)}h1{margin:0 0 5px;font-size:30px}p{color:#c7d2e2}.url{word-break:break-all;color:#7dd3fc}table{width:100%;border-collapse:collapse;background:#f8fafc;color:#0f172a;border-radius:10px;overflow:hidden}th,td{padding:11px;border-bottom:1px solid #dbe3ed;text-align:left}thead th{background:#1d4ed8;color:#fff}.actions{display:flex;gap:10px;flex-wrap:wrap}.actions button{padding:10px 15px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}@media print{body{background:#fff;color:#111}.w{max-width:none}.hero,.card{background:#fff;color:#111;border-color:#ccc}.actions{display:none}.url,p{color:#333}}</style></head><body><main class="w"><section class="hero"><div>ContentScale · protected evidence checkpoint</div><h1>30-day case-study report</h1>${case_study_evidence_freshness_warning}<p>${esc(x.client_name||x.domain)} · ${esc(new Date(x.event_at).toISOString())}</p><div class="url">${esc(x.canonical_url)}</div></section><section class="card"><h2>Direct answer</h2><p>This report compares the immutable starting baseline with the latest evidence saved at the 30-day checkpoint. Missing values remain blank rather than being inferred.</p><p><strong>Primary query:</strong> ${esc(x.primary_query)}</p></section><section class="card"><h2>Baseline versus day 30</h2><table><thead><tr><th>Metric</th><th>Baseline</th><th>Day 30</th><th>Change</th></tr></thead><tbody>${metric('GSC clicks',b.gsc_clicks,c.gsc_clicks)}${metric('GSC impressions',b.gsc_impressions,c.gsc_impressions)}${metric('GSC average position',b.gsc_position,c.gsc_position)}${metric('Google position',b.google_position,c.google_position)}${metric('GRAAF score',b.graaf_score,c.graaf_score)}${metric('Exact-page AI citations (5 engines)',ai0,ai1)}</tbody></table></section><section class="card"><h2>Evidence boundary</h2><p>GSC and AI evidence reflects only the latest data manually or automatically saved before this checkpoint. The five AI engines are not treated as checked unless their evidence was explicitly recorded.</p></section><div class="actions"><button onclick="window.print()">Print / Save PDF</button><button onclick="navigator.clipboard.writeText(location.href)">Copy share link</button></div></main></body></html>`);
 }catch(e){console.error('[case-study-report]',e.message);res.status(500).send('Report could not be generated');}});
 
@@ -46019,7 +46038,7 @@ function startCaseStudy(pageId){
   }).catch(function(e){alert(e.message||'Could not start case study');});
 }
 ${_trackerLiveProofText.toString()}
-function openCaseStudy(pageId){
+function openCaseStudy(pageId,caseId){
   var ov=document.getElementById('caseStudyOv');
   if(!ov){
     ov=document.createElement('div');ov.id='caseStudyOv';ov.style.cssText='position:fixed;inset:0;background:rgba(2,6,23,.84);z-index:100000;display:none;align-items:center;justify-content:center;padding:16px;';
@@ -46028,7 +46047,9 @@ function openCaseStudy(pageId){
     document.body.appendChild(ov);
   }
   var box=document.getElementById('caseStudyBox');box.innerHTML='<div style="padding:28px;text-align:center;color:#7dd3fc;">Loading protected baseline and history...</div>';ov.style.display='flex';
-  api('/pages/'+pageId+'/proof-history','GET').then(function(d){
+  var historyRequest={};box._historyRequest=historyRequest;
+  api('/pages/'+pageId+'/proof-history'+(caseId?'?case_id='+encodeURIComponent(caseId):''),'GET').then(function(d){
+    if(box._historyRequest!==historyRequest)return;
     if(!d||!d.success)throw new Error((d&&d.error)||'Could not load case study');
     var cs=d.case_study||{},b=cs.baseline_data||{};if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}
     var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[],aiRows=d.ai_evidence||[],evidenceCorrected=events.some(function(e){return e.event_type==='evidence_classification_corrected';});
@@ -46110,8 +46131,13 @@ function openCaseStudy(pageId){
       return '<details><summary>'+_csEscH(utcStamp(item.recorded_at))+'</summary><pre style="white-space:pre-wrap">'+_csEscH(item.owner_report)+'</pre>'
          +observations.map(function(proof){return '<p>'+_csEscH(_trackerLiveProofText(proof,lang))+'</p>';}).join('')+'</details>';
     }).join('');
-    var historyLabels={en:['Proof & History','Tracker measurements','Close'],nl:['Bewijs en historie','Tracker-metingen','Sluiten'],es:['Evidencias e historial','Mediciones de Tracker','Cerrar']};
+    var historyLabels={en:['Proof & History','Tracker measurements','Close','Case study','Active','Completed'],nl:['Bewijs en historie','Tracker-metingen','Sluiten','Casestudy','Actief','Afgerond'],es:['Evidencias e historial','Mediciones de Tracker','Cerrar','Caso de estudio','Activo','Finalizado']};
     var historyText=historyLabels[proofLocale]||historyLabels.en;
+    var caseOptions=(d.case_studies||[]).map(function(study){
+      return '<option value="'+_csEscH(study.id)+'"'+(study.id===cs.id?' selected':'')+'>'
+        +_csEscH(historyText[study.status==='active'?4:5]+' · '+utcStamp(study.baseline_at))+'</option>';
+    }).join('');
+    var casePicker=caseOptions?'<label>'+_csEscH(historyText[3])+' <select id="trackerProofCase">'+caseOptions+'</select></label>':'';
     var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+prewriteReports;
     if(!d.case_study){
       var trackerMeasurements=snaps.map(function(row){
@@ -46129,7 +46155,8 @@ function openCaseStudy(pageId){
         +(trackerAi?'<h3>'+_csEscH(labels[8])+'</h3><ul>'+trackerAi+'</ul>':'');
       document.getElementById('trackerProofClose').onclick=function(){ov.style.display='none';};
     }else
-    box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">'+_csEscH(caseName)+'</h2>'+(isPerfectRoofing?'<div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div>':'')+'<div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
+    box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">'+_csEscH(historyText[3]+' · '+historyText[cs.status==='active'?4:5])+'</div><h2 style="margin:5px 0 3px;font-size:19px;">'+_csEscH(caseName)+'</h2>'+(isPerfectRoofing?'<div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div>':'')+'<div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
+      +casePicker
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LOCKED BASELINE · '+_csEscH(utcStamp(cs.baseline_at))+'</div>'
       +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',b.google_position,'#fbbf24')+metric('GSC clicks',b.gsc_clicks,'#4ade80')+metric('GSC impressions',b.gsc_impressions==null?'—':Number(b.gsc_impressions).toLocaleString(),'#60a5fa')+metric('GRAAF',b.graaf_score==null?'—':b.graaf_score+'/100','#facc15')+metric('AIO evidence',baselineAioText,baselineAioText.indexOf('CITED')>=0?'#4ade80':'#fbbf24')+'</div>'
@@ -46141,6 +46168,8 @@ function openCaseStudy(pageId){
       +sourceHtml
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Proof timeline</h3>'+(timeline||'<div style="color:#64748b;font-size:11px;">No events yet.</div>')
       +'<div style="font-size:10px;color:#64748b;margin-top:14px;">'+snaps.length+' dated Tracker snapshot(s) linked · '+events.length+' protected event(s) · '+versions.length+' immutable HTML version(s)</div>';
+    var caseSelect=document.getElementById('trackerProofCase');
+    if(caseSelect)caseSelect.onchange=function(){openCaseStudy(pageId,caseSelect.value);};
     document.getElementById('caseStudyLinkProof').onclick=async function(){
       var input=prompt(labels[1]);if(!input)return;
       try{
@@ -46148,10 +46177,10 @@ function openCaseStudy(pageId){
         if(!match)throw Error();
         var id=decodeURIComponent(match[1]),key=link.searchParams.get('k');
         await api('/pages/'+pageId+'/proof-sources','POST',{type:key?'free_growth':'gsc_audit',id:id,key:key||id});
-        openCaseStudy(pageId);
+        openCaseStudy(pageId,caseId);
       }catch(e){alert(labels[2]);}
     };
-  }).catch(function(e){box.innerHTML='<div style="color:#f87171;">'+_csEscH(e.message)+'</div>';});
+  }).catch(function(e){if(box._historyRequest!==historyRequest)return;box.innerHTML='<div style="color:#f87171;">'+_csEscH(e.message)+'</div>';});
 }
 function csPosHist(pageId){
   var ov=document.getElementById('csPosOv');
