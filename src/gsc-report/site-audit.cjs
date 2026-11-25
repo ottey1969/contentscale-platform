@@ -53,7 +53,10 @@ const tags=(html,name)=>String(html||'').match(new RegExp('<'+name+'\\b[^>]*>','
 const metaContent=(html,re)=>{for(const t of tags(html,'meta')){const n=attrOf(t,'name')||attrOf(t,'property');if(n&&re.test(n))return attrOf(t,'content')}return null};
 const samePage=(a,b)=>{try{const x=new URL(a),y=new URL(b);const p=u=>u.pathname.replace(/\/+$/,'')||'/';return x.host.toLowerCase()===y.host.toLowerCase()&&p(x)===p(y)&&x.search===y.search}catch{return false}};
 function pageAudit(html,url,{xRobotsTag=null}={}){
- const h=String(html||'');
+ const source=String(html||'').replace(/<!--[\s\S]*?-->/g,' ')
+  .replace(/<(template|noscript|textarea|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,' ');
+ // Script strings can contain generated headings and link tags that are absent from the document.
+ const h=source.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi,' ');
  const tm=h.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i);
  const title=tm?text(tm[1]):'';
  const description=(metaContent(h,/^description$/i)||'').replace(/\s+/g,' ').trim();
@@ -70,7 +73,7 @@ function pageAudit(html,url,{xRobotsTag=null}={}){
  const words=(text(body).match(/[\p{L}\p{N}][\p{L}\p{N}\p{M}'’-]*/gu)||[]).length;
  // Structured data: the types on the page; an Article twice (theme plus plugin) and JSON-LD that does not parse.
  const schema=[],articleNodes=[];let schemaInvalid=false,articles=0,schemaDescription='';
- for(const m of h.matchAll(/<script\b[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script\s*>/gi)){
+ for(const m of source.matchAll(/<script\b[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script\s*>/gi)){
   let j;try{j=JSON.parse(m[1].trim())}catch{schemaInvalid=true;continue}
   const walk=x=>{if(Array.isArray(x))return x.forEach(walk);if(!x||typeof x!=='object')return;
    const ty=[].concat(x['@type']||[]).map(String).filter(Boolean);if(ty.length){schema.push(...ty);
