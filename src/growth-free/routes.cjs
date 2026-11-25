@@ -1236,7 +1236,7 @@ function adminPage(cfg,api,base,loggedIn){
  <details class="card" id="hireSection"><summary><strong>Hire requests</strong> <span id="hireIndicator" role="status" hidden style="color:var(--blocked);font-weight:700"></span></summary><div id="hireRows"></div><p id="hireStatus" role="status"></p></details>
  <details class="card" id="rankMailSection" data-mail-section="rank"><summary><strong>Rank Tracker Emails</strong></summary><div class="mailRows"></div></details>
  <details class="card" id="gscMailSection" data-mail-section="gsc"><summary><strong>GSC Audit Emails</strong></summary><div class="mailRows"></div></details>
- <details class="card" id="growthMailSection" data-mail-section="growth"><summary><strong>Growth Reminders</strong></summary><div class="mailRows"></div></details>
+ <details class="card" id="growthMailSection" data-mail-section="growth"><summary><strong>Growth Reminders</strong></summary><p>Subscribe to Google Calendar: ContentScale – Scheduled Reminders. Keep the private URL confidential; anyone with it can read the schedule. Google refreshes periodically.</p><p><button type="button" id="calendarCreate">Create / replace private calendar URL</button> <button type="button" class="ghost" id="calendarRevoke">Revoke calendar URL</button></p><div id="calendarLink" role="status"></div><div class="mailRows"></div></details>
  <details class="card" id="researchSection"><summary><strong>Research History</strong></summary><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div></details>
  <details class="card" id="contactsSection"><summary><strong>Contacts per country</strong></summary><div id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = did not tick “Don't send me tips” (or ticked the older “send me tips”).</p>
   <div class="rtabs" role="tablist"><button type="button" class="ctab" data-src="rank" aria-selected="true">Rank tracker</button><button type="button" class="ctab" data-src="growth" aria-selected="false">Free Growth</button></div>
@@ -1330,6 +1330,18 @@ async function loadHire(){
 document.getElementById('hireRows').addEventListener('change',async function(e){var id=e.target.getAttribute('data-hire-id');if(!id)return;var el=e.target;el.disabled=true;var status=document.getElementById('hireStatus');status.textContent='Saving…';try{var d=await post('/admin/hire-requests/status',{id:id,status:el.value});if(!d.success)throw Error(d.error);el.blur();await loadHire();status.textContent='Saved'}catch(err){status.textContent='Save failed';el.blur();await loadHire()}finally{el.disabled=false}});
 function startHirePolling(){if(hireTimer===null)hireTimer=setInterval(function(){if(!document.getElementById('app').hidden&&!document.hidden)loadHire()},60000)}
 document.querySelectorAll('[data-mail-section]').forEach(function(section){section.addEventListener('toggle',function(){if(section.open)loadMail(section)})});
+document.getElementById('calendarCreate').onclick=async function(){
+ var btn=this,target=document.getElementById('calendarLink');if(!confirm('Create a new private calendar URL? Any previous subscription will stop working.'))return;
+ btn.disabled=true;target.textContent='Creating…';
+ try{var d=await post('/admin/reminder-calendar',{action:'rotate'});if(!d.success)throw Error(d.error);target.textContent='Copy this URL now and add it in Google Calendar → Other calendars → From URL. It cannot be shown again.';
+ var field=document.createElement('input');field.readOnly=true;field.value=d.url;field.setAttribute('aria-label','Private calendar URL');target.appendChild(field);field.select();
+ var copy=document.createElement('button');copy.type='button';copy.textContent='Copy URL';copy.onclick=async function(){try{await navigator.clipboard.writeText(field.value);copy.textContent='Copied'}catch(e){field.select()}};target.appendChild(copy);
+ }catch(e){target.textContent='Calendar URL unavailable'}finally{btn.disabled=false}
+};
+document.getElementById('calendarRevoke').onclick=async function(){
+ if(!confirm('Revoke the current calendar URL? This does not cancel reminders.'))return;var btn=this,target=document.getElementById('calendarLink');btn.disabled=true;
+ try{var d=await post('/admin/reminder-calendar',{action:'revoke'});if(!d.success)throw Error(d.error);target.textContent='Calendar URL revoked. Remove the old subscription from Google Calendar.'}catch(e){target.textContent='Revocation failed'}finally{btn.disabled=false}
+};
 async function loadMail(section){
  var root=section.querySelector('.mailRows'),source=section.getAttribute('data-mail-section');root.textContent='Loading…';
  try{var d=await get('/admin/email-overview?source='+encodeURIComponent(source));if(!d.success)throw Error(d.error);
@@ -2341,6 +2353,34 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!admin(req,res))return;const b=req.body||{};
   if(typeof b.id!=='string'||!/^[1-9][0-9]{0,17}$/.test(b.id)||!['NEW','IN_PROGRESS','COMPLETED','ARCHIVED'].includes(b.status))return res.status(400).json({success:false,error:'Invalid status or ID'});
   try{await storage.ensureTables(pool);const r=await pool.query('UPDATE growth_free_hire_requests SET status=$2 WHERE id=$1 RETURNING id',[b.id,b.status]);res.status(r.rowCount?200:404).json({success:!!r.rowCount})}catch(e){res.status(503).json({success:false,error:'Status unavailable'})}
+ });
+ app.post(apiPath+'/admin/reminder-calendar',async(req,res)=>{
+  if(!admin(req,res))return;
+  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer');
+  const action=req.body?.action;
+  if(!['rotate','revoke'].includes(action))return res.status(400).json({success:false,error:'Invalid action'});
+  try{
+   await storage.ensureTables(pool);
+   if(action==='revoke'){await pool.query('DELETE FROM growth_free_calendar_subscription');return res.json({success:true})}
+   const key=crypto.randomBytes(32).toString('base64url'),hash=crypto.createHash('sha256').update(key).digest('hex');
+   const origin=new URL(publicBase()).origin;
+   if(!origin.startsWith('https://'))return res.status(503).json({success:false,error:'HTTPS public URL required'});
+   await pool.query('INSERT INTO growth_free_calendar_subscription(singleton,token_hash) VALUES(TRUE,$1) ON CONFLICT(singleton) DO UPDATE SET token_hash=EXCLUDED.token_hash,created_at=NOW()',[hash]);
+   res.json({success:true,url:origin+apiPath+'/reminder-calendar.ics?key='+encodeURIComponent(key)});
+  }catch(e){res.status(503).json({success:false,error:'Calendar unavailable'})}
+ });
+ app.get(apiPath+'/reminder-calendar.ics',async(req,res)=>{
+  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').set('X-Robots-Tag','noindex, nofollow').set('X-Content-Type-Options','nosniff');
+  const key=req.query?.key;
+  if(!config.adminKey||typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return res.status(404).end();
+  try{
+   await storage.ensureTables(pool);
+   const hash=crypto.createHash('sha256').update(key).digest('hex');
+   const sub=(await pool.query('SELECT token_hash FROM growth_free_calendar_subscription WHERE singleton=TRUE')).rows[0];
+   if(!sub||!store.sameKey(sub.token_hash,hash))return res.status(404).end();
+   const rows=(await pool.query("SELECT public_id,email,emails,access_label,invite_id,url,host,query,reminder_due_at FROM growth_free_checks WHERE status='DONE' AND reminder_due_at IS NOT NULL AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 ORDER BY reminder_due_at,id")).rows;
+   res.type('text/calendar; charset=utf-8').send(require('./reminder-calendar.cjs').buildCalendar(rows));
+  }catch(e){res.status(503).end()}
  });
  app.get(apiPath+'/admin/email-overview',async(req,res)=>{
   if(!admin(req,res))return;const source=String(req.query?.source||'');
