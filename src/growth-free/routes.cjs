@@ -72,6 +72,8 @@ function freeGrowthConfig(env=process.env){
 function freeGrowthDefaults(env){
  return {
   enabled:env.GROWTH_FREE_ENABLED!=='false',
+  // Disabled until dedicated subscription authorization and revocation tests are verified.
+  reminderCalendarEnabled:env.GROWTH_FREE_CALENDAR_ENABLED==='true',
   // Enable only after the WordPress application form is live and mail tested.
   // Existing result links continue to work; new check creation needs owner access or an invite.
   approvalRequired:env.GROWTH_FREE_APPROVAL_REQUIRED==='true',
@@ -1236,7 +1238,7 @@ function adminPage(cfg,api,base,loggedIn){
  <details class="card" id="hireSection"><summary><strong>Hire requests</strong> <span id="hireIndicator" role="status" hidden style="color:#b91c1c;font-weight:700"></span></summary><div id="hireRows"></div><p id="hireStatus" role="status"></p></details>
  <details class="card" id="rankMailSection" data-mail-section="rank"><summary><strong>Rank Tracker Emails</strong> <span id="rankSignupIndicator" role="status" hidden style="color:#b91c1c;font-weight:700"></span></summary><div class="mailRows"></div></details>
  <details class="card" id="gscMailSection" data-mail-section="gsc"><summary><strong>GSC Audit Emails</strong></summary><div class="mailRows"></div></details>
- <details class="card" id="growthMailSection" data-mail-section="growth"><summary><strong>Growth Reminders</strong></summary><p>Subscribe to Google Calendar: ContentScale – Scheduled Reminders. Keep the private URL confidential; anyone with it can read the schedule. Google refreshes periodically.</p><p><button type="button" id="calendarCreate">Create / replace private calendar URL</button> <button type="button" class="ghost" id="calendarRevoke">Revoke calendar URL</button></p><div id="calendarLink" role="status"></div><div class="mailRows"></div></details>
+ <details class="card" id="growthMailSection" data-mail-section="growth"><summary><strong>Growth Reminders</strong></summary>${cfg.reminderCalendarEnabled?`<p>Subscribe to Google Calendar: ContentScale – Scheduled Reminders. Keep the private URL confidential; anyone with it can read the schedule. Google refreshes periodically.</p><p><button type="button" id="calendarCreate">Create / replace private calendar URL</button> <button type="button" class="ghost" id="calendarRevoke">Revoke calendar URL</button></p><div id="calendarLink" role="status"></div>`:'<p class="muted">Google Calendar subscription is not enabled yet.</p>'}<div class="mailRows"></div></details>
  <details class="card" id="researchSection"><summary><strong>Research History</strong></summary><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div></details>
  <details class="card" id="contactsSection"><summary><strong>Contacts per country</strong></summary><div id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = did not tick “Don't send me tips” (or ticked the older “send me tips”).</p>
   <div class="rtabs" role="tablist"><button type="button" class="ctab" data-src="rank" aria-selected="true">Rank tracker</button><button type="button" class="ctab" data-src="growth" aria-selected="false">Free Growth</button></div>
@@ -1333,7 +1335,7 @@ async function refreshRankBadge(){try{var d=await get('/admin/rank-signups');if(
 function startHirePolling(){refreshRankBadge();if(hireTimer===null)hireTimer=setInterval(function(){if(!document.getElementById('app').hidden&&!document.hidden){loadHire();refreshRankBadge()}},60000)}
 
 document.querySelectorAll('[data-mail-section]').forEach(function(section){section.addEventListener('toggle',function(){if(section.open)loadMail(section)})});
-document.getElementById('calendarCreate').onclick=async function(){
+if(document.getElementById('calendarCreate'))document.getElementById('calendarCreate').onclick=async function(){
  var btn=this,target=document.getElementById('calendarLink');if(!confirm('Create a new private calendar URL? Any previous subscription will stop working.'))return;
  btn.disabled=true;target.textContent='Creating…';
  try{var d=await post('/admin/reminder-calendar',{action:'rotate'});if(!d.success)throw Error(d.error);target.textContent='Copy this URL now and add it in Google Calendar → Other calendars → From URL. It cannot be shown again.';
@@ -1341,7 +1343,7 @@ document.getElementById('calendarCreate').onclick=async function(){
  var copy=document.createElement('button');copy.type='button';copy.textContent='Copy URL';copy.onclick=async function(){try{await navigator.clipboard.writeText(field.value);copy.textContent='Copied'}catch(e){field.select()}};target.appendChild(copy);
  }catch(e){target.textContent='Calendar URL unavailable'}finally{btn.disabled=false}
 };
-document.getElementById('calendarRevoke').onclick=async function(){
+if(document.getElementById('calendarRevoke'))document.getElementById('calendarRevoke').onclick=async function(){
  if(!confirm('Revoke the current calendar URL? This does not cancel reminders.'))return;var btn=this,target=document.getElementById('calendarLink');btn.disabled=true;
  try{var d=await post('/admin/reminder-calendar',{action:'revoke'});if(!d.success)throw Error(d.error);target.textContent='Calendar URL revoked. Remove the old subscription from Google Calendar.'}catch(e){target.textContent='Revocation failed'}finally{btn.disabled=false}
 };
@@ -2369,6 +2371,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  });
  app.post(apiPath+'/admin/reminder-calendar',async(req,res)=>{
   if(!admin(req,res))return;
+  if(!config.reminderCalendarEnabled)return res.status(404).json({success:false,error:'Calendar disabled'});
   res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer');
   const action=req.body?.action;
   if(!['rotate','revoke'].includes(action))return res.status(400).json({success:false,error:'Invalid action'});
@@ -2383,6 +2386,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   }catch(e){res.status(503).json({success:false,error:'Calendar unavailable'})}
  });
  app.get(apiPath+'/reminder-calendar.ics',async(req,res)=>{
+  if(!config.reminderCalendarEnabled)return res.status(404).set('Cache-Control','private, no-store').end();
   res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').set('X-Robots-Tag','noindex, nofollow').set('X-Content-Type-Options','nosniff');
   const key=req.query?.key;
   if(!config.adminKey||typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return res.status(404).end();
