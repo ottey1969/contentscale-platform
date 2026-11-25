@@ -1349,11 +1349,11 @@ if(document.getElementById('calendarRevoke'))document.getElementById('calendarRe
 };
 async function loadMail(section){
  var root=section.querySelector('.mailRows'),source=section.getAttribute('data-mail-section');root.textContent='Loading…';
- try{var d=await get('/admin/email-overview?source='+encodeURIComponent(source));if(!d.success)throw Error(d.error);
+ try{var response=await fetch(API+'/admin/email-overview?source='+encodeURIComponent(source),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(20000)});var d=await response.json();if(!response.ok||!d.success)throw Error(d.error);
  root.innerHTML='<p class="muted">'+esc(d.note)+'</p>'+(source==='rank'?'<p><button type="button" class="ghost" data-rank-seen-all>Mark all loaded signups as seen</button> <span class="rankSeenStatus" role="status"></span></p>':'')+'<label>Search<input placeholder="Email, website or URL"></label><div class="mailList"></div>';
  var input=root.querySelector('input'),list=root.querySelector('.mailList');if(source==='rank')rankBadge(d.rows.filter(function(r){return r.is_new}).length);
  function draw(){var q=input.value.toLowerCase().trim(),groups=new Map();d.rows.forEach(function(r){if(q&&![r.email,r.host,r.url].some(function(v){return String(v||'').toLowerCase().includes(q)}))return;var h=r.host||'Unknown website';if(!groups.has(h))groups.set(h,[]);groups.get(h).push(r)});
- list.innerHTML=Array.from(groups.entries()).map(function(g){return '<details class="card" style="padding:10px"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+'</summary>'+g[1].map(function(r){return '<div style="border-top:1px solid var(--line);padding:8px"><strong>'+esc(r.email||'Email not stored')+'</strong> · '+esc(r.status)+(r.is_new?' <strong style="color:#b91c1c">● New</strong> <button type="button" class="ghost" data-rank-seen="'+esc(r.id)+'">Mark as seen</button>':'')+'<br><small>'+esc(r.url||'')+'</small><br><small>'+esc(r.detail||'')+'</small></div>'}).join('')+'</details>'}).join('')||'<p>No matching records.</p>'}
+ list.innerHTML=Array.from(groups.entries()).map(function(g){return '<details class="card" style="padding:10px"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+'</summary>'+g[1].map(function(r){return '<div style="border-top:1px solid var(--line);padding:8px"><strong>'+esc(r.email||'Email not stored')+'</strong> · '+esc(r.status)+(r.module?' · '+esc(r.module):'')+(r.is_new?' <strong style="color:#b91c1c">● New</strong> <button type="button" class="ghost" data-rank-seen="'+esc(r.id)+'">Mark as seen</button>':'')+'<br><small>'+esc(r.url||'')+'</small><br><small>'+esc(r.detail||'')+'</small></div>'}).join('')+'</details>'}).join('')||'<p>No matching records.</p>'}
  input.addEventListener('input',draw);draw();
  if(source==='rank')root.onclick=async function(e){
   var btn=e.target.closest('[data-rank-seen],[data-rank-seen-all]');if(!btn||btn.disabled)return;
@@ -1365,7 +1365,7 @@ async function loadMail(section){
   }catch(err){status.textContent='Could not save; reopen this section to refresh'}finally{btn.disabled=false}
  };
 
- }catch(e){root.textContent='Email overview unavailable'}
+ }catch(e){root.textContent='Email overview unavailable or timed out. ';var retry=document.createElement('button');retry.type='button';retry.textContent='Retry';retry.onclick=function(){loadMail(section)};root.appendChild(retry)}
 }
 var historyRows=[],historySelected=new Set(),historyPage=0,historySize=25,historyBusy=false;
 async function loadHistory(){
@@ -2430,8 +2430,24 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(source==='growth'){
     await storage.ensureTables(pool);
     const records=(await pool.query("SELECT id,email,emails,access_label,invite_id,url,host,status,published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,reminder_attempts FROM growth_free_checks WHERE reminder_due_at IS NOT NULL ORDER BY reminder_due_at,id")).rows;
-    rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
-    note='One-time measurement reminders, grouped by website. Dates in UTC.';
+    rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,module:'Free Growth',due_at:r.reminder_due_at,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
+    note='Measurement reminders from Free Growth and Tracker Growth, grouped by website. Dates in UTC. Only saved reminders appear; a published page without a reminder is not scheduled.';
+    try{
+     const trackerTables=(await pool.query("SELECT to_regclass('tracker_growth_reminders') IS NOT NULL AND to_regclass('tracker_growth_publications') IS NOT NULL AND to_regclass('tracker_pages') IS NOT NULL AND to_regclass('tracker_clients') IS NOT NULL AS available")).rows[0];
+     if(trackerTables.available){
+      const tracker=(await pool.query(`SELECT r.id,r.emails,r.due_at,r.sent_at,r.attempts,g.published_at,g.query,p.url,c.status AS client_status
+       FROM tracker_growth_reminders r JOIN tracker_growth_publications g ON g.id=r.publication_id AND g.tracker_client_id=r.tracker_client_id
+       JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id
+       JOIN tracker_clients c ON c.id=r.tracker_client_id ORDER BY r.due_at,r.id`)).rows;
+      for(const r of tracker){
+       let host;try{host=new URL(r.url).hostname.toLowerCase().replace(/^www\\./,'')}catch(e){host=r.url||'Unknown website'}
+       for(const email of (Array.isArray(r.emails)?r.emails:[])){
+        rows.push({email,host,url:r.url,module:'Tracker Growth',due_at:r.due_at,status:r.sent_at?'Sent':r.attempts>=3?'Failed':['deleted','paused','disabled'].includes(r.client_status)?'Stopped':'Scheduled',detail:'Published '+date(r.published_at)+' · Due '+date(r.due_at)+' · Sent '+date(r.sent_at)+' · Query '+(r.query||'—')});
+       }
+      }
+     }else note+=' Tracker Growth tables are not available on this instance.';
+    }catch(e){note+=' Tracker Growth could not be loaded; Free Growth results remain available.'}
+    rows.sort((a,b)=>new Date(a.due_at)-new Date(b.due_at));
    }else if(source==='rank'){
     await storage.ensureTables(pool);
     const records=(await pool.query("SELECT a.id::text AS id,a.email,a.created_at,a.verified_at,a.opted_out_at,a.marketing_consent,(s.account_id IS NULL) AS is_new,p.host,p.last_digest_at,p.digest_fail_at,p.digest_fail_count,COUNT(k.id) FILTER (WHERE k.active)::int AS active_keywords,MAX(k.next_check_at) FILTER (WHERE k.active) AS last_next_check FROM rank_free_accounts a LEFT JOIN growth_free_rank_signup_seen s ON s.account_id=a.id LEFT JOIN rank_free_projects p ON p.account_id=a.id LEFT JOIN rank_free_keywords k ON k.project_id=p.id GROUP BY a.id,p.id,s.account_id ORDER BY (s.account_id IS NULL) DESC,a.created_at DESC")).rows;
