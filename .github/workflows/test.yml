@@ -35,5 +35,7 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Gemini Live credentials and provider failure regression
         run: node --test tests/gemini-live-token.test.cjs
+      - name: Lint browser and server source
+        run: npm run lint
       - name: Done
         run: echo "OK — CEO domain boundary and startup syntax verified"
