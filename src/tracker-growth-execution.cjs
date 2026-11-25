@@ -1,6 +1,13 @@
 'use strict';
 const {proposalById}=require('./growth-proposal-store.cjs');
 const reminders=require('./growth-measurement-reminders.cjs');
+const {parseImplementationReport}=require('./implementation-report.cjs');
+function validateImported(raw,url,notes,publishedAt){
+ if(raw==null)return null;
+ const report=parseImplementationReport(typeof raw==='string'?raw:JSON.stringify(raw),url);
+ if(report.status!=='published'||report.summary!==notes||Date.parse(report.published_at)!==Date.parse(publishedAt))throw Error('Imported report must match the actual publication time and change summary.');
+ return report;
+}
 function validPublish({url,query,notes,published_at}){
  const stamp=Date.parse(published_at||'');
  if(!url||!/^https:\/\//i.test(url)||!String(query||'').trim())return 'A verified HTTPS page and query are required';
@@ -50,6 +57,7 @@ function registerGrowthExecution(app,pool,deps={}){
    let host,root;try{host=new URL(pg.url).hostname;root=new URL('https://'+String(c.domain).replace(/^https?:\/\//,'')).hostname}catch{return res.status(400).json({success:false,error:'Invalid domain'})}
    if(host!==root)return res.status(403).json({success:false,error:'Page belongs to another domain'});
    const err=validPublish({url:pg.url,query,notes,published_at:publishedAt});if(err)return res.status(400).json({success:false,error:err});
+   let implementationReport;try{implementationReport=validateImported(req.body?.implementation_report,pg.url,notes,publishedAt)}catch(e){return res.status(400).json({success:false,error:e.message})}
    const mail=reminders.parseEmails(req.body&&req.body.reminder_emails);
    if(mail.invalid.length)return res.status(400).json({success:false,error:'Not an e-mail address: '+mail.invalid.slice(0,3).join(', ')});
    if(mail.too_many)return res.status(400).json({success:false,error:'At most 5 e-mail addresses for the reminder'});
@@ -71,7 +79,8 @@ function registerGrowthExecution(app,pool,deps={}){
     query TEXT NOT NULL,notes TEXT NOT NULL,published_at TIMESTAMPTZ NOT NULL,
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
     ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS gsc_evidence TEXT;
-    ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS growth_proposal_id BIGINT`);
+    ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS growth_proposal_id BIGINT;
+    ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS implementation_report JSONB`);
    // Never treat a second click as another publication. Editing an existing
    // checkpoint uses /publication/:id; a genuine later live update is a new
    // measurement event and must be explicitly chosen by its owner.
@@ -91,7 +100,7 @@ function registerGrowthExecution(app,pool,deps={}){
     }
    }
    const gscEvidence=verified?'VERIFIED':'NEEDS_ACCESS';
-   const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at,gsc_evidence,growth_proposal_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt,gscEvidence,proposalId]);
+   const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at,gsc_evidence,growth_proposal_id,implementation_report) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt,gscEvidence,proposalId,implementationReport?JSON.stringify(implementationReport):null]);
    // Baseline: if the 28 days before publication are already final in Search Console (a publication recorded a few days
    // late), read them now; otherwise the hourly check reads them as soon as they are.
    const pubId=Number(result.rows[0].id);
@@ -120,11 +129,13 @@ function registerGrowthExecution(app,pool,deps={}){
    const c=(await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted') LIMIT 1",[req.params.token])).rows[0];
    if(!c)return res.status(404).json({success:false,error:'Tracker not found'});
    const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({success:false,error:'Invalid publication'});
-   const pub=(await pool.query('SELECT g.id,g.published_at,g.notes,g.query,p.url FROM tracker_growth_publications g JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id WHERE g.id=$1 AND g.tracker_client_id=$2',[id,c.id])).rows[0];
+   const pub=(await pool.query('SELECT g.id,g.published_at,g.notes,g.query,p.url,to_jsonb(g)->'implementation_report' AS implementation_report FROM tracker_growth_publications g JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id WHERE g.id=$1 AND g.tracker_client_id=$2',[id,c.id])).rows[0];
    if(!pub)return res.status(404).json({success:false,error:'Publication not found'});
    const notes=req.body&&req.body.notes!=null?String(req.body.notes).trim():pub.notes;
    const publishedAt=req.body&&req.body.published_at?String(req.body.published_at):new Date(pub.published_at).toISOString();
    const err=validPublish({url:pub.url,query:pub.query,notes,published_at:publishedAt});if(err)return res.status(400).json({success:false,error:err});
+   if(pub.implementation_report&&(notes!==pub.notes||Date.parse(publishedAt)!==Date.parse(pub.published_at)))return res.status(409).json({success:false,error:'The imported implementation report is immutable. Keep its recorded details; record a distinct later publication for new changes.'});
+   if(req.body?.implementation_report!=null)return res.status(409).json({success:false,error:'Import a report when registering a new publication, not when correcting an existing checkpoint.'});
    const moved=new Date(publishedAt).toISOString().slice(0,10)!==new Date(pub.published_at).toISOString().slice(0,10);
    if(moved){
     const has=async t=>{try{return (await pool.query('SELECT 1 FROM '+t+' WHERE tracker_client_id=$1 AND publication_id=$2 LIMIT 1',[c.id,id])).rows.length>0}catch(e){if(e.code==='42P01')return false;throw e}};
@@ -158,4 +169,4 @@ function registerGrowthExecution(app,pool,deps={}){
  });
  reminders.startReminderLoop(pool);
 }
-module.exports={registerGrowthExecution,validPublish};
+module.exports={registerGrowthExecution,validPublish,validateImported};
