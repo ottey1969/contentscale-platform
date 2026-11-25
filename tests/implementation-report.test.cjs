@@ -26,3 +26,30 @@ test('Free Growth uses the existing publication save and a separate read-only im
  assert.ok(s.includes("parseImplementationReport(raw,row.url)"));
  assert.ok(s.includes("date.value=report.published_on;note.value=report.summary;"));
 });
+
+test('owner reports preserve editor evidence and publication uncertainty in every language',()=>{
+ const {ownerReport}=require('../src/implementation-report.cjs');
+ for(const lang of ['en','nl','es']){
+  const text=ownerReport(parse(report),lang);
+  assert.ok(text.includes(report.summary));assert.ok(text.includes(report.url));assert.ok(text.includes(report.published_at));assert.ok(text.includes(report.evidence));
+  const draft=ownerReport(parse({...report,status:'implemented',published_at:null}),lang);
+  assert.ok(!draft.includes(report.published_at));
+ }
+});
+test('both existing Free Growth emails include saved page changes safely',()=>{
+ const {confirmationMessage,reminderMessage}=require('../src/growth-free/reminders.cjs');
+ const base={url,publishedOn:'2026-11-25',stopLink:'https://example.com/stop',resultLink:'https://example.com/result',note:'Added <script>alert(1)</script> & headings'};
+ for(const [lang,label] of [['en','Recorded page changes'],['nl','Geregistreerde paginawijzigingen'],['es','Cambios registrados en la página']]){
+  for(const make of [confirmationMessage,reminderMessage]){
+   const {html}=make({...base,lang});
+   assert.ok(html.includes(label));assert.ok(html.includes('&lt;script&gt;'));assert.ok(html.includes('&amp; headings'));assert.ok(!html.includes('<script>'));
+   assert.ok(!make({...base,lang,note:null}).html.includes(label));
+  }
+ }
+});
+test('scheduled email receives the saved publication note without additional sends',async()=>{
+ const {sendDueFreeReminders}=require('../src/growth-free/reminders.cjs');const sent=[],marked=[];
+ const storage={dueReminders:async()=>[{id:1,url,email:'owner@example.com',published_on:'2026-11-25',published_note:'Added headings',ui_lang:'en',reminder_token:'token'}],markReminder:async(pool,data)=>marked.push(data)};
+ await sendDueFreeReminders({},storage,{send:async m=>{sent.push(m);return true},links:{result:()=>url,stop:()=>url}});
+ assert.equal(sent.length,1);assert.ok(sent[0].html.includes('Added headings'));assert.deepEqual(sent[0].to,['owner@example.com']);assert.deepEqual(marked,[{id:1,sent:true}]);
+});
