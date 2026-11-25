@@ -2281,44 +2281,6 @@ const _serveOttoJs = (req, res) => {
   app.get('/' + name, _serveOttoJs);
 });
 
-// ── Gemini Live ephemeral token ─────────────────────────────
-// Browser calls this → gets short-lived token → connects DIRECTLY to Google
-// No audio proxy needed — lower latency, Google recommended approach
-// Gemini Live — relay API key securely to client for direct WS connection
-// Rate limit: max 2 sessions per IP per day
-const _ottoIpMap = new Map(); // ip -> { count, date }
-
-function checkOttoLimit(req, res) {
-  // Admin bypass
-  if (req.query.admin === 'ottmar2024') {
-    console.log('[otto-limit] admin bypass');
-    return true;
-  }
-
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  const entry = _ottoIpMap.get(ip);
-
-  if (entry && entry.date === today) {
-    if (entry.count >= 10) {
-      console.log('[otto-limit] blocked:', ip, 'count:', entry.count);
-      res.status(429).json({ error: 'Daily limit reached — max 10 conversations per day per visitor. Come back tomorrow!' });
-      return false;
-    }
-    entry.count++;
-  } else {
-    _ottoIpMap.set(ip, { count: 1, date: today });
-  }
-
-  // Clean old entries every 1000 requests
-  if (_ottoIpMap.size > 1000) {
-    for (const [k, v] of _ottoIpMap.entries()) {
-      if (v.date !== today) _ottoIpMap.delete(k);
-    }
-  }
-  return true;
-}
-
 // ── /admin MUST be registered before express.static ────────────────────────
 // Prevents a stale public/admin.html from being served instead of the
 // server-rendered template (express.static wins over later route definitions).
@@ -28832,96 +28794,12 @@ const GEMINI_LIVE_MODEL  = 'models/gemini-2.0-flash-exp'; // v1alpha Live model
 
 // REST endpoint to verify key + connectivity before browser opens WebSocket
 
-// ── Gemini Live ephemeral token endpoint (FIXED) ─────────────────────────────
-// ── Gemini Live ephemeral token endpoint (FIXED for 1007 error) ──────────────
-app.get('/api/gemini-live-token', async (req, res) => {
-  try {
-    // Admin bypass for testing
-    if (req.query.admin === 'ottmar2024') {
-      console.log('[otto] admin bypass token request');
-    }
+// Public browsers receive a time-limited, single-use token from the provider.
+app.get('/api/gemini-live-token', require('./gemini-live-token.cjs').createLiveTokenHandler());
 
-    // Rate limit check (2 requests per IP per day)
-    const ip = req.ip || req.connection.remoteAddress;
-    const today = new Date().toISOString().split('T')[0];
-
-    if (!_ottoIpMap.has(ip)) {
-      _ottoIpMap.set(ip, { count: 1, date: today });
-    } else {
-      const entry = _ottoIpMap.get(ip);
-      if (entry.date !== today) {
-        entry.count = 1;
-        entry.date = today;
-      } else {
-        entry.count++;
-        if (entry.count > 2) {
-          console.log(`[otto] rate limit hit for ${ip}`);
-          return res.status(429).json({ error: 'Daily limit reached' });
-        }
-      }
-    }
-
-    // Clean old entries periodically
-    if (_ottoIpMap.size > 1000) {
-      for (const [k, v] of _ottoIpMap.entries()) {
-        if (v.date !== today) _ottoIpMap.delete(k);
-      }
-    }
-
-    // Build WebSocket URL for Gemini Live — USE v1alpha NOT v1beta
-    const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error('[otto] No Gemini Live key — set GEMINI_KEY_LIVE in Railway Variables');
-      return res.status(500).json({ error: 'Server configuration error' });
-    }
-
-    const model = 'gemini-2.0-flash-live-001';
-    // ✅ FIX: Use v1alpha endpoint — v1beta causes 1007 errors
-    const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${encodeURIComponent(apiKey)}`;
-
-    console.log(`[otto] token issued for ${ip} — model: ${model}`);
-
-    // Return BOTH wsUrl AND key for client compatibility
-    res.json({ 
-      wsUrl, 
-      key: apiKey, 
-      model,
-      expires: Date.now() + 3600000 // 1 hour
-    });
-
-  } catch (error) {
-    console.error('[otto] token endpoint error:', error.message);
-    res.status(500).json({ error: 'Failed to generate token', details: error.message });
-  }
-});
-
-
-// Test endpoint — call this to diagnose key access
-app.get('/api/gemini-live-test', async (req, res) => {
-  const apiKey = process.env.GEMINI_KEY_LIVE || process.env.GEMINI_KEY_LEADCRAWLER;
-  if (!apiKey) return res.json({ error: 'No key set in Railway Variables' });
-
-  const results = {};
-  const models = ['gemini-2.0-flash-live-001', 'gemini-live-001', 'gemini-2.0-flash-exp'];
-
-  for (const model of models) {
-    try {
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}?key=${apiKey}`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      const d = await r.json();
-      results[model] = r.ok ? 'available ✅' : `error: ${d.error?.message || r.status}`;
-    } catch(e) {
-      results[model] = 'timeout/error: ' + e.message;
-    }
-  }
-
-  res.json({
-    keyPrefix: apiKey.substring(0, 8) + '...',
-    models: results,
-    hint: 'If all models show errors, the key needs Gemini Live access at aistudio.google.com'
-  });
+// Internal diagnostics disclose configuration presence only.
+app.get('/api/gemini-live-test', verifyAdmin, (req, res) => {
+  res.set('Cache-Control', 'no-store').json({ configured: Boolean(process.env.GEMINI_KEY_LIVE) });
 });
 
 app.get('/api/gemini-live-status', async (req, res) => {

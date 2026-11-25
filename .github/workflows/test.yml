@@ -31,5 +31,9 @@ jobs:
         run: node --test tests/cors-language-subdomains.test.cjs
       - name: A tracker only takes in URLs of its own domain
         run: node --test tests/tracker-domain-guard.test.cjs
+      - name: Install dependencies for API regressions
+        run: npm ci --ignore-scripts
+      - name: Gemini Live credentials and provider failure regression
+        run: node --test tests/gemini-live-token.test.cjs
       - name: Done
         run: echo "OK — CEO domain boundary and startup syntax verified"
