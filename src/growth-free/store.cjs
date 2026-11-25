@@ -243,9 +243,9 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null,note=nul
     reminder_attempts=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_attempts ELSE 0 END,
     publication_history=COALESCE(publication_history,'[]'::jsonb)
       || CASE WHEN published_on IS NOT NULL AND jsonb_array_length(COALESCE(publication_history,'[]'::jsonb))=0
-           THEN jsonb_build_array(jsonb_build_object('recorded_at',NULL,'published_on',published_on::text,'summary',published_note,'source','legacy','verified',false)) ELSE '[]'::jsonb END
+           THEN jsonb_build_array(jsonb_build_object('recorded_at',NULL,'published_on',published_on::text,'summary',published_note,'source','legacy','verified',false,'report',NULL::jsonb)) ELSE '[]'::jsonb END
       || CASE WHEN $2::date IS NULL THEN '[]'::jsonb
-           WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(publication_history,'[]'::jsonb)) h WHERE h->>'published_on'=$2::date::text AND h->>'summary' IS NOT DISTINCT FROM $6::text AND (h->'report') IS NOT DISTINCT FROM COALESCE($7::jsonb,'null'::jsonb)) THEN '[]'::jsonb
+           WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(publication_history,'[]'::jsonb)) h WHERE h->>'published_on'=$2::date::text AND h->>'summary' IS NOT DISTINCT FROM $6::text AND COALESCE(h->'report','null'::jsonb) = COALESCE($7::jsonb,'null'::jsonb)) THEN '[]'::jsonb
            WHEN published_on IS NOT DISTINCT FROM $2::date AND published_note IS NOT DISTINCT FROM $6::text AND $7::jsonb IS NULL THEN '[]'::jsonb
            ELSE jsonb_build_array(jsonb_build_object('recorded_at',NOW(),'published_on',$2::date::text,'summary',$6::text,'source',CASE WHEN $7::jsonb IS NULL THEN 'manual' ELSE 'external_ai' END,'verified',false,'report',$7::jsonb)) END,
     published_on=$2::date,reminder_due_at=$3::timestamptz,reminder_token=COALESCE(reminder_token,$4),reminder_opt_out_at=CASE WHEN $3::timestamptz IS NULL THEN reminder_opt_out_at ELSE NULL END,reminder_base=COALESCE($5,reminder_base),published_note=$6
