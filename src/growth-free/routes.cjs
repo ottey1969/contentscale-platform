@@ -929,6 +929,7 @@ function sideHtml(label,w,x,undated){if(!x)return '<div><small>'+label+'</small>
  var T=x.totals||{};return '<div><small>'+label+' · '+esc(x.period.start)+' – '+esc(x.period.end)+(x.source==='GSC_REPORT'?'</small><small>From your GSC report “'+esc(x.report_title||'')+'”':'')+(x.period.inferred?' (dates from “'+esc(x.period.inferred)+'” and the export date)':'')+'</small><strong>'+esc(T.impressions)+' shown · '+esc(T.clicks)+' clicks</strong><small>'+(T.position==null?'':'average position '+esc(T.position)+' · ')+(x.search_term_row?'your search term: '+esc(x.search_term_row.impressions)+' shown, '+esc(x.search_term_row.clicks)+' clicks':'your search term is not in this export')+(x.matches_window?'':' · not exactly the 4 weeks '+(label==='Before'?'before':'after')+' the update')+'</small></div>'}
 function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">Record publication and compare results</h2>';
  var today=new Date().toISOString().slice(0,10);
+ if((p.history||[]).length){h+='<details><summary><strong>Implementation history ('+esc(p.history.length)+')</strong></summary><p class="muted">Previous records remain available. Publication declarations are not independent live verification.</p>';(p.history||[]).slice().reverse().forEach(function(item){h+='<div class="card"><strong>'+esc(item.published_on||'Unknown date')+'</strong><p data-no-translate>'+esc(item.summary||'No change summary recorded')+'</p>';if(item.report){h+='<p class="muted">'+esc((item.report.change_types||[]).join(', '))+' · '+esc(item.report.published_at||'')+'</p><p data-no-translate>'+esc(item.report.evidence||'')+'</p><label>Saved implementation report (JSON)<textarea rows="5" readonly data-no-translate>'+esc(JSON.stringify(item.report,null,2))+'</textarea></label>';if(item.owner_report)h+='<label>Website owner change report<textarea rows="8" readonly data-no-translate>'+esc(item.owner_report)+'</textarea></label>'}h+='</div>'});h+='</details>'}
  if(p.published_on){h+=(p.note?'<p data-no-translate>'+esc('What was changed: “'+p.note+'”')+'</p>':'');h+='<p class="lead"><strong>Published on '+esc(fmtD(p.published_on))+'.</strong> '+(p.stopped?'The reminder is stopped.':p.reminder_sent_at?'The reminder was sent on '+esc(fmtD(p.reminder_sent_at))+'.':p.reminder_due_at?'One e-mail on '+esc(fmtD(p.reminder_due_at))+' to '+esc(p.email_hint)+': which two periods to export from Search Console.':'No e-mail reminder.')+'</p>';
   if(!p.email_configured&&p.reminder_due_at&&!p.reminder_sent_at)h+='<p class="note">E-mail is not set up on this server, so no e-mail will arrive. Come back to this page after '+esc(fmtD(p.reminder_due_at))+'; the steps below work without it.</p>';
   var c=g&&g.comparison;if(c){h+='<h3>Before and after in Google (Search Console)</h3><div class="grid two">'+sideHtml('Before',c.windows.before,c.before,c.undated)+sideHtml('After',c.windows.after,c.after,null)+'</div><p class="muted">'+esc(c.note)+'</p>';
@@ -943,7 +944,7 @@ function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">Record publicati
  return h}
 function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  var reload=async function(){var d=await (await fetch(API+Q,{cache:'no-store'})).json();var box=document.getElementById('pubBox');if(box&&d.success){box.innerHTML=pubHtml(d.publication,d.gsc);wirePub()}var el=document.getElementById('published');if(el)el.scrollIntoView()};
- var imp=document.getElementById('pubImport'),ownerCopies=null;
+ var imp=document.getElementById('pubImport'),ownerCopies=null,importedReport=null;
  var ownerLang=document.getElementById('pubOwnerLang'),ownerText=document.getElementById('pubOwnerText');
  if(ownerLang){ownerLang.value=['en','nl','es'].includes(PAGE_LANG)?PAGE_LANG:'en';ownerLang.onchange=function(){if(ownerCopies)ownerText.value=ownerCopies[ownerLang.value]||ownerCopies.en};
  document.getElementById('pubOwnerCopy').onclick=async function(){try{await navigator.clipboard.writeText(ownerText.value);document.getElementById('pubOwnerStatus').textContent='Owner report copied.'}catch(e){document.getElementById('pubOwnerStatus').textContent='Copy unavailable; download the report.'}};
@@ -951,7 +952,7 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  }
  if(imp)imp.onclick=async function(){
   var st=document.getElementById('pubImportStatus'),raw=document.getElementById('pubReport').value;
-  imp.disabled=true;ownerCopies=null;document.getElementById('pubOwnerReport').hidden=true;ownerText.value='';st.textContent='Validating report…';
+  imp.disabled=true;importedReport=null;ownerCopies=null;document.getElementById('pubOwnerReport').hidden=true;ownerText.value='';st.textContent='Validating report…';
   try{
    var res=await fetch(API+'/implementation-report/preview'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({report:raw})});
    var data=await res.json();if(!res.ok||!data.success)throw Error(data.error||'Invalid report');
@@ -960,14 +961,14 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
    if(report.status!=='published'){st.textContent='Owner report ready. Publication not confirmed; no publication date was filled.';return}
    var date=document.getElementById('pubDate'),note=document.getElementById('pubNote');
    if((date.value||note.value)&&!confirm('Replace the current unsaved date and summary with this report?')){st.textContent='Import cancelled.';return}
-   date.value=report.published_on;note.value=report.summary;
+   date.value=report.published_on;note.value=report.summary;importedReport=report;
    st.textContent='Report imported into fields. Review and save only if the page is live. Not independently verified.';
   }catch(e){st.textContent=e.message||'Could not import report'}finally{imp.disabled=false}
  };
  var ch=document.getElementById('pubChange');if(ch)ch.onclick=function(){document.getElementById('pubForm').hidden=false};
  var cl=document.getElementById('pubClear');if(cl)cl.onclick=async function(){if(!confirm('Remove the date and the reminder?'))return;await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:true})});reload()};
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
-  try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked,note:document.getElementById('pubNote').value})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
+  try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked,note:document.getElementById('pubNote').value,implementation_report:importedReport})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
 // One editorial brief: an actionable instruction, precise existing-page placement and attributable proof.
 // One list for the editor: what to put into the content, from most to least important (owner 2026-11-19).
@@ -2112,7 +2113,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const links={result:row=>baseOf(row)+resultUrl(row),stop:(t,row)=>baseOf(row)+basePath+'/stop/'+encodeURIComponent(t||'')};
  const send=sendEmail||reminders.brevo(fetchImpl);
  const emailConfigured=()=>!!sendEmail||!!process.env.BREVO_API_KEY;
- const publicationOf=row=>({published_on:row.published_on||null,note:row.published_note||null,note_suggestion:row.published_note?null:require('./publication-note.cjs').noteSuggestion(row,row.ui_lang||'nl')||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
+ const publicationOf=row=>({history:(Array.isArray(row.publication_history)?row.publication_history:[]).map(item=>({...item,owner_report:item.report?require('../implementation-report.cjs').ownerReport(item.report,row.ui_lang||'en'):null})),published_on:row.published_on||null,note:row.published_note||null,note_suggestion:row.published_note?null:require('./publication-note.cjs').noteSuggestion(row,row.ui_lang||'nl')||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
   stopped:!!row.reminder_opt_out_at,email_hint:(Array.isArray(row.emails)&&row.emails.length?row.emails:[row.email]).map(maskEmail).join(', '),email_configured:emailConfigured(),
   windows:row.published_on?reminders.windowsOf(row.published_on):null});
  app.post(apiPath+'/checks/:id/contentscore',async(req,res)=>{
@@ -2160,8 +2161,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const fresh=await storage.getCheck(pool,req.params.id,req.query.k);return res.json({success:true,publication:publicationOf(fresh||row)})}
   const d=reminders.readPublishedOn(b.published_on);if(d.error)return res.status(400).json({success:false,error:d.error});
   const remind=b.remind!==false;
+  const note=require('./publication-note.cjs').cleanNote(b.note)||null;
+  let implementationReport=null;
+  if(b.implementation_report!=null){try{
+   implementationReport=require('../implementation-report.cjs').parseImplementationReport(JSON.stringify(b.implementation_report),row.url);
+   if(implementationReport.status!=='published'||implementationReport.published_on!==d.value||require('./publication-note.cjs').cleanNote(implementationReport.summary)!==note)throw Error('The publication date or summary differs from the imported report. Re-import a corrected report or reload to save manually.');
+  }catch(e){return res.status(400).json({success:false,error:String(e.message).slice(0,240)})}}
   try{
-   const saved=await storage.setPublication(pool,{checkId:row.id,publishedOn:d.value,dueAt:remind?reminders.dueAt(d.value):null,base:baseFor(req),note:require('./publication-note.cjs').cleanNote(b.note)||null});
+   const saved=await storage.setPublication(pool,{checkId:row.id,publishedOn:d.value,dueAt:remind?reminders.dueAt(d.value):null,base:baseFor(req),note,implementationReport});
    // Started from the rank tracker: the tracked keyword is marked "changed" there with its position on this day.
    if(rankHandoff)await rankHandoff.published(row.public_id,d.value).catch(e=>console.warn('[free-growth] rank tracker link failed',e&&e.message));
    let confirmation=remind?(emailConfigured()?'NOT_ACCEPTED':'EMAIL_NOT_CONFIGURED'):'NO_REMINDER';
