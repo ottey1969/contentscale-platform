@@ -105,6 +105,18 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     const list = await (await call('GET',endpoint,null,jar)).json();
     assert.equal(list.rows.filter(r=>r.email===email).length,4);
     assert.ok(list.rows.filter(r=>r.email===email).every(r=>r.result_url && !('access_key' in r)));
+    const hire=(await pool.query("INSERT INTO growth_free_hire_requests(check_id,name,email,message) VALUES($1,'Test request',$2,'Test message') RETURNING id::text",[done,email])).rows[0].id;
+    const hirePath='/api/free-growth/admin/hire-requests';
+    assert.equal((await call('GET',hirePath)).status,404);
+    const hires=await (await call('GET',hirePath,null,jar)).json();
+    assert.ok(hires.rows.some(r=>r.id===hire&&r.status==='NEW'));
+    assert.equal((await call('POST',hirePath+'/status',{id:hire,status:'COMPLETED'},jar)).status,404);
+    assert.equal((await call('POST',hirePath+'/status',{id:hire,status:'INVALID'},write)).status,400);
+    const rankOverview=await (await call('GET','/api/free-growth/admin/email-overview?source=rank',null,jar)).json();
+    assert.ok(rankOverview.rows.some(r=>r.email===email&&r.status==='Unconfirmed'));
+    await pool.query("UPDATE growth_free_checks SET published_on=CURRENT_DATE,reminder_due_at=NOW()+INTERVAL '28 days' WHERE id=$1",[other]);
+    const growthOverview=await (await call('GET','/api/free-growth/admin/email-overview?source=growth',null,jar)).json();
+    assert.ok(growthOverview.rows.some(r=>r.email===email&&r.status==='Scheduled'));
     const { chromium } = require('playwright');
     browser = await chromium.launch();
     const page = await browser.newPage();
@@ -112,6 +124,15 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     await page.goto(base+'/free-growth/admin');
     await page.locator('#lf input[name=key]').fill('research-secret-0123456789');
     await page.locator('#lf button').click();
+    await page.locator('#hireIndicator').waitFor({state:'visible'});
+    await page.locator('#hireSection > summary').click();
+    await page.locator('select[data-hire-id="'+hire+'"]').selectOption('COMPLETED');
+    await page.waitForFunction(()=>document.getElementById('hireStatus').textContent==='Saved');
+    const completed=await (await call('GET',hirePath,null,jar)).json();
+    assert.ok(completed.rows.some(r=>r.id===hire&&r.status==='COMPLETED'));
+    assert.equal(completed.active,hires.active-1);
+    await page.locator('#hireSection > summary').click();
+    await page.locator('#researchSection > summary').click();
     await page.locator('#rhSearch').fill(host);
     const group=page.locator('#rhRows details'); await group.waitFor();
     assert.equal(await group.count(),1);
@@ -158,6 +179,7 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     assert.equal((await pool.query('SELECT COUNT(*)::int n FROM rank_free_accounts WHERE email=$1',[email])).rows[0].n,1);
   } finally {
     if(browser) await browser.close(); if(srv) srv.close();
+    await pool.query('DELETE FROM growth_free_hire_requests WHERE email=$1',[email]).catch(()=>{});
     await pool.query('DELETE FROM growth_free_retained_contacts WHERE email=$1',[email]).catch(()=>{});
     await pool.query('DELETE FROM growth_free_checks WHERE email=$1',[email]).catch(()=>{});
     await pool.query('DELETE FROM rank_free_accounts WHERE email=$1',[email]).catch(()=>{});
