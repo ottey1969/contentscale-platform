@@ -695,7 +695,7 @@
  }
  function selectPublicationChoice(mode){
   var old=safe.priorPublication;if(!old)return;
-  safe.publicationChoice=mode;safe.newPublication=mode==='new';
+  safe.publicationChoice=mode;safe.newPublication=mode==='new';safe.implementationReport=null;
   safe.publicationId=mode==='edit'?Number(old.id):null;
   $('recordPublication').disabled=false;
   $('reusePublicationEmailLabel').hidden=mode!=='new';
@@ -731,6 +731,23 @@
  }
  // Record the publication; afterwards the same form corrects it (text, date, reminder addresses), it never locks
  // (owner 2026-11-02: "after the download I changed it, so I must be able to edit").
+ // Import is a local draft only. The server checks the exact page, time and summary on save.
+ var importBox=document.createElement('details');
+ importBox.innerHTML='<summary>Import Implementation Report</summary><label>Paste external AI JSON<textarea id="trackerImplementationJson" rows="6" maxlength="16000"></textarea></label><button type="button" id="trackerImplementationImport">Fill publication fields</button><small id="trackerImplementationStatus" role="status"></small>';
+ $('publicationNotes').parentNode.appendChild(importBox);
+ $('trackerImplementationImport').addEventListener('click',function(){
+  var st=$('trackerImplementationStatus');safe.implementationReport=null;
+  try{
+   var r=JSON.parse($('trackerImplementationJson').value);
+   if(r.schema!=='contentscale.implementation.v1'||r.status!=='published'||new URL(r.url).href!==new URL(safe.source.canonical_url).href||typeof r.summary!=='string'||!r.summary.trim()||r.summary.trim().length>500)throw Error('Report must describe the exact page and actual published changes.');
+   var dt=new Date(r.published_at);
+   if(!Number.isFinite(dt.getTime())||dt.getTime()>Date.now()||dt.toISOString().replace('.000Z','Z')!==r.published_at)throw Error('Use the actual UTC publication timestamp.');
+   if(safe.publicationId&&!safe.newPublication)throw Error('Choose a new later publication first.');
+   if(!confirm('Replace the publication time and change summary with this report?'))return;
+   $('publishedAt').value=localDateTime(r.published_at);$('publicationNotes').value=r.summary.trim();safe.implementationReport=r;
+   $('confirmPublished').checked=false;st.textContent='Imported for review. Confirm the actual live page before saving.';
+  }catch(e){st.textContent=e.message}
+ });
  $('publicationForm').addEventListener('submit',async function(ev){
   ev.preventDefault();var btn=$('recordPublication');btn.disabled=true;buttonProgress(btn,true);
   var editing=!!safe.publicationId;
@@ -746,6 +763,11 @@
     throw Error('The second live update must be later than the already recorded publication.');
    var enteredEmails=$('reminderEmails')?$('reminderEmails').value.trim():'';
    var body={notes:$('publicationNotes').value.trim(),published_at:at.toISOString()};
+   if(safe.implementationReport&&!editing){
+    var ir=safe.implementationReport;
+    if(ir.summary.trim()!==body.notes||Math.floor(Date.parse(ir.published_at)/60000)!==Math.floor(at.getTime()/60000))throw Error('The imported date or summary changed. Re-import the corrected report.');
+    body.published_at=ir.published_at;body.implementation_report=ir;
+   }
    if(enteredEmails)body.reminder_emails=enteredEmails;
    if(safe.newPublication){body.new_publication=true;body.send_update_email=$('reusePublicationEmail').checked;}
    if(!editing&&!safe.newPublication)body.reminder_emails=enteredEmails;
