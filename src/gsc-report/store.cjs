@@ -47,9 +47,19 @@ async function deleteReports(pool,ids){
  if(!ids||!ids.length)return [];
  return (await pool.query('DELETE FROM gsc_reports WHERE id=ANY($1::bigint[]) RETURNING id,growth_invite',[ids])).rows.map(r=>({id:Number(r.id),growth_invite:r.growth_invite}));
 }
-// A newer export (before/after): replaces an earlier one, the report itself stays as it was.
+// Keep earlier uploads. The latest entry still powers the existing before/after view.
 async function setAfter(pool,id,snap){
- return (await pool.query(`UPDATE gsc_reports SET report=jsonb_set(report,'{after}',$2::jsonb) WHERE id=$1 RETURNING id`,[id,JSON.stringify(snap)])).rows[0]||null;
+ return (await pool.query(`WITH locked AS (
+     SELECT id,COALESCE(report->'after_history',
+       CASE WHEN jsonb_typeof(report->'after')='object' THEN jsonb_build_array(report->'after') ELSE '[]'::jsonb END) AS history
+       FROM gsc_reports WHERE id=$1 FOR UPDATE
+   ), next AS (
+     SELECT id,CASE WHEN EXISTS (
+       SELECT 1 FROM jsonb_array_elements(history) AS item WHERE item-'added_at'=$2::jsonb-'added_at'
+     ) THEN history ELSE history||jsonb_build_array($2::jsonb) END AS history FROM locked
+   )
+   UPDATE gsc_reports AS g SET report=g.report||jsonb_build_object('after_history',next.history,'after',next.history->-1)
+     FROM next WHERE g.id=next.id RETURNING g.id`,[id,JSON.stringify(snap)])).rows[0]||null;
 }
 // Atomic per-page update: preserve concurrent scans and original GSC evidence.
 async function saveContentScore(pool,token,url,result){

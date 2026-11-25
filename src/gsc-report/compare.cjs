@@ -3,12 +3,13 @@
 // Growth publication date are compared, so the report stays readable. Two periods of a different length cannot be compared
 // fairly, and a page missing from one export has no comparison: those say "not comparable" and show no numbers.
 const {norm}=require('./published.cjs');
+const measured=x=>x==null||x===''||!Number.isFinite(Number(x))?null:Number(x);
 const num=x=>Number.isFinite(Number(x))?Number(x):0;
 // What is kept of the newer export: the period and the numbers per page, nothing else.
 function snapshot(report){
  const r=report||{},k=r.kpis||{};
  return {period:k.period||null,added_at:new Date().toISOString(),
-  pages:(r.pages||[]).filter(p=>p&&p.url&&p.source!=='MANUAL'&&p.source!=='CRAWL').map(p=>({url:p.url,clicks:num(p.clicks),impressions:num(p.impressions),position:p.position==null?null:Number(p.position)}))};
+  pages:(r.pages||[]).filter(p=>p&&p.url&&p.source!=='MANUAL'&&p.source!=='CRAWL').map(p=>({url:p.url,clicks:measured(p.clicks),impressions:measured(p.impressions),position:measured(p.position)}))};
 }
 function compare(before,after,published){
  const bp=before&&before.kpis&&before.kpis.period||null,ap=after&&after.period||null;

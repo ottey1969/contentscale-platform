@@ -4045,6 +4045,8 @@ require('./prewrite-customer-question.cjs').registerPrewriteCustomerQuestion(app
 require('./tracker-growth-execution.cjs').registerGrowthExecution(app,pool);
 require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 require('./tracker-growth-gsc-direct.cjs').registerGrowthGscDirect(app,pool);
+const trackerProofSources=require('./tracker-proof-sources.cjs');
+trackerProofSources.registerProofSourceRoutes(app,pool);
 app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
@@ -4068,7 +4070,14 @@ app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{t
   const prewriteImplementations=implementationReports.rows.flatMap(row=>row.history.map(item=>({
     brief_id:row.brief_id,...item,owner_report:ownerReport(item.report,row.language)
   })));
-  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,history_protected:true});
+  const linked=await pool.query(`SELECT e.event_type,e.event_data FROM tracker_case_study_events e
+    JOIN tracker_case_studies c ON c.id=e.case_study_id
+    WHERE c.tracker_client_id=$1 AND c.tracker_page_id=$2 AND c.canonical_url=$3 AND e.event_type=$4
+    ORDER BY e.event_at,e.id`,[cr.rows[0].id,req.params.pageId,cs.canonical_url,trackerProofSources.EVENT]);
+  const proofSources=await trackerProofSources.loadProofSources(pool,{
+    clientId:cr.rows[0].id,pageId:req.params.pageId,url:cs.canonical_url,events:linked.rows
+  });
+  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // Passwordless, read-only milestone report. The random token is the share credential.
@@ -46049,6 +46058,39 @@ function openCaseStudy(pageId){
     function yesNo(v){return v===true||v==='true'||v==='t'||v===1||v==='1';}
     function evidenceCell(v){return '<span style="font-weight:900;color:'+(yesNo(v)?'#4ade80':'#f87171')+'">'+(yesNo(v)?'YES':'NO')+'</span>';}
     var engineTable='<div style="overflow-x:auto;border:1px solid #1e3a8a;border-radius:9px;"><table style="width:100%;border-collapse:collapse;min-width:700px;font-size:10px;"><thead><tr style="background:#0b1220;color:#94a3b8;text-align:left;"><th style="padding:8px;">ENGINE</th><th style="padding:8px;">REVISION</th><th style="padding:8px;">RECOMMENDED</th><th style="padding:8px;">LOCAL / MAPS</th><th style="padding:8px;">DOMAIN CITED</th><th style="padding:8px;">EXACT PAGE</th><th style="padding:8px;">VERIFIED</th></tr></thead><tbody>'+engineOrder.map(function(k){var r=latestByEngine[k],isCurrent=r&&Number(r.revision_cycle||1)===currentRevision;if(!r)return '<tr style="border-top:1px solid #172033;"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td colspan="6" style="padding:8px;color:#fbbf24;">NOT CHECKED — manual evidence required</td></tr>';return '<tr style="border-top:1px solid #172033;opacity:'+(isCurrent?'1':'.58')+';"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td style="padding:8px;color:'+(isCurrent?'#7dd3fc':'#94a3b8')+';">'+(isCurrent?'CURRENT · R':'PRIOR · R')+_csEscH(r.revision_cycle||1)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_recommended)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_local_result)+'</td><td style="padding:8px;">'+evidenceCell(r.domain_cited)+'</td><td style="padding:8px;">'+evidenceCell(r.exact_page_cited)+'</td><td style="padding:8px;color:#94a3b8;white-space:nowrap;">'+_csEscH(utcStamp(r.updated_at||r.verified_at))+'</td></tr>';}).join('')+'</tbody></table></div><div style="font-size:10px;color:'+(currentCount===5?'#4ade80':'#fbbf24')+';margin-top:7px;font-weight:800;">Revision '+currentRevision+': '+currentCount+'/5 manually checked'+(currentCount===5?' · complete':' · recheck all five engines after publication')+'. Prior revisions are comparison evidence only.</div>';
+    var proofLocale=(navigator.language||'en').split('-')[0];
+    var proofLabels={
+      en:['Link Free Growth or GSC Audit','Paste your private result link','Unable to link this result to the exact page','Clicks','Impressions','Position','CTR','Publication history','AI visibility','Exact URL in supplied sources','Exact URL absent from supplied sources'],
+      nl:['Koppel Free Growth of GSC Audit','Plak je privélink naar het resultaat','Dit resultaat kon niet aan de exacte pagina worden gekoppeld','Klikken','Vertoningen','Positie','CTR','Publicatiehistorie','AI-zichtbaarheid','Exacte URL in aangeleverde bronnen','Exacte URL ontbreekt in aangeleverde bronnen'],
+      es:['Vincular Free Growth o GSC Audit','Pega tu enlace privado al resultado','No se pudo vincular el resultado a la página exacta','Clics','Impresiones','Posición','CTR','Historial de publicación','Visibilidad en IA','URL exacta en las fuentes aportadas','URL exacta ausente de las fuentes aportadas']
+    };
+    var labels=proofLabels[proofLocale]||proofLabels.en, sources=d.proof_sources||{};
+    var scoreLines=function(rows){return rows.map(function(row){
+      return '<li>'+_csEscH(row.scanned_at?utcStamp(row.scanned_at):'')+' · ContentScore '+_csEscH(row.score==null?'—':row.score)+'</li>';
+    }).join('');};
+    var measurement=function(row){
+      var names=[labels[3],labels[4],labels[5],labels[6]], values=[row.clicks,row.impressions,row.position,row.ctr==null?null:(row.ctr*100).toFixed(2)+'%'];
+      return '<li>'+_csEscH(row.period&&(row.period.start+' – '+row.period.end)||'')+' · '+names.map(function(name,i){
+        return _csEscH(name+' '+(values[i]==null?'—':values[i]));
+      }).join(' · ')+'</li>';
+    };
+    var audited=(sources.gsc_audit||[]).map(function(item){
+      return '<details><summary>GSC Audit · '+_csEscH(utcStamp(item.recorded_at))+'</summary><ul>'+item.observations.map(measurement).join('')+scoreLines(item.contentscore)+'</ul></details>';
+    }).join('');
+    var freeGrowth=(sources.free_growth||[]).map(function(item){
+      var rows=(item.gsc||[]).map(function(row){
+        var totals=row.totals||{},ctr=totals.clicks!=null&&totals.impressions>0?totals.clicks/totals.impressions:null;
+        return measurement(Object.assign({},totals,{ctr:ctr,period:{start:row.period_start,end:row.period_end}}));
+      }).join('');
+      var changes=(item.publication_history||[]).map(function(row){return '<li>'+_csEscH(row.published_on||'')+' · '+_csEscH(row.summary||row.report&&row.report.summary||'—')+'</li>';}).join('');
+      var engines=(item.ai||[]).map(function(row){
+        var citation=row.exact_url_listed==null?'—':labels[row.exact_url_listed?9:10];
+        return '<li>'+_csEscH(row.engine+' · '+utcStamp(row.recorded_at)+' · '+citation)+'</li>';
+      }).join('');
+      return '<details><summary>Free Growth · '+_csEscH(item.query||'')+'</summary><ul>'+rows+scoreLines(item.contentscore_history||[])+'</ul>'
+        +(changes?'<h4>'+_csEscH(labels[7])+'</h4><ul>'+changes+'</ul>':'')
+        +(engines?'<h4>'+_csEscH(labels[8])+'</h4><ul>'+engines+'</ul>':'')+'</details>';
+    }).join('');
     var prewriteReports=(d.prewrite_implementations||[]).map(function(item){
       var proof=item.live_verification,lang=(document.documentElement.lang||navigator.language||'en').split('-')[0];
       var labels={en:'Approved content found in live HTML',nl:'Goedgekeurde inhoud gevonden in de live HTML',es:'Contenido aprobado encontrado en el HTML público'};
@@ -46064,9 +46106,20 @@ function openCaseStudy(pageId){
       +'<div style="margin-top:14px;padding:10px;background:#111827;border-left:3px solid #f59e0b;border-radius:6px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Current guardrail:</b> '+_csEscH(evidenceCorrected?'Preserve the historical baseline, but do not claim an exact-page AIO citation until a verifiable source URL supports it. Measure recommendation, Local/Maps visibility, domain citation and exact-page citation separately.':(b.treatment_guardrail||'Preserve proven wins and measure incremental changes.'))+'</div>'
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 7px;">Five-engine AI evidence</h3>'+engineTable
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Immutable HTML versions</h3>'+(versionList||'<div style="color:#fbbf24;font-size:11px;">No pre-publication HTML saved yet. Use “Save live version before publishing” right before you publish.</div>')
+      +'<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth
       +(prewriteReports?'<div style="margin:16px 0">'+prewriteReports+'</div>':'')
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Proof timeline</h3>'+(timeline||'<div style="color:#64748b;font-size:11px;">No events yet.</div>')
       +'<div style="font-size:10px;color:#64748b;margin-top:14px;">'+snaps.length+' dated Tracker snapshot(s) linked · '+events.length+' protected event(s) · '+versions.length+' immutable HTML version(s)</div>';
+    document.getElementById('caseStudyLinkProof').onclick=async function(){
+      var input=prompt(labels[1]);if(!input)return;
+      try{
+        var link=new URL(input), match=link.pathname.match(/[/]r[/]([^/]+)[/]?$/);
+        if(!match)throw Error();
+        var id=decodeURIComponent(match[1]),key=link.searchParams.get('k');
+        await api('/pages/'+pageId+'/case-study/proof-sources','POST',{type:key?'free_growth':'gsc_audit',id:id,key:key||id});
+        openCaseStudy(pageId);
+      }catch(e){alert(labels[2]);}
+    };
   }).catch(function(e){box.innerHTML='<div style="color:#f87171;">'+_csEscH(e.message)+'</div>';});
 }
 function csPosHist(pageId){
