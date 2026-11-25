@@ -72,6 +72,8 @@ function freeGrowthConfig(env=process.env){
 function freeGrowthDefaults(env){
  return {
   enabled:env.GROWTH_FREE_ENABLED!=='false',
+  // Disabled until dedicated subscription authorization and revocation tests are verified.
+  reminderCalendarEnabled:env.GROWTH_FREE_CALENDAR_ENABLED==='true',
   // Enable only after the WordPress application form is live and mail tested.
   // Existing result links continue to work; new check creation needs owner access or an invite.
   approvalRequired:env.GROWTH_FREE_APPROVAL_REQUIRED==='true',
@@ -1219,27 +1221,31 @@ function adminPage(cfg,api,base,loggedIn){
 <div id="login" class="card"${loggedIn?' hidden':''}><form id="lf"><label>Admin key<input name="key" type="password" autocomplete="current-password" required></label><p><button>Log in</button> <small id="ls" role="status"></small></p></form><p class="muted">The session lasts 12 hours on this browser only.</p></div>
 <div id="app"${loggedIn?'':' hidden'}>
  <p><button class="ghost" id="logout" type="button">Log out</button></p>
- <div class="card" id="firecrawlOwnerCard"><h2 style="margin-top:0">Firecrawl usage</h2>
+ <details class="card" id="firecrawlSection"><summary><strong>Firecrawl Usage</strong></summary><div id="firecrawlOwnerCard"><h2 style="margin-top:0">Firecrawl usage</h2>
  <p class="muted">Application request limits, not billed credits. UTC periods.</p>
  <p><button type="button" class="ghost" id="firecrawlRefresh">Refresh usage</button></p>
  <div id="firecrawlOwnerUsage" role="status">Loading…</div>
- <p class="muted">Provider credit balance and key validity are not checked here. Module counts begin at deployment and may be incomplete if telemetry storage is unavailable.</p></div>
+ <p class="muted">Provider credit balance and key validity are not checked here. Module counts begin at deployment and may be incomplete if telemetry storage is unavailable.</p></div></details>
  <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">The same form your visitors use, in owner mode: no limits, AI writing, customer questions, Search Console upload, pasted AI answers kept, and the option to research again. One form, so what you test is what visitors get.</p>
   <p><a class="btn" href="${esc(base)}">Open the check form (owner mode) →</a></p></div>
- <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
+ <details class="card" id="invitationSection"><summary><strong>Invitations</strong></summary><div><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
   <form id="if"><label>For whom? (name or company)<input name="label" required maxlength="80"></label>
   <label>Only for this email address (recommended)<input name="email_lock" type="email" maxlength="200" placeholder="name@company.com"></label>
   <label>Number of checks<input name="max_checks" type="number" min="1" max="50" value="3"></label>
   <label>Valid for (days)<input name="days" type="number" min="1" max="90" value="7"></label>
   <p><button>Create invitation link</button> <small role="status" id="is"></small></p></form><div id="newlink"></div></div>
- <h2>Invitations</h2><div id="invites"></div>
- <h2>Leads</h2><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div>
- <div class="card" id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = did not tick “Don't send me tips” (or ticked the older “send me tips”).</p>
+ <h2>Invitations</h2><div id="invites"></div></details>
+ <details class="card" id="hireSection"><summary><strong>Hire requests</strong> <span id="hireIndicator" role="status" hidden style="color:#b91c1c;font-weight:700"></span></summary><div id="hireRows"></div><p id="hireStatus" role="status"></p></details>
+ <details class="card" id="rankMailSection" data-mail-section="rank"><summary><strong>Rank Tracker Emails</strong> <span id="rankSignupIndicator" role="status" hidden style="color:#b91c1c;font-weight:700"></span></summary><div class="mailRows"></div></details>
+ <details class="card" id="gscMailSection" data-mail-section="gsc"><summary><strong>GSC Audit Emails</strong></summary><div class="mailRows"></div></details>
+ <details class="card" id="growthMailSection" data-mail-section="growth"><summary><strong>Growth Reminders</strong></summary>${cfg.reminderCalendarEnabled?`<p>Subscribe to Google Calendar: ContentScale – Scheduled Reminders. Keep the private URL confidential; anyone with it can read the schedule. Google refreshes periodically.</p><p><button type="button" id="calendarCreate">Create / replace private calendar URL</button> <button type="button" class="ghost" id="calendarRevoke">Revoke calendar URL</button></p><div id="calendarLink" role="status"></div>`:'<p class="muted">Google Calendar subscription is not enabled yet.</p>'}<div class="mailRows"></div></details>
+ <details class="card" id="researchSection"><summary><strong>Research History</strong></summary><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div></details>
+ <details class="card" id="contactsSection"><summary><strong>Contacts per country</strong></summary><div id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = did not tick “Don't send me tips” (or ticked the older “send me tips”).</p>
   <div class="rtabs" role="tablist"><button type="button" class="ctab" data-src="rank" aria-selected="true">Rank tracker</button><button type="button" class="ctab" data-src="growth" aria-selected="false">Free Growth</button></div>
   <label>Country<select id="cCountry"></select></label><label class="check"><input type="checkbox" id="cTips"><span>Only people who want tips</span></label>
   <p><a id="cCsv" class="btn ghost" href="#">Download CSV of this selection</a> <button type="button" id="cDelAll" class="ghost">Delete everyone in this selection</button> <small role="status" id="cStatus"></small></p>
-  <div id="cRows"></div></div>
- <div class="card"><h2 style="margin-top:0">Delete someone's data</h2><form id="ff"><label>Email address<input name="email" type="email" required></label><p><button>Delete everything for this email</button> <small role="status" id="fs"></small></p></form></div>
+  <div id="cRows"></div></div></details>
+ <details class="card" id="privacySection"><summary><strong>Delete someone’s data</strong></summary><div><h2 style="margin-top:0">Delete someone's data</h2><form id="ff"><label>Email address<input name="email" type="email" required></label><p><button>Delete everything for this email</button> <small role="status" id="fs"></small></p></form></div></details>
 </div>
 <script>
 ${aiStartScript()}
@@ -1310,9 +1316,57 @@ var STATUS={ACTIVE:'Active',EXPIRED:'Expired',REVOKED:'Withdrawn',USED_UP:'Used 
 async function load(){
  var i=await get('/admin/invites');if(!i.success){document.getElementById('app').hidden=true;document.getElementById('login').hidden=false;return}
  document.getElementById('invites').innerHTML=i.invites.length?i.invites.map(function(v){return '<div class="card"><strong>'+esc(v.label)+'</strong> · '+esc(STATUS[v.status]||v.status)+'<br><small>'+esc(v.used_checks)+' of '+esc(v.max_checks)+' checks used · valid until '+esc(day(v.expires_at))+(v.email_lock?' · only for '+esc(v.email_lock):' · anyone with the link')+(v.last_used_at?' · last used '+esc(day(v.last_used_at)):'')+'</small>'+(v.status==='ACTIVE'?'<p><button class="ghost revoke" data-id="'+esc(v.id)+'">Withdraw</button></p>':'')+'</div>'}).join(''):'<p class="muted">No invitations yet.</p>';
- var d=await get('/admin/leads');
- document.getElementById('leads').innerHTML='<h3>Hire requests ('+d.hires.length+')</h3>'+d.hires.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> &lt;'+esc(h.email)+'&gt; '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url)+' · '+esc(h.decision||'')+' · '+esc(h.access_label||'')+'</small><p>'+esc(h.message||'')+'</p></div>'}).join('')+
- '<h3>Research history</h3><div id="researchHistory"></div>';await loadHistory()}
+ await loadHire();
+ document.getElementById('leads').innerHTML='<div id="researchHistory"></div>';await loadHistory()}
+var hireBusy=false,hireTimer=null;
+async function loadHire(){
+ if(hireBusy)return;hireBusy=true;
+ var target=document.getElementById('hireRows'),indicator=document.getElementById('hireIndicator'),st=document.getElementById('hireStatus');
+ try{var d=await get('/admin/hire-requests');if(!d.success)throw Error(d.error);
+ indicator.hidden=!d.active;indicator.textContent=d.active?'● '+d.active+' open':'';
+ var open=document.activeElement;if(open&&target.contains(open))return;
+ target.innerHTML=d.rows.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> · '+esc(h.email)+' · '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url||'')+' · '+esc(h.decision||'')+'</small><p>'+esc(h.message||'')+'</p><label>Status<select data-hire-id="'+esc(h.id)+'">'+['NEW','IN_PROGRESS','COMPLETED','ARCHIVED'].map(function(v){return '<option value="'+v+'" '+(v===h.status?'selected':'')+'>'+v.replace('_',' ')+'</option>'}).join('')+'</select></label></div>'}).join('')||'<p>No hire requests.</p>';
+ st.textContent='';
+ }catch(e){st.textContent='Hire requests unavailable';indicator.hidden=true}finally{hireBusy=false}
+}
+document.getElementById('hireRows').addEventListener('change',async function(e){var id=e.target.getAttribute('data-hire-id');if(!id)return;var el=e.target;el.disabled=true;var status=document.getElementById('hireStatus');status.textContent='Saving…';try{var d=await post('/admin/hire-requests/status',{id:id,status:el.value});if(!d.success)throw Error(d.error);el.blur();await loadHire();status.textContent='Saved'}catch(err){status.textContent='Save failed';el.blur();await loadHire()}finally{el.disabled=false}});
+function rankBadge(n){var el=document.getElementById('rankSignupIndicator');el.hidden=!n;el.textContent=n?'● '+n+' new':''}
+async function refreshRankBadge(){try{var d=await get('/admin/rank-signups');if(!d.success)throw Error(d.error);rankBadge(d.unseen)}catch(e){var el=document.getElementById('rankSignupIndicator');el.title='Signup count unavailable'}}
+function startHirePolling(){refreshRankBadge();if(hireTimer===null)hireTimer=setInterval(function(){if(!document.getElementById('app').hidden&&!document.hidden){loadHire();refreshRankBadge()}},60000)}
+
+document.querySelectorAll('[data-mail-section]').forEach(function(section){section.addEventListener('toggle',function(){if(section.open)loadMail(section)})});
+if(document.getElementById('calendarCreate'))document.getElementById('calendarCreate').onclick=async function(){
+ var btn=this,target=document.getElementById('calendarLink');if(!confirm('Create a new private calendar URL? Any previous subscription will stop working.'))return;
+ btn.disabled=true;target.textContent='Creating…';
+ try{var d=await post('/admin/reminder-calendar',{action:'rotate'});if(!d.success)throw Error(d.error);target.textContent='Copy this URL now and add it in Google Calendar → Other calendars → From URL. It cannot be shown again.';
+ var field=document.createElement('input');field.readOnly=true;field.value=d.url;field.setAttribute('aria-label','Private calendar URL');target.appendChild(field);field.select();
+ var copy=document.createElement('button');copy.type='button';copy.textContent='Copy URL';copy.onclick=async function(){try{await navigator.clipboard.writeText(field.value);copy.textContent='Copied'}catch(e){field.select()}};target.appendChild(copy);
+ }catch(e){target.textContent='Calendar URL unavailable'}finally{btn.disabled=false}
+};
+if(document.getElementById('calendarRevoke'))document.getElementById('calendarRevoke').onclick=async function(){
+ if(!confirm('Revoke the current calendar URL? This does not cancel reminders.'))return;var btn=this,target=document.getElementById('calendarLink');btn.disabled=true;
+ try{var d=await post('/admin/reminder-calendar',{action:'revoke'});if(!d.success)throw Error(d.error);target.textContent='Calendar URL revoked. Remove the old subscription from Google Calendar.'}catch(e){target.textContent='Revocation failed'}finally{btn.disabled=false}
+};
+async function loadMail(section){
+ var root=section.querySelector('.mailRows'),source=section.getAttribute('data-mail-section');root.textContent='Loading…';
+ try{var d=await get('/admin/email-overview?source='+encodeURIComponent(source));if(!d.success)throw Error(d.error);
+ root.innerHTML='<p class="muted">'+esc(d.note)+'</p>'+(source==='rank'?'<p><button type="button" class="ghost" data-rank-seen-all>Mark all loaded signups as seen</button> <span class="rankSeenStatus" role="status"></span></p>':'')+'<label>Search<input placeholder="Email, website or URL"></label><div class="mailList"></div>';
+ var input=root.querySelector('input'),list=root.querySelector('.mailList');if(source==='rank')rankBadge(d.rows.filter(function(r){return r.is_new}).length);
+ function draw(){var q=input.value.toLowerCase().trim(),groups=new Map();d.rows.forEach(function(r){if(q&&![r.email,r.host,r.url].some(function(v){return String(v||'').toLowerCase().includes(q)}))return;var h=r.host||'Unknown website';if(!groups.has(h))groups.set(h,[]);groups.get(h).push(r)});
+ list.innerHTML=Array.from(groups.entries()).map(function(g){return '<details class="card" style="padding:10px"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+'</summary>'+g[1].map(function(r){return '<div style="border-top:1px solid var(--line);padding:8px"><strong>'+esc(r.email||'Email not stored')+'</strong> · '+esc(r.status)+(r.is_new?' <strong style="color:#b91c1c">● New</strong> <button type="button" class="ghost" data-rank-seen="'+esc(r.id)+'">Mark as seen</button>':'')+'<br><small>'+esc(r.url||'')+'</small><br><small>'+esc(r.detail||'')+'</small></div>'}).join('')+'</details>'}).join('')||'<p>No matching records.</p>'}
+ input.addEventListener('input',draw);draw();
+ if(source==='rank')root.onclick=async function(e){
+  var btn=e.target.closest('[data-rank-seen],[data-rank-seen-all]');if(!btn||btn.disabled)return;
+  var id=btn.getAttribute('data-rank-seen'),ids=id?[id]:d.rows.filter(function(r){return r.is_new}).map(function(r){return r.id});
+  if(!ids.length)return;
+  btn.disabled=true;var status=root.querySelector('.rankSeenStatus');status.textContent='Saving…';
+  try{for(var i=0;i<ids.length;i+=500){var out=await post('/admin/rank-signups/seen',{ids:ids.slice(i,i+500)});if(!out.success)throw Error(out.error)}
+   var chosen=new Set(ids);d.rows.forEach(function(r){if(chosen.has(r.id))r.is_new=false});draw();await refreshRankBadge();status.textContent='Saved';
+  }catch(err){status.textContent='Could not save; reopen this section to refresh'}finally{btn.disabled=false}
+ };
+
+ }catch(e){root.textContent='Email overview unavailable'}
+}
 var historyRows=[],historySelected=new Set(),historyPage=0,historySize=25,historyBusy=false;
 async function loadHistory(){
  var root=document.getElementById('researchHistory');if(!root)return;
@@ -1358,7 +1412,7 @@ async function deleteHistory(ids,all){
  catch(e){msg.textContent='Delete failed: '+e.message}finally{historyBusy=false;if(document.getElementById('rhCount'))historyCounts()}
 }
 
-document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load();loadContacts()});
+document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load();loadContacts();startHirePolling()});
 document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
 var rfForm=document.getElementById('rf');if(rfForm)rfForm.addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
 document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
@@ -1383,7 +1437,7 @@ document.getElementById('cDelAll').addEventListener('click',async function(){var
  var typed=prompt('This deletes everyone in this selection ('+what+') with all their data. It cannot be undone. Type DELETE to confirm.');if(typed!=='DELETE')return;
  var r=await post('/admin/contacts/delete-all',{source:CSRC,country:c,tips:t,confirm:'DELETE'});document.getElementById('cStatus').textContent=r.success?r.deleted+' deleted.':(r.error||'Not deleted');loadContacts()});
 document.getElementById('cCsv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/contacts.csv?'+cParams(),{credentials:'same-origin'});if(!r.ok){alert('Not logged in');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='contacts.csv';document.body.appendChild(a);a.click();a.remove()});
-if(${js(!!loggedIn)}){load();loadContacts()}
+if(${js(!!loggedIn)}){load();loadContacts();startHirePolling()}
 </script>`,cfg);
 }
 
@@ -2302,6 +2356,84 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     published_on:c.published_on||null,reminder_due_at:c.reminder_due_at||null}));
    res.set('Cache-Control','no-store').json({success:true,...d,checks})}
   catch(e){res.status(503).json({success:false,error:e.message})}
+ });
+ app.get(apiPath+'/admin/hire-requests',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{await storage.ensureTables(pool);
+   const rows=(await pool.query("SELECT h.id::text,h.name,h.email,h.company,h.phone,h.message,h.status,h.created_at,c.url,c.decision FROM growth_free_hire_requests h LEFT JOIN growth_free_checks c ON c.id=h.check_id ORDER BY h.created_at DESC,h.id DESC")).rows;
+   res.set('Cache-Control','private, no-store').json({success:true,rows,active:rows.filter(h=>['NEW','IN_PROGRESS'].includes(h.status)).length});
+  }catch(e){res.status(503).json({success:false,error:'Hire requests unavailable'})}
+ });
+ app.post(apiPath+'/admin/hire-requests/status',async(req,res)=>{
+  if(!admin(req,res))return;const b=req.body||{};
+  if(typeof b.id!=='string'||!/^[1-9][0-9]{0,17}$/.test(b.id)||!['NEW','IN_PROGRESS','COMPLETED','ARCHIVED'].includes(b.status))return res.status(400).json({success:false,error:'Invalid status or ID'});
+  try{await storage.ensureTables(pool);const r=await pool.query('UPDATE growth_free_hire_requests SET status=$2 WHERE id=$1 RETURNING id',[b.id,b.status]);res.status(r.rowCount?200:404).json({success:!!r.rowCount})}catch(e){res.status(503).json({success:false,error:'Status unavailable'})}
+ });
+ app.post(apiPath+'/admin/reminder-calendar',async(req,res)=>{
+  if(!admin(req,res))return;
+  if(!config.reminderCalendarEnabled)return res.status(404).json({success:false,error:'Calendar disabled'});
+  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer');
+  const action=req.body?.action;
+  if(!['rotate','revoke'].includes(action))return res.status(400).json({success:false,error:'Invalid action'});
+  try{
+   await storage.ensureTables(pool);
+   if(action==='revoke'){await pool.query('DELETE FROM growth_free_calendar_subscription');return res.json({success:true})}
+   const key=crypto.randomBytes(32).toString('base64url'),hash=crypto.createHash('sha256').update(key).digest('hex');
+   const origin=new URL(publicBase()).origin;
+   if(!origin.startsWith('https://'))return res.status(503).json({success:false,error:'HTTPS public URL required'});
+   await pool.query('INSERT INTO growth_free_calendar_subscription(singleton,token_hash) VALUES(TRUE,$1) ON CONFLICT(singleton) DO UPDATE SET token_hash=EXCLUDED.token_hash,created_at=NOW()',[hash]);
+   res.json({success:true,url:origin+apiPath+'/reminder-calendar.ics?key='+encodeURIComponent(key)});
+  }catch(e){res.status(503).json({success:false,error:'Calendar unavailable'})}
+ });
+ app.get(apiPath+'/reminder-calendar.ics',async(req,res)=>{
+  if(!config.reminderCalendarEnabled)return res.status(404).set('Cache-Control','private, no-store').end();
+  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').set('X-Robots-Tag','noindex, nofollow').set('X-Content-Type-Options','nosniff');
+  const key=req.query?.key;
+  if(!config.adminKey||typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return res.status(404).end();
+  try{
+   await storage.ensureTables(pool);
+   const hash=crypto.createHash('sha256').update(key).digest('hex');
+   const sub=(await pool.query('SELECT token_hash FROM growth_free_calendar_subscription WHERE singleton=TRUE')).rows[0];
+   if(!sub||!store.sameKey(sub.token_hash,hash))return res.status(404).end();
+   const rows=(await pool.query("SELECT public_id,email,emails,access_label,invite_id,url,host,query,reminder_due_at FROM growth_free_checks WHERE status='DONE' AND reminder_due_at IS NOT NULL AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 ORDER BY reminder_due_at,id")).rows;
+   res.type('text/calendar; charset=utf-8').send(require('./reminder-calendar.cjs').buildCalendar(rows));
+  }catch(e){res.status(503).end()}
+ });
+ app.get(apiPath+'/admin/rank-signups',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{await storage.ensureTables(pool);const row=(await pool.query('SELECT COUNT(*)::int AS unseen FROM rank_free_accounts a WHERE NOT EXISTS(SELECT 1 FROM growth_free_rank_signup_seen s WHERE s.account_id=a.id)')).rows[0];
+   res.set('Cache-Control','private, no-store').json({success:true,unseen:row.unseen});
+  }catch(e){res.status(503).json({success:false,error:'Signup count unavailable'})}
+ });
+ app.post(apiPath+'/admin/rank-signups/seen',async(req,res)=>{
+  if(!admin(req,res))return;const ids=req.body?.ids;
+  if(!Array.isArray(ids)||!ids.length||ids.length>500||ids.some(id=>typeof id!=='string'||!/^[1-9][0-9]{0,17}$/.test(id)))return res.status(400).json({success:false,error:'Invalid signup IDs'});
+  try{await storage.ensureTables(pool);const r=await pool.query('INSERT INTO growth_free_rank_signup_seen(account_id) SELECT id FROM rank_free_accounts WHERE id=ANY($1::bigint[]) ON CONFLICT(account_id) DO NOTHING',[ids]);res.json({success:true,seen:r.rowCount})}
+  catch(e){res.status(503).json({success:false,error:'Acknowledgement unavailable'})}
+ });
+ app.get(apiPath+'/admin/email-overview',async(req,res)=>{
+  if(!admin(req,res))return;const source=String(req.query?.source||'');
+  if(!['rank','growth','gsc'].includes(source))return res.status(400).json({success:false,error:'Invalid source'});
+  try{
+   let rows=[],note='';
+   const date=x=>x?new Date(x).toISOString():'—';
+   if(source==='growth'){
+    await storage.ensureTables(pool);
+    const records=(await pool.query("SELECT id,email,emails,access_label,invite_id,url,host,status,published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,reminder_attempts FROM growth_free_checks WHERE reminder_due_at IS NOT NULL ORDER BY reminder_due_at,id")).rows;
+    rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
+    note='One-time measurement reminders, grouped by website. Dates in UTC.';
+   }else if(source==='rank'){
+    await storage.ensureTables(pool);
+    const records=(await pool.query("SELECT a.id::text AS id,a.email,a.created_at,a.verified_at,a.opted_out_at,a.marketing_consent,(s.account_id IS NULL) AS is_new,p.host,p.last_digest_at,p.digest_fail_at,p.digest_fail_count,COUNT(k.id) FILTER (WHERE k.active)::int AS active_keywords,MAX(k.next_check_at) FILTER (WHERE k.active) AS last_next_check FROM rank_free_accounts a LEFT JOIN growth_free_rank_signup_seen s ON s.account_id=a.id LEFT JOIN rank_free_projects p ON p.account_id=a.id LEFT JOIN rank_free_keywords k ON k.project_id=p.id GROUP BY a.id,p.id,s.account_id ORDER BY (s.account_id IS NULL) DESC,a.created_at DESC")).rows;
+    rows=records.map(r=>({id:r.id,is_new:r.is_new,email:r.email,host:r.host,status:r.opted_out_at?'Stopped':!r.verified_at?'Unconfirmed':!r.active_keywords?'No active keywords':'Active',detail:'Signed up '+date(r.created_at)+' · Keywords '+r.active_keywords+' · Tips '+(r.marketing_consent?'yes':'no')+' · Last digest round closed '+date(r.last_digest_at)+' · Latest next keyword check '+date(r.last_next_check)+(r.digest_fail_at?' · Failed attempts '+r.digest_fail_count:'')}));
+    note='Rank Tracker digest recipients. A digest is sent after a full keyword round. The round-close timestamp is not proof of delivery, and next keyword check is not an exact email schedule. Tips consent is separate.';
+   }else{
+    const records=(await pool.query("SELECT site,created_at,expires_at,revoked_at FROM gsc_reports ORDER BY created_at DESC")).rows;
+    rows=records.map(r=>({host:r.site,url:r.site,status:r.revoked_at?'Revoked':new Date(r.expires_at)<=new Date()?'Expired':'Report active',detail:'Report created '+date(r.created_at)+' · Expires '+date(r.expires_at)}));
+    note='GSC Audit report records. The report table does not store recipient emails or an automatic email schedule; these are not verified mailing recipients.';
+   }
+   res.set('Cache-Control','private, no-store').json({success:true,rows,note});
+  }catch(e){res.status(503).json({success:false,error:'Email overview unavailable'})}
  });
  app.get(apiPath+'/admin/research-history',async(req,res)=>{
   if(!admin(req,res))return;

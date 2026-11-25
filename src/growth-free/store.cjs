@@ -65,6 +65,13 @@ function ensureTables(pool){
     email TEXT PRIMARY KEY, tips BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL, last_at TIMESTAMPTZ NOT NULL,
     url TEXT, query TEXT, country TEXT, language TEXT)`);
+  // Admin acknowledgement is separate from rank account verification, consent and delivery.
+  await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_rank_signup_seen(
+    account_id BIGINT PRIMARY KEY, seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  // One revocable read-only calendar subscription; only the token fingerprint is stored.
+  await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_calendar_subscription(
+    singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK(singleton),
+    token_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
