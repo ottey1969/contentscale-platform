@@ -3,6 +3,8 @@
 // tables, own settings (GROWTH_FREE_* environment variables). It can be mounted
 // in the main app or run on its own domain with server.cjs.
 const crypto=require('node:crypto');
+const path=require('node:path');
+const DEFAULT_AUTHOR_IMAGE='/blog/images/ottmar-francisca.jpg';
 const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl,engineVersion}=require('./engine.cjs');
 const {groundedGeminiAnswer}=require('./auto-ai-answers.cjs');
@@ -80,7 +82,7 @@ function freeGrowthDefaults(env){
   brand:env.GROWTH_FREE_BRAND||'ContentScale',
   // Owner 2026-11-20: the paid card says "I", so it shows who that is.
   authorName:env.GROWTH_FREE_AUTHOR_NAME||'Ottmar J.G. Francisca',
-  authorImage:/^https:\/\//.test(env.GROWTH_FREE_AUTHOR_IMAGE||'')?env.GROWTH_FREE_AUTHOR_IMAGE:'https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png',
+  authorImage:/^https:\/\//.test(env.GROWTH_FREE_AUTHOR_IMAGE||'')?env.GROWTH_FREE_AUTHOR_IMAGE:DEFAULT_AUTHOR_IMAGE,
   perEmail:int(env.GROWTH_FREE_PER_EMAIL_PER_DAY,3),
   perIp:int(env.GROWTH_FREE_PER_IP_PER_DAY,3),
   daily:int(env.GROWTH_FREE_DAILY_LIMIT,50),
@@ -115,7 +117,7 @@ function readEmails(raw){
 const clean=(x,n)=>String(x==null?'':x).replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,n);
 
 function page(title,body,cfg){
- return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
+ return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><link rel="icon" href="data:,"><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
 :root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
 .growth-priorities{border-left:4px solid #15803d}.journey-head{display:flex;align-items:center;gap:12px;padding:18px 16px;border-bottom:1px solid var(--line);background:var(--bg)}.journey-head strong{display:block;font-size:17px}.journey-head small{display:block;color:var(--muted);font-weight:400}.journey-static{border:2px solid #2563eb}.growth-brief-jump{margin:0 0 14px}.growth-brief-jump a{font-weight:700;text-decoration:none}.card.hire-prominent{border:2px solid #2563eb;border-left-width:8px;box-shadow:0 8px 24px rgba(37,99,235,.22)}.card.hire-prominent .kicker{color:#2563eb;font-weight:800;letter-spacing:.04em}.card.hire-prominent h2{font-size:1.5em;margin-bottom:2px}.hire-who{display:flex;gap:14px;align-items:center}.hire-who img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #2563eb;flex-shrink:0}.hire-name{margin:0;color:var(--muted);font-size:14px}.prio-list{padding-left:22px;margin:10px 0}.prio-item{margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}.prio-item p{margin:6px 0}.prio-head{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline}.prio-tier,.prio-action{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--card);border:1px solid var(--line)}.prio-most_important .prio-tier{background:#dcfce7;color:#14532d;border-color:#86efac}.prio-important .prio-tier{background:#dbeafe;color:#1e3a8a;border-color:#93c5fd}.prio-fact{color:var(--blocked)}.prio-item details>summary{cursor:pointer;font-size:14px;color:var(--muted)}
@@ -1537,6 +1539,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  // A check opened from the free rank tracker carries a signed handoff for one tracked keyword (src/rank-free/handoff.cjs).
  const attachRank=async(row,ref)=>{if(rankHandoff&&ref&&row&&row.public_id)await rankHandoff.attach(row.public_id,ref).catch(()=>{})};
  if(!config.enabled)return null;
+ app.get(DEFAULT_AUTHOR_IMAGE,(req,res)=>res.sendFile(path.join(__dirname,'../../public',DEFAULT_AUTHOR_IMAGE),{maxAge:'1d'}));
  const queue=[];let running=0;
  const treatedFor=async scope=>typeof storage.treatedQuestions==='function'?storage.treatedQuestions(pool,scope):[];
  const jobs=new Set();

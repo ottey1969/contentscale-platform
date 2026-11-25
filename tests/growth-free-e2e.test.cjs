@@ -60,6 +60,13 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     const evidence = async tab => { if(tab==='ai'){await p.locator('#freeAiResearch').scrollIntoViewIfNeeded();return;} if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click(); await p.click('.rtabs button[data-tab="' + tab + '"]'); };
     const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     // 1. The form: page, search term, market, language, email.
+    const authorImage = await ctx.request.get(base + '/blog/images/ottmar-francisca.jpg');
+    assert.equal(authorImage.status(), 200);
+    assert.match(authorImage.headers()['content-type'], /^image\/jpeg/);
+    await ctx.route('**/*', route => {
+      if (new URL(route.request().url()).origin === base) return route.continue();
+      return route.abort();
+    });
     await p.goto(base + '/free-growth?key=e2e-open-key-1');
     // Legacy access-key form: no question-discovery credits without approval.
     // Visitors type their question; approved invitations use the same full research engine with discovery enabled.
