@@ -72,8 +72,9 @@ async function getPageMetrics(siteUrl, pageUrl, opts = {}, token, fetchImpl = fe
   };
   // aggregate row (no dimensions) = canonical totals + avg position for the page
   const agg = await searchAnalytics(siteUrl, { startDate, endDate, dimensions: [], ...pageFilter }, token, fetchImpl);
-  const r = agg[0] || { clicks: 0, impressions: 0, ctr: 0, position: 0 };
-  const out = { clicks: r.clicks || 0, impressions: r.impressions || 0, ctr: r.ctr || 0, position: r.position || 0, topQueries: [] };
+  const r = agg[0] || {};
+  const metric = value => Number.isFinite(value) ? value : null;
+  const out = { clicks: metric(r.clicks), impressions: metric(r.impressions), ctr: metric(r.ctr), position: metric(r.position), topQueries: [] };
 
   if (opts.withQueries !== false) {
     const q = await searchAnalytics(siteUrl,
