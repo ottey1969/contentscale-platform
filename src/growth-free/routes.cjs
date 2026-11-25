@@ -1315,7 +1315,7 @@ async function get(p){var r=await fetch(API+p,{credentials:'same-origin',cache:'
 var STATUS={ACTIVE:'Active',EXPIRED:'Expired',REVOKED:'Withdrawn',USED_UP:'Used up'};
 async function load(){
  var i=await get('/admin/invites');if(!i.success){document.getElementById('app').hidden=true;document.getElementById('login').hidden=false;return}
- document.getElementById('invites').innerHTML=i.invites.length?i.invites.map(function(v){return '<div class="card"><strong>'+esc(v.label)+'</strong> · '+esc(STATUS[v.status]||v.status)+'<br><small>'+esc(v.used_checks)+' of '+esc(v.max_checks)+' checks used · valid until '+esc(day(v.expires_at))+(v.email_lock?' · only for '+esc(v.email_lock):' · anyone with the link')+(v.last_used_at?' · last used '+esc(day(v.last_used_at)):'')+'</small>'+(v.status==='ACTIVE'?'<p><button class="ghost revoke" data-id="'+esc(v.id)+'">Withdraw</button></p>':'')+'</div>'}).join(''):'<p class="muted">No invitations yet.</p>';
+ document.getElementById('invites').innerHTML=i.invites.length?i.invites.map(function(v){return '<div class="card"><strong>'+esc(v.label)+'</strong> · '+esc(STATUS[v.status]||v.status)+'<br><small>'+esc(v.used_checks)+' of '+esc(v.max_checks)+' checks used · valid until '+esc(day(v.expires_at))+(v.email_lock?' · only for '+esc(v.email_lock):' · anyone with the link')+(v.last_used_at?' · last used '+esc(day(v.last_used_at)):'')+'</small>'+(v.status==='ACTIVE'?'<p><button class="ghost revoke" data-id="'+esc(v.id)+'">Withdraw</button></p>':v.status==='REVOKED'?'<p><button type="button" class="ghost inviteDelete" data-id="'+esc(v.id)+'">Delete</button></p>':'')+'</div>'}).join(''):'<p class="muted">No invitations yet.</p>';
  await loadHire();
  document.getElementById('leads').innerHTML='<div id="researchHistory"></div>';await loadHistory()}
 var hireBusy=false,hireTimer=null;
@@ -1417,6 +1417,7 @@ document.getElementById('logout').addEventListener('click',async function(){awai
 var rfForm=document.getElementById('rf');if(rfForm)rfForm.addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
 document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
  document.getElementById('newlink').innerHTML='<p class="note"><strong>Copy this link now</strong> — it cannot be shown again.<br><input readonly id="lnk" value="'+esc(d.link)+'"> <button type="button" id="cp">Copy</button></p>';document.getElementById('cp').onclick=function(){var x=document.getElementById('lnk');x.select();navigator.clipboard&&navigator.clipboard.writeText(x.value);this.textContent='Copied'};load()});
+document.addEventListener('click',async function(e){var b=e.target.closest('button.inviteDelete');if(!b)return;if(!confirm('Permanently delete this withdrawn invitation? Existing research is retained.'))return;b.disabled=true;try{var d=await post('/admin/invites/'+b.dataset.id+'/delete',{confirm:'DELETE'});if(!d.success)throw Error(d.error);await load()}catch(err){alert(err.message||'Delete failed');b.disabled=false}});
 document.addEventListener('click',async function(e){var b=e.target.closest('button.revoke');if(!b)return;if(!confirm('Withdraw this invitation? The link stops working immediately.'))return;var d=await post('/admin/invites/'+b.dataset.id+'/revoke');if(!d.success)alert(d.error);load()});
 document.getElementById('csv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/leads.csv',{credentials:'same-origin'});if(!r.ok){alert('Not logged in');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='growth-free-leads.csv';a.click()});
 document.getElementById('ff').addEventListener('submit',async function(e){e.preventDefault();if(!confirm('Delete all checks and requests of this email address?'))return;var d=await post('/admin/forget',{email:e.target.email.value});document.getElementById('fs').textContent=d.success?('Deleted '+d.deleted.checks+' checks, '+d.deleted.hire_requests+' requests'):(d.error||'Failed');load()});
@@ -2326,6 +2327,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      link:`${origin}${basePath}?invite=${encodeURIComponent(inv.token)}`,
      note:'Copy this link now: only a fingerprint is stored, the link cannot be shown again.'});
    }catch(e){console.error('[free-growth] invite failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
+  });
+  app.post(apiPath+'/admin/invites/:id/delete',async(req,res)=>{
+   if(!admin(req,res))return;
+   const id=String(req.params.id);
+   if(!/^[1-9][0-9]{0,12}$/.test(id)||req.body?.confirm!=='DELETE')return res.status(400).json({success:false,error:'Invalid invitation or confirmation'});
+   try{await storage.ensureTables(pool);
+    const r=await pool.query('DELETE FROM growth_free_invites WHERE id=$1 AND revoked_at IS NOT NULL RETURNING id',[id]);
+    res.status(r.rowCount?200:409).json({success:!!r.rowCount,...(r.rowCount?{}:{error:'Only withdrawn invitations can be deleted'})});
+   }catch(e){res.status(503).json({success:false,error:'Temporarily unavailable'})}
   });
   app.post(apiPath+'/admin/invites/:id/revoke',async(req,res)=>{
    if(!admin(req,res))return;
