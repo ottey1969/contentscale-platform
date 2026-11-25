@@ -2168,7 +2168,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const fresh=await storage.getCheck(pool,req.params.id,req.query.k)||row;
    if(remind&&emailConfigured()){
     const lang=reminders.languageOf(fresh);
-    const m=await localizeMail(reminders.confirmationMessage({url:row.url,publishedOn:d.value,stopLink:links.stop(saved.reminder_token,saved),lang:reminders.T[lang]?lang:'en'}),lang);
+    const m=await localizeMail(reminders.confirmationMessage({url:row.url,publishedOn:d.value,note:fresh.published_note,stopLink:links.stop(saved.reminder_token,saved),lang:reminders.T[lang]?lang:'en'}),lang);
     if(await Promise.resolve(send({to:reminders.recipientsOf({...saved,access_label:row.access_label,invite_id:row.invite_id}),subject:m.subject,html:m.html})).catch(()=>false))confirmation='SENT'}
    res.set('Cache-Control','no-store').json({success:true,publication:publicationOf(fresh),confirmation,gsc:await gscFor(fresh)});
   }catch(e){console.error('[free-growth] publication failed',e.message);res.status(503).json({success:false,error:'The date could not be saved. Please try again.'})}
