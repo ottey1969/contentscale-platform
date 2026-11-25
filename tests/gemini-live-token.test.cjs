@@ -15,7 +15,7 @@ test('Gemini Live exchanges the server credential for a single-use browser token
  let calls = 0;
  const app = appWith(async (url, options) => {
   calls++;
-  assert.equal(url, 'https://generativelanguage.googleapis.com/v1alpha/auth_tokens');
+  assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/auth_tokens');
   assert.equal(options.headers['x-goog-api-key'], 'synthetic-server-key');
   const payload = JSON.parse(options.body);
   assert.equal(payload.uses, 1);
@@ -25,7 +25,7 @@ test('Gemini Live exchanges the server credential for a single-use browser token
  for (let i = 0; i < 2; i++) {
   const response = await app.get('/token').expect(200).expect('Cache-Control', 'no-store');
   const ws = new URL(response.body.wsUrl);
-  assert.match(ws.pathname, /BidiGenerateContentConstrained$/);
+  assert.match(ws.pathname, /v1beta.*BidiGenerateContentConstrained$/);
   assert.equal(ws.searchParams.get('access_token'), 'auth_tokens/synthetic-session');
   assert.equal(ws.searchParams.has('key'), false);
   assert.doesNotMatch(response.text, /synthetic-server-key/);
