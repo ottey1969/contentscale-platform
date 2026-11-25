@@ -1233,8 +1233,8 @@ function adminPage(cfg,api,base,loggedIn){
   <label>Valid for (days)<input name="days" type="number" min="1" max="90" value="7"></label>
   <p><button>Create invitation link</button> <small role="status" id="is"></small></p></form><div id="newlink"></div></div>
  <h2>Invitations</h2><div id="invites"></div></details>
- <details class="card" id="hireSection"><summary><strong>Hire requests</strong> <span id="hireIndicator" role="status" hidden style="color:var(--blocked);font-weight:700"></span></summary><div id="hireRows"></div><p id="hireStatus" role="status"></p></details>
- <details class="card" id="rankMailSection" data-mail-section="rank"><summary><strong>Rank Tracker Emails</strong></summary><div class="mailRows"></div></details>
+ <details class="card" id="hireSection"><summary><strong>Hire requests</strong> <span id="hireIndicator" role="status" hidden style="color:#b91c1c;font-weight:700"></span></summary><div id="hireRows"></div><p id="hireStatus" role="status"></p></details>
+ <details class="card" id="rankMailSection" data-mail-section="rank"><summary><strong>Rank Tracker Emails</strong> <span id="rankSignupIndicator" role="status" hidden style="color:#b91c1c;font-weight:700"></span></summary><div class="mailRows"></div></details>
  <details class="card" id="gscMailSection" data-mail-section="gsc"><summary><strong>GSC Audit Emails</strong></summary><div class="mailRows"></div></details>
  <details class="card" id="growthMailSection" data-mail-section="growth"><summary><strong>Growth Reminders</strong></summary><p>Subscribe to Google Calendar: ContentScale – Scheduled Reminders. Keep the private URL confidential; anyone with it can read the schedule. Google refreshes periodically.</p><p><button type="button" id="calendarCreate">Create / replace private calendar URL</button> <button type="button" class="ghost" id="calendarRevoke">Revoke calendar URL</button></p><div id="calendarLink" role="status"></div><div class="mailRows"></div></details>
  <details class="card" id="researchSection"><summary><strong>Research History</strong></summary><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div></details>
@@ -1328,7 +1328,10 @@ async function loadHire(){
  }catch(e){st.textContent='Hire requests unavailable';indicator.hidden=true}finally{hireBusy=false}
 }
 document.getElementById('hireRows').addEventListener('change',async function(e){var id=e.target.getAttribute('data-hire-id');if(!id)return;var el=e.target;el.disabled=true;var status=document.getElementById('hireStatus');status.textContent='Saving…';try{var d=await post('/admin/hire-requests/status',{id:id,status:el.value});if(!d.success)throw Error(d.error);el.blur();await loadHire();status.textContent='Saved'}catch(err){status.textContent='Save failed';el.blur();await loadHire()}finally{el.disabled=false}});
-function startHirePolling(){if(hireTimer===null)hireTimer=setInterval(function(){if(!document.getElementById('app').hidden&&!document.hidden)loadHire()},60000)}
+function rankBadge(n){var el=document.getElementById('rankSignupIndicator');el.hidden=!n;el.textContent=n?'● '+n+' new':''}
+async function refreshRankBadge(){try{var d=await get('/admin/rank-signups');if(!d.success)throw Error(d.error);rankBadge(d.unseen)}catch(e){var el=document.getElementById('rankSignupIndicator');el.title='Signup count unavailable'}}
+function startHirePolling(){refreshRankBadge();if(hireTimer===null)hireTimer=setInterval(function(){if(!document.getElementById('app').hidden&&!document.hidden){loadHire();refreshRankBadge()}},60000)}
+
 document.querySelectorAll('[data-mail-section]').forEach(function(section){section.addEventListener('toggle',function(){if(section.open)loadMail(section)})});
 document.getElementById('calendarCreate').onclick=async function(){
  var btn=this,target=document.getElementById('calendarLink');if(!confirm('Create a new private calendar URL? Any previous subscription will stop working.'))return;
@@ -1345,11 +1348,21 @@ document.getElementById('calendarRevoke').onclick=async function(){
 async function loadMail(section){
  var root=section.querySelector('.mailRows'),source=section.getAttribute('data-mail-section');root.textContent='Loading…';
  try{var d=await get('/admin/email-overview?source='+encodeURIComponent(source));if(!d.success)throw Error(d.error);
- root.innerHTML='<p class="muted">'+esc(d.note)+'</p><label>Search<input placeholder="Email, website or URL"></label><div class="mailList"></div>';
- var input=root.querySelector('input'),list=root.querySelector('.mailList');
+ root.innerHTML='<p class="muted">'+esc(d.note)+'</p>'+(source==='rank'?'<p><button type="button" class="ghost" data-rank-seen-all>Mark all loaded signups as seen</button> <span class="rankSeenStatus" role="status"></span></p>':'')+'<label>Search<input placeholder="Email, website or URL"></label><div class="mailList"></div>';
+ var input=root.querySelector('input'),list=root.querySelector('.mailList');if(source==='rank')rankBadge(d.rows.filter(function(r){return r.is_new}).length);
  function draw(){var q=input.value.toLowerCase().trim(),groups=new Map();d.rows.forEach(function(r){if(q&&![r.email,r.host,r.url].some(function(v){return String(v||'').toLowerCase().includes(q)}))return;var h=r.host||'Unknown website';if(!groups.has(h))groups.set(h,[]);groups.get(h).push(r)});
- list.innerHTML=Array.from(groups.entries()).map(function(g){return '<details class="card" style="padding:10px"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+'</summary>'+g[1].map(function(r){return '<div style="border-top:1px solid var(--line);padding:8px"><strong>'+esc(r.email||'Email not stored')+'</strong> · '+esc(r.status)+'<br><small>'+esc(r.url||'')+'</small><br><small>'+esc(r.detail||'')+'</small></div>'}).join('')+'</details>'}).join('')||'<p>No matching records.</p>'}
- input.addEventListener('input',draw);draw()
+ list.innerHTML=Array.from(groups.entries()).map(function(g){return '<details class="card" style="padding:10px"><summary><strong>'+esc(g[0])+'</strong> · '+g[1].length+'</summary>'+g[1].map(function(r){return '<div style="border-top:1px solid var(--line);padding:8px"><strong>'+esc(r.email||'Email not stored')+'</strong> · '+esc(r.status)+(r.is_new?' <strong style="color:#b91c1c">● New</strong> <button type="button" class="ghost" data-rank-seen="'+esc(r.id)+'">Mark as seen</button>':'')+'<br><small>'+esc(r.url||'')+'</small><br><small>'+esc(r.detail||'')+'</small></div>'}).join('')+'</details>'}).join('')||'<p>No matching records.</p>'}
+ input.addEventListener('input',draw);draw();
+ if(source==='rank')root.onclick=async function(e){
+  var btn=e.target.closest('[data-rank-seen],[data-rank-seen-all]');if(!btn||btn.disabled)return;
+  var id=btn.getAttribute('data-rank-seen'),ids=id?[id]:d.rows.filter(function(r){return r.is_new}).map(function(r){return r.id});
+  if(!ids.length)return;
+  btn.disabled=true;var status=root.querySelector('.rankSeenStatus');status.textContent='Saving…';
+  try{for(var i=0;i<ids.length;i+=500){var out=await post('/admin/rank-signups/seen',{ids:ids.slice(i,i+500)});if(!out.success)throw Error(out.error)}
+   var chosen=new Set(ids);d.rows.forEach(function(r){if(chosen.has(r.id))r.is_new=false});draw();await refreshRankBadge();status.textContent='Saved';
+  }catch(err){status.textContent='Could not save; reopen this section to refresh'}finally{btn.disabled=false}
+ };
+
  }catch(e){root.textContent='Email overview unavailable'}
 }
 var historyRows=[],historySelected=new Set(),historyPage=0,historySize=25,historyBusy=false;
@@ -2382,6 +2395,18 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    res.type('text/calendar; charset=utf-8').send(require('./reminder-calendar.cjs').buildCalendar(rows));
   }catch(e){res.status(503).end()}
  });
+ app.get(apiPath+'/admin/rank-signups',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{await storage.ensureTables(pool);const row=(await pool.query('SELECT COUNT(*)::int AS unseen FROM rank_free_accounts a WHERE NOT EXISTS(SELECT 1 FROM growth_free_rank_signup_seen s WHERE s.account_id=a.id)')).rows[0];
+   res.set('Cache-Control','private, no-store').json({success:true,unseen:row.unseen});
+  }catch(e){res.status(503).json({success:false,error:'Signup count unavailable'})}
+ });
+ app.post(apiPath+'/admin/rank-signups/seen',async(req,res)=>{
+  if(!admin(req,res))return;const ids=req.body?.ids;
+  if(!Array.isArray(ids)||!ids.length||ids.length>500||ids.some(id=>typeof id!=='string'||!/^[1-9][0-9]{0,17}$/.test(id)))return res.status(400).json({success:false,error:'Invalid signup IDs'});
+  try{await storage.ensureTables(pool);const r=await pool.query('INSERT INTO growth_free_rank_signup_seen(account_id) SELECT id FROM rank_free_accounts WHERE id=ANY($1::bigint[]) ON CONFLICT(account_id) DO NOTHING',[ids]);res.json({success:true,seen:r.rowCount})}
+  catch(e){res.status(503).json({success:false,error:'Acknowledgement unavailable'})}
+ });
  app.get(apiPath+'/admin/email-overview',async(req,res)=>{
   if(!admin(req,res))return;const source=String(req.query?.source||'');
   if(!['rank','growth','gsc'].includes(source))return res.status(400).json({success:false,error:'Invalid source'});
@@ -2394,8 +2419,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
     note='One-time measurement reminders, grouped by website. Dates in UTC.';
    }else if(source==='rank'){
-    const records=(await pool.query("SELECT a.email,a.verified_at,a.opted_out_at,a.marketing_consent,p.host,p.last_digest_at,p.digest_fail_at,p.digest_fail_count,COUNT(k.id) FILTER (WHERE k.active)::int AS active_keywords,MAX(k.next_check_at) FILTER (WHERE k.active) AS last_next_check FROM rank_free_accounts a LEFT JOIN rank_free_projects p ON p.account_id=a.id LEFT JOIN rank_free_keywords k ON k.project_id=p.id GROUP BY a.id,p.id ORDER BY a.created_at DESC")).rows;
-    rows=records.map(r=>({email:r.email,host:r.host,status:r.opted_out_at?'Stopped':!r.verified_at?'Unconfirmed':!r.active_keywords?'No active keywords':'Active',detail:'Keywords '+r.active_keywords+' · Tips '+(r.marketing_consent?'yes':'no')+' · Last digest round closed '+date(r.last_digest_at)+' · Latest next keyword check '+date(r.last_next_check)+(r.digest_fail_at?' · Failed attempts '+r.digest_fail_count:'')}));
+    await storage.ensureTables(pool);
+    const records=(await pool.query("SELECT a.id::text AS id,a.email,a.created_at,a.verified_at,a.opted_out_at,a.marketing_consent,(s.account_id IS NULL) AS is_new,p.host,p.last_digest_at,p.digest_fail_at,p.digest_fail_count,COUNT(k.id) FILTER (WHERE k.active)::int AS active_keywords,MAX(k.next_check_at) FILTER (WHERE k.active) AS last_next_check FROM rank_free_accounts a LEFT JOIN growth_free_rank_signup_seen s ON s.account_id=a.id LEFT JOIN rank_free_projects p ON p.account_id=a.id LEFT JOIN rank_free_keywords k ON k.project_id=p.id GROUP BY a.id,p.id,s.account_id ORDER BY (s.account_id IS NULL) DESC,a.created_at DESC")).rows;
+    rows=records.map(r=>({id:r.id,is_new:r.is_new,email:r.email,host:r.host,status:r.opted_out_at?'Stopped':!r.verified_at?'Unconfirmed':!r.active_keywords?'No active keywords':'Active',detail:'Signed up '+date(r.created_at)+' · Keywords '+r.active_keywords+' · Tips '+(r.marketing_consent?'yes':'no')+' · Last digest round closed '+date(r.last_digest_at)+' · Latest next keyword check '+date(r.last_next_check)+(r.digest_fail_at?' · Failed attempts '+r.digest_fail_count:'')}));
     note='Rank Tracker digest recipients. A digest is sent after a full keyword round. The round-close timestamp is not proof of delivery, and next keyword check is not an exact email schedule. Tips consent is separate.';
    }else{
     const records=(await pool.query("SELECT site,created_at,expires_at,revoked_at FROM gsc_reports ORDER BY created_at DESC")).rows;
