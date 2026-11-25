@@ -49,6 +49,7 @@ function ensureTables(pool){
   // Measurement after publication (visitor's choice): the date the change went live and one e-mail about 4 weeks later.
   await addColumn('published_on','DATE');
   await addColumn('published_note','TEXT');
+  await addColumn('publication_history',"JSONB NOT NULL DEFAULT '[]'::jsonb");
   await addColumn('implementation',"JSONB NOT NULL DEFAULT '{}'::jsonb");
   await addColumn('contentscore_history',"JSONB NOT NULL DEFAULT '[]'::jsonb");
   await addColumn('reminder_due_at','TIMESTAMPTZ');
@@ -168,7 +169,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation,contentscore_history FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,publication_history,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation,contentscore_history FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
@@ -236,12 +237,19 @@ async function forgetEmail(pool,email){
 }
 
 // The publication date and the reminder. A changed date moves the reminder and sends it again; no reminder = cleared.
-async function setPublication(pool,{checkId,publishedOn,dueAt,base=null,note=null}){
+async function setPublication(pool,{checkId,publishedOn,dueAt,base=null,note=null,implementationReport=null}){
  return (await pool.query(`UPDATE growth_free_checks SET
     reminder_sent_at=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_sent_at ELSE NULL END,
     reminder_attempts=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_attempts ELSE 0 END,
+    publication_history=COALESCE(publication_history,'[]'::jsonb)
+      || CASE WHEN published_on IS NOT NULL AND jsonb_array_length(COALESCE(publication_history,'[]'::jsonb))=0
+           THEN jsonb_build_array(jsonb_build_object('recorded_at',NULL,'published_on',published_on::text,'summary',published_note,'source','legacy','verified',false,'report',NULL::jsonb)) ELSE '[]'::jsonb END
+      || CASE WHEN $2::date IS NULL THEN '[]'::jsonb
+           WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(publication_history,'[]'::jsonb)) h WHERE h->>'published_on'=$2::date::text AND h->>'summary' IS NOT DISTINCT FROM $6::text AND COALESCE(h->'report','null'::jsonb) = COALESCE($7::jsonb,'null'::jsonb)) THEN '[]'::jsonb
+           WHEN published_on IS NOT DISTINCT FROM $2::date AND published_note IS NOT DISTINCT FROM $6::text AND $7::jsonb IS NULL THEN '[]'::jsonb
+           ELSE jsonb_build_array(jsonb_build_object('recorded_at',NOW(),'published_on',$2::date::text,'summary',$6::text,'source',CASE WHEN $7::jsonb IS NULL THEN 'manual' ELSE 'external_ai' END,'verified',false,'report',$7::jsonb)) END,
     published_on=$2::date,reminder_due_at=$3::timestamptz,reminder_token=COALESCE(reminder_token,$4),reminder_opt_out_at=CASE WHEN $3::timestamptz IS NULL THEN reminder_opt_out_at ELSE NULL END,reminder_base=COALESCE($5,reminder_base),published_note=$6
-   WHERE id=$1 RETURNING emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base,publishedOn?(note||null):null])).rows[0]||null;
+   WHERE id=$1 RETURNING emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base,publishedOn?(note||null):null,implementationReport?JSON.stringify(implementationReport):null])).rows[0]||null;
 }
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
  return (await pool.query(`SELECT id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,published_note,reminder_token,reminder_base,ui_lang FROM growth_free_checks

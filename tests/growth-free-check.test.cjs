@@ -878,7 +878,7 @@ test('ensureTables: an existing column is not altered again; a missing one is ad
   return {rows:[]}}};
  await store.ensureTables(pool);
  const alters=seen.filter(x=>/ALTER TABLE/.test(x));
- assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS implementation JSONB NOT NULL DEFAULT '{}'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS contentscore_history JSONB NOT NULL DEFAULT '[]'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing columns');
+ assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS publication_history JSONB NOT NULL DEFAULT '[]'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS implementation JSONB NOT NULL DEFAULT '{}'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS contentscore_history JSONB NOT NULL DEFAULT '[]'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing columns');
  delete require.cache[require.resolve('../src/growth-free/store.cjs')];
 });
 
@@ -1084,4 +1084,13 @@ test('the form opens the existing result for this page instead of starting over 
  // Every visitor: a check started in this browser is remembered for its page and offered on the form.
  assert.match(form,/growthFreeResults/);
  for(const m of form.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
+});
+
+// Exercise the history comparison in the standalone CI workflow, not only npm test.
+test('publication history: exact windows and overlap warnings',()=>{
+ const {compareHistory,windowsOf}=require('../src/growth-free/reminders.cjs');
+ const date='2026-11-01',other='2026-11-10',w=windowsOf(date);
+ const upload=(p,clicks,status='VERIFIED_FOR_PAGE')=>({status,period_start:p.start,period_end:p.end,totals:{clicks,impressions:100},queries:[]});
+ const results=compareHistory([{published_on:date},{published_on:other}],[upload(w.before,1),upload(w.after,2),upload(w.after,999,'WRONG_PAGE')],'roof repair');
+ assert.equal(results[0].before.totals.clicks,1);assert.equal(results[0].after.totals.clicks,2);assert.deepEqual(results[0].overlapping_publications,[other]);
 });
