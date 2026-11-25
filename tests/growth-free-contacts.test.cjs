@@ -99,6 +99,19 @@ test('research history: owner-only explicit bulk removal, active checks and rank
     assert.equal((await call('GET',endpoint)).status,404);
     const login = await call('POST','/api/free-growth/admin/login',{key:'research-secret-0123456789'});
     const cookie = login.headers.get('set-cookie').split(';')[0], jar={cookie}, write={cookie,'X-Requested-With':'growth-free-admin'};
+    const inv=await growth.createInvite(pool,{label:'Cleanup regression '+suffix,maxChecks:3,days:7});
+    try{
+      const invitePath='/api/free-growth/admin/invites/'+inv.id;
+      await pool.query('UPDATE growth_free_checks SET invite_id=$2 WHERE id=$1',[done,inv.id]);
+      assert.equal((await call('POST',invitePath+'/delete',{confirm:'DELETE'},jar)).status,404);
+      assert.equal((await call('POST',invitePath+'/delete',{confirm:'DELETE'},write)).status,409);
+      assert.equal((await call('POST',invitePath+'/revoke',{},write)).status,200);
+      assert.equal((await call('POST',invitePath+'/delete',{},write)).status,400);
+      assert.equal((await call('POST',invitePath+'/delete',{confirm:'DELETE'},write)).status,200);
+      assert.equal(await growth.getInvite(pool,inv.token),null);
+      assert.equal((await pool.query('SELECT COUNT(*)::int n FROM growth_free_checks WHERE id=$1',[done])).rows[0].n,1);
+    }finally{await pool.query('DELETE FROM growth_free_invites WHERE id=$1',[inv.id]);}
+
     assert.equal((await call('POST',endpoint+'/delete',{ids:[done],confirm:'DELETE'},jar)).status,404);
     assert.equal((await call('POST',endpoint+'/delete',{ids:[done]},write)).status,400);
     assert.equal((await call('POST',endpoint+'/delete',{ids:['1 OR 1=1'],confirm:'DELETE'},write)).status,400);
