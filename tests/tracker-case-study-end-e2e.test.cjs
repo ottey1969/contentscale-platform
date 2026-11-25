@@ -149,11 +149,17 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     const rows = (await db.query('SELECT id,status,baseline_data FROM tracker_case_studies WHERE tracker_client_id=$1 ORDER BY id', [clientId])).rows;
     assert.deepEqual(rows.map(r => [r.id, r.status]), [[csId, 'completed'], [second, 'active']]);
     assert.deepEqual(rows[0].baseline_data, baseline, 'the ended baseline is untouched');
+    const originalReading = (await db.query(`INSERT INTO tracker_snapshots(page_id,checked_at,score)
+      VALUES($1,$2,42) RETURNING id`,[pageId, new Date(after.ended_at.getTime()-1000)])).rows[0].id;
+    const nextReading = (await db.query(`INSERT INTO tracker_snapshots(page_id,checked_at,score)
+      SELECT $1,baseline_at+interval '1 second',87 FROM tracker_case_studies WHERE id=$2 RETURNING id`,[pageId,second])).rows[0].id;
     const currentHistory = await getHistory();
     assert.equal(currentHistory.body.case_study.id, second);
+    assert.deepEqual(currentHistory.body.snapshots.map(row=>row.id),[nextReading]);
     assert.deepEqual(currentHistory.body.case_studies.map(study => study.id), [second, csId]);
     const originalHistory = await getHistory('?case_id=' + csId);
     assert.deepEqual(originalHistory.body.case_study.baseline_data, baseline);
+    assert.deepEqual(originalHistory.body.snapshots.map(row=>row.id),[originalReading]);
     assert.ok(originalHistory.body.events.some(event => event.event_type === 'case_study_ended'));
     const otherPageId = (await db.query("INSERT INTO tracker_pages(tracker_client_id,url,keyword) VALUES ($1,'https://test-cs.example/another/','TEST') RETURNING id",[clientId])).rows[0].id;
     assert.equal((await fetch(base+historyPath.replace('/pages/'+pageId+'/', '/pages/'+otherPageId+'/')+'?case_id='+csId)).status,404);

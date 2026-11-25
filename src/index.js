@@ -4049,11 +4049,20 @@ app.get(['/api/tracker-client/:token/pages/:pageId/case-study','/api/tracker-cli
   const ev=cs?await pool.query(`SELECT id,event_type,event_at,source,event_data,content_hash FROM tracker_case_study_events WHERE case_study_id=$1 ORDER BY event_at ASC,id ASC LIMIT 500`,[cs.id]):{rows:[]};
   const versions=cs?await pool.query(`SELECT id,version_type,captured_at,source,canonical_url,content_hash,octet_length(html_content) AS html_bytes,version_data
     FROM tracker_case_study_content_versions WHERE case_study_id=$1 ORDER BY captured_at ASC,id ASC LIMIT 500`,[cs.id]):{rows:[]};
-  const snap=await pool.query(`SELECT id,checked_at,google_position,google_clicks,google_impressions,score,ai_google_overview_cited,ai_perplexity_cited,ai_bing_cited,ai_brave_cited,scanner_version,scoring_version
-    FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at ASC,id ASC LIMIT 500`,[req.params.pageId]).catch(()=>({rows:[]}));
-  const aiEvidence=await pool.query(`SELECT id,engine,revision_cycle,evidence_method,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,verified_at,updated_at,is_cleared
+  // Scope measurements to the selected cycle. Its pre-existing baseline stays in the protected case record.
+  const windowStart=!activeOnly&&cs?cs.baseline_at:null;
+  const windowEnd=!activeOnly&&cs?.status==='completed'?cs.ended_at:null;
+  const windowKnown=!windowStart||cs.status!=='completed'||Boolean(windowEnd);
+  const snap=windowKnown?await pool.query(`SELECT id,checked_at,google_position,google_clicks,google_impressions,score,ai_google_overview_cited,ai_perplexity_cited,ai_bing_cited,ai_brave_cited,scanner_version,scoring_version
+    FROM tracker_snapshots WHERE page_id=$1
+      AND ($2::timestamptz IS NULL OR checked_at>$2)
+      AND ($3::timestamptz IS NULL OR checked_at<=$3)
+    ORDER BY checked_at DESC,id DESC LIMIT 500`,[page.id,windowStart,windowEnd]).catch(()=>({rows:[]})):{rows:[]};
+  const aiEvidence=windowKnown?await pool.query(`SELECT id,engine,revision_cycle,evidence_method,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,verified_at,updated_at,is_cleared
     FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual'
-    ORDER BY revision_cycle ASC,COALESCE(updated_at,verified_at,created_at) ASC NULLS LAST,id ASC`,[cr.rows[0].id,req.params.pageId]).catch(()=>({rows:[]}));
+      AND ($3::timestamptz IS NULL OR COALESCE(updated_at,verified_at,created_at)>$3)
+      AND ($4::timestamptz IS NULL OR COALESCE(updated_at,verified_at,created_at)<=$4)
+    ORDER BY revision_cycle ASC,COALESCE(updated_at,verified_at,created_at) ASC NULLS LAST,id ASC`,[...scope,windowStart,windowEnd]).catch(()=>({rows:[]})):{rows:[]};
   const implementationReports=await pool.query(`SELECT id AS brief_id, language,
       COALESCE(to_jsonb(b)->'implementation_reports','[]'::jsonb) AS history
     FROM prewrite_briefs b WHERE b.client_id=$1 AND b.tracker_page_id=$2 AND b.published_url=$3
@@ -4063,7 +4072,7 @@ app.get(['/api/tracker-client/:token/pages/:pageId/case-study','/api/tracker-cli
     brief_id:row.brief_id,...item,owner_report:ownerReport(item.report,row.language)
   })));
   const proofSources=await trackerProofSources.loadPageProofSources(pool,page);
-  res.set('Cache-Control','no-store').json({success:true,page_url:page.url,case_study:cs,case_studies:studies,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
+  res.set('Cache-Control','no-store').json({success:true,page_url:page.url,case_study:cs,case_studies:studies,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows.reverse(),ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // Passwordless, read-only milestone report. The random token is the share credential.
