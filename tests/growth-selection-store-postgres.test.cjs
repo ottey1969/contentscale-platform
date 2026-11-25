@@ -201,4 +201,26 @@ test('Firecrawl module telemetry: atomic increments, UTC month isolation and key
   assert.equal((await a.moduleUsage({...base,day:'2026-12-01',month:'2026-12'}))[0].requests,1);
  }finally{await pool.query('DELETE FROM firecrawl_module_usage WHERE account_hash=$1',[id])}
 });
+test('Free Growth publication history preserves prior dates, structured reports and original research (PostgreSQL)',async()=>{
+ const free=require('../src/growth-free/store.cjs');await free.ensureTables(pool);
+ const url='https://history-'+Date.now()+'.example.test/';
+ const original={baseline:'original research'};
+ const id=(await pool.query("INSERT INTO growth_free_checks(public_id,access_key,email,url,host,status,published_on,published_note,report) VALUES('history-'||floor(random()*1e9),'k','owner@example.test',$1,'example.test','DONE','2026-11-01','Legacy change',$2::jsonb) RETURNING id",[url,JSON.stringify(original)])).rows[0].id;
+ const report={schema:'contentscale.implementation.v1',url,status:'published',published_at:'2026-11-25T10:00:00Z',published_on:'2026-11-25',summary:'Updated headings and schema',change_types:['content','schema'],evidence:'commit abc123',verified:false};
+ const read=async()=> (await pool.query('SELECT publication_history,published_on::text,published_note,report FROM growth_free_checks WHERE id=$1',[id])).rows[0];
+ try{
+  await free.setPublication(pool,{checkId:id,publishedOn:'2026-11-01',dueAt:null,note:'Legacy change'});
+  assert.equal((await read()).publication_history.length,1);
+  await free.setPublication(pool,{checkId:id,publishedOn:'2026-11-25',dueAt:null,note:report.summary,implementationReport:report});
+  await free.setPublication(pool,{checkId:id,publishedOn:'2026-11-25',dueAt:null,note:report.summary,implementationReport:report});
+  let row=await read();assert.equal(row.publication_history.length,2);
+  assert.deepEqual(row.publication_history[1].report,report);assert.equal(row.publication_history[0].summary,'Legacy change');
+  await free.setPublication(pool,{checkId:id,publishedOn:'2026-11-26',dueAt:null,note:'Manual follow-up'});
+  await free.setPublication(pool,{checkId:id,publishedOn:null,dueAt:null});
+  row=await read();assert.equal(row.published_on,null);assert.equal(row.publication_history.length,3);assert.deepEqual(row.report,original);
+  await free.setPublication(pool,{checkId:id,publishedOn:'2026-11-01',dueAt:null,note:'Legacy change'});
+  assert.equal((await read()).publication_history.length,3);
+ }finally{await pool.query('DELETE FROM growth_free_checks WHERE id=$1',[id])}
+});
+
 }
