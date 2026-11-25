@@ -30,6 +30,18 @@ test('routing is disabled by default and never intercepts API or POST',async()=>
  try{
   delete process.env.LOCALIZED_HOME_ENABLED;
   assert.equal((await request(app).get('/').set('Host',hosts.nl)).text,'fallback');
+  for(const flag of [undefined,'false']){
+   if(flag===undefined)delete process.env.LOCALIZED_HOME_ENABLED;else process.env.LOCALIZED_HOME_ENABLED=flag;
+   for(const url of ['/','/index.html']){
+    const r=await request(app).get(url).set('Host',hosts.en);
+    assert.equal(r.status,200);
+    assert.match(r.text,/<html lang="en"/);
+    assert.match(r.text,/<link rel="canonical" href="https:\/\/app\.contentscale\.site\/">/);
+    assert.doesNotMatch(r.text,/<link\b[^>]*hreflang=/i);
+    assert.doesNotMatch(r.text,/aria-label="Language"/);
+    assert.doesNotMatch(r.text,/https:\/\/(nl|es)\.app\.contentscale\.site\//);
+   }
+  }
   process.env.LOCALIZED_HOME_ENABLED='true';
   for(const lang of ['nl','es']){
    const r=await request(app).get('/').set('Host',hosts[lang]);
