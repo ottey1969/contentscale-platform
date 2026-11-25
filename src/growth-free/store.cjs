@@ -108,7 +108,7 @@ function ensureTables(pool){
     observation_history JSONB NOT NULL DEFAULT '[]'::jsonb,
     UNIQUE(check_id,engine))`);
   if (!(await pool.query(`SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema()
-    AND table_name='growth_free_ai_answers' AND column_name='observation_history'`)).rowCount) {
+    AND table_name='growth_free_ai_answers' AND column_name='observation_history'`)).rows.length) {
    await pool.query(`SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_ai_answers
      ADD COLUMN IF NOT EXISTS observation_history JSONB NOT NULL DEFAULT '[]'::jsonb`);
   }
