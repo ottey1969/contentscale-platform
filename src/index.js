@@ -5978,7 +5978,7 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/reject', async (req, res
     res.json({ success: true, status: 'in_progress', reason: reason });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief);
+require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief, { normalise: _trackerPlainLiveHtml });
 app.post('/api/tracker-client/:token/prewrite-brief/:id/deadline', async (req, res) => {
   try {
     const r = await _resolvePWBrief(req.params.token, req.params.id);
@@ -9599,6 +9599,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(st==='submitted') return (pw?'':'<button class="bd-btn score" onclick="openScore('+id+')">📊 Re-score</button>')+'<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button><button class="bd-btn sec" onclick="openSubmit('+id+','+pw+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
     if(st==='approved'&&pw) return '<button class="bd-btn pub" onclick="publish('+id+',true)">'+pwText(1)+'</button><button class="bd-btn sec" onclick="recordPWImplementation('+id+')">'+pwText(2)+'</button><button class="bd-btn sec" onclick="viewHtml('+id+',true)">View</button>';
     if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+id+','+pw+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
+    if(st==='published'&&pw) return '<button class="bd-btn sec" onclick="verifyPWLive('+id+',this)">'+pwText(4)+'</button><button class="bd-btn sec" onclick="viewPWDetail('+id+')">'+pwText(7)+'</button>';
     if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
     return '<button class="bd-btn sec" onclick="reopen('+id+','+pw+')">Reopen</button>'; }
   function _hrsLeft(t){ if(!t) return null; try{ return (new Date(t).getTime()-Date.now())/3600000; }catch(e){ return null; } }
@@ -9668,7 +9669,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       (result.history||[]).forEach(function(item){
         var report=document.createElement('pre');
         report.style.whiteSpace='pre-wrap';
-        report.textContent=item.owner_report;
+        report.textContent=item.owner_report+(item.live_verification?NL+NL+pwText(5)+' · '+item.live_verification.observed_at:'');
         preview.appendChild(report);
       });
     }).catch(function(){preview.textContent='Could not load';});
@@ -9685,9 +9686,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function viewHtml(id,pw){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submitted content':'Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(nothing submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
   var pwLanguage=(navigator.language||'en').split('-')[0];
   var pwLabels={
-    en:['Paste the Implementation Report JSON','Record reported publication','Save implementation report','Could not save the report'],
-    nl:['Plak het Implementation Report als JSON','Gemelde publicatie vastleggen','Implementatierapport opslaan','Rapport opslaan mislukt'],
-    es:['Pega el informe de implementación en JSON','Registrar la publicación comunicada','Guardar informe de implementación','No se pudo guardar el informe']
+    en:['Paste the Implementation Report JSON','Record reported publication','Save implementation report','Could not save the report','Check approved content live','Approved content found in live HTML','Live verification is pending','View report'],
+    nl:['Plak het Implementation Report als JSON','Gemelde publicatie vastleggen','Implementatierapport opslaan','Rapport opslaan mislukt','Controleer goedgekeurde inhoud live','Goedgekeurde inhoud gevonden in de live HTML','Live verificatie staat open','Bekijk rapport'],
+    es:['Pega el informe de implementación en JSON','Registrar la publicación comunicada','Guardar informe de implementación','No se pudo guardar el informe','Verificar el contenido aprobado en vivo','Se encontró el contenido aprobado en el HTML público','Verificación en vivo pendiente','Ver informe']
   };
   function pwText(index){return (pwLabels[pwLanguage]||pwLabels.en)[index];}
   function publish(id,pw){
@@ -9702,6 +9703,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     }
     if(!confirm('Publish this brief? Do this once the page is live.'))return;
     post(id,'publish',{name:_name},false).then(function(r){if(!r.success){alert(r.error||'Could not publish');return;}load();});
+  }
+  function verifyPWLive(id,button){
+    button.disabled=true;
+    post(id,'verify-live',{},true).then(function(r){
+      if(r.success){viewPWDetail(id);return;}
+      alert(pwText(6));
+    }).catch(function(){alert(pwText(6));}).finally(function(){button.disabled=false;});
   }
   function recordPWImplementation(id){
     var report=prompt(pwText(0));
@@ -46042,7 +46050,10 @@ function openCaseStudy(pageId){
     function evidenceCell(v){return '<span style="font-weight:900;color:'+(yesNo(v)?'#4ade80':'#f87171')+'">'+(yesNo(v)?'YES':'NO')+'</span>';}
     var engineTable='<div style="overflow-x:auto;border:1px solid #1e3a8a;border-radius:9px;"><table style="width:100%;border-collapse:collapse;min-width:700px;font-size:10px;"><thead><tr style="background:#0b1220;color:#94a3b8;text-align:left;"><th style="padding:8px;">ENGINE</th><th style="padding:8px;">REVISION</th><th style="padding:8px;">RECOMMENDED</th><th style="padding:8px;">LOCAL / MAPS</th><th style="padding:8px;">DOMAIN CITED</th><th style="padding:8px;">EXACT PAGE</th><th style="padding:8px;">VERIFIED</th></tr></thead><tbody>'+engineOrder.map(function(k){var r=latestByEngine[k],isCurrent=r&&Number(r.revision_cycle||1)===currentRevision;if(!r)return '<tr style="border-top:1px solid #172033;"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td colspan="6" style="padding:8px;color:#fbbf24;">NOT CHECKED — manual evidence required</td></tr>';return '<tr style="border-top:1px solid #172033;opacity:'+(isCurrent?'1':'.58')+';"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td style="padding:8px;color:'+(isCurrent?'#7dd3fc':'#94a3b8')+';">'+(isCurrent?'CURRENT · R':'PRIOR · R')+_csEscH(r.revision_cycle||1)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_recommended)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_local_result)+'</td><td style="padding:8px;">'+evidenceCell(r.domain_cited)+'</td><td style="padding:8px;">'+evidenceCell(r.exact_page_cited)+'</td><td style="padding:8px;color:#94a3b8;white-space:nowrap;">'+_csEscH(utcStamp(r.updated_at||r.verified_at))+'</td></tr>';}).join('')+'</tbody></table></div><div style="font-size:10px;color:'+(currentCount===5?'#4ade80':'#fbbf24')+';margin-top:7px;font-weight:800;">Revision '+currentRevision+': '+currentCount+'/5 manually checked'+(currentCount===5?' · complete':' · recheck all five engines after publication')+'. Prior revisions are comparison evidence only.</div>';
     var prewriteReports=(d.prewrite_implementations||[]).map(function(item){
-      return '<details><summary>'+_csEscH(utcStamp(item.recorded_at))+'</summary><pre style="white-space:pre-wrap">'+_csEscH(item.owner_report)+'</pre></details>';
+      var proof=item.live_verification,lang=(document.documentElement.lang||navigator.language||'en').split('-')[0];
+      var labels={en:'Approved content found in live HTML',nl:'Goedgekeurde inhoud gevonden in de live HTML',es:'Contenido aprobado encontrado en el HTML público'};
+      return '<details><summary>'+_csEscH(utcStamp(item.recorded_at))+'</summary><pre style="white-space:pre-wrap">'+_csEscH(item.owner_report)+'</pre>'
+        +(proof?'<p>'+_csEscH((labels[lang]||labels.en)+' · '+utcStamp(proof.observed_at))+'</p>':'')+'</details>';
     }).join('');
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">'+_csEscH(caseName)+'</h2>'+(isPerfectRoofing?'<div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div>':'')+'<div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'

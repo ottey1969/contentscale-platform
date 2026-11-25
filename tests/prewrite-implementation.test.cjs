@@ -69,7 +69,7 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     await pool.query(`
       CREATE TABLE tracker_clients (id INT PRIMARY KEY, domain TEXT, token TEXT);
       CREATE TABLE prewrite_briefs (id INT PRIMARY KEY, client_id INT, status TEXT, keyword TEXT, language TEXT,
-        brief_json JSONB, tracker_page_id INT, published_at TIMESTAMPTZ, published_url TEXT,
+        brief_json JSONB, specialist_html TEXT, tracker_page_id INT, published_at TIMESTAMPTZ, published_url TEXT,
         implementation_reports JSONB NOT NULL DEFAULT '[]'::jsonb);
       CREATE TABLE tracker_pages (id SERIAL PRIMARY KEY, tracker_client_id INT, url TEXT, keyword TEXT, intent TEXT,
         check_frequency TEXT, next_check_at TIMESTAMPTZ, is_active BOOLEAN, implementation_status TEXT,
@@ -82,11 +82,18 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     await pool.query("INSERT INTO prewrite_briefs(id,client_id,status,keyword,language,brief_json) VALUES (1,1,'approved','emergency','nl',$1),(2,1,'approved','new','es',$2)", [expand, newBrief]);
     await pool.query("INSERT INTO tracker_pages(tracker_client_id,url,baseline_data) VALUES (1,$1,'{\"score\":42}'),(2,$1,'{\"score\":59}')", [url]);
     const { rows: before } = await pool.query('SELECT * FROM tracker_pages ORDER BY id');
+    const approvedHtml = '<p>' + 'This is the approved emergency page content. '.repeat(8) + '</p>';
+    await pool.query('UPDATE prewrite_briefs SET specialist_html=$1 WHERE id=1', [approvedHtml]);
+    const live = { status: 200, final_url: url, redirect_chain: [], retrieved_at: '2026-01-02T00:00:00Z', html: approvedHtml };
+    let liveRequests = 0;
     const app = express();
     app.use(express.json());
     registerRoutes(app, pool, async (token, id) => {
       const { rows: [row] } = await pool.query('SELECT b.id AS "briefId", c.id AS "clientId" FROM prewrite_briefs b JOIN tracker_clients c ON c.id=b.client_id WHERE c.token=$1 AND b.id=$2', [token, id]);
       return row || { code: 404, error: 'Not found' };
+    }, {
+      normalise: html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+      fetchHtml: async () => { liveRequests++; return live; }
     });
     const base = '/api/tracker-client/owner/prewrite-brief/';
     const api = request(app);
@@ -104,6 +111,13 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     const history = (await api.get(base + '1/implementation-report').expect(200)).body.history;
     assert.deepEqual(history.map(item => item.report.status), ['implemented', 'published']);
     assert.ok(history.every(item => item.recorded_at.endsWith('Z')));
+    await api.post(base.replace('owner', 'other') + '1/verify-live').expect(404);
+    const verification = (await api.post(base + '1/verify-live').expect(200)).body.verification;
+    assert.equal(verification.status, 'approved_content_present');
+    assert.deepEqual((await api.post(base + '1/verify-live').expect(200)).body.verification, verification);
+    assert.equal(liveRequests, 1);
+    const verifiedHistory = (await api.get(base + '1/implementation-report').expect(200)).body.history;
+    assert.deepEqual(verifiedHistory[1].live_verification, verification);
     assert.deepEqual((await pool.query('SELECT * FROM tracker_pages ORDER BY id')).rows, before);
     await api.post(base + '2/publish').send({ report: { ...published, url: newUrl } }).expect(200);
     const { rows: [page] } = await pool.query('SELECT * FROM tracker_pages WHERE tracker_client_id=1 AND url=$1', [newUrl]);
@@ -114,4 +128,22 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     await owner.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');
     await owner.end();
   }
+});
+
+test('live proof requires exact public response and the approved content, with no redirect or truncation', async () => {
+  const { verifyApprovedContent } = require('../src/prewrite-implementation.cjs');
+  const content = 'Approved content for the emergency page. '.repeat(8).trim();
+  const approved = '<article><p>' + content + '</p></article>';
+  const live = { html: '<main>' + approved + '</main>', status: 200, final_url: url, redirect_chain: [], retrieved_at: '2026-01-02T10:00:00.000Z' };
+  const normalise = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const verify = (response, draft = approved) => verifyApprovedContent(url, draft, async () => response, normalise);
+  const proof = await verify(live);
+  assert.equal(proof.status, 'approved_content_present');
+  assert.equal(proof.observed_at, live.retrieved_at);
+  assert.match(proof.content_hash, /^[a-f0-9]{64}$/);
+  assert.equal(await verify({ ...live, final_url: url + 'different' }), null);
+  assert.equal(await verify({ ...live, redirect_chain: [{ status: 301 }] }), null);
+  assert.equal(await verify({ ...live, truncated: true }), null);
+  assert.equal(await verify({ ...live, html: '<!--' + content + '-->' }), null);
+  assert.equal(await verify(live, '<p>Too little to verify</p>'), null);
 });

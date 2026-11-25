@@ -1,5 +1,7 @@
 'use strict';
 
+const { createHash } = require('node:crypto');
+const { compactPublicHtml, fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
 const { VERSION, exactUrl, parseImplementationReport, ownerReport } = require('./implementation-report.cjs');
 
 function resolveTarget(brief, domain) {
@@ -54,7 +56,23 @@ function editorInstructions(brief, domain) {
   ].join('\n');
 }
 
-module.exports = { resolveTarget, readReport, publicationReport, editorInstructions };
+async function verifyApprovedContent(url, approvedHtml, fetchHtml, normalise) {
+  const draft = normalise(compactPublicHtml(approvedHtml));
+  if (draft.length < 200) return null;
+  const live = await fetchHtml(url, { redirects: 0, limit: 600000, compact: true });
+  if (live.status !== 200 || live.final_url !== url || live.redirect_chain?.length || live.truncated) return null;
+  const observed = normalise(compactPublicHtml(live.html));
+  if (!(' ' + observed + ' ').includes(' ' + draft + ' ')) return null;
+  return {
+    status: 'approved_content_present',
+    url,
+    observed_at: live.retrieved_at,
+    source: 'LIVE_PUBLIC_HTTPS',
+    content_hash: createHash('sha256').update(draft).digest('hex')
+  };
+}
+
+module.exports = { resolveTarget, readReport, publicationReport, editorInstructions, verifyApprovedContent };
 
 function response(result, trackerPageId) {
   return {
@@ -63,7 +81,7 @@ function response(result, trackerPageId) {
   };
 }
 
-function registerRoutes(app, pool, resolveBrief) {
+function registerRoutes(app, pool, resolveBrief, { normalise, fetchHtml = fetchPublicGrowthHtml } = {}) {
   const path = '/api/tracker-client/:token/prewrite-brief/:id';
   async function save(req, res, publishing) {
     let db;
@@ -161,6 +179,53 @@ function registerRoutes(app, pool, resolveBrief) {
     } catch (error) {
       console.error('[prewrite-implementation]', error.message);
       res.status(500).json({ success: false, error: 'Could not load the implementation reports' });
+    }
+  });
+  app.post(path + '/verify-live', async (req, res) => {
+    try {
+      const scope = await resolveBrief(req.params.token, req.params.id);
+      if (scope.error) return res.status(scope.code).json({ success: false, error: scope.error });
+      const ids = [scope.briefId, scope.clientId];
+      const { rows: [row] } = await pool.query(
+        `SELECT b.specialist_html, b.published_at, b.published_url, b.implementation_reports
+           FROM prewrite_briefs b JOIN tracker_pages p
+             ON p.id=b.tracker_page_id AND p.tracker_client_id=b.client_id AND p.url=b.published_url
+          WHERE b.id=$1 AND b.client_id=$2 AND b.status='published'`, ids);
+      const index = row?.implementation_reports.findIndex(item => item.report.status === 'published') ?? -1;
+      if (index < 0 || !row.specialist_html || !normalise) {
+        return res.status(409).json({ success: false, status: 'verification_pending' });
+      }
+      let verification = row.implementation_reports[index].live_verification;
+      if (!verification) {
+        try {
+          verification = await verifyApprovedContent(row.published_url, row.specialist_html, fetchHtml, normalise);
+        } catch {
+          return res.status(422).json({ success: false, status: 'verification_pending' });
+        }
+        if (!verification || !(Date.parse(verification.observed_at) >= Date.parse(row.published_at))) {
+          return res.status(422).json({ success: false, status: 'verification_pending' });
+        }
+        const key = [String(index), 'live_verification'];
+        const saved = await pool.query(
+          `UPDATE prewrite_briefs SET implementation_reports=jsonb_set(implementation_reports,$3::text[],$4::jsonb)
+            WHERE id=$1 AND client_id=$2 AND status='published' AND published_url=$5 AND specialist_html=$6
+              AND implementation_reports->$7::int->'report'=$8::jsonb
+              AND implementation_reports->$7::int->'live_verification' IS NULL
+            RETURNING implementation_reports #> $3::text[] AS verification`,
+          [...ids, key, JSON.stringify(verification), row.published_url, row.specialist_html, index,
+            JSON.stringify(row.implementation_reports[index].report)]);
+        if (!saved.rowCount) {
+          const current = await pool.query(
+            `SELECT implementation_reports #> $3::text[] AS verification FROM prewrite_briefs
+              WHERE id=$1 AND client_id=$2 AND status='published' AND published_url=$4`, [...ids, key, row.published_url]);
+          verification = current.rows[0]?.verification;
+        }
+      }
+      if (!verification) return res.status(409).json({ success: false, status: 'verification_pending' });
+      res.set('Cache-Control', 'no-store').json({ success: true, verification });
+    } catch (error) {
+      console.error('[prewrite-live-verification]', error.message);
+      res.status(500).json({ success: false, status: 'verification_pending' });
     }
   });
   app.post(path + '/implementation-report', (req, res) => save(req, res, false));
