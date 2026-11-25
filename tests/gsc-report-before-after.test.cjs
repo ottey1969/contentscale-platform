@@ -74,3 +74,14 @@ test('owner adds a newer export to an existing report; nobody else can',async t=
  assert.match(owner,/data-period=/);assert.match(owner,/Add a newer period/);
  for(const m of owner.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
 });
+
+test('missing comparison measures stay unknown while a real zero remains visible',()=>{
+ const baseline={...before,pages:[{url:A,clicks:null,impressions:10,position:null}]};
+ const after={...afterSnap,pages:[{url:A,clicks:0,impressions:null,position:22}]};
+ const result=compare(baseline,after,published);
+ assert.equal(result.pages[0].before.clicks,null);
+ assert.equal(result.pages[0].after.clicks,0);
+ assert.equal(result.totals.before.clicks,null);
+ assert.equal(result.totals.after.impressions,null);
+ assert.equal(result.totals.before.position,null);
+});
