@@ -29,4 +29,16 @@ function parseImplementationReport(raw,expectedUrl,now=new Date()){
  if(raw.evidence!=null&&(typeof raw.evidence!=='string'||raw.evidence.length>1000))throw Error('Invalid implementation evidence');
  return {schema:VERSION,url:exactUrl(raw.url),status:raw.status,published_at:date?raw.published_at:null,summary:raw.summary.trim(),change_types:[...new Set(raw.change_types)],evidence:raw.evidence||null,published_on:date,verified:false};
 }
-module.exports={VERSION,parseImplementationReport};
+// Plain-language owner copy; never upgrades editor evidence into independently verified results.
+function ownerReport(report,lang='en'){
+ const labels={
+ en:{title:'Website change report',url:'Page',date:'Publication time (UTC)',status:'Status',changes:'Changes made',types:'Change categories',proof:'Editor-provided evidence',none:'Not supplied',pending:'Not confirmed',published:'Publication reported by editor',implemented:'Implemented; publication not confirmed',not_published:'Not published',next:'Next step: verify the live page and measure Google Search and AI visibility. Results are not guaranteed.'},
+ nl:{title:'Wijzigingsrapport website',url:'Pagina',date:'Publicatietijd (UTC)',status:'Status',changes:'Uitgevoerde wijzigingen',types:'Soorten wijzigingen',proof:'Door de redacteur aangeleverd bewijs',none:'Niet aangeleverd',pending:'Niet bevestigd',published:'Publicatie gemeld door redacteur',implemented:'Geïmplementeerd; publicatie niet bevestigd',not_published:'Niet gepubliceerd',next:'Volgende stap: controleer de live pagina en meet Google Search en AI-zichtbaarheid. Resultaten zijn niet gegarandeerd.'},
+ es:{title:'Informe de cambios del sitio web',url:'Página',date:'Hora de publicación (UTC)',status:'Estado',changes:'Cambios realizados',types:'Tipos de cambios',proof:'Evidencias aportadas por el editor',none:'No aportadas',pending:'Sin confirmar',published:'Publicación comunicada por el editor',implemented:'Implementado; publicación sin confirmar',not_published:'No publicado',next:'Siguiente paso: verificar la página publicada y medir la visibilidad en Google y en IA. No se garantizan resultados.'}
+ };
+ const categories={en:['Content','Technical SEO','Schema','GEO','User experience','General'],nl:['Content','Technische SEO','Schema','GEO','Gebruikerservaring','Algemeen'],es:['Contenido','SEO técnico','Schema','GEO','Experiencia de usuario','General']};
+ lang=Object.hasOwn(labels,lang)?lang:'en';
+ const l=labels[lang],keys=['content','technical_seo','schema','geo','ux','general'];
+ return [l.title,'',l.url+': '+report.url,l.date+': '+(report.published_at||l.pending),l.status+': '+l[report.status],'',l.changes+':',report.summary,'',l.types+': '+report.change_types.map(t=>categories[lang][keys.indexOf(t)]).join(', '),l.proof+': '+(report.evidence||l.none),'',l.next].join('\n');
+}
+module.exports={VERSION,parseImplementationReport,ownerReport};
