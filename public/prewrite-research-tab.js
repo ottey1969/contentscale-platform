@@ -429,7 +429,31 @@
     }
   }
 
+  // Extend the Tracker-only external writer export, without changing Network's approved Brief.
+  function installImplementationExport(){
+    var params=new URLSearchParams(location.search);
+    if(!/^\/track\/[^/?#]+/.test(location.pathname)||params.get('networkEmbed')==='1'||params.has('networkPlacement'))return;
+    var original=window.copyPrewriteForExternalAi;
+    if(typeof original!=='function'||original.csImplementationReport)return;
+    function copyWithReport(btn){
+      var brief=window._pwbCurrentBrief||{},decision=brief.content_decision||{};
+      var url=String(decision.closest_existing_url||'');
+      var existing=/^(EXPAND_EXISTING_PAGE|OPTIMIZE_EXISTING_PAGE|IMPROVE_EXISTING_PAGE)$/.test(String(decision.recommended_treatment||'').toUpperCase());
+      var report={schema:'contentscale.implementation.v1',url:existing&&/^https?:\/\//i.test(url)?url:'REPLACE_WITH_ACTUAL_FINAL_PAGE_URL',status:'not_published',published_at:null,summary:'Describe only the work actually performed',change_types:['content'],evidence:null};
+      var extra='\n\nIMPLEMENTATION REPORT — return separately from the article body. If you only drafted content, label it not_published; do not describe draft work as live. When actually implemented or published, return this JSON with the exact final URL and actual changes (1–500 characters). Status: not_published, implemented, or published. Use published only after confirmed live publication, with actual UTC timestamp YYYY-MM-DDTHH:mm:ssZ; otherwise null. Never invent evidence, URLs, dates or verification. Allowed change_types: content, technical_seo, schema, geo, ux, general. Evidence is optional editor-provided evidence, not independent verification.\n'+JSON.stringify(report,null,2);
+      // The canonical writer reads these existing globals synchronously; restore immediately.
+      var saved=window._lastPrewriteBriefExternalText;
+      var text=saved||window._lastPrewriteBriefText;
+      if(!text)return original.call(this,btn);
+      window._lastPrewriteBriefExternalText=text+extra;
+      try{return original.call(this,btn)}finally{window._lastPrewriteBriefExternalText=saved}
+    }
+    copyWithReport.csImplementationReport=true;
+    window.copyPrewriteForExternalAi=copyWithReport;
+  }
+
   function boot() {
+    installImplementationExport();
     installGrowthHandoff();
     if (install()) return;
     // The inputs are part of the page's own HTML; a short, bounded wait covers late rendering only.
