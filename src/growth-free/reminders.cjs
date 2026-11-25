@@ -131,6 +131,19 @@ function compareUploads(uploads, publishedOn, term) {
     note: 'Search Console numbers for this exact page, 4 weeks before and after the update. A change is not proof that the update caused it.' };
 }
 
+// Historical comparisons use only exact-page exports within their own measurement window.
+function compareHistory(history,uploads,term,activeDate=null){
+ const dates=[...new Set([...(Array.isArray(history)?history:[]).map(x=>x&&x.published_on),activeDate].filter(x=>typeof x==='string'&&YMD.test(x)))].sort();
+ return dates.map(date=>{
+  const w=windowsOf(date);
+  const eligible=(uploads||[]).filter(u=>u.status==='VERIFIED_FOR_PAGE'&&u.period_start&&u.period_end&&(
+   (u.period_start>=w.before.start&&u.period_end<=w.before.end)||(u.period_start>=w.after.start&&u.period_end<=w.after.end)));
+  const result=compareUploads(eligible,date,term);
+  const overlapping=dates.filter(other=>other!==date&&other>=w.before.start&&other<=w.after.end);
+  return {...result,overlapping_publications:overlapping};
+ });
+}
+
 function brevo(fetchImpl) {
   return ({ to, subject, html }) => {
     const key = process.env.BREVO_API_KEY; if (!key || typeof fetchImpl !== 'function') return Promise.resolve(false);
@@ -164,4 +177,4 @@ async function sendDueFreeReminders(pool, storage, { send, links, now = new Date
   return { sent, failed };
 }
 
-module.exports = { recipientsOf, readPublishedOn, reminderMessage, confirmationMessage, compareUploads, sendDueFreeReminders, brevo, languageOf, modelFor, dueAt, windowsOf, T };
+module.exports = { compareHistory, recipientsOf, readPublishedOn, reminderMessage, confirmationMessage, compareUploads, sendDueFreeReminders, brevo, languageOf, modelFor, dueAt, windowsOf, T };
