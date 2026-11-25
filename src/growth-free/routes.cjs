@@ -303,9 +303,7 @@ function simpleFromTracker(d){try{
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 // A result this browser already started for the page in the address: offered on top of the form (owner 2026-11-22).
 function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://');if(i>=0)u=u.slice(i+3);if(u.indexOf('www.')===0)u=u.slice(4);u=u.split('#')[0].split('?')[0];while(u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u}
-(function(){try{var box=document.getElementById('existingLocal');if(!box)return;var u=new URLSearchParams(location.search).get('url');if(!u)return;
- var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),r=M[normPage(u)];if(!r||r.charAt(0)!=='/'||r.charAt(1)==='/')return;
- var lg=new URLSearchParams(location.search).get('lang');document.getElementById('existingLocalLink').href=r+(lg?'&lang='+encodeURIComponent(lg):'');box.hidden=false}catch(e){}})();
+
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
@@ -313,6 +311,20 @@ function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://')
 // filled in. Only in this browser; a link with values wins; works without storage too.
 var REMEMBER=['url','query','market','language','search_location','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
+// Reopen a saved result from this browser, also on the bare landing URL.
+function showSavedResult(){
+ var box=document.getElementById('existingLocal'),link=document.getElementById('existingLocalLink'),field=document.getElementById('url');if(!box||!link)return;
+ box.hidden=true;
+ try{
+  var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),u=field&&field.value||new URLSearchParams(location.search).get('url')||'',r=u?M[normPage(u)]:null;
+  if(!u){var keys=Object.keys(M);r=keys.length?M[keys[keys.length-1]]:null}
+  if(typeof r!=='string'||!r.startsWith('/')||r.startsWith('//'))return;
+  var dest=new URL(r,location.origin),prefix=${js(base)}+'/r/';
+  if(dest.origin!==location.origin||!dest.pathname.startsWith(prefix)||!dest.searchParams.get('k'))return;
+  dest.searchParams.set('lang',${js(lang)});link.href=dest.pathname+dest.search;box.hidden=false;
+ }catch(e){}
+}
+showSavedResult();var savedResultField=document.getElementById('url');if(savedResultField){savedResultField.addEventListener('input',showSavedResult);savedResultField.addEventListener('change',showSavedResult)}
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}if(!aiKeyChanged())rememberAi()}
 // Pasted AI answers are kept in this browser too, with the page and customer question they answer: after a refresh or a
 // failed start they come back only for the same page and question. When either changes, the answers are removed instead of
@@ -382,7 +394,7 @@ try{
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
 var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_audit:auditMatches()?AUDIT_TOKEN:null,gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
-var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);try{var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');M[normPage(document.getElementById('url').value)]=d.result_url;localStorage.setItem('growthFreeResults',JSON.stringify(M))}catch(e){}location.href=d.result_url}
+var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);try{var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');var savedPage=normPage(document.getElementById('url').value);delete M[savedPage];M[savedPage]=d.result_url;localStorage.setItem('growthFreeResults',JSON.stringify(M))}catch(e){}location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
 }
