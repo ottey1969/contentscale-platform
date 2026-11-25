@@ -78,3 +78,32 @@ test('Spanish is Spanish: the reminder follows the language of the check, Spanis
     { now: new Date('2026-11-12T10:00:00Z'), model, send: async m => { sent.push(m); return true; }, links: { result: () => 'x', stop: () => 'y' } });
   assert.equal(sent.length, 1); assert.match(sent[0].subject, /Cuatro semanas/);
 });
+
+test('calendar renders one transparent private event per scheduled reminder, in UTC',()=>{
+ const {buildCalendar}=require('../src/growth-free/reminder-calendar.cjs');
+ const row={public_id:'test123',host:'example.test',url:'https://example.test/page',query:'test phrase',email:'one@example.test',reminder_due_at:'2026-12-10T08:00:00Z'};
+ const render=rows=>buildCalendar(rows,{now:NOW}).replace(/\r\n /g,'');
+ const first=render([row]);
+ assert.match(first,/BEGIN:VCALENDAR\r\nVERSION:2.0/);
+ assert.match(first,/UID:growth-reminder-test123@contentscale.site/);
+ assert.match(first,/DTSTART:20261210T080000Z/);
+ assert.match(first,/DTEND:20261210T081500Z/);
+ assert.match(first,/CLASS:PRIVATE\r\nTRANSP:TRANSPARENT/);
+ assert.ok(first.includes(row.email)&&first.includes(row.url));
+ assert.match(render([{...row,reminder_due_at:'2026-12-11T08:00:00Z'}]),/DTSTART:20261211T080000Z/);
+ assert.match(render([{...row,reminder_due_at:'2026-12-11T08:00:00Z'}]),/UID:growth-reminder-test123@contentscale.site/);
+ assert.doesNotMatch(render([]),/BEGIN:VEVENT/);
+});
+test('calendar escapes text, folds UTF-8 lines and follows authorized recipient rules',()=>{
+ const {buildCalendar,escapeText,fold}=require('../src/growth-free/reminder-calendar.cjs');
+ assert.equal(escapeText('a,b;c\\d\nnext'),'a\\,b\\;c\\\\d\\nnext');
+ const line='DESCRIPTION:'+'é'.repeat(110);
+ const folded=fold(line);
+ assert.equal(folded.replace(/\r\n /g,''),line);
+ assert.ok(folded.split('\r\n').every(x=>Buffer.byteLength(x)<=75));
+ const row={public_id:'test123',host:'example.test',url:'https://example.test/',query:'demo',email:'first@example.test',emails:['first@example.test','second@example.test'],reminder_due_at:'2026-12-10T08:00:00Z'};
+ const render=r=>buildCalendar([r],{now:NOW}).replace(/\r\n /g,'');
+ assert.ok(render(row).includes('first@example.test'));
+ assert.ok(!render(row).includes('second@example.test'));
+ assert.ok(render({...row,access_label:'admin'}).includes('second@example.test'));
+});
