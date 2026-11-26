@@ -5,6 +5,9 @@ on:
   pull_request:
     paths:
       - 'src/index.js'
+      - 'src/contact-suppression-schema.cjs'
+      - 'src/network-acquisition-invitations.cjs'
+      - 'public/network-acquisition.html'
       - 'src/network/register-network.js'
       - 'src/network-maps-acquisition.cjs'
       - 'src/tracker-growth-execution.cjs'
