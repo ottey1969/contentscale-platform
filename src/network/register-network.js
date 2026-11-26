@@ -8,6 +8,7 @@
 const dns = require('dns').promises;
 const net = require('net');
 const crypto = require('crypto');
+const { exactUrl } = require('../implementation-report.cjs');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
@@ -5449,8 +5450,8 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Generated placement not found'});
     if(!x.published_url)return res.status(409).json({success:false,error:'Save the exact live URL before verification'});
     if(!liveEvidenceStates.has(x.status))return res.status(409).json({success:false,error:'Placement is not ready for live verification'});
-    let fetched,analysis,fetchError='';
-    try{fetched=await safeFetchHtml(x.published_url);analysis=analyzeWebsiteHtml({status:fetched.response.status,html:fetched.html,finalUrl:fetched.finalUrl,contentType:fetched.contentType})}catch(e){fetchError=e.message;analysis={http_status:null,indexable:false,canonical:'',technical_pass:false,password_protected:false}}
+    let fetched,fetchError='';
+    try{fetched=await safeFetchHtml(x.published_url)}catch(e){fetchError=e.message}
     const html=String(fetched&&fetched.html||'');
     const snap=x.generation_input_snapshot||{};const token=cleanText(snap.delivery_token,128);
     const legacyJsEmbed=!!token && (html.includes(token)||html.includes('/network/embed/'+token+'.js'));
@@ -5463,18 +5464,24 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const staticMarker=html.includes(`data-contentscale-placement="${id}"`)||html.includes(`data-contentscale-placement='${id}'`)||html.includes(`ContentScale Network indexable placement ${id}`);
     const contentMatch=publicationTextMatch(editionHtml,html);
     const statusCode=fetched&&fetched.response?fetched.response.status:null;
-    const httpOk=Number(statusCode)>=200&&Number(statusCode)<400;
-    const noindex=/<meta\b[^>]*name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html)||/<meta\b[^>]*content=["'][^"']*noindex[^"']*["'][^>]*name=["']robots["']/i.test(html);
+    const httpOk=Number(statusCode)>=200&&Number(statusCode)<300;
+    const robotsHeader=fetched?.response?.headers?.get('x-robots-tag')||'';
+    const noindex=/(?:^|[\s,:])(?:noindex|none)(?=$|[\s,;])/i.test(robotsHeader)
+      ||/<meta\b[^>]*name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html)||/<meta\b[^>]*content=["'][^"']*noindex[^"']*["'][^>]*name=["']robots["']/i.test(html);
     const passwordProtected=Number(statusCode)===401||Number(statusCode)===403||/password protected|enter password|member login/i.test(htmlText(html).slice(0,3000));
     const canonicalTag=(html.match(/<link\b[^>]*rel=["'][^"']*canonical[^"']*["'][^>]*>/i)||[])[0]||'';
     const canonical=extractAttr(canonicalTag,'href');
-    let canonicalOk=true;if(canonical){try{const cu=new URL(canonical,x.published_url),lu=new URL(x.published_url);canonicalOk=cu.hostname.replace(/^www\./,'').toLowerCase()===lu.hostname.replace(/^www\./,'').toLowerCase()}catch(e){canonicalOk=false}}
+    function matchesPublishedUrl(value) {
+      try { return exactUrl(new URL(value,x.published_url).href)===exactUrl(x.published_url); } catch { return false; }
+    }
+    const exactDocument=Boolean(fetched?.finalUrl)&&matchesPublishedUrl(fetched.finalUrl);
+    const canonicalOk=!canonical||matchesPublishedUrl(canonical);
     const indexable=httpOk&&!noindex&&!passwordProtected;
     const staticHtmlPresent=staticMarker&&contentMatch.matched;
     const jsOnlyDelivery=legacyJsEmbed&&!staticHtmlPresent;
-    const passed=httpOk&&indexable&&canonicalOk&&staticHtmlPresent&&brandOk&&sourceOk&&!jsOnlyDelivery;
+    const passed=httpOk&&exactDocument&&indexable&&canonicalOk&&staticHtmlPresent&&brandOk&&sourceOk&&!jsOnlyDelivery;
     const result=passed?'passed':'needs_review';
-    const details={published_url:x.published_url,edition_id:String(x.edition_id),edition_revision:x.edition_revision,seo_static_html_present:staticHtmlPresent,content_text_match:contentMatch,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,final_url:fetched&&fetched.finalUrl||x.published_url,canonical:canonical||null,noindex,password_protected:passwordProtected,fetch_error:fetchError||null,required_brand:brand||null,required_source_domain:owner||null};
+    const details={published_url:x.published_url,edition_id:String(x.edition_id),edition_revision:x.edition_revision,seo_static_html_present:staticHtmlPresent,content_text_match:contentMatch,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,final_url:fetched?.finalUrl||null,exact_document:exactDocument,canonical:canonical||null,noindex,password_protected:passwordProtected,fetch_error:fetchError||null,required_brand:brand||null,required_source_domain:owner||null};
     const client=await pool.connect();
     let committed=false;
     try{
@@ -5493,7 +5500,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
           id,passed?'precheck_passed':'precheck_needs_review',
           cleanText(req.admin?.id||'admin',200),
           x.published_url,
-          JSON.stringify({run_no:runNo,result_status:result,checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,brand_mention_ok:brandOk,source_link_ok:sourceOk}})
+          JSON.stringify({run_no:runNo,result_status:result,checks:{http_ok:httpOk,exact_document:exactDocument,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,brand_mention_ok:brandOk,source_link_ok:sourceOk}})
         ]);
       await client.query('COMMIT');
       committed=true;
@@ -5508,7 +5515,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       result_status:result,
       credit_awarded:false,
       credits:x.reward_credits,
-      checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,content_match_ok:contentMatch.matched,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,brand_mention_ok:brandOk,source_link_ok:sourceOk,password_protected:passwordProtected},
+      checks:{http_ok:httpOk,exact_document:exactDocument,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,content_match_ok:contentMatch.matched,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,brand_mention_ok:brandOk,source_link_ok:sourceOk,password_protected:passwordProtected},
       details,
       rule:passed
         ? 'Pre-check passed. This does NOT verify the placement and does NOT award credits. Open the live page and make the final manual decision.'
@@ -5526,7 +5533,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       ow.domain AS source_domain,ow.brand_name AS source_brand,pv.*,pv.title AS edition_title,
       pa.email AS publisher_email,pa.contact_name AS publisher_contact_name,pa.access_token AS publisher_dashboard_token,
       pv.id AS edition_id,pv.updated_at::text AS edition_revision,
-      vr.result_status AS latest_result,vr.run_no AS latest_run_no
+      vr.result_status AS latest_result,vr.run_no AS latest_run_no,vr.details->>'exact_document' AS latest_exact_document
       FROM network_placements p
       JOIN network_content c ON c.id=p.content_id
       JOIN network_websites w ON w.id=p.publisher_website_id
@@ -5574,7 +5581,8 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
 
     // Human is the final authority for live-page judgement. It may override a live pre-check with a note,
     // but it may not override a stale/non-Ready publication package.
-    if(x.latest_result!=='passed' && !note){
+    const alreadyVerified=x.status==='verified'&&x.verification_decision==='verified';
+    if(!alreadyVerified&&(x.latest_result!=='passed'||x.latest_exact_document!=='true')&&!note){
       return res.status(409).json({success:false,error:'The automated pre-check has not passed. You can still verify manually, but enter a review note explaining the override.'});
     }
 
@@ -5592,11 +5600,11 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
         return res.status(409).json({success:false,error:'The publication changed during review. Reload the current edition.'});
       }
       if(!note){
-        const {rows:[latest]}=await client.query(`SELECT result_status FROM network_verification_runs
+        const {rows:[latest]}=await client.query(`SELECT result_status,details->>'exact_document' AS exact_document FROM network_verification_runs
           WHERE placement_id=$1 AND details->>'published_url'=$2 AND details->>'edition_id'=$3
             AND details->>'edition_revision'=$4 ORDER BY run_no DESC LIMIT 1`,
           [id,x.published_url,String(x.edition_id),x.edition_revision]);
-        if(latest?.result_status!=='passed'){
+        if(latest?.result_status!=='passed'||latest.exact_document!=='true'){
           await client.query('ROLLBACK');
           return res.status(409).json({success:false,error:'The live pre-check changed during review. Reload the latest result.'});
         }

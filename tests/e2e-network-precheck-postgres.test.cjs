@@ -50,7 +50,7 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     let started = 0, entered;
     const reached = new Promise(resolve => { entered = resolve; });
     const blocked = new Promise(resolve => { unblock = resolve; });
-    let changeDuringReview=false, notifications=0;
+    let changeDuringReview=false, notifications=0, finalUrl, canonical, robotsHeader;
     const observedPool={
       connect:()=>pool.connect(),
       query:async (sql,args)=>{
@@ -70,13 +70,17 @@ test('Network precheck discards a superseded publication and numbers concurrent 
           entered();
           await blocked;
         }
-        return { html: '<article data-contentscale-placement="3">Approved edition</article>', response: { status: 200 }, finalUrl: url };
+        const tag = canonical ? '<link rel="canonical" href="' + canonical + '">' : '';
+        return { html: tag + '<article data-contentscale-placement="3">Approved edition</article>',
+          response: { status: 200, headers: new Headers(robotsHeader ? {'X-Robots-Tag': robotsHeader} : {}) }, finalUrl: finalUrl || url };
       },
       analyzeWebsiteHtml: () => ({ indexable: true }),
       cleanText: value => String(value || ''),
       htmlText: value => value.replace(/<[^>]*>/g, ''),
       publicationTextMatch: () => ({ matched: true }),
-      extractAttr: () => '',
+      extractAttr: () => canonical || '',
+      URL,
+      exactUrl: require('../src/implementation-report.cjs').exactUrl,
       _networkResolvePublisherReadinessV527: async () => ({ readiness: { final_ready: true, seo_copied_current: true } })
     });
     const invoke = async (route, requestBody) => {
@@ -102,6 +106,8 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     assert.ok(rows.every(row => row.details.published_url === 'https://publisher.example/new-article'));
     assert.equal((await pool.query('SELECT status FROM network_placements WHERE id=3')).rows[0].status, 'needs_review');
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_placement_review_events')).rows[0].n, 2);
+    await pool.query("UPDATE network_verification_runs SET details=details-'exact_document' WHERE run_no=2");
+    assert.equal((await invoke('manual-review', { decision: 'verified' })).status, 409);
 
     await pool.query("UPDATE network_publication_versions SET html='<p>Revised edition</p>',updated_at=NOW() WHERE id=7");
     const oldPrecheck = await invoke('manual-review', { decision: 'verified' });
@@ -123,6 +129,24 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_credit_transactions')).rows[0].n,1);
 
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_verification_runs')).rows[0].n, 3);
+
+    // Rechecking a verified placement records current evidence while retaining the original decision.
+    finalUrl = 'https://publisher.example/replaced/syndicated';
+    assert.equal((await verify()).body.precheck_passed, false);
+    finalUrl = undefined;
+    canonical = '/archive';
+    assert.equal((await verify()).body.precheck_passed, false);
+    canonical = '/replaced';
+    robotsHeader = 'googlebot: noindex';
+    assert.equal((await verify()).body.precheck_passed, false);
+    robotsHeader = undefined;
+    assert.equal((await verify()).body.precheck_passed, true);
+    const monitoring = await pool.query('SELECT result_status FROM network_verification_runs WHERE run_no>3 ORDER BY run_no');
+    assert.deepEqual(monitoring.rows.map(row => row.result_status), ['needs_review', 'needs_review', 'needs_review', 'passed']);
+    const placement = await pool.query('SELECT status,verification_decision FROM network_placements WHERE id=3');
+    assert.deepEqual(placement.rows[0], {status: 'verified', verification_decision: 'verified'});
+    assert.equal((await pool.query('SELECT balance FROM network_credit_wallets')).rows[0].balance, 7);
+    assert.equal(notifications, 1);
   } finally {
     unblock?.();
     await pool.end();

@@ -27,6 +27,10 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ## Auditmatrix
 
+### Network-hercontrole na publicatie
+
+De bestaande Network-precheck kon HTML van een andere URL accepteren na een redirect en beschouwde een canonical op een ander pad van hetzelfde domein als geldig. Een `X-Robots-Tag` met `noindex` telde niet mee. De precheck vergelijkt nu de exacte opgehaalde URL en eventuele canonical met de ingestuurde publicatie. Een nieuwe, foutloze controle kan de handmatige review onderbouwen. Legacy-runs blijven in de geschiedenis en gelden niet als bewijs van de nieuwe controle. De PostgreSQL-regressie bevestigt ook dat een nieuwe hercontrole eerdere handmatige verificatie en toegekende credits bewaart. Dit is de bestaande handmatige route. Automatische planning en bewijs met echte publishers zijn nog open.
+
 De goedgekeurde squashmerges #579 (`501462a`), #577 (`e9820ea`) en #578 (`841f9e7`) zijn achtereenvolgens uitgevoerd na groene CI. De regressies op de mergecommits dekten volledige geïsoleerde database-initialisatie, Network Test Lab in Chromium, Proof & History en de gelijktijdige Contact Intelligence-synchronisatie en onderdrukking. De concurrencyregressie van #578 draait ook in de canonieke CI.
 
 De Railway-configuratie in de repository vraagt één replica. De Serper-cache en lopende aanvragen zijn procesgeheugen en delen geen resultaat tussen processen, ook niet bij overlappende deploys. De bestaande PostgreSQL-boekhouding voor Firecrawl bewaart tellers en geen providerresultaten. Een gedeelde Serper-test met echte Railway-workers en facturatie is niet uitgevoerd. [Railway-configuratie](../railway.json)
