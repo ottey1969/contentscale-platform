@@ -92,7 +92,6 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
       const { rows: [row] } = await pool.query('SELECT b.id AS "briefId", c.id AS "clientId" FROM prewrite_briefs b JOIN tracker_clients c ON c.id=b.client_id WHERE c.token=$1 AND b.id=$2', [token, id]);
       return row || { code: 404, error: 'Not found' };
     }, {
-      normalise: html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
       fetchHtml: async () => { liveRequests++; return live; }
     });
     const base = '/api/tracker-client/owner/prewrite-brief/';
@@ -112,6 +111,11 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     assert.deepEqual(history.map(item => item.report.status), ['implemented', 'published']);
     assert.ok(history.every(item => item.recorded_at.endsWith('Z')));
     await api.post(base.replace('owner', 'other') + '1/verify-live').expect(404);
+    live.html = '<textarea hidden>' + approvedHtml + '</textarea>';
+    await api.post(base + '1/verify-live').expect(422);
+    const unverifiedHistory = (await api.get(base + '1/implementation-report').expect(200)).body.history;
+    assert.equal(unverifiedHistory[1].live_verification, undefined);
+    live.html = approvedHtml;
     const verification = (await api.post(base + '1/verify-live').expect(200)).body.verification;
     assert.equal(verification.status, 'approved_content_present');
     assert.equal(verification.markup_checks.title, false);
@@ -120,7 +124,7 @@ test('HTTP import and publication on isolated PostgreSQL preserve history and te
     const complete = (await api.post(base + '1/verify-live').expect(200)).body.verification;
     assert.equal(complete.markup_checks.title, true);
     assert.deepEqual((await api.post(base + '1/verify-live').expect(200)).body.verification, complete);
-    assert.equal(liveRequests, 2);
+    assert.equal(liveRequests, 3);
     const verifiedHistory = (await api.get(base + '1/implementation-report').expect(200)).body.history;
     assert.deepEqual(verifiedHistory[1].live_verification, complete);
     assert.deepEqual(verifiedHistory[1].live_verification_history, [verification]);
@@ -141,8 +145,7 @@ test('live proof requires exact public response and the approved content, with n
   const content = 'Approved content for the emergency page. '.repeat(8).trim();
   const approved = '<article><p>' + content + '</p></article>';
   const live = { html: '<main>' + approved + '</main>', status: 200, final_url: url, redirect_chain: [], retrieved_at: '2026-01-02T10:00:00.000Z' };
-  const normalise = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const verify = (response, draft = approved) => verifyApprovedContent(url, draft, async () => response, normalise);
+  const verify = (response, draft = approved) => verifyApprovedContent(url, draft, async () => response);
   const proof = await verify(live);
   assert.equal(proof.status, 'approved_content_present');
   assert.equal(proof.observed_at, live.retrieved_at);
@@ -154,19 +157,42 @@ test('live proof requires exact public response and the approved content, with n
   assert.equal(await verify(live, '<p>Too little to verify</p>'), null);
 });
 
+test('live proof excludes hidden controls, nested templates and attributes and preserves Spanish accents', async () => {
+  const { verifyApprovedContent } = require('../src/prewrite-implementation.cjs');
+  const content = 'La reparación de la mañana requiere una revisión de la cubierta. '.repeat(5);
+  const approved = '<main><p>' + content + '</p></main>';
+  const verify = html => verifyApprovedContent(url, approved, async () => ({
+    html, status: 200, final_url: url, retrieved_at: '2026-01-02T00:00:00Z'
+  }));
+  assert.equal((await verify(approved.normalize('NFD')))?.status, 'approved_content_present');
+  for (const html of [
+    '<textarea hidden>' + content + '</textarea>',
+    '<section hidden><div>' + content + '</div></section>',
+    '<div style="display:none"><p>' + content + '</p></div>',
+    '<template><template></template><p>' + content + '</p></template>',
+    '<div data-copy=">' + content + '"></div>',
+    approved.normalize('NFD').replace(/\p{M}/gu, '')
+  ]) assert.equal(await verify(html), null, html.slice(0, 40));
+});
+
 test('live proof compares explicitly approved metadata and complete structured-data nodes', async () => {
   const { verifyApprovedContent } = require('../src/prewrite-implementation.cjs');
-  const normalise = html => html.replace(/<[^>]+>/g, ' ').trim();
   const snippet = '<title>Emergency roofing</title><meta name="description" content="Approved description">' +
     '<link rel="canonical" href="' + url + '">' +
     '<script type="application/ld+json">{"@type":"Service","name":"Roof repair"}</script>';
   const verify = html => verifyApprovedContent(url, snippet, async () => ({
     html, status: 200, final_url: url, retrieved_at: '2026-01-02T00:00:00Z'
-  }), normalise);
+  }));
   const all = await verify(snippet.replace('"@type":"Service","name":"Roof repair"', '"name":"Roof repair","@type":"Service"'));
   assert.equal(all.status, 'approved_markup_present');
   assert.deepEqual(all.markup_checks, { title: true, description: true, canonical: true, json_ld: true });
   const partial = await verify(snippet.replace('Approved description', 'Different').replace('Roof repair', 'Other service'));
   assert.deepEqual(partial.markup_checks, { title: true, description: false, canonical: true, json_ld: false });
   assert.equal(await verify('<!--' + snippet + '-->'), null);
+  assert.equal(await verify('<textarea>' + snippet + '</textarea>'), null);
+  assert.equal(await verify('<div data-preview=\'' + snippet + '\'></div>'), null);
+  const longTitle = 'Emergency roofing information '.repeat(12);
+  assert.equal(await verifyApprovedContent(url, '<title>' + longTitle + 'Approved</title>', async () => ({
+    html: '<title>' + longTitle + 'Different</title>', status: 200, final_url: url, retrieved_at: '2026-01-02T00:00:00Z'
+  })), null);
 });

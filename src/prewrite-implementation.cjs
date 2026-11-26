@@ -1,11 +1,11 @@
 'use strict';
 
 const { isDeepStrictEqual } = require('node:util');
-const { pageAudit } = require('./gsc-report/site-audit.cjs');
+const { parse } = require('parse5');
 const { jsonLd } = require('./growth-free/schema-help.cjs');
 
 const { createHash } = require('node:crypto');
-const { compactPublicHtml, fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
+const { fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
 const { VERSION, exactUrl, parseImplementationReport, ownerReport } = require('./implementation-report.cjs');
 
 function resolveTarget(brief, domain) {
@@ -60,29 +60,61 @@ function editorInstructions(brief, domain) {
   ].join('\n');
 }
 
-function approvedMarkup(html, url) {
-  const clean = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(template|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
-  const markup = pageAudit(clean.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''), url);
-  return { ...markup, nodes: jsonLd(clean).filter(node => node['@type']) };
+const excludedText = new Set(['iframe', 'noscript', 'script', 'select', 'style', 'svg', 'template', 'textarea', 'title']);
+const attribute = (node, name) => node?.attrs?.find(item => item.name === name)?.value;
+const normalized = text => text.normalize('NFC').replace(/\s+/gu, ' ').trim();
+const inlineHidden = /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!\s*important\s*)?(?:;|$)/i;
+
+function proofHtml(html, url) {
+  const document = parse(html).childNodes.find(node => node.tagName === 'html');
+  const head = document.childNodes.find(node => node.tagName === 'head');
+  const body = document.childNodes.find(node => node.tagName === 'body');
+  const metadata = head.childNodes;
+  const title = metadata.find(node => node.tagName === 'title');
+  const description = metadata.find(node => node.tagName === 'meta' && attribute(node, 'name')?.toLowerCase() === 'description');
+  const canonical = metadata.find(node => node.tagName === 'link' && attribute(node, 'rel')?.toLowerCase().split(/\s+/).includes('canonical'));
+  const markup = {
+    title: normalized(title?.childNodes.map(node => node.value || '').join('') || ''),
+    description: normalized(attribute(description, 'content') || ''),
+    canonical: null,
+    nodes: []
+  };
+  const href = attribute(canonical, 'href');
+  if (href) {
+    try { markup.canonical = new URL(href, url).href; } catch {}
+  }
+  const text = [];
+  const pending = [body, ...metadata.filter(node => node.tagName === 'script')].filter(Boolean);
+  while (pending.length) {
+    const node = pending.pop();
+    if (node.nodeName === '#text') {
+      text.push(node.value);
+      continue;
+    }
+    if (attribute(node, 'hidden') !== undefined || inlineHidden.test(attribute(node, 'style') || '')) continue;
+    if (node.tagName === 'script' && attribute(node, 'type')?.trim().toLowerCase() === 'application/ld+json') {
+      const data = node.childNodes.map(item => item.value || '').join('');
+      markup.nodes.push(...jsonLd('<script type="application/ld+json">' + data + '</script>').filter(item => item['@type']));
+    }
+    if (excludedText.has(node.tagName)) continue;
+    for (let i = (node.childNodes?.length || 0) - 1; i >= 0; i--) pending.push(node.childNodes[i]);
+  }
+  return { markup, text: normalized(text.join(' ')).toLowerCase() };
 }
 
-async function verifyApprovedContent(url, approvedHtml, fetchHtml, normalise) {
-  const bodyText = html => normalise(compactPublicHtml(html)
-    .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, '')
-    .replace(/<(script|title|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, ''));
-  const draft = bodyText(approvedHtml);
-  const expected = approvedMarkup(approvedHtml, url);
+async function verifyApprovedContent(url, approvedHtml, fetchHtml) {
+  const { text: draft, markup: expected } = proofHtml(approvedHtml, url);
   const fields = ['title', 'description', 'canonical'].filter(field => expected[field]);
   if (draft.length < 200 && !fields.length && !expected.nodes.length) return null;
 
   const live = await fetchHtml(url, { redirects: 0, limit: 2500000 });
   if (live.status !== 200 || live.final_url !== url || live.redirect_chain?.length || live.truncated) return null;
-  const found = approvedMarkup(live.html, url);
+  const { text: liveText, markup: found } = proofHtml(live.html, url);
   const checks = Object.fromEntries(fields.map(field => [field, expected[field] === found[field]]));
   if (expected.nodes.length) {
     checks.json_ld = expected.nodes.every(node => found.nodes.some(candidate => isDeepStrictEqual(node, candidate)));
   }
-  const contentPresent = draft.length >= 200 && (' ' + bodyText(live.html) + ' ').includes(' ' + draft + ' ');
+  const contentPresent = draft.length >= 200 && (' ' + liveText + ' ').includes(' ' + draft + ' ');
   const matched = Object.values(checks);
   if (!contentPresent && !matched.includes(true)) return null;
   return {
@@ -106,7 +138,7 @@ function response(result, trackerPageId) {
   };
 }
 
-function registerRoutes(app, pool, resolveBrief, { normalise, fetchHtml = fetchPublicGrowthHtml } = {}) {
+function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowthHtml } = {}) {
   const path = '/api/tracker-client/:token/prewrite-brief/:id';
   async function save(req, res, publishing) {
     let db;
@@ -217,7 +249,7 @@ function registerRoutes(app, pool, resolveBrief, { normalise, fetchHtml = fetchP
              ON p.id=b.tracker_page_id AND p.tracker_client_id=b.client_id AND p.url=b.published_url
           WHERE b.id=$1 AND b.client_id=$2 AND b.status='published'`, ids);
       const index = row?.implementation_reports.findIndex(item => item.report.status === 'published') ?? -1;
-      if (index < 0 || !row.specialist_html || !normalise) {
+      if (index < 0 || !row.specialist_html) {
         return res.status(409).json({ success: false, status: 'verification_pending' });
       }
       const entry = row.implementation_reports[index];
@@ -225,7 +257,7 @@ function registerRoutes(app, pool, resolveBrief, { normalise, fetchHtml = fetchP
       let verification = previous;
       if (!previous || previous.content_check === false || Object.values(previous.markup_checks || {}).includes(false)) {
         try {
-          verification = await verifyApprovedContent(row.published_url, row.specialist_html, fetchHtml, normalise);
+          verification = await verifyApprovedContent(row.published_url, row.specialist_html, fetchHtml);
         } catch {
           return res.status(422).json({ success: false, status: 'verification_pending' });
         }
