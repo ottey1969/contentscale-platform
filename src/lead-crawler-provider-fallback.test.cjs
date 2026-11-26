@@ -48,6 +48,33 @@ async function main(){
  r=await request('roofing');assert.equal(r.body.cached,true);assert.equal(r.body.provider_calls,0);
  assert.equal(providers.length,1,'cached call must not charge another provider request');
 
+ const parallelCalls=[];
+ let release, started;
+ const gate=new Promise(resolve=>{release=resolve});
+ const entered=new Promise(resolve=>{started=resolve});
+ const simultaneous=suite({serperKey:'parallel-test-key',fetchImpl:async(url)=>{
+  parallelCalls.push(url);started();await gate;
+  return {ok:true,status:200,json:async()=>({places:[sample]})};
+ }});
+ const first=simultaneous('roofing parallel');
+ await entered;
+ const second=simultaneous('roofing parallel');
+ await new Promise(resolve=>setImmediate(resolve));
+ release();
+ const shared=await Promise.all([first,second]);
+ assert.deepEqual(shared.map(result=>result.status),[200,200]);
+ assert.equal(parallelCalls.length,1,'overlapping requests for the same Serper page spend one credit');
+ assert.deepEqual(shared.map(result=>result.body.provider_calls).sort(),[0,1]);
+ assert.deepEqual(shared[0].body.leads,shared[1].body.leads);
+
+ let rotatedCalls=0;
+ const rotated=suite({serperKey:'rotated-test-key',fetchImpl:async()=>{
+  rotatedCalls++;
+  return {ok:true,status:200,json:async()=>({places:[sample]})};
+ }});
+ assert.equal((await rotated('roofing parallel')).body.provider_calls,1);
+ assert.equal(rotatedCalls,1,'a new credential uses its own cache');
+
  const calls=[];
  const unavailable=suite({fetchImpl:async(url)=>{calls.push(url);return {ok:false,status:401,json:async()=>({})}}});
  r=await unavailable('roofing replacement');
@@ -62,6 +89,6 @@ async function main(){
  assert.equal(r.body.providers_attempted,1);
  const noKeys=suite({serperKey:'',serpapiKey:'',fetchImpl:()=>{throw Error('should not fetch');}});
  r=await noKeys('roofing without keys');assert.equal(r.status,503);assert.match(r.body.error,/SERPER_API_KEY/);
- console.log('PASS: Serper Maps primary, per-request credit count, 20-min cache, existing SerpAPI 401 fallback, two-failure diagnostics, 403 auth, no key exposure');
+ console.log('PASS: Serper Maps only, per-request credit count, concurrent request reuse, credential-isolated cache, provider errors and admin authorization');
 }
 main().catch(err=>{console.error(err);process.exitCode=1;});
