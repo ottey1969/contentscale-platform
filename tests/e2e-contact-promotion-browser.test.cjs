@@ -89,8 +89,8 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
     assert.deepEqual(prospects, [{
       token: saved.promoted_token, domain, source: 'lead_crawler', scan_started_at: null, outreach_sent_at: null
     }]);
-    const queued = page.locator('#eqList [data-missing-token="' + saved.promoted_token + '"]');
-    await queued.getByText(name, { exact: true }).waitFor({ state: 'attached' });
+    const queued = page.locator('[data-missing-token="' + saved.promoted_token + '"]');
+    await page.locator('#eqList').locator(queued).getByText(name, { exact: true }).waitFor({ state: 'attached' });
     const queueGroup = page.locator('#eqList details').filter({ has: queued });
     assert.match(await queueGroup.locator('summary').textContent(), /Without public email/);
 
