@@ -2,7 +2,7 @@
 // The automatic part of the free rank tracker: due keywords are checked, results saved, and one e-mail per project goes
 // out when all its keywords have a fresh result. A monthly provider budget caps the cost for all free users together;
 // when it is used up, checks are postponed one day (never dropped, never estimated).
-const { checkRank, checkMaps, checkMapsGrid, GRID_SIZE, locationsOf, changeOf, growthLink, searchLocationOf, placesForKeyword } = require('./engine.cjs');
+const { checkRank, checkMaps, checkMapsGrid, GRID_SIZE, MAX_PAGES, locationsOf, changeOf, growthLink, searchLocationOf, placesForKeyword } = require('./engine.cjs');
 const { digestEmail, followText, plainFollow, t } = require('./texts.cjs');
 const { bestOpportunity, followUp } = require('./gsc.cjs');
 const { linkToken, handoffToken } = require('./links.cjs');
@@ -11,24 +11,41 @@ const { countryName } = require('../growth-search-locale.cjs');
 const DAY = 86400000;
 const WEEK = 7 * DAY;
 
-async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), monthlyCap = 3000, batch = 40, maxPages, check = checkRank, maps = checkMaps, grid = checkMapsGrid } = {}) {
+async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), clock = () => now, monthlyCap = 3000, batch = 40, maxPages, check = checkRank, maps = checkMaps, grid = checkMapsGrid } = {}) {
   const out = { checked: 0, postponed: 0, errors: 0, calls: 0, budget_reached: false };
   if (!key) return { ...out, skipped: 'PROVIDER_NOT_CONFIGURED' };
+  async function withinBudget(maxCalls, perform) {
+    const requestAt = clock();
+    if (!await store.reserveUsage(requestAt, maxCalls, monthlyCap)) {
+      out.budget_reached = true;
+      return null;
+    }
+    // A lost provider response or a crash leaves the reservation in the monthly limit.
+    // Only attempts with an observed count are included in the reported provider calls.
+    const result = await Promise.resolve().then(perform).catch(() => ({ status: 'PROVIDER_ERROR', reason: 'REQUEST_FAILED' }));
+    if (Number.isInteger(result.calls) && result.calls >= 0) {
+      await store.settleUsage(requestAt, maxCalls, result.calls);
+      out.calls += result.calls;
+    }
+    return result;
+  }
   const due = await store.due(now, batch);
   for (const k of due) {
-    // A check costs up to three calls: start one only when three still fit in this month's budget.
-    if ((await store.usage(now)) + 3 > monthlyCap) {
-      out.budget_reached = true;
-      await store.postpone(k.keyword_id, new Date(now.getTime() + DAY)); out.postponed++; continue;
-    }
+    const claimedAt = clock();
+    const lease = new Date(claimedAt.getTime() + 15 * 60 * 1000);
+    if (!await store.claimKeyword(k.keyword_id, claimedAt, lease)) continue;
     // Normal results for the project's state, region or city when one is set; otherwise the whole country.
     const location = searchLocationOf(k.search_location, k.gl);
-    const r = await check({ keyword: k.keyword, host: k.host, gl: k.gl, hl: k.hl, key, fetchImpl, ...(location ? { location } : {}), ...(maxPages ? { maxPages } : {}), now: () => now });
+    const r = await withinBudget(Math.max(MAX_PAGES, Math.ceil(Number(maxPages) || 0)),
+      () => check({ keyword: k.keyword, host: k.host, gl: k.gl, hl: k.hl, key, fetchImpl, ...(location ? { location } : {}), ...(maxPages ? { maxPages } : {}), now: clock }));
+    if (clock() >= lease) continue;
+    if (!r) {
+      await store.postpone(k.keyword_id, new Date(claimedAt.getTime() + DAY), null, null, lease); out.postponed++; continue;
+    }
     if (location) r.location = location;
-    if (r.calls) { await store.addUsage(now, r.calls); out.calls += r.calls; }
     if (r.status !== 'FOUND' && r.status !== 'NOT_IN_RESULTS') {
       // A failed provider call is retried in six hours; it never counts as "not ranking".
-      out.errors++; await store.postpone(k.keyword_id, new Date(now.getTime() + DAY / 4), String(r.reason || r.status).slice(0, 60), now);
+      out.errors++; await store.postpone(k.keyword_id, new Date(claimedAt.getTime() + DAY / 4), String(r.reason || r.status).slice(0, 60), clock(), lease);
       console.warn('[rank-free] check failed', k.keyword_id, r.status, r.reason || '');
       continue;
     }
@@ -38,29 +55,27 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
     if (places.length) {
       const all = [];
       for (const location of placesForKeyword(k.keyword, places)) {
-        if ((await store.usage(now)) + 1 > monthlyCap) { all.push({ status: 'BUDGET_REACHED', location }); out.budget_reached = true; continue; }
-        const m = await maps({ keyword: k.keyword, host: k.host, location, gl: k.gl, hl: k.hl, key, fetchImpl, now: () => now });
-        if (m.calls) { await store.addUsage(now, m.calls); out.calls += m.calls; }
-        all.push(m);
+        if (clock() >= lease) break;
+        const m = await withinBudget(1, () => maps({ keyword: k.keyword, host: k.host, location, gl: k.gl, hl: k.hl, key, fetchImpl, now: clock }));
+        all.push(m || { status: 'BUDGET_REACHED', location });
       }
       r.maps = all[0]; r.maps_places = all;
     }
     // Geo-grid for the keywords the owner chose: centred on the business's own Maps listing from this round. Without that
     // (not found in Maps, or no coordinates) there is no centre, and nothing is guessed.
     const gridKeywords = Array.isArray(k.maps_grid) ? k.maps_grid : (typeof k.maps_grid === 'string' ? JSON.parse(k.maps_grid || '[]') : []);
+    if (clock() >= lease) continue;
     if (k.maps_location && gridKeywords.includes(k.keyword)) {
       // Centre: the first place where the business's own listing was found with coordinates this round.
       const m = (r.maps_places || [r.maps]).find(x => x && x.status === 'FOUND' && x.lat != null && x.lng != null), center = m ? { lat: m.lat, lng: m.lng } : null;
       if (!center) r.grid = { status: 'NO_CENTER' };
-      else if ((await store.usage(now)) + GRID_SIZE * GRID_SIZE > monthlyCap) { r.grid = { status: 'BUDGET_REACHED' }; out.budget_reached = true; }
       else {
-        const g = await grid({ keyword: k.keyword, host: k.host, center, gl: k.gl, hl: k.hl, key, fetchImpl, now: () => now });
-        if (g.calls) { await store.addUsage(now, g.calls); out.calls += g.calls; }
-        r.grid = g.status === 'OK' ? { ...g, place: m.location || null } : g;
+        const g = await withinBudget(GRID_SIZE * GRID_SIZE, () => grid({ keyword: k.keyword, host: k.host, center, gl: k.gl, hl: k.hl, key, fetchImpl, now: clock }));
+        r.grid = g?.status === 'OK' ? { ...g, place: m.location || null } : g || { status: 'BUDGET_REACHED' };
       }
     }
-    await store.saveResult(k.keyword_id, r, new Date(now.getTime() + WEEK));
-    out.checked++;
+    const completedAt = clock();
+    if (completedAt < lease && await store.saveResult(k.keyword_id, r, new Date(completedAt.getTime() + WEEK), lease)) out.checked++;
   }
   return out;
 }

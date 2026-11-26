@@ -266,7 +266,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   const accountFor = async tok => { const nonce = links.readToken(tok); return nonce ? store.accountByDashboard(nonce) : null; };
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
   const runRound = () => kick || (kick = (async () => {
-    try { await runDue({ store, key: config.serperKey, fetchImpl, now: now(), monthlyCap: config.monthlyCap });
+    try { await runDue({ store, key: config.serperKey, fetchImpl, now: now(), clock: now, monthlyCap: config.monthlyCap });
       await sendDigests({ store, send: sendDigest, baseUrl: config.baseUrl, growthUrl: config.growthUrl, growthLinks: config.growthLinks, callUrl: config.callUrl, now: now() }); } catch (e) { console.warn('[rank-free] round failed', e && e.message); }
     finally { kick = null; }
   })());
