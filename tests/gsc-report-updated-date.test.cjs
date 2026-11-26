@@ -10,7 +10,7 @@ const report={pages:[{rank:1,url:'https://nl.contentscale.site/wat-is-een-ai-ove
  bands:[],queries:{},files:[],notes:[],kpis:{}};
 const row={title:'x',lang:'nl',created_at:new Date('2026-11-21'),expires_at:new Date(Date.now()+864e5),views:0,report,growth_invite:'inv-1'};
 test('a page with a Growth publication date shows "Aangepast op …"; other pages show nothing',()=>{
- const published=new Map([['https://nl.contentscale.site/ai-zichtbaarheid','2026-11-21']]);
+ const published=new Map([['https://nl.contentscale.site/ai-zichtbaarheid/','2026-11-21']]);
  const html=reportPage(row,{owner:false,config:{},growthPath:'/free-growth',published});
  const cell=u=>html.slice(html.indexOf('href="'+u+'"'),html.indexOf('</td>',html.indexOf('href="'+u+'"')));
  assert.match(cell('https://nl.contentscale.site/ai-zichtbaarheid/'),/class="chip done">Aangepast op 21 november 2026 \(Growth\)/);
@@ -18,14 +18,15 @@ test('a page with a Growth publication date shows "Aangepast op …"; other page
  assert.match(reportPage({...row,lang:'en'},{owner:false,config:{},growthPath:'/free-growth',published}),/Updated on 21 November 2026 \(Growth\)/);
  assert.match(reportPage({...row,lang:'es'},{owner:false,config:{},growthPath:'/free-growth',published}),/Actualizada el 21 de noviembre de 2026 \(Growth\)/);
 });
-test('lookup: latest date per page, only checks of the owner or of this report invitation, trailing slash and www ignored',async()=>{
- assert.ok(sameUrl('https://www.x.nl/a/','https://x.nl/a'));
+test('lookup: latest date per page, only explicitly authorized checks with the same page identity',async()=>{
+ assert.equal(sameUrl('https://www.x.nl/a/','https://x.nl/a'),false);
+ assert.equal(sameUrl('https://x.nl/a?group=1','https://x.nl/a?group=2'),false);
  const calls=[];
- const pool={query:async(sql,params)=>{calls.push({sql,params});return {rows:[
-  {url:'https://nl.contentscale.site/ai-zichtbaarheid/',published_on:'2026-11-21'},{url:'https://nl.contentscale.site/ai-zichtbaarheid',published_on:'2026-11-10'}]}}};
+ const pool={query:async(sql,params)=>{if(!sql.includes('ORDER BY c.finished_at DESC'))return {rows:[]};calls.push({sql,params});return {rows:[
+  {matching_invite:true,url:'https://nl.contentscale.site/ai-zichtbaarheid/',published_on:'2026-11-21'},{matching_invite:true,url:'https://nl.contentscale.site/ai-zichtbaarheid',published_on:'2026-11-10'}]}}};
  const m=await publicationsFor(pool,['https://nl.contentscale.site/ai-zichtbaarheid/'],{invite:'inv-1'});
- assert.equal(m.get('https://nl.contentscale.site/ai-zichtbaarheid'),'2026-11-21');
- assert.match(calls[0].sql,/published_on IS NOT NULL/);assert.match(calls[0].sql,/access_label='admin'/);assert.match(calls[0].sql,/token_hash/);
+ assert.equal(m.get('https://nl.contentscale.site/ai-zichtbaarheid/'),'2026-11-21');
+ assert.match(calls[0].sql,/url=ANY/);assert.match(calls[0].sql,/c\.invite_id IN/);assert.match(calls[0].sql,/token_hash/);
  // No Free Growth tables yet: no dates, no error.
  const none=await publicationsFor({query:async()=>{throw Object.assign(Error('relation does not exist'),{code:'42P01'})}},['https://a.example/']);
  assert.equal(none.size,0);
@@ -34,13 +35,13 @@ test('lookup: latest date per page, only checks of the owner or of this report i
 test('same publication date retains a recorded note without borrowing an older date note',async()=>{
  const {growthFor}=require('../src/gsc-report/published.cjs');
  const url='https://example.com/page/';
- const pool={query:async sql=>({rows:String(sql).includes('ORDER BY finished_at DESC')?[
+ const pool={query:async sql=>({rows:String(sql).includes('ORDER BY c.finished_at DESC')?[
  {url,public_id:'new',access_key:'key',access_label:'admin',published_on:'2026-11-22',published_note:null},
  {url,public_id:'same',access_key:'key',access_label:'admin',published_on:'2026-11-22',published_note:'Recorded work'},
  {url,public_id:'old',access_key:'key',access_label:'admin',published_on:'2026-11-21',published_note:'Old work'}
  ]:[]})};
- const out=await growthFor(pool,[url]);
- assert.equal(out.get('https://example.com/page').note,'Recorded work');
+ const out=await growthFor(pool,[url],{owner:true,reportId:38});
+ assert.equal(out.get(url).note,'Recorded work');
 });
 
 test('report lists exact pages with more than five audit issues',()=>{
@@ -77,16 +78,16 @@ test('issue views share one table, filter categories, and never duplicate overla
  assert.match(blocked,/wat-is-een-ai-overview/);assert.doesNotMatch(blocked,/ai-zichtbaarheid/);
 });
 
-test('owner finds completed research even if originally created through a non-admin access key; recipient cannot borrow it',async()=>{
+test('owner finds completed research linked through its source report; recipient cannot borrow it',async()=>{
  const {growthFor}=require('../src/gsc-report/published.cjs');
  const url='https://example.com/page/';
  const calls=[];
- const pool={query:async(sql,args)=>{if(!String(sql).includes('ORDER BY finished_at DESC'))return {rows:[]};calls.push({sql,args});return {rows:[{url,public_id:'saved',access_key:'secret',access_label:'public',invite_id:null}]}}};
- const owner=await growthFor(pool,[url],{owner:true});
- assert.equal(owner.get('https://example.com/page').owner_result,'/r/saved?k=secret');
- assert.ok(calls[0].args.includes(true));
+ const pool={query:async(sql,args)=>{if(!String(sql).includes('ORDER BY c.finished_at DESC'))return {rows:[]};calls.push({sql,args});return {rows:[{url,public_id:'saved',access_key:'secret',access_label:'public',invite_id:null}]}}};
+ const owner=await growthFor(pool,[url],{owner:true,reportId:38});
+ assert.equal(owner.get(url).owner_result,'/r/saved?k=secret');
+ assert.equal(calls[0].args[2],38);assert.match(calls[0].sql,/u\.gsc_report_id=\$3/);
  const recipient=await growthFor(pool,[url],{owner:false});
- assert.equal(recipient.get('https://example.com/page')?.owner_result||null,null);
+ assert.equal(recipient.get(url)?.owner_result||null,null);
 });
 
 test('existing research has a direct result link and a separate explicitly fresh research link',()=>{
