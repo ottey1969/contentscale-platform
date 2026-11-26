@@ -2381,6 +2381,8 @@ function _networkPublicationReadinessV527(ctx){
     }else{
       next={key:'refresh_all',control_id:'refreshAllContent',step:9,label:'Refresh all & verify',reason:!generationCurrent?'The current Brief snapshot changed; perform surgical repair/relock without rerunning research.':(!linkPolicyReady?'Apply the current verified 3 + 3 link set and recheck the package.':(!internalPreviewCurrent?'Rebuild the stable internal URL for the exact current HTML.':(!contentScoreReady?'Run the real ContentScore on the exact current HTML.':'Repair/recheck the remaining deterministic content requirement.')))};
     }
+  }else if(status==='verified'&&verification&&!verificationPassed){
+    next={key:'retry_live_precheck',control_id:'publishPrecheck',step:10,label:'Recheck live publication',reason:'The latest live check found a problem. The previous manual verification remains in history.'};
   }else if(status==='verified'){
     next={key:'done',control_id:null,step:10,label:'Verified live',reason:'The current HTML and live placement are verified.',done:true};
   }else if(liveState&&verification){
@@ -4193,15 +4195,21 @@ ${html.slice(0,52000)}`;
       JOIN network_content c ON c.id=p.content_id
       JOIN network_websites w ON w.id=p.publisher_website_id
       LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
-      LEFT JOIN LATERAL (SELECT result_status,http_status,details,checked_at FROM network_verification_runs WHERE placement_id=p.id ORDER BY run_no DESC LIMIT 1) vr ON TRUE
-      WHERE p.status NOT IN ('verified','cancelled','rejected')
+      LEFT JOIN LATERAL (SELECT result_status,http_status,details,checked_at FROM network_verification_runs
+        WHERE placement_id=p.id AND details->>'published_url'=p.published_url
+          AND details->>'edition_id'=pv.id::text AND details->>'edition_revision'=pv.updated_at::text
+        ORDER BY run_no DESC LIMIT 1) vr ON TRUE
+      WHERE p.status NOT IN ('cancelled','rejected')
+        AND (p.status<>'verified' OR vr.result_status<>'passed')
       ORDER BY p.updated_at DESC,p.id DESC LIMIT 100`);
     const items=r.rows.map(x=>{
       const snap=safeJsonObject(x.generation_input_snapshot),scan=safeJsonObject(snap.official_contentscore_scan),details=safeJsonObject(x.latest_details);
       const previewHash=cleanText(snap.internal_preview_hash||'',128),copiedHash=cleanText(snap.seo_publication_copied_hash||'',128),copiedCurrent=!!(previewHash&&copiedHash&&previewHash===copiedHash);
       const fetchFailed=!!(x.latest_result&&(details.fetch_error||!(Number(x.latest_http_status)>=200&&Number(x.latest_http_status)<400)));
+      const monitoringWarning=x.status==='verified'&&!!x.latest_result&&x.latest_result!=='passed';
       let next='Continue guided Publisher Edition';
-      if(!x.publication_version_id)next='Generate Publisher Edition';
+      if(monitoringWarning)next='Recheck live publication';
+      else if(!x.publication_version_id)next='Generate Publisher Edition';
       else if(!scan.score||!previewHash)next='Refresh all & verify';
       else if(x.latest_result==='passed')next='Verify live placement';
       else if(fetchFailed&&!copiedCurrent)next='Copy SEO publication HTML';
@@ -4209,7 +4217,7 @@ ${html.slice(0,52000)}`;
       else if(x.latest_result&&x.latest_result!=='passed')next='Review live changes';
       else if(!copiedCurrent)next='Copy SEO publication HTML';
       else next='Publish page and run live pre-check';
-      return {role:'admin',kind:'network_publishing',placement_id:Number(x.id),title:cleanText(x.title||'Publisher Edition',300),brand_name:cleanText(x.brand_name||'',220),publisher_domain:cleanText(x.publisher_domain||'',300),status:x.status,next_action:next,updated_at:x.updated_at,url:'/network/publishing/'+Number(x.id)+'?guided=1'};
+      return {role:'admin',kind:'network_publishing',placement_id:Number(x.id),title:cleanText(x.title||'Publisher Edition',300),brand_name:cleanText(x.brand_name||'',220),publisher_domain:cleanText(x.publisher_domain||'',300),status:x.status,monitoring_warning:monitoringWarning,next_action:next,updated_at:x.updated_at,url:'/network/publishing/'+Number(x.id)+'?guided=1'};
     });
     res.set('Cache-Control','no-store');res.json({success:true,count:items.length,items,rule:'Open the canonical workflow page. It will auto-scroll to the single blue next action.'});
   }));
@@ -7881,6 +7889,7 @@ function _networkMarketplaceLogicSuiteV541(){
       ['submitted_fetch_failed_after_copy',at({placement_status:'submitted',seo_copied_current:true,seo_copied_at:'2026-10-06T10:05:00.000Z',live_verification:live({http_status:0,result_status:'failed',details:{fetch_error:'timeout'}})}),'retry_live_precheck'],
       ['submitted_reachable_failed',at({placement_status:'submitted',seo_copied_current:true,live_verification:live({result_status:'failed',canonical_ok:false,details:{}})}),'needs_changes'],
       ['verified_current',at({placement_status:'verified',seo_copied_current:true,live_verification:live()}),'done'],
+      ['verified_live_warning',at({placement_status:'verified',seo_copied_current:true,live_verification:live({result_status:'needs_review'})}),'retry_live_precheck'],
       ['verified_became_stale',at({placement_status:'verified',internal_preview_current:false,seo_copied_current:true,live_verification:live()}),'reopen_editing']
     ];
     const publication=pubCases.map(([key,ctx,expected])=>{const result=_networkPublicationReadinessV527(ctx),actual=String(result.next_action&&result.next_action.key||'');return{domain:'publication',key,expected,actual,pass:actual===expected,final_ready:!!result.final_ready,blocking_missing:result.blocking_missing||[],next_action:result.next_action||null}});

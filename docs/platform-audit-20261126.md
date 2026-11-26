@@ -29,6 +29,8 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ### Network-hercontrole na publicatie
 
+Bij een mislukte hercontrole komt de eerder geverifieerde plaatsing terug in de Admin-werklijst. Admin koppelt de waarschuwing aan de laatste controle van dezelfde URL en editie. Een nieuwe geslaagde controle haalt de waarschuwing uit de werklijst. De historie en het creditsaldo blijven behouden.
+
 De bestaande Network-precheck kon HTML van een andere URL accepteren na een redirect en beschouwde een canonical op een ander pad van hetzelfde domein als geldig. Een `X-Robots-Tag` met `noindex` telde niet mee. De precheck vergelijkt nu de exacte opgehaalde URL en eventuele canonical met de ingestuurde publicatie. Een nieuwe, foutloze controle kan de handmatige review onderbouwen. Legacy-runs blijven in de geschiedenis en gelden niet als bewijs van de nieuwe controle. De PostgreSQL-regressie bevestigt ook dat een nieuwe hercontrole eerdere handmatige verificatie en toegekende credits bewaart. Dit is de bestaande handmatige route. Automatische planning en bewijs met echte publishers zijn nog open.
 
 De goedgekeurde squashmerges #579 (`501462a`), #577 (`e9820ea`) en #578 (`841f9e7`) zijn achtereenvolgens uitgevoerd na groene CI. De regressies op de mergecommits dekten volledige geïsoleerde database-initialisatie, Network Test Lab in Chromium, Proof & History en de gelijktijdige Contact Intelligence-synchronisatie en onderdrukking. De concurrencyregressie van #578 draait ook in de canonieke CI.
