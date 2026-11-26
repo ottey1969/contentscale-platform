@@ -46151,7 +46151,20 @@ function openCaseStudy(pageId,caseId){
     }).join('');
     var casePicker=caseOptions?'<label>'+_csEscH(historyText[3])+' <select id="trackerProofCase">'+caseOptions+'</select></label>':'';
     var scanProof=(sources.quick_scan||[]).length?'<details><summary>Quick Scan</summary><ul>'+scoreLines(sources.quick_scan)+'</ul></details>':'';
-    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prewriteReports;
+    var researchLabels={en:['CEO Scan','20-page audit','Findings'],nl:['CEO Scan','20-pagina-audit','Bevindingen'],es:['Informe CEO','Auditoría de 20 páginas','Hallazgos']};
+    var researchText=researchLabels[proofLocale]||researchLabels.en;
+    var prospectResearch=(sources.prospect_research||[]).map(function(item){
+      var heading=researchText[item.source==='ceo_scan'?0:1];
+      var pages=(item.pages||[]).map(function(p){
+        return '<li>'+_csEscH(p.url+' · ContentScore '+(p.score==null?'—':p.score))+'</li>';
+      }).join('');
+      var findings=(item.findings||[]).map(function(f){
+        return '<li>'+_csEscH(f.title+' · '+f.url)+'</li>';
+      }).join('');
+      return '<details><summary>'+_csEscH(heading+' · '+utcStamp(item.recorded_at))+'</summary><ul>'+pages+'</ul>'
+        +(findings?'<h4>'+_csEscH(researchText[2])+'</h4><ul>'+findings+'</ul>':'')+'</details>';
+    }).join('');
+    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prospectResearch+prewriteReports;
     if(!d.case_study){
       var trackerMeasurements=snaps.map(function(row){
         var date=utcStamp(row.checked_at);
