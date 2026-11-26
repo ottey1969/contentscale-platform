@@ -174,3 +174,76 @@ test('Quick Scan confirmation retries an explicit quota rejection and holds an u
     await db.end();
   }
 });
+
+const registrationLocales = [
+  ['en', 'en-US', 'Create my Tracker', 'Open my Tracker'],
+  ['nl', 'nl-NL', 'Maak mijn Tracker aan', 'Open mijn Tracker'],
+  ['es', 'es-ES', 'Crear mi Tracker', 'Abrir mi Tracker']
+];
+for (const [index, [language, locale, registerLabel, trackerLabel]] of registrationLocales.entries()) {
+  for (const [size, width] of [390, 1280].entries()) {
+    const ip = '192.0.2.' + (10 + index * 2 + size);
+    test('A reviewed Audit20 prospect can register and reopen evidence (' + locale + ', ' + width + 'px)', {
+      skip: !(localApp && localDb) && 'requires the canonical local app and a disposable PostgreSQL database',
+      timeout: 40000
+    }, async () => {
+      const { Client } = require('pg');
+      const { chromium } = require('playwright');
+      const db = new Client({ connectionString: database });
+      await db.connect();
+      const token = randomBytes(32).toString('hex');
+      const domain = 'register-' + token.slice(0, 12) + '.example';
+      const url = 'https://' + domain + '/Services/?version=1';
+      let browser;
+      try {
+        await fetch(base + '/api/prospect-quick-scan/test-missing-' + token);
+        await db.query(`INSERT INTO prospect_quick_scans(token,domain,business_name,url,ceo_report_url,language,opened_count,
+          scan_result,scan_completed_at,audit20_status,follow_up_status)
+          VALUES($1,$2,'Registration fixture',$3,'/opportunity-report/fixture',$5,1,$4,NOW(),'not_started','replied')`,
+        [token, domain, url, { score: 0, url }, language]);
+        browser = await chromium.launch();
+        const context = await browser.newContext({ locale, viewport: { width, height: 840 }, extraHTTPHeaders: { 'X-Forwarded-For': ip } });
+        await context.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
+        const page = await context.newPage();
+        const errors = [], requests = [];
+        page.on('pageerror', error => errors.push(error.message));
+        page.on('response', response => {
+          const path = new URL(response.url()).pathname;
+          if (path.endsWith('/tracker-interest') || path.endsWith('/tracker-client/register')) requests.push([path.split('/').pop(), response.status()]);
+        });
+        await page.goto(base + '/quick-scan/' + token);
+        assert.equal(await page.locator('#pqsTrackerRegistration').count(), 0);
+        await db.query("UPDATE prospect_quick_scans SET audit20_status='ready' WHERE token=$1", [token]);
+        await page.reload();
+        const form = page.locator('#pqsTrackerRegistration');
+        assert.equal(await form.isVisible(), true);
+        const [registration] = await Promise.all([
+          page.waitForResponse(response => response.url().endsWith('/api/tracker-client/register'), {timeout:7000}),
+          form.getByRole('button', { name: registerLabel }).click()
+        ]).catch(async error => {
+          throw new Error(JSON.stringify({ requests, errors, status: await form.getByRole('status').textContent() }), { cause: error });
+        });
+        assert.equal(registration.status(), 200, await registration.text());
+        const account = await registration.json();
+        assert.ok(account.linked_page_id);
+        assert.equal(await form.getByRole('link', { name: trackerLabel }).getAttribute('href'), '/track/' + account.token);
+        const response = await page.request.get(base + '/api/tracker-client/' + account.token + '/pages/' + account.linked_page_id + '/proof-sources');
+        assert.equal(response.status(), 200);
+        const body = await response.json();
+        assert.equal(body.proof_sources.quick_scan[0].url, url);
+        assert.equal(body.proof_sources.quick_scan[0].score, 0);
+        assert.equal((await db.query('SELECT follow_up_status FROM prospect_quick_scans WHERE token=$1', [token])).rows[0].follow_up_status, 'replied');
+      } finally {
+        if (browser) await browser.close();
+        const client = (await db.query('SELECT id FROM tracker_clients WHERE domain=$1', [domain])).rows[0];
+        if (client) {
+          await db.query("DELETE FROM tracker_case_study_events WHERE (to_jsonb(tracker_case_study_events)->>'tracker_client_id')::int=$1", [client.id]);
+          await db.query('DELETE FROM tracker_pages WHERE tracker_client_id=$1', [client.id]);
+          await db.query('DELETE FROM tracker_clients WHERE id=$1', [client.id]);
+        }
+        await db.query('DELETE FROM prospect_quick_scans WHERE token=$1', [token]);
+        await db.end();
+      }
+    });
+  }
+}
