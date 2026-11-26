@@ -5428,16 +5428,27 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     res.json({success:true,placement:r.rows[0],event:eventType,url_change:verifiedUrlChange,previous_url:previousUrl||null,rule:verifiedUrlChange?'Verified live URL changed safely. Previous verification remains in history; the new URL requires a fresh pre-check and manual verification.':'Exact live URL saved as a new review round. Manual verification is still required before credits are earned.'});
   }));
 
+  async function lockPublicationEvidence(client,id){
+    const result=await client.query(`SELECT p.status,p.verification_decision,p.published_url,pv.id AS edition_id,pv.updated_at::text AS edition_revision
+      FROM network_placements p JOIN network_publication_versions pv ON pv.placement_id=p.id
+      WHERE p.id=$1 FOR UPDATE OF p,pv`,[id]);
+    return result.rows[0];
+  }
+  function samePublicationEvidence(current,previous){
+    return current && current.published_url===previous.published_url &&
+      current.edition_id===previous.edition_id && current.edition_revision===previous.edition_revision;
+  }
+  const liveEvidenceStates=new Set(['submitted','verifying','needs_review','verified']);
+
   app.post('/api/network/admin/placements/:id/verify-live', verifyAdmin, wrap(async (req,res)=>{
     const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
     const q=await pool.query(`SELECT p.*,c.brand_name,c.owner_website_id,w.domain AS publisher_domain,w.status AS publisher_status,
-      pv.html AS edition_html,pv.generation_input_snapshot,ow.domain AS owner_domain
+      pv.html AS edition_html,pv.generation_input_snapshot,pv.id AS edition_id,pv.updated_at::text AS edition_revision,ow.domain AS owner_domain
       FROM network_placements p JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id
       JOIN network_publication_versions pv ON pv.placement_id=p.id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[id]);
     const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Generated placement not found'});
     if(!x.published_url)return res.status(409).json({success:false,error:'Save the exact live URL before verification'});
-    if(!['submitted','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'Placement is not ready for live verification'});
-    await pool.query(`UPDATE network_placements SET status='verifying',updated_at=NOW() WHERE id=$1 AND status!='verified'`,[id]);
+    if(!liveEvidenceStates.has(x.status))return res.status(409).json({success:false,error:'Placement is not ready for live verification'});
     let fetched,analysis,fetchError='';
     try{fetched=await safeFetchHtml(x.published_url);analysis=analyzeWebsiteHtml({status:fetched.response.status,html:fetched.html,finalUrl:fetched.finalUrl,contentType:fetched.contentType})}catch(e){fetchError=e.message;analysis={http_status:null,indexable:false,canonical:'',technical_pass:false,password_protected:false}}
     const html=String(fetched&&fetched.html||'');
@@ -5463,19 +5474,34 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const jsOnlyDelivery=legacyJsEmbed&&!staticHtmlPresent;
     const passed=httpOk&&indexable&&canonicalOk&&staticHtmlPresent&&brandOk&&sourceOk&&!jsOnlyDelivery;
     const result=passed?'passed':'needs_review';
-    const rn=await pool.query('SELECT COALESCE(MAX(run_no),0)+1 AS n FROM network_verification_runs WHERE placement_id=$1',[id]);
-    const runNo=Number(rn.rows[0].n)||1;
-    const details={seo_static_html_present:staticHtmlPresent,content_text_match:contentMatch,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,final_url:fetched&&fetched.finalUrl||x.published_url,canonical:canonical||null,noindex,password_protected:passwordProtected,fetch_error:fetchError||null,required_brand:brand||null,required_source_domain:owner||null};
-    await pool.query(`INSERT INTO network_verification_runs (placement_id,run_no,http_status,indexable,canonical_ok,brand_mention_ok,source_link_ok,content_match_ok,password_protected,result_status,details,checked_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,NOW())`,[id,runNo,statusCode,indexable,canonicalOk,brandOk,sourceOk,staticHtmlPresent,passwordProtected,result,JSON.stringify(details)]);
-    await pool.query(`UPDATE network_placements SET status=CASE WHEN status='verified' THEN 'verified' ELSE 'needs_review' END,updated_at=NOW() WHERE id=$1`,[id]);
-    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-      VALUES ($1,$2,'admin',$3,$4,NULL,$5::jsonb,NOW())`,[
-        id,passed?'precheck_passed':'precheck_needs_review',
-        cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200),
-        x.published_url,
-        JSON.stringify({run_no:runNo,result_status:result,checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,brand_mention_ok:brandOk,source_link_ok:sourceOk}})
-      ]);
+    const details={published_url:x.published_url,edition_id:String(x.edition_id),edition_revision:x.edition_revision,seo_static_html_present:staticHtmlPresent,content_text_match:contentMatch,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,final_url:fetched&&fetched.finalUrl||x.published_url,canonical:canonical||null,noindex,password_protected:passwordProtected,fetch_error:fetchError||null,required_brand:brand||null,required_source_domain:owner||null};
+    const client=await pool.connect();
+    let committed=false;
+    try{
+      await client.query('BEGIN');
+      const current=await lockPublicationEvidence(client,id);
+      if(!samePublicationEvidence(current,x)||!liveEvidenceStates.has(current.status)){
+        return res.status(409).json({success:false,error:'The publication changed during verification. Run the live pre-check again.'});
+      }
+      const rn=await client.query('SELECT COALESCE(MAX(run_no),0)+1 AS n FROM network_verification_runs WHERE placement_id=$1',[id]);
+      const runNo=Number(rn.rows[0].n)||1;
+      await client.query(`INSERT INTO network_verification_runs (placement_id,run_no,http_status,indexable,canonical_ok,brand_mention_ok,source_link_ok,content_match_ok,password_protected,result_status,details,checked_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,NOW())`,[id,runNo,statusCode,indexable,canonicalOk,brandOk,sourceOk,staticHtmlPresent,passwordProtected,result,JSON.stringify(details)]);
+      await client.query(`UPDATE network_placements SET status=CASE WHEN status='verified' THEN 'verified' ELSE 'needs_review' END,updated_at=NOW() WHERE id=$1`,[id]);
+      await client.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+        VALUES ($1,$2,'admin',$3,$4,NULL,$5::jsonb,NOW())`,[
+          id,passed?'precheck_passed':'precheck_needs_review',
+          cleanText(req.admin?.id||'admin',200),
+          x.published_url,
+          JSON.stringify({run_no:runNo,result_status:result,checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,brand_mention_ok:brandOk,source_link_ok:sourceOk}})
+        ]);
+      await client.query('COMMIT');
+      committed=true;
+    }finally{
+      let rollbackError;
+      if(!committed){try{await client.query('ROLLBACK');}catch(error){rollbackError=error;}}
+      client.release(rollbackError);
+    }
     res.json({
       success:true,
       precheck_passed:passed,
@@ -5499,6 +5525,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       w.domain AS publisher_domain,w.brand_name AS publisher_brand,
       ow.domain AS source_domain,ow.brand_name AS source_brand,pv.*,pv.title AS edition_title,
       pa.email AS publisher_email,pa.contact_name AS publisher_contact_name,pa.access_token AS publisher_dashboard_token,
+      pv.id AS edition_id,pv.updated_at::text AS edition_revision,
       vr.result_status AS latest_result,vr.run_no AS latest_run_no
       FROM network_placements p
       JOIN network_content c ON c.id=p.content_id
@@ -5506,29 +5533,39 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
       LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
       LEFT JOIN network_publisher_accounts pa ON pa.website_id=p.publisher_website_id AND pa.status='active'
-      LEFT JOIN LATERAL (SELECT * FROM network_verification_runs z WHERE z.placement_id=p.id ORDER BY z.run_no DESC LIMIT 1) vr ON TRUE
+      LEFT JOIN LATERAL (SELECT * FROM network_verification_runs z WHERE z.placement_id=p.id
+        AND z.details->>'published_url'=p.published_url AND z.details->>'edition_id'=pv.id::text
+        AND z.details->>'edition_revision'=pv.updated_at::text ORDER BY z.run_no DESC LIMIT 1) vr ON TRUE
       WHERE p.id=$1
       ORDER BY pa.updated_at DESC NULLS LAST
       LIMIT 1`,[id]);
     const x=qr.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
     if(!x.published_url)return res.status(409).json({success:false,error:'No live article URL has been submitted'});
-    const adminId=cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200);
+    const adminId=cleanText(req.admin?.id||'admin',200);
 
-    if(decision==='needs_changes'){
-      const reviewNote=note||'Changes requested after manual review';
-      await pool.query(`UPDATE network_placements SET status='needs_review',verification_decision='needs_changes',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
-      await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-        VALUES ($1,'needs_changes','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
-      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'needs_changes',reviewNote);
-      return res.json({success:true,status:'needs_review',credits_awarded:false,publisher_email:publisherNotification.state});
-    }
-    if(decision==='rejected'){
-      const reviewNote=note||'Rejected after manual review';
-      await pool.query(`UPDATE network_placements SET status='rejected',verification_decision='rejected',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
-      await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-        VALUES ($1,'rejected','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
-      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'rejected',reviewNote);
-      return res.json({success:true,status:'rejected',credits_awarded:false,publisher_email:publisherNotification.state});
+    if(decision!=='verified'){
+      const status=decision==='needs_changes'?'needs_review':'rejected';
+      const reviewNote=note||(decision==='needs_changes'?'Changes requested after manual review':'Rejected after manual review');
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        const current=await lockPublicationEvidence(client,id);
+        if(!samePublicationEvidence(current,x)||current.status!==x.status){
+          await client.query('ROLLBACK');
+          return res.status(409).json({success:false,error:'The publication changed during review. Reload the current edition.'});
+        }
+        await client.query(`UPDATE network_placements SET status=$2,verification_decision=$3,verification_note=$4,
+          reviewed_by_admin_id=$5,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,status,decision,reviewNote,adminId]);
+        await client.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+          VALUES ($1,$2,'admin',$3,$4,$5,$6::jsonb,NOW())`,[id,decision,adminId,x.published_url,reviewNote,
+          JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
+        await client.query('COMMIT');
+      }catch(error){
+        await client.query('ROLLBACK').catch(()=>{});
+        throw error;
+      }finally{client.release();}
+      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,decision,reviewNote);
+      return res.json({success:true,status,credits_awarded:false,publisher_email:publisherNotification.state});
     }
 
     const _reviewImages=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[x.id]);
@@ -5545,6 +5582,25 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const client=await pool.connect();
     try{
       await client.query('BEGIN');
+      const current=await lockPublicationEvidence(client,id);
+      if(samePublicationEvidence(current,x)&&current.status==='verified'&&current.verification_decision==='verified'){
+        await client.query('COMMIT');
+        return res.json({success:true,status:'verified',credits_awarded:false,credits:x.reward_credits,already_verified:true});
+      }
+      if(!samePublicationEvidence(current,x)||current.status!==x.status){
+        await client.query('ROLLBACK');
+        return res.status(409).json({success:false,error:'The publication changed during review. Reload the current edition.'});
+      }
+      if(!note){
+        const {rows:[latest]}=await client.query(`SELECT result_status FROM network_verification_runs
+          WHERE placement_id=$1 AND details->>'published_url'=$2 AND details->>'edition_id'=$3
+            AND details->>'edition_revision'=$4 ORDER BY run_no DESC LIMIT 1`,
+          [id,x.published_url,String(x.edition_id),x.edition_revision]);
+        if(latest?.result_status!=='passed'){
+          await client.query('ROLLBACK');
+          return res.status(409).json({success:false,error:'The live pre-check changed during review. Reload the latest result.'});
+        }
+      }
       let wr=await client.query('SELECT * FROM network_credit_wallets WHERE website_id=$1 FOR UPDATE',[x.publisher_website_id]);
       if(!wr.rows[0])wr=await client.query(`INSERT INTO network_credit_wallets (website_id,balance,reserved,created_at,updated_at) VALUES ($1,0,0,NOW(),NOW()) ON CONFLICT (website_id) DO UPDATE SET updated_at=NOW() RETURNING *`,[x.publisher_website_id]);
       const wallet=wr.rows[0],key='placement:'+id+':reward:v1';
@@ -5562,10 +5618,10 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
         SET status='verified',verified_at=COALESCE(verified_at,NOW()),verification_decision='verified',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW()
         WHERE id=$1`,[id,note||null,adminId]);
       await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status='verified',updated_at=NOW() WHERE id=$1`,[x.content_id]);
+      await client.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+      VALUES ($1,'verified','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,note||null,JSON.stringify({credits_awarded:creditAwarded,credits:x.reward_credits,precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
       await client.query('COMMIT');
     }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
-    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-      VALUES ($1,'verified','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,note||null,JSON.stringify({credits_awarded:creditAwarded,credits:x.reward_credits,precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
     const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'verified',note||'');
     res.json({success:true,status:'verified',credits_awarded:creditAwarded,credits:x.reward_credits,publisher_email:publisherNotification.state,rule:'Verified by manual admin decision. Reward is idempotent and can be awarded only once.'});
   }));
