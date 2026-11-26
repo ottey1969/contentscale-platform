@@ -43,6 +43,7 @@ test('proof linking requires both capabilities and never updates the protected b
       CREATE TABLE growth_free_checks (id BIGINT,public_id TEXT,access_key TEXT,url TEXT,status TEXT,query TEXT,finished_at TIMESTAMPTZ,summary JSONB,publication_history JSONB,contentscore_history JSONB);
       CREATE TABLE growth_free_ai_answers (check_id BIGINT,engine TEXT,raw_text TEXT,parsed JSONB,created_at TIMESTAMPTZ DEFAULT NOW(),UNIQUE(check_id,engine));
       CREATE TABLE growth_free_gsc_uploads (id INT,check_id BIGINT,file_name TEXT,status TEXT,basis TEXT,period_start DATE,period_end DATE,totals JSONB,queries JSONB,created_at TIMESTAMPTZ);
+      CREATE TABLE prospect_quick_scans (id BIGINT,token TEXT,url TEXT,scan_result JSONB,scan_completed_at TIMESTAMPTZ,revoked_at TIMESTAMPTZ);
       INSERT INTO tracker_clients VALUES(1,'first',NULL),(2,'second',NULL);
     `);
     const auditStore = require('../src/gsc-report/store.cjs');
@@ -55,7 +56,8 @@ test('proof linking requires both capabilities and never updates the protected b
     }]);
     const app = express();
     app.use(express.json());
-    registerProofSourceRoutes(app, pool);
+    const prospectKey = 'ab'.repeat(32);
+    registerProofSourceRoutes(app, pool, { resolveQuickScanToken: async key => key === prospectKey.slice(0, 16) ? prospectKey : '' });
     const api = request(app);
     const link = (token, page, body) => api.post('/api/tracker-client/' + token + '/pages/' + page + '/case-study/proof-sources').send(body);
     const growth = { type: 'free_growth', id: 'growth', key: growthKey };
@@ -108,6 +110,28 @@ test('proof linking requires both capabilities and never updates the protected b
     assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM tracker_case_studies')).rows[0].count, 3);
     await pool.query('UPDATE gsc_reports SET revoked_at=NOW()');
     assert.deepEqual((await loadProofSources(pool, { clientId: 1, pageId: 5, url, events })).gsc_audit, []);
+    assert.deepEqual((await pool.query('SELECT baseline_data FROM tracker_case_studies WHERE id=10')).rows[0].baseline_data, { score: 42 });
+
+    await pool.query(`INSERT INTO prospect_quick_scans VALUES
+      (3,$1,$2,$3,NOW(),NULL)`, [prospectKey, url, { score: 0, url, provider_usage: { tokens: 1234 } }]);
+    const scan = { type: 'quick_scan', key: prospectKey };
+    await link('first', 7, scan).expect(404);
+    await link('first', 5, scan).expect(200);
+    await link('first', 5, { ...scan, key: prospectKey.slice(0, 16) }).expect(200);
+    await link('second', 6, scan).expect(409);
+    const scanHistory = async () => (await api.get('/api/tracker-client/first/pages/5/proof-sources').expect(200).expect('Cache-Control','no-store')).body.proof_sources.quick_scan;
+    const measurements = await scanHistory();
+    assert.equal(measurements.length, 1);
+    assert.equal(measurements[0].score, 0);
+    assert.ok(measurements[0].scanned_at);
+    assert.deepEqual(Object.keys(measurements[0]).sort(), ['scanned_at', 'score', 'url']);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS count FROM tracker_case_study_events WHERE source='quick_scan'")).rows[0].count, 1);
+    await pool.query('UPDATE prospect_quick_scans SET scan_result=$1 WHERE id=3', [{ url }]);
+    assert.equal((await scanHistory())[0].score, null);
+    await pool.query('UPDATE prospect_quick_scans SET scan_result=$1 WHERE id=3', [{ score: 5, url: url.toLowerCase() }]);
+    assert.deepEqual(await scanHistory(), []);
+    await pool.query('UPDATE prospect_quick_scans SET revoked_at=NOW() WHERE id=3');
+    assert.deepEqual(await scanHistory(), []);
     assert.deepEqual((await pool.query('SELECT baseline_data FROM tracker_case_studies WHERE id=10')).rows[0].baseline_data, { score: 42 });
   } finally {
     await pool.end();
