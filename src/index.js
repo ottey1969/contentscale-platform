@@ -21456,8 +21456,7 @@ async function _ensureContactIntelligenceTablesInit(){
   await pool.query(`INSERT INTO contact_intelligence_daily_usage(usage_day,used)
     SELECT CURRENT_DATE,LEAST(500,COUNT(*)::int) FROM contact_intelligence_verification_usage WHERE created_at>=date_trunc('day',NOW())
     ON CONFLICT(usage_day) DO NOTHING`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS contact_intelligence_suppressions(
-    id BIGSERIAL PRIMARY KEY,contact_id BIGINT,email TEXT,source TEXT,reason TEXT,actor TEXT DEFAULT 'admin',created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await require('./contact-suppression-schema.cjs').ensureContactSuppressionSchema(pool);
   await pool.query(`ALTER TABLE contact_intelligence_verification_jobs ADD COLUMN IF NOT EXISTS last_contact_id BIGINT DEFAULT 0`);
   await pool.query(`ALTER TABLE contact_intelligence_verification_jobs ADD COLUMN IF NOT EXISTS daily_limit INTEGER DEFAULT 500`);
   await pool.query(`ALTER TABLE contact_intelligence_verification_jobs ADD COLUMN IF NOT EXISTS total_limit INTEGER`);

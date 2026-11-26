@@ -3,6 +3,7 @@
 // No CEO, QuickScan or prospect_quick_scans dependency.
 const crypto=require('node:crypto');
 const path=require('node:path');
+const {ensureContactSuppressionSchema}=require('./contact-suppression-schema.cjs');
 const {readWebsitePage,hostForWebsite}=require('./network-business-email-fetch.cjs');
 const clean=(v,n=250)=>String(v??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0,n);
 const hash=token=>crypto.createHash('sha256').update(token).digest('hex');
@@ -202,6 +203,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    const existing=inviteState(c);
    if(existing?.status && !['draft'].includes(existing.status))return reply(res,409,{error:'Network invitation already exists ('+existing.status+'). Review this record instead.'});
    // Exclude globally suppressed addresses even at preparation.
+   await ensureContactSuppressionSchema(pool);
    const blocked=await pool.query("SELECT EXISTS(SELECT 1 FROM contact_intelligence_suppressions WHERE lower(email)=lower($1)) AS blocked",[email]);
    if(blocked.rows[0]?.blocked)return reply(res,409,{error:'This address has opted out of contact'});
    const token=crypto.randomBytes(24).toString('hex');
@@ -237,6 +239,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
   if(!Number.isSafeInteger(id)||id<1||!tokenOk(token)||req.body?.approved!==true)return reply(res,400,{error:'Explicit approved Network invitation required'});
   let sendLockClient=null,sendLockHeld=false;
   try{
+   await ensureContactSuppressionSchema(pool);
    // Serialize the shared Network quota check and Brevo acceptance across replicas.
    if(typeof pool.connect==='function'){
     sendLockClient=await pool.connect();

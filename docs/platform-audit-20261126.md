@@ -27,6 +27,19 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ## Auditmatrix
 
+De [centrale acceptatiematrix](platform-acceptance-matrix.md) noemt per gebruikersreis de acceptatietest, het geïmplementeerde bereik, de end-to-endstatus, CI, productie-evidence en blokkades.
+
+### Gecombineerde hertest na #585–#590
+
+De zes goedgekeurde PR's zijn in opgegeven volgorde gesquasht tegen groene CI. De mergecommits zijn `6b5b912` (#585), `a920e0b` (#586), `fd278c8` (#588), `a78cd80` (#587), `9222b69` (#589) en `46786e5` (#590). De gerichte PostgreSQL-hertests slaagden met respectievelijk 17, 17, 19, 19, 31 en 41 tests. De publieke versie-API bevestigde de laatstgenoemde commit. [Productieversie](https://app.contentscale.site/api/version)
+
+De vervolgbranch voegt een browsertest toe die vanuit het echte Lead Crawler-beheerscherm een opgeslagen Maps-crawl naar private Network-review importeert. Een oude crawl zonder plaatsveld liet de browser vastlopen. Een eerste import op een lege canonieke testdatabase gaf HTTP 503 omdat de bestaande Network-directory nog niet was geïnitialiseerd. Imports en review gebruiken nu dezelfde canonieke initiator. De test controleert nul e-mails en nul openbare vermeldingen. De volledige kwalificatie, approval, generatie, opvolging en Tracker-reis staat nog open.
+
+De aanvullende Chromium-regressie voor Network-acquisitie reproduceerde HTTP 503 bij voorbereiding van een uitnodiging voordat Contact Intelligence zijn onderdrukkingstabel had geïnitialiseerd. Na het aanmaken van de bestaande tabel reproduceerde de test een tweede defect bij dezelfde kandidaat. Opnieuw openen van de pagina liet de uitnodiging als voorbereid zien zonder de knop waarmee een beheerder de preview kan herstellen. Contact Intelligence en Network gebruiken nu dezelfde schema-initialisatie. Het beheerscherm laat voorbereide uitnodigingen hervatten. Met vooraf ingevoerd website- en contactbewijs doorliep Chromium de echte import-, sessie-, voorbereidings- en herstelroutes. Het record bleef privé en de verzenddatum bleef leeg.
+
+De alleen-lezen productiecheck op `46786e5` zag HTTP 200 voor Lead Crawler, Network en Network-acquisitie. De sessiecontrole zonder inloggegevens antwoordde met `authenticated: false`. De schone lokale boot liet ook zien dat LinkedPod Boost bij de sessie-afsluiter op de ontbrekende tabel `boost_sessions` stuit. Voor herstel en regressiedekking is het ondersteunde Boost-schema nodig. Het staat niet als migratie in dit repository.
+
+
 ### Rank Tracker-digest na een workercrash
 
 Rank Tracker Admin toont afzonderlijk recente reserveringen en reserveringen ouder dan één minuut waarvan de aflevering onzeker is. De provider heeft een timeout van tien seconden. De teller gebruikt de bestaande projectrij en telt een onzekere aflevering niet als verzonden.
