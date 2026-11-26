@@ -64,7 +64,7 @@ test('Network precheck discards a superseded publication and numbers concurrent 
         return output;
       }
     };
-    vm.runInNewContext(source.slice(start, end) + source.slice(attentionStart, attentionEnd), {
+    const context = vm.createContext({
       pool:observedPool, networkNotifyPublisherReviewDecision:async()=>{notifications++;return {state:'mocked'}},
       app: { post(route, _admin, callback) { handlers.set(route, callback); }, get(route, _admin, callback) { handlers.set(route, callback); } }, verifyAdmin() {}, wrap: callback => callback,
       safeJsonObject: value => value || {},
@@ -87,6 +87,7 @@ test('Network precheck discards a superseded publication and numbers concurrent 
       exactUrl: require('../src/implementation-report.cjs').exactUrl,
       _networkResolvePublisherReadinessV527: async () => ({ readiness: { final_ready: true, seo_copied_current: true } })
     });
+    vm.runInContext(source.slice(start, end) + source.slice(attentionStart, attentionEnd), context);
     const invoke = async (route, requestBody) => {
       let status = 200, body;
       const handler = handlers.get('/api/network/admin/placements/:id/' + route);
@@ -160,6 +161,35 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     assert.deepEqual(placement.rows[0], {status: 'verified', verification_decision: 'verified'});
     assert.equal((await pool.query('SELECT balance FROM network_credit_wallets')).rows[0].balance, 7);
     assert.equal(notifications, 1);
+
+    // Scheduled monitoring uses the same canonical checks and leaves the previous review and credits alone.
+    const { runNetworkPublicationMonitoring, ensureMonitoringSchedule } = require('../src/network-publication-monitor.cjs');
+    await ensureMonitoringSchedule(pool);
+    await pool.query("UPDATE network_placements SET verified_at=NOW()-INTERVAL '2 days' WHERE id=3");
+    robotsHeader = 'noindex';
+    const check = vm.runInContext('checkLivePublication', context);
+    const run = () => runNetworkPublicationMonitoring({ pool, check, limit: 1 });
+    const scheduled = await Promise.all([run(), run()]);
+    assert.equal(scheduled.reduce((total, item) => total + item.checked, 0), 1);
+    assert.equal((await attention()).items[0].monitoring_warning, true);
+    const events = await pool.query("SELECT actor_type,event_type FROM network_placement_review_events WHERE actor_type='system'");
+    assert.deepEqual(events.rows, [{ actor_type: 'system', event_type: 'precheck_needs_review' }]);
+    assert.equal((await run()).checked, 0);
+    await pool.query("UPDATE network_placements SET monitoring_due_at=NOW()-INTERVAL '1 minute' WHERE id=3");
+    let abandonedLease;
+    const crash = await runNetworkPublicationMonitoring({ pool, limit: 1, async check(_id, { lease }) {
+      abandonedLease = lease;
+      throw new Error('disposable worker crash fixture');
+    } });
+    assert.equal(crash.deferred, 1);
+    assert.equal((await run()).checked, 0);
+    await pool.query("UPDATE network_placements SET monitoring_due_at=NOW()-INTERVAL '1 minute' WHERE id=3");
+    robotsHeader = undefined;
+    assert.equal((await run()).checked, 1);
+    assert.equal((await check(3, { lease: abandonedLease })).status, 409);
+    assert.equal((await attention()).items.some(item => item.placement_id === 3), false);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS count FROM network_placement_review_events WHERE actor_type='system'")).rows[0].count, 2);
+    assert.equal((await pool.query('SELECT balance FROM network_credit_wallets')).rows[0].balance, 7);
   } finally {
     unblock?.();
     await pool.end();

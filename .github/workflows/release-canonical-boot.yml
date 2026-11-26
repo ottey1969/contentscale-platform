@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/index.js'
       - 'src/network/register-network.js'
+      - 'src/network-publication-monitor.cjs'
       - 'src/network-prewrite-contract.cjs'
       - 'src/prospect-research-proof.cjs'
       - 'src/tracker-registration-identity.cjs'
