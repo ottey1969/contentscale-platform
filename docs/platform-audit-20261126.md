@@ -33,6 +33,10 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 De [centrale acceptatiematrix](platform-acceptance-matrix.md) noemt per gebruikersreis de acceptatietest, het geïmplementeerde bereik, de end-to-endstatus, CI, productie-evidence en blokkades.
 
+### Contact Intelligence openen vanuit Network
+
+Op een schone canonieke testdatabase reproduceerde Chromium HTTP 503 bij het openen van Contact Intelligence-staging vanuit Network. De server las de tabel voordat de Contact Intelligence-initialisatie was uitgevoerd. De twee bestaande Network-beheerschermen gebruiken nu de canonieke initializer na autorisatie. Het Network-selectiescherm initialiseert ook de bestaande directory vóór een query die beide bronnen gebruikt. De browserregressie controleert anonieme weigering, een lege staging en uitlezing van hetzelfde contact vanuit beide schermen op geïsoleerd PostgreSQL. De volledige CSV-, kwalificatie- en promotiereis blijft open.
+
 ### Gecombineerde hertest na #585–#590
 
 De zes goedgekeurde PR's zijn in opgegeven volgorde gesquasht tegen groene CI. De mergecommits zijn `6b5b912` (#585), `a920e0b` (#586), `fd278c8` (#588), `a78cd80` (#587), `9222b69` (#589) en `46786e5` (#590). De gerichte PostgreSQL-hertests slaagden met respectievelijk 17, 17, 19, 19, 31 en 41 tests. De publieke versie-API bevestigde de laatstgenoemde commit. [Productieversie](https://app.contentscale.site/api/version)

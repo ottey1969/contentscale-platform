@@ -51,7 +51,7 @@ function candidate(raw){
  if(['app.contentscale.site','contentscale.site'].includes(domain))return null;
  return {name,address,phone,website:site,domain,niche,source:raw.source,place_id:plain(raw.place_id,180)};
 }
-function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=discoverCompanyContact,inspect=websiteEvidence,backfillDelayMs=12000,ensureDirectory=async()=>{}}){
+function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=discoverCompanyContact,inspect=websiteEvidence,backfillDelayMs=12000,ensureDirectory=async()=>{},ensureContactIntelligence=async()=>{}}){
  if(!app?.get||!app?.post||!pool?.query)throw Error('Network acquisition dependencies missing');
  let directoryReady;
  function readyDirectory(){
@@ -98,6 +98,8 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
  app.get('/api/network/admin/acquisition/contact-intelligence',async(req,res)=>{
   if(!sessionAuth(req))return res.status(403).json({error:'Admin login required'});
   try{
+   await ensureContactIntelligence();
+   await readyDirectory();
    const mode=String(req.query.mode||'active');
    const where=mode==='archived'?"c.status='archived'":mode==='network'?"c.status='domain_verified' AND c.network_publisher_candidate IS TRUE AND COALESCE(c.network_fit_score,0)>=60":"c.status<>'archived'";
    const q=await pool.query(`SELECT c.id,c.company_name,c.niche,c.country,c.email,c.status,c.website_url,c.website_candidate,c.website_verified_at,c.network_fit_score,c.network_fit_label,c.network_publisher_candidate,c.network_vertical,n.id AS network_id,n.status AS network_status
@@ -112,6 +114,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   const action=String(req.body?.action||''),ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(Number).filter(n=>Number.isSafeInteger(n)&&n>0))].slice(0,100);
   if(!ids.length||!['archive','restore','select_network'].includes(action))return res.status(400).json({error:'Choose records and a valid action'});
   try{
+   await ensureContactIntelligence();
    if(action==='archive'||action==='restore'){
     await pool.query('ALTER TABLE contact_intelligence ADD COLUMN IF NOT EXISTS staging_previous_status text');
     const sql=action==='archive'
@@ -120,6 +123,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
     const result=await pool.query(sql,[ids]);
     return res.json({ok:true,changed:result.rowCount,skipped:ids.length-result.rowCount});
    }
+   await readyDirectory();
    const q=await pool.query(`UPDATE network_directory_businesses n
     SET metadata=jsonb_set(COALESCE(n.metadata,'{}'::jsonb),'{contact_intelligence,network_selected}', 'true'::jsonb,true),updated_at=now()
     FROM contact_intelligence c
@@ -270,7 +274,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   }catch(e){console.error('[network-acquisition] import',e.code||e.message);
    return res.status(503).json({error:'Network import interrupted. Check the review list before retrying; duplicate websites cannot be imported twice.'})}
  });
- registerContactStagingAdmin(app,pool,sessionAuth);
+ registerContactStagingAdmin(app,pool,sessionAuth,ensureContactIntelligence);
  registerNetworkAcquisitionInvitations({app,pool,auth:sessionAuth});
  scheduleEmailBackfill();
 }

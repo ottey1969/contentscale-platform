@@ -16,7 +16,9 @@ function registerGrowthExecution(app,pool,deps={}){
  try{
   require('./lead-crawler-serpapi.cjs').registerLeadCrawlerSerpApi(app,{pool});
   const {ensureNetworkDirectorySchema}=require('./network/register-network.js');
-  require('./network-maps-acquisition.cjs').registerNetworkMapsAcquisition({app,pool,ensureDirectory:ensureNetworkDirectorySchema});
+  require('./network-maps-acquisition.cjs').registerNetworkMapsAcquisition({
+   app,pool,ensureDirectory:ensureNetworkDirectorySchema,ensureContactIntelligence:deps.ensureContactIntelligence
+  });
  }catch(error){
   console.error('[lead-crawler-serpapi] registration failed:',error.message);
  }

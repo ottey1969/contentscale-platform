@@ -4013,7 +4013,7 @@ require('./gsc-report/routes.cjs').registerGscReport(app,pool);
 require('./rank-free/routes.cjs').registerRankFree(app,pool);
 // Pre-Write: the best real customer question to ask the AI systems for a keyword (Google's own questions first).
 require('./prewrite-customer-question.cjs').registerPrewriteCustomerQuestion(app,pool);
-require('./tracker-growth-execution.cjs').registerGrowthExecution(app,pool);
+require('./tracker-growth-execution.cjs').registerGrowthExecution(app,pool,{ensureContactIntelligence:_ensureContactIntelligenceTables});
 require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 require('./tracker-growth-gsc-direct.cjs').registerGrowthGscDirect(app,pool);
 function _trackerLiveProofText(proof, lang) {
