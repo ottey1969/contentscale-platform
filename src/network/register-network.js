@@ -4984,8 +4984,16 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       }
     }
     if(!token){
-      const domain='network-placement-'+id+'.internal.contentscale.site',ex=await pool.query(`SELECT id,token FROM tracker_clients WHERE domain=$1 AND (status IS NULL OR status<>'deleted') ORDER BY id LIMIT 1`,[domain]);
-      if(ex.rows[0]){clientId=ex.rows[0].id;token=ex.rows[0].token}else{token=crypto.randomBytes(32).toString('hex');const ins=await pool.query(`INSERT INTO tracker_clients(token,domain,name,email,status,max_pages,created_at,updated_at) VALUES($1,$2,$3,NULL,'active',1,NOW(),NOW()) RETURNING id`,[token,domain,cleanText(x.brand_name||x.title||('Placement '+id),180)]);clientId=ins.rows[0].id}
+      const domain='network-placement-'+id+'.internal.contentscale.site';
+      const {reuseOrCreateRegistration}=require('../tracker-registration-identity.cjs');
+      const workspace=await reuseOrCreateRegistration(pool,domain,async db=>{
+        const token=crypto.randomBytes(32).toString('hex');
+        const {rows}=await db.query(`INSERT INTO tracker_clients(token,domain,name,email,status,max_pages,created_at,updated_at)
+          VALUES($1,$2,$3,NULL,'active',1,NOW(),NOW()) RETURNING id,token`,
+          [token,domain,cleanText(x.brand_name||x.title||('Placement '+id),180)]);
+        return rows[0];
+      });
+      clientId=workspace.id;token=workspace.token;
       await pool.query(`UPDATE tracker_clients SET
         name=$2,
         prewrite_briefs_paid=GREATEST(COALESCE(prewrite_briefs_paid,0),9999),

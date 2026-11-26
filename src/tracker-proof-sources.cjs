@@ -128,14 +128,55 @@ const PROOF_EVENTS_SCHEMA = `
     ALTER COLUMN case_study_id DROP NOT NULL
 `;
 
+async function bindProofSource(db, page, type, sourceId, url) {
+  const ref = { type, source_id: String(sourceId), url };
+  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [EVENT + ':' + type + ':' + ref.source_id]);
+  const existing = (await db.query(
+    `SELECT COALESCE(c.tracker_client_id,e.tracker_client_id) AS tracker_client_id,
+            COALESCE(c.tracker_page_id,e.tracker_page_id) AS tracker_page_id,e.event_data->>'url' AS url
+       FROM tracker_case_study_events e LEFT JOIN tracker_case_studies c ON c.id=e.case_study_id
+      WHERE e.event_type=$1 AND e.event_data->>'type'=$2 AND e.event_data->>'source_id'=$3`,
+    [EVENT, type, ref.source_id])).rows;
+  if (existing.some(link => link.tracker_client_id !== page.tracker_client_id ||
+    (link.url === url && link.tracker_page_id !== page.id))) {
+    return false;
+  }
+  if (!existing.some(link => link.url === url && link.tracker_page_id === page.id)) {
+    await db.query(`INSERT INTO tracker_case_study_events(tracker_client_id,tracker_page_id,event_type,source,event_data)
+                    VALUES($1,$2,$3,$4,$5::jsonb)`, [page.tracker_client_id, page.id, EVENT, type, JSON.stringify(ref)]);
+  }
+  return true;
+}
+
+async function quickScanForRegistration(db, token, domain) {
+  const { rows: [scan] } = await db.query(`SELECT id,url,scan_result,scan_completed_at
+    FROM prospect_quick_scans WHERE token=$1 AND tracker_interested IS TRUE AND audit20_status='ready'
+      AND revoked_at IS NULL FOR SHARE`, [token]);
+  if (!scan) return null;
+  let url;
+  try { url = exactUrl(scan.url); } catch { return null; }
+  const host = new URL(url).hostname.replace(/^www[.]/, '');
+  return host === domain && quickScanEvidence(scan, url) ? { id: scan.id, url } : null;
+}
+
+async function registerQuickScanProof(db, clientId, scan) {
+  const { rows: [page] } = await db.query(`INSERT INTO tracker_pages
+    (tracker_client_id,url,check_frequency,next_check_at,email_reminders,next_ai_reminder_at)
+    VALUES ($1,$2,'0',NULL,FALSE,NULL) RETURNING id,tracker_client_id`, [clientId, scan.url]);
+  return await bindProofSource(db, page, 'quick_scan', scan.id, scan.url) ? page.id : null;
+}
+
+async function ensureProofSourceSchema(pool, ensureCaseSchema) {
+  if (ensureCaseSchema) await ensureCaseSchema();
+  await pool.query(PROOF_EVENTS_SCHEMA);
+}
+
 function registerProofSourceRoutes(app, pool, { ensureCaseSchema, resolveQuickScanToken } = {}) {
   const path = '/api/tracker-client/:token/pages/:pageId';
   let schemaReady;
   function ensureProofSchema() {
-    if (!schemaReady) schemaReady = (async () => {
-      if (ensureCaseSchema) await ensureCaseSchema();
-      await pool.query(PROOF_EVENTS_SCHEMA);
-    })().catch(error => { schemaReady = null; throw error; });
+    if (!schemaReady) schemaReady = ensureProofSourceSchema(pool, ensureCaseSchema)
+      .catch(error => { schemaReady = null; throw error; });
     return schemaReady;
   }
   app.get(path + '/proof-sources', async (req, res) => {
@@ -181,26 +222,11 @@ function registerProofSourceRoutes(app, pool, { ensureCaseSchema, resolveQuickSc
       await ensureProofSchema();
       db = await pool.connect();
       await db.query('BEGIN');
-      const ref = { type, source_id: String(source.id), url };
-      await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [EVENT + ':' + type + ':' + ref.source_id]);
       const current = await ownedPage(db, req.params.token, req.params.pageId, true);
       if (!current || current.tracker_client_id !== page.tracker_client_id || current.url !== page.url) {
         return res.status(409).json({ success: false });
       }
-      const existing = (await db.query(
-        `SELECT COALESCE(c.tracker_client_id,e.tracker_client_id) AS tracker_client_id,
-                COALESCE(c.tracker_page_id,e.tracker_page_id) AS tracker_page_id,e.event_data->>'url' AS url
-           FROM tracker_case_study_events e LEFT JOIN tracker_case_studies c ON c.id=e.case_study_id
-          WHERE e.event_type=$1 AND e.event_data->>'type'=$2 AND e.event_data->>'source_id'=$3`,
-        [EVENT, type, ref.source_id])).rows;
-      if (existing.some(link => link.tracker_client_id !== page.tracker_client_id ||
-        (link.url === url && link.tracker_page_id !== page.id))) {
-        return res.status(409).json({ success: false });
-      }
-      if (!existing.some(link => link.url === url && link.tracker_page_id === page.id)) {
-        await db.query(`INSERT INTO tracker_case_study_events(tracker_client_id,tracker_page_id,event_type,source,event_data)
-                        VALUES($1,$2,$3,$4,$5::jsonb)`, [page.tracker_client_id, page.id, EVENT, type, JSON.stringify(ref)]);
-      }
+      if (!await bindProofSource(db, page, type, source.id, url)) return res.status(409).json({ success: false });
       await db.query('COMMIT');
       committed = true;
       res.set('Cache-Control', 'no-store').json({ success: true });
@@ -217,4 +243,5 @@ function registerProofSourceRoutes(app, pool, { ensureCaseSchema, resolveQuickSc
   });
 }
 
-module.exports = { EVENT, auditPageEvidence, loadProofSources, loadPageProofSources, registerProofSourceRoutes };
+module.exports = { EVENT, auditPageEvidence, loadProofSources, loadPageProofSources, registerProofSourceRoutes,
+  ensureProofSourceSchema, quickScanForRegistration, registerQuickScanProof };
