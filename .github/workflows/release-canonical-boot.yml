@@ -9,6 +9,7 @@ on:
       - 'tests/e2e-prospect-quick-scan-browser.test.cjs'
       - 'tests/e2e-contact-promotion-postgres.test.cjs'
       - 'tests/e2e-network-test-lab-browser.test.cjs'
+      - 'tests/e2e-network-precheck-postgres.test.cjs'
       - 'tests/fixtures/staging-boot-schema.sql'
       - 'tests/staging-boot-no-egress.cjs'
       - '.github/workflows/release-canonical-boot.yml'
@@ -123,5 +124,6 @@ jobs:
           PROSPECT_E2E_BASE="$APP_URL" PROSPECT_E2E_MAIL_FIXTURE=1 node --test tests/e2e-prospect-quick-scan-browser.test.cjs
           node --test tests/e2e-contact-promotion-postgres.test.cjs
           NETWORK_E2E_BASE="$APP_URL" node --test tests/e2e-network-test-lab-browser.test.cjs
+          node --test tests/e2e-network-precheck-postgres.test.cjs
       - name: Writable Case Study baseline and replay on disposable PostgreSQL (rollback)
         run: node tests/e2e-case-study-postgres.cjs
