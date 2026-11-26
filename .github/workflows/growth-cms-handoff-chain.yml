@@ -9,6 +9,7 @@ on:
       - 'public/growth-automatic-report-ui.js'
       - 'tests/growth-proposal-cms-handoff.test.cjs'
       - 'tests/growth-cms-chain-postgres.test.cjs'
+      - 'tests/growth-gsc-period-import.test.cjs'
       - 'tests/growth-report-51-review-regression.test.cjs'
       - 'tests/fixtures/growth-report-50/**'
       - 'tests/fixtures/growth-report-51/**'
@@ -121,6 +122,10 @@ jobs:
         env:
           GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e
         run: node --test tests/growth-selection-store-postgres.test.cjs
+      - name: Scheduled Search Console imports (real PostgreSQL)
+        env:
+          GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e
+        run: node --test tests/growth-gsc-period-import.test.cjs
       - name: Existing publication, export and Cockpit tests
         run: |
           node tests/tracker-growth-execution.test.cjs

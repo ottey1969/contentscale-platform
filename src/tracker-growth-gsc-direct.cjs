@@ -110,20 +110,30 @@ function registerGrowthGscDirect(app,pool,{env=process.env,pull=pullQueryWindow,
 // Background: every publication of the last 120 days whose missing period is final gets it read (only with Search
 // Console access; a publication whose read failed is retried on the next run, at most once a day per period).
 async function importDueWindows(pool,{env=process.env,pull=pullQueryWindow,tokenProvider=gscToken,now=new Date()}={}){
- if(!(await tokenProvider(env).catch(()=>null)))return {imported:0,access:false};
+ const cutoff=new Date(now.getTime()-120*86400000);
  let rows;
- try{rows=(await pool.query(`SELECT g.id,g.tracker_client_id,g.published_at,
-   ARRAY(SELECT w.period FROM tracker_growth_gsc_windows w WHERE w.tracker_client_id=g.tracker_client_id AND w.publication_id=g.id) AS have
-   FROM tracker_growth_publications g WHERE g.published_at>$1 ORDER BY g.published_at LIMIT 200`,[new Date(now.getTime()-120*86400000)])).rows}
+ try{rows=(await pool.query(`SELECT g.id,g.tracker_client_id,g.published_at,stored.have
+   FROM tracker_growth_publications g CROSS JOIN LATERAL (
+     SELECT ARRAY(SELECT w.period FROM tracker_growth_gsc_windows w
+       WHERE w.tracker_client_id=g.tracker_client_id AND w.publication_id=g.id) AS have
+   ) stored
+   WHERE g.published_at>$1 AND cardinality(stored.have)<2
+     AND NOT EXISTS(SELECT 1 FROM tracker_case_studies c WHERE c.tracker_client_id=g.tracker_client_id
+       AND c.tracker_page_id=g.tracker_page_id AND c.status='active')
+   ORDER BY g.published_at,g.id LIMIT 200`,[cutoff])).rows}
  catch(e){if(e.code!=='42P01')throw e;
-  try{rows=(await pool.query('SELECT g.id,g.tracker_client_id,g.published_at,ARRAY[]::text[] AS have FROM tracker_growth_publications g WHERE g.published_at>$1 LIMIT 200',[new Date(now.getTime()-120*86400000)])).rows}catch(e2){if(e2.code==='42P01')return {imported:0,access:true};throw e2}}
+  try{rows=(await pool.query(`SELECT g.id,g.tracker_client_id,g.published_at,ARRAY[]::text[] AS have FROM tracker_growth_publications g
+    WHERE g.published_at>$1 ORDER BY g.published_at,g.id LIMIT 200`,[cutoff])).rows}catch(e2){if(e2.code==='42P01')return {imported:0,access:null};throw e2}}
  let imported=0;
+ let token;
+ const batchToken=async()=>token??=await tokenProvider(env).catch(()=>null);
  for(const r of rows){
   const missing=finalPeriods(windowDates(r.published_at),now).filter(p=>!(r.have||[]).includes(p));
   if(!missing.length)continue;
-  const out=await importGscWindows(pool,{clientId:r.tracker_client_id,publicationId:Number(r.id),env,pull,tokenProvider,now,periods:missing}).catch(e=>({status:'GSC_ERROR',error:e.message}));
+  const out=await importGscWindows(pool,{clientId:r.tracker_client_id,publicationId:Number(r.id),env,pull,tokenProvider:batchToken,now,periods:missing}).catch(e=>({status:'GSC_ERROR',error:e.message}));
+  if(out.status==='NO_GSC_ACCESS')return {imported,access:false};
   if(out.status==='IMPORTED')imported+=out.periods.length;
  }
- return {imported,access:true};
+ return {imported,access:token?true:null};
 }
 module.exports={registerGrowthGscDirect,importGscWindows,importDueWindows,finalPeriods,pullQueryWindow,gscToken,serviceAccountJsonToken};
