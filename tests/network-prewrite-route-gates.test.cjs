@@ -62,14 +62,18 @@ test('Canonical Network saves valid research only and reports the validated five
  const saved = brief(false);
  const writes = [];
  const route = '/api/network/admin/publications/:placementId/ai-evidence';
+ let placementStatus = 'accepted';
  let handle;
  const app = { post(path, ...handlers) { if (path === route) handle = handlers.at(-1); } };
  for (const method of ['get', 'patch', 'put', 'delete', 'use']) app[method] = () => {};
+ const placement = () => ({ id: 1, status: placementStatus, prewrite_brief_id: 9, publication_version_id: 42,
+   generation_input_snapshot: { official_contentscore_scan: { score: 92 } } });
  const pool = {
-  async query() { return { rows: [{ prewrite_brief_id: 9 }] }; },
+  async query() { return { rows: [placement()] }; },
   async connect() {
    return {
     async query(sql, params) {
+     if (sql.includes('FROM network_placements p')) return { rows: [placement()] };
      if (sql.includes('FROM prewrite_briefs')) return {rows: [{id: 9, keyword: KEYWORD, brief_json: structuredClone(saved)}]};
      if (sql.startsWith('UPDATE')) writes.push(JSON.parse(params[1]));
      return { rows: [] };
@@ -95,5 +99,79 @@ test('Canonical Network saves valid research only and reports the validated five
  const approved = await capture({engine: 'claude', evidence: ANSWER});
  assert.equal(approved.statusCode, 200);
  assert.equal(approved.body.complete_5_of_5, true);
- assert.equal(writes[1].what_we_checked.ai_systems_checked, 5);
+ assert.equal(writes[2].what_we_checked.ai_systems_checked, 5);
+ assert.equal(writes.length, 4);
+ for (const status of ['submitted', 'verifying', 'verified']) {
+  placementStatus = status;
+  const live = await capture({ engine: 'claude', evidence: ANSWER });
+  assert.equal(live.statusCode, 409, 'live research may not revise the approved Publisher Edition');
+  assert.equal(writes.length, 4);
+ }
+});
+
+const database = process.env.DATABASE_URL || '';
+const isolated = /^postgres(?:ql)?:\/\/[^@]+@(?:127\.0\.0\.1|localhost):\d+\/(?:test\w*|\w+_e2e)$/.test(database);
+
+test('Network research capture sees a concurrent publication submission and leaves the approved edition intact', {
+ skip: !isolated && 'requires disposable local PostgreSQL', timeout: 15000
+}, async () => {
+ const { Pool } = require('pg');
+ const schema = 'live_research_' + crypto.randomBytes(8).toString('hex');
+ const control = new Pool({ connectionString: database, max: 1 });
+ const db = new Pool({ connectionString: database, options: '-c search_path=' + schema, max: 3 });
+ let submission;
+ try {
+  await control.query('CREATE SCHEMA ' + schema);
+  await db.query(`CREATE TABLE network_placements (id INT PRIMARY KEY, content_id INT, status TEXT);
+    CREATE TABLE network_content (id INT PRIMARY KEY, prewrite_brief_id INT);
+    CREATE TABLE network_publication_versions (id INT PRIMARY KEY, placement_id INT, generation_input_snapshot JSONB,
+      quality_status TEXT, updated_at TIMESTAMPTZ);
+    CREATE TABLE prewrite_briefs (id INT PRIMARY KEY, keyword TEXT, brief_json JSONB);
+    INSERT INTO network_placements VALUES (1,5,'ready');
+    INSERT INTO network_content VALUES (5,9);
+    INSERT INTO network_publication_versions VALUES (42,1,'{"official_contentscore_scan":{"score":92}}','approved',NOW())`);
+  const prewrite = brief(false);
+  await db.query('INSERT INTO prewrite_briefs VALUES (9,$1,$2)', [KEYWORD, JSON.stringify(prewrite)]);
+
+  let capture;
+  const app = { post(path, ...handlers) {
+   if (path === '/api/network/admin/publications/:placementId/ai-evidence') capture = handlers.at(-1);
+  } };
+  for (const method of ['get', 'patch', 'put', 'delete', 'use']) app[method] = () => {};
+  let reachedCapture;
+  const captureStarted = new Promise(resolve => { reachedCapture = resolve; });
+  const observedPool = {
+   query: (...args) => db.query(...args),
+   async connect() {
+    const conn = await db.connect();
+    return { query(sql, ...args) {
+     const result = conn.query(sql, ...args);
+     if (sql.includes('FROM network_placements p') && sql.includes('FOR UPDATE OF p')) reachedCapture();
+     return result;
+    }, release: () => conn.release() };
+   }
+  };
+  registerCanonicalNetwork({ app, pool: observedPool, verifyAdmin() {}, asyncHandler: fn => fn });
+  submission = await db.connect();
+  await submission.query('BEGIN');
+  await submission.query("UPDATE network_placements SET status='submitted' WHERE id=1");
+  const res = { statusCode: 200, status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; } };
+  const request = capture({ params: { placementId: 1 }, body: { engine: 'claude', evidence: ANSWER } }, res);
+  await Promise.race([captureStarted, request]);
+  await submission.query('COMMIT');
+  await request;
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.body.code, 'live_publication_research_locked');
+  const { rows: [version] } = await db.query('SELECT generation_input_snapshot,quality_status FROM network_publication_versions');
+  assert.deepEqual(version, { generation_input_snapshot: { official_contentscore_scan: { score: 92 } }, quality_status: 'approved' });
+  assert.deepEqual((await db.query('SELECT brief_json FROM prewrite_briefs')).rows[0].brief_json, prewrite);
+ } finally {
+  if (submission) {
+   await submission.query('ROLLBACK').catch(() => {});
+   submission.release();
+  }
+  await db.end();
+  try { await control.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE'); }
+  finally { await control.end(); }
+ }
 });

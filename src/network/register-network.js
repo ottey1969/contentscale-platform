@@ -5025,18 +5025,24 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     if(!networkAiEngines.includes(engine))return res.status(400).json({success:false,error:'Unknown AI system'});
     if(engine==='google_aio'&&!['ai_overview','gemini'].includes(googleSource))return res.status(422).json({success:false,error:'Choose the actual Google source: AI Overview or Gemini.'});
     if(!evidence)return res.status(400).json({success:false,error:'Paste the AI answer first'});
-    const pq=await pool.query(`SELECT p.id,c.id AS content_id,c.prewrite_brief_id,pv.id AS publication_version_id,pv.generation_input_snapshot
-      FROM network_placements p JOIN network_content c ON c.id=p.content_id
-      LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
-      WHERE p.id=$1 LIMIT 1`,[placementId]);
-    const placement=pq.rows[0];
-    if(!placement)return res.status(404).json({success:false,error:'Placement not found'});
-    const briefId=Number(placement.prewrite_brief_id||0);
-    if(!briefId)return res.status(409).json({success:false,error:'Create or link the Prewrite Brief first. The AI answer must belong to a specific Brief.'});
     const client=await pool.connect();
-    let aiState,newHash='',requiresRegeneration=!!placement.publication_version_id;
+    let aiState,newHash='',briefId,requiresRegeneration;
     try{
       await client.query('BEGIN');
+      const pq=await client.query(`SELECT p.id,p.status,c.prewrite_brief_id,pv.id AS publication_version_id,pv.generation_input_snapshot
+        FROM network_placements p JOIN network_content c ON c.id=p.content_id
+        LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
+        WHERE p.id=$1 LIMIT 1 FOR UPDATE OF p,c`,[placementId]);
+      const placement=pq.rows[0];
+      if(!placement){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Placement not found'});}
+      if(['submitted','verifying','verified'].includes(placement.status)){
+        await client.query('ROLLBACK');
+        return res.status(409).json({success:false,code:'live_publication_research_locked',
+          error:'Reopen the Publisher Edition for editing before changing its Pre-Write research.'});
+      }
+      briefId=Number(placement.prewrite_brief_id||0);
+      if(!briefId){await client.query('ROLLBACK');return res.status(409).json({success:false,error:'Create or link the Prewrite Brief first. The AI answer must belong to a specific Brief.'});}
+      requiresRegeneration=!!placement.publication_version_id;
       const br=await client.query(`SELECT id,keyword,brief_json FROM prewrite_briefs WHERE id=$1 FOR UPDATE`,[briefId]);
       if(!br.rows[0]){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Linked Prewrite Brief not found'})}
       const brief=safeJsonObject(br.rows[0].brief_json),ae=safeJsonObject(brief.ai_system_evidence),now=new Date().toISOString();
