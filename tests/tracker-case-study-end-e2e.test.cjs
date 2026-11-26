@@ -106,6 +106,33 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     assert.deepEqual(afterPublication.body.prewrite_implementations.map(item => [item.brief_id, item.report.status]),
       [[own, 'not_published'], [own, 'implemented'], [own, 'published']]);
     assert.deepEqual(afterPublication.body.case_study.baseline_data, baseline);
+    const gscStore = require('../src/gsc-report/store.cjs');
+    const growthStore = require('../src/growth-free/store.cjs');
+    await gscStore.ensureTables(db);
+    await growthStore.ensureTables(db);
+    const beforePeriod = { start: '2026-01-01', end: '2026-01-02' };
+    const afterPeriod = { start: '2026-01-03', end: '2026-01-04' };
+    const audit = await gscStore.createReport(db, { lang: 'nl', days: 1, report: {
+      kpis: { period: beforePeriod }, pages: [{ url, source: 'PAGE_EXPORT', clicks: null, impressions: 8 }]
+    } });
+    await gscStore.setAfter(db, audit.id, { period: afterPeriod, pages: [{ url, clicks: 0, impressions: 12 }] });
+    const check = await growthStore.createCheck(db, { email: 'test@example.test', url, host: new URL(url).hostname, query: 'TEST geo' });
+    await growthStore.setStatus(db, check.id, { status: 'DONE' });
+    for (const score of [42, 59]) await growthStore.appendContentScore(db, { checkId: check.id, result: { score } });
+    await growthStore.saveAiAnswer(db, { checkId: check.id, engine: 'chatgpt', rawText: 'TEST unverified', parsed: { sources_verifiable: false } });
+    await growthStore.saveAiAnswer(db, { checkId: check.id, engine: 'chatgpt', rawText: 'TEST verified', parsed: { sources_verifiable: true, sources: [url] } });
+    const linkPath = base + historyPath.replace('/proof-history', '/proof-sources');
+    const linkProof = (target, source) => fetch(target, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(source)
+    });
+    assert.equal((await linkProof(linkPath, { type: 'gsc_audit', key: audit.token })).status, 200);
+    assert.equal((await linkProof(linkPath, { type: 'free_growth', id: check.public_id, key: check.access_key })).status, 200);
+    const sharedProof = (await getHistory()).body;
+    assert.equal(sharedProof.prewrite_implementations[2].report.status, 'published');
+    assert.deepEqual(sharedProof.case_study.baseline_data, baseline);
+    assert.deepEqual(sharedProof.proof_sources.gsc_audit[0].observations.map(row => [row.period, row.clicks]), [[beforePeriod, null], [afterPeriod, 0]]);
+    assert.deepEqual(sharedProof.proof_sources.free_growth[0].contentscore_history.map(row => row.score), [42, 59]);
+    assert.deepEqual(sharedProof.proof_sources.free_growth[0].ai.map(row => row.exact_url_listed), [null, true]);
     assert.equal((await getHistory('?case_id=abc')).status, 400);
     const reportToken = crypto.randomBytes(24).toString('hex');
     const fiveEngines = ['google_aio','chatgpt','perplexity','claude','copilot'];
