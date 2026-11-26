@@ -9,7 +9,7 @@ const database = process.env.DATABASE_URL || '';
 const localApp = /^http:\/\/127\.0\.0\.1:\d+$/.test(base);
 const localDb = /^postgres(?:ql)?:\/\/[^@]+@(?:127\.0\.0\.1|localhost):\d+\/(?:test\w*|\w+_e2e)$/.test(database);
 
-test('Quick Scan reopens the exact CEO page evidence and records explicit Audit20 interest', {
+test('Prospect reopens exact CEO evidence and records explicit interest without changing owner follow-up', {
   skip: !(localApp && localDb) && 'requires the canonical local app and a disposable PostgreSQL database',
   timeout: 60000
 }, async () => {
@@ -70,6 +70,7 @@ test('Quick Scan reopens the exact CEO page evidence and records explicit Audit2
     assert.match(new URL(preview.url()).pathname, /^\/audit-process\//);
     await preview.close();
     assert.notEqual((await currentInterest()).audit20_interested, true);
+    await db.query("UPDATE prospect_quick_scans SET follow_up_status='won' WHERE token=$1", [prospect]);
     const interestButton = page.locator('#pqs391Audit');
     page.once('dialog', dialog => dialog.accept());
     const [response] = await Promise.all([
@@ -85,6 +86,37 @@ test('Quick Scan reopens the exact CEO page evidence and records explicit Audit2
     assert.equal(replay.status(), 200);
     assert.equal((await replay.json()).already_interested, true);
     assert.deepEqual(await currentInterest(), recorded);
+    const followUp = async () => (await db.query(`SELECT follow_up_status,quickscan_interested_at,
+      tracker_interested_at,updated_at FROM prospect_quick_scans WHERE token=$1`, [prospect])).rows[0];
+    assert.equal((await followUp()).follow_up_status, 'won');
+
+    await db.query("UPDATE prospect_quick_scans SET follow_up_status='closed' WHERE token=$1", [prospect]);
+    const trackerInterest = await page.request.post(base + '/api/prospect-quick-scan/' + prospect + '/tracker-interest');
+    assert.equal(trackerInterest.status(), 200);
+    assert.ok((await followUp()).tracker_interested_at);
+    assert.equal((await followUp()).follow_up_status, 'closed');
+
+    await db.query("UPDATE prospect_quick_scans SET follow_up_status='replied' WHERE token=$1", [prospect]);
+    const quickPath = base + '/api/prospect-quick-scan/' + prospect + '/quickscan-interest';
+    const requests = await Promise.all([page.request.post(quickPath), page.request.post(quickPath)]);
+    assert.deepEqual(requests.map(r => r.status()), [200, 200]);
+    const values = await Promise.all(requests.map(r => r.json()));
+    assert.equal(values.filter(value => value.already_interested === true).length, 1);
+    assert.equal(values[0].quick_scan_url, values[1].quick_scan_url);
+    const firstQuickInterest = await followUp();
+    assert.ok(firstQuickInterest.quickscan_interested_at);
+    assert.equal(firstQuickInterest.follow_up_status, 'replied');
+    const quickReplay = await page.request.post(quickPath);
+    assert.equal((await quickReplay.json()).already_interested, true);
+    assert.deepEqual(await followUp(), firstQuickInterest);
+
+    await db.query('UPDATE prospect_quick_scans SET ceo_report_url=NULL WHERE token=$1', [prospect]);
+    assert.equal((await page.request.post(quickPath)).status(), 409);
+    await db.query('UPDATE prospect_quick_scans SET revoked_at=NOW() WHERE token=$1', [prospect]);
+    const denied = await Promise.all(['quickscan-interest', 'audit20-interest', 'tracker-interest'].map(
+      action => page.request.post(base + '/api/prospect-quick-scan/' + prospect + '/' + action)
+    ));
+    assert.deepEqual(denied.map(response => response.status()), [404, 404, 404]);
     assert.deepEqual(browserErrors, []);
   } finally {
     if (browser) await browser.close();
