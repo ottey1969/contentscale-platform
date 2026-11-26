@@ -72,6 +72,67 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     assert.equal(endedHistory.body.case_study?.status, 'completed');
     assert.deepEqual(endedHistory.body.case_study.baseline_data, baseline);
     assert.ok(endedHistory.body.events.some(event => event.event_type === 'case_study_ended'));
+    const brief = { content_decision: { recommended_treatment: 'EXPAND_EXISTING_PAGE', closest_existing_url: url } };
+    const otherClientId = (await db.query("INSERT INTO tracker_clients(token,domain) VALUES ($1,'test-cs.example') RETURNING id", [token + '-other'])).rows[0].id;
+    await db.query("INSERT INTO tracker_pages(tracker_client_id,url,keyword) VALUES ($1,$2,'TEST other client')", [otherClientId, url]);
+    const addBrief = (owner, target) => db.query(`INSERT INTO prewrite_briefs(client_id,keyword,language,brief_json,status)
+      VALUES($1,'TEST geo','nl',$2,'approved') RETURNING id`, [owner, { ...brief, content_decision: { ...brief.content_decision, closest_existing_url: target } }]);
+    const own = (await addBrief(clientId, url)).rows[0].id;
+    const similar = (await addBrief(clientId, url.replace('/test-geo-page/', '/Test-geo-page/'))).rows[0].id;
+    const other = (await addBrief(otherClientId, url)).rows[0].id;
+    const report = { schema: 'contentscale.implementation.v1', url, status: 'implemented', summary: 'TEST implemented update', change_types: ['content'] };
+    await db.query(`UPDATE prewrite_briefs SET implementation_reports=$2::jsonb WHERE id=$1`, [own, JSON.stringify([
+      { recorded_at: '2026-01-01T00:00:00.000000Z', report: { ...report, status: 'not_published', summary: 'TEST earlier draft' } }
+    ])]);
+    const saveReport = (owner, id, data) => fetch(base + '/api/tracker-client/' + owner + '/prewrite-brief/' + id + '/implementation-report', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ report: data })
+    });
+    assert.equal((await saveReport(token, own, report)).status, 200);
+    assert.equal((await saveReport(token, similar, { ...report, url: url.replace('/test-geo-page/', '/Test-geo-page/') })).status, 200);
+    assert.equal((await saveReport(token + '-other', other, report)).status, 200);
+    const beforePublication = await getHistory();
+    assert.deepEqual(beforePublication.body.prewrite_implementations.map(item => [item.brief_id, item.report.status]),
+      [[own, 'not_published'], [own, 'implemented']]);
+    assert.equal(beforePublication.body.prewrite_implementations[1].report.published_at, null);
+    assert.deepEqual(beforePublication.body.case_study.baseline_data, baseline);
+    const published = { ...report, status: 'published', published_at: '2026-01-02T00:00:00Z' };
+    const publication = await fetch(base + '/api/tracker-client/' + token + '/prewrite-brief/' + own + '/publish', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ report: published })
+    });
+    assert.equal(publication.status, 200, log.slice(-1400));
+    assert.equal((await publication.json()).tracker_page_id, pageId);
+    assert.deepEqual((await db.query('SELECT tracker_client_id FROM tracker_pages WHERE url=$1 ORDER BY tracker_client_id', [url])).rows.map(row => row.tracker_client_id), [clientId, otherClientId]);
+    const afterPublication = await getHistory();
+    assert.deepEqual(afterPublication.body.prewrite_implementations.map(item => [item.brief_id, item.report.status]),
+      [[own, 'not_published'], [own, 'implemented'], [own, 'published']]);
+    assert.deepEqual(afterPublication.body.case_study.baseline_data, baseline);
+    const gscStore = require('../src/gsc-report/store.cjs');
+    const growthStore = require('../src/growth-free/store.cjs');
+    await gscStore.ensureTables(db);
+    await growthStore.ensureTables(db);
+    const beforePeriod = { start: '2026-01-01', end: '2026-01-02' };
+    const afterPeriod = { start: '2026-01-03', end: '2026-01-04' };
+    const audit = await gscStore.createReport(db, { lang: 'nl', days: 1, report: {
+      kpis: { period: beforePeriod }, pages: [{ url, source: 'PAGE_EXPORT', clicks: null, impressions: 8 }]
+    } });
+    await gscStore.setAfter(db, audit.id, { period: afterPeriod, pages: [{ url, clicks: 0, impressions: 12 }] });
+    const check = await growthStore.createCheck(db, { email: 'test@example.test', url, host: new URL(url).hostname, query: 'TEST geo' });
+    await growthStore.setStatus(db, check.id, { status: 'DONE' });
+    for (const score of [42, 59]) await growthStore.appendContentScore(db, { checkId: check.id, result: { score } });
+    await growthStore.saveAiAnswer(db, { checkId: check.id, engine: 'chatgpt', rawText: 'TEST unverified', parsed: { sources_verifiable: false } });
+    await growthStore.saveAiAnswer(db, { checkId: check.id, engine: 'chatgpt', rawText: 'TEST verified', parsed: { sources_verifiable: true, sources: [url] } });
+    const linkPath = base + historyPath.replace('/proof-history', '/proof-sources');
+    const linkProof = (target, source) => fetch(target, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(source)
+    });
+    assert.equal((await linkProof(linkPath, { type: 'gsc_audit', key: audit.token })).status, 200);
+    assert.equal((await linkProof(linkPath, { type: 'free_growth', id: check.public_id, key: check.access_key })).status, 200);
+    const sharedProof = (await getHistory()).body;
+    assert.equal(sharedProof.prewrite_implementations[2].report.status, 'published');
+    assert.deepEqual(sharedProof.case_study.baseline_data, baseline);
+    assert.deepEqual(sharedProof.proof_sources.gsc_audit[0].observations.map(row => [row.period, row.clicks]), [[beforePeriod, null], [afterPeriod, 0]]);
+    assert.deepEqual(sharedProof.proof_sources.free_growth[0].contentscore_history.map(row => row.score), [42, 59]);
+    assert.deepEqual(sharedProof.proof_sources.free_growth[0].ai.map(row => row.exact_url_listed), [null, true]);
     assert.equal((await getHistory('?case_id=abc')).status, 400);
     const reportToken = crypto.randomBytes(24).toString('hex');
     const fiveEngines = ['google_aio','chatgpt','perplexity','claude','copilot'];

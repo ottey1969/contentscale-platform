@@ -196,3 +196,31 @@ test('live proof compares explicitly approved metadata and complete structured-d
     html: '<title>' + longTitle + 'Different</title>', status: 200, final_url: url, retrieved_at: '2026-01-02T00:00:00Z'
   })), null);
 });
+
+test('JavaScript-rendered visible text can verify the exact page without upgrading static metadata', async () => {
+  const { verifyApprovedContent } = require('../src/prewrite-implementation.cjs');
+  const content = 'La reparación de la mañana requiere una revisión de la cubierta. '.repeat(5).trim();
+  const observed = '2026-01-03T00:00:00Z';
+  const live = {
+    html: '<title>Different title</title><main id="app"></main><script src="/app.js"></script>',
+    status: 200, final_url: url, retrieved_at: '2026-01-02T00:00:00Z'
+  };
+  const approved = '<title>Approved title</title><main>' + content + '</main>';
+  let renders = 0;
+  const rendered = { status: 200, final_url: url, visible_text: content, retrieved_at: observed };
+  const verify = (response = live, browser = rendered) => verifyApprovedContent(url, approved, async () => response, async () => {
+    renders++;
+    return { live: browser };
+  });
+  const proof = await verify();
+  assert.equal(proof?.status, 'approved_content_present');
+  assert.equal(proof.source, 'LIVE_PUBLIC_BROWSER_RENDERED');
+  assert.equal(proof.observed_at, observed);
+  assert.deepEqual(proof.markup_checks, { title: false });
+  assert.equal(await verify({ ...live, final_url: url + 'other' }), null);
+  assert.equal(await verify({ ...live, html: '<title>Just a moment</title>' + live.html }), null);
+  assert.equal(renders, 1, 'redirected or blocked pages never reach Chromium');
+  assert.equal(await verify(live, { ...rendered, final_url: url + '?other' }), null);
+  assert.equal(await verify(live, { ...rendered, status: 403 }), null);
+  assert.equal(await verify(live, { ...rendered, visible_text: '' }), null);
+});

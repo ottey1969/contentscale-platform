@@ -4009,12 +4009,12 @@ require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 require('./tracker-growth-gsc-direct.cjs').registerGrowthGscDirect(app,pool);
 function _trackerLiveProofText(proof, lang) {
   var labels = {
-    en: ['Approved content found in live HTML','SEO title','Meta description','Canonical URL','JSON-LD','Matched','No match'],
-    nl: ['Goedgekeurde inhoud gevonden in de live HTML','SEO-titel','Metabeschrijving','Canonieke URL','JSON-LD','Komt overeen','Komt niet overeen'],
-    es: ['Contenido aprobado encontrado en el HTML público','Título SEO','Metadescripción','URL canónica','JSON-LD','Coincide','No coincide']
+    en: ['Approved content found in live HTML','SEO title','Meta description','Canonical URL','JSON-LD','Matched','No match','Approved content found after browser rendering'],
+    nl: ['Goedgekeurde inhoud gevonden in de live HTML','SEO-titel','Metabeschrijving','Canonieke URL','JSON-LD','Komt overeen','Komt niet overeen','Goedgekeurde inhoud gevonden na weergave in de browser'],
+    es: ['Contenido aprobado encontrado en el HTML público','Título SEO','Metadescripción','URL canónica','JSON-LD','Coincide','No coincide','Contenido aprobado encontrado tras renderizar la página en el navegador']
   };
   var text = labels[lang] || labels.en;
-  var results = proof.status === 'approved_content_present' ? [text[0]] : [];
+  var results = proof.status === 'approved_content_present' ? [text[proof.source === 'LIVE_PUBLIC_BROWSER_RENDERED' ? 7 : 0]] : [];
   ['title','description','canonical','json_ld'].forEach(function(key, index) {
     if (proof.markup_checks && typeof proof.markup_checks[key] === 'boolean') {
       results.push(text[index + 1] + ' · ' + text[proof.markup_checks[key] ? 5 : 6]);
@@ -4063,14 +4063,18 @@ app.get(['/api/tracker-client/:token/pages/:pageId/case-study','/api/tracker-cli
       AND ($3::timestamptz IS NULL OR COALESCE(updated_at,verified_at,created_at)>$3)
       AND ($4::timestamptz IS NULL OR COALESCE(updated_at,verified_at,created_at)<=$4)
     ORDER BY revision_cycle ASC,COALESCE(updated_at,verified_at,created_at) ASC NULLS LAST,id ASC`,[...scope,windowStart,windowEnd]).catch(()=>({rows:[]})):{rows:[]};
-  const implementationReports=await pool.query(`SELECT id AS brief_id, language,
-      COALESCE(to_jsonb(b)->'implementation_reports','[]'::jsonb) AS history
-    FROM prewrite_briefs b WHERE b.client_id=$1 AND b.tracker_page_id=$2 AND b.published_url=$3
-    ORDER BY b.published_at ASC,id ASC`,[cr.rows[0].id,req.params.pageId,page.url]);
+  const implementationReports=await pool.query(`SELECT b.id AS brief_id,b.language,entry.item
+    FROM prewrite_briefs b
+    CROSS JOIN LATERAL jsonb_array_elements(COALESCE(to_jsonb(b)->'implementation_reports','[]'::jsonb))
+      WITH ORDINALITY AS entry(item,sequence)
+    WHERE b.client_id=$1 AND entry.item->'report'->>'url'=$3
+      AND (entry.item->'report'->>'status' IN ('not_published','implemented')
+        OR (entry.item->'report'->>'status'='published' AND b.tracker_page_id=$2 AND b.published_url=$3))
+    ORDER BY entry.item->>'recorded_at' NULLS LAST,b.id,entry.sequence`,[cr.rows[0].id,page.id,page.url]);
   const {ownerReport}=require('./implementation-report.cjs');
-  const prewriteImplementations=implementationReports.rows.flatMap(row=>row.history.map(item=>({
-    brief_id:row.brief_id,...item,owner_report:ownerReport(item.report,row.language)
-  })));
+  const prewriteImplementations=implementationReports.rows.map(({brief_id,language,item})=>({
+    ...item,brief_id,owner_report:ownerReport(item.report,language)
+  }));
   const proofSources=await trackerProofSources.loadPageProofSources(pool,page);
   res.set('Cache-Control','no-store').json({success:true,page_url:page.url,case_study:cs,case_studies:studies,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows.reverse(),ai_evidence:aiEvidence.rows,prewrite_implementations:prewriteImplementations,proof_sources:proofSources,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
@@ -12153,6 +12157,24 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    )`);
 
    // ── CONTENT LIFECYCLE TRACKER ──────────────────────────────────────────────
+  // ── Tracker clients — self-service users (WhatsApp flow) ─────────────────
+  await client.query(`CREATE TABLE IF NOT EXISTS tracker_clients (
+    id SERIAL PRIMARY KEY,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    domain TEXT NOT NULL,
+    whatsapp VARCHAR(30),
+    email VARCHAR(200),
+    name VARCHAR(200),
+    gsc_connected BOOLEAN DEFAULT FALSE,
+    gsc_property TEXT,
+    status VARCHAR(20) DEFAULT 'active',
+    last_notified_at TIMESTAMPTZ,
+    notify_frequency INTEGER DEFAULT 7,
+    max_pages INTEGER DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(()=>{});
+
    // CRITICAL: parent tables (engine_access_codes, content_profiles) must exist first
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_pages (
      id SERIAL PRIMARY KEY,
@@ -12218,23 +12240,6 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source VARCHAR(20) DEFAULT 'live'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
 
-  // ── Tracker clients — self-service users (WhatsApp flow) ─────────────────
-  await client.query(`CREATE TABLE IF NOT EXISTS tracker_clients (
-    id SERIAL PRIMARY KEY,
-    token VARCHAR(64) UNIQUE NOT NULL,
-    domain TEXT NOT NULL,
-    whatsapp VARCHAR(30),
-    email VARCHAR(200),
-    name VARCHAR(200),
-    gsc_connected BOOLEAN DEFAULT FALSE,
-    gsc_property TEXT,
-    status VARCHAR(20) DEFAULT 'active',
-    last_notified_at TIMESTAMPTZ,
-    notify_frequency INTEGER DEFAULT 7,
-    max_pages INTEGER DEFAULT 1,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-  )`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 1`).catch(()=>{});
   // v344 — one client-level timestamp invalidates every older Brief after a
   // Claims & Facts change. This makes VERIFIED facts operational, not merely

@@ -35,3 +35,20 @@ test('fallback pins verified DNS, blocks cross-origin browser subrequests and cl
  assert.equal(r.live.final_url,url);
  assert.equal(pinned,true);assert.equal(allowed,true);assert.equal(blocked,true);assert.equal(closed,true);
 });
+
+test('proof renderer requires an exact successful document without redirects', async () => {
+ const url='https://roof.example/leak/';
+ const run=(status,redirects=[])=>renderPublicGrowthPage(url,{
+  verifyDocument:true,
+  lookup:async()=>[{address:'8.8.8.8'}],
+  puppeteer:{launch:async()=>({close:async()=>{},newPage:async()=>({
+   setRequestInterception:async()=>{},on:()=>{},url:()=>url,
+   goto:async()=>({status:()=>status,request:()=>({redirectChain:()=>redirects})}),
+   evaluate:async()=>({visibleText:'Visible text',title:'Roof leak repair'}),
+   content:async()=>'<main>'+('Not independently relevant markup '.repeat(10))+'</main>'
+  })})}
+ });
+ assert.equal((await run(403)).live,null);
+ assert.equal((await run(200,[{}])).live,null);
+ assert.equal((await run(200)).live.visible_text,'Visible text');
+});
