@@ -48652,11 +48652,9 @@ function hideModal(id) {
 }
 
 async function api(path, method, body) {
-  var base = window.location.origin.indexOf('app.contentscale.site') > -1
-    ? '' : 'https://app.contentscale.site';
   var opts = { method: method||'GET', headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
-  var apiPath = base + '/api/tracker-client/' + TOKEN + path;
+  var apiPath = '/api/tracker-client/' + TOKEN + path;
   try {
     var _nq = new URLSearchParams(window.location.search || '');
     var _np = String(_nq.get('networkPlacement') || '').trim();

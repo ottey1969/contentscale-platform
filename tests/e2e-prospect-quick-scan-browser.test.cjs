@@ -238,8 +238,17 @@ for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, c
         const body = await response.json();
         assert.equal(body.proof_sources.quick_scan[0].url, url);
         assert.equal(body.proof_sources.quick_scan[0].score, 0);
-        await form.getByRole('link', { name: trackerLabel }).click();
-        await page.getByRole('button', { name: proofLabel, exact: true }).click({ timeout: 7000 });
+        await context.addInitScript(() => localStorage.setItem('cs_welcome_seen', '1'));
+        const [tracker] = await Promise.all([
+          page.waitForResponse(response => new URL(response.url()).pathname === '/track/' + account.token),
+          form.getByRole('link', { name: trackerLabel }).click()
+        ]);
+        assert.equal(tracker.status(), 200);
+        const trackerData = await page.request.get(base + '/api/tracker-client/' + account.token);
+        assert.equal(trackerData.status(), 200, await trackerData.text());
+        await page.getByRole('button', { name: proofLabel, exact: true }).click({ timeout: 7000 }).catch(async error => {
+          throw new Error(JSON.stringify({ errors, listed: (await trackerData.json()).pages?.map(item => item.id), pageList: await page.locator('#pagesList').innerText() }), { cause: error });
+        });
         const proof = page.locator('#caseStudyBox');
         await proof.locator('summary').filter({ hasText: ceoLabel }).click({ timeout: 7000 });
         await proof.locator('summary').filter({ hasText: auditLabel }).click({ timeout: 7000 });
