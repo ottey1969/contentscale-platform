@@ -27,6 +27,8 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ## Auditmatrix
 
+Een aanvullende regressie vóór de merge van #575 reproduceerde dat eerder overgenomen GSC-cijfers via de opslag van Free Growth beschikbaar bleven na intrekking. De uitlezing controleert nu de oorspronkelijke rapportautorisatie en de eventuele uitnodiging. De test houdt een onafhankelijk geüploade export en de historische databaserijen intact. Hij toetst ook het verlopen van een uitnodiging, de cache-uitsluiting van auditgebonden onderzoek en intrekking in Tracker Proof & History. [Regressie](../tests/gsc-growth-authorized-history.test.cjs)
+
 Een herstelstatus geldt uitsluitend voor het expliciet genoemde defect. De wijzigingen staan in de vermelde commits en pull requests. Een streepje betekent dat voor die rij geen defect of oplossing is vastgesteld. `NOT TESTED` betekent dat de volledige gebruikersreis niet aantoonbaar is uitgevoerd, ook als deeltests groen zijn.
 
 | Module / functie | Gebruikersreis | Bevinding en oorzaak | Prioriteit | Oplossing | Regressie en resultaat | Status | Commit / PR |
@@ -95,6 +97,18 @@ De reparatie is getest met HTTP en een geïsoleerde PostgreSQL-compatibele engin
 | Resterende gebruikersreizen | De volledige kruismodulegeschiedenis voor live providers, echte Network-publicatie en de prospectoverdracht naar Tracker zijn nog niet aantoonbaar doorlopen. De eerdere rijen voor besloten productiegegevens en productiehandelingen blijven van kracht. | NOT TESTED | Gebruik de bestaande testomgevingen en alleen-lezen productiecontroles voor het vervolg. |
 
 Aanbevolen volgorde voor afzonderlijk goedgekeurde merges is #571 → #572 → #573. Die drie PR’s hebben geen functionele onderlinge afhankelijkheid. Test de actuele `main` en CI na iedere merge. Het vervolg voor browserbewijs in #574 steunt op de parser van #572. Externe scripts of styles van andere origins vallen buiten de begrensde browsercontrole en een botblokkade blijft een blokkade.
+
+### Samengevoegde reparaties en geautoriseerd hergebruik
+
+PR’s #571, #572, #573 en #574 zijn in die volgorde via squash gemergd als respectievelijk `e98dfe5`, `0eaf5b9`, `41d1501` en `b73e73a`. Na elke merge slaagden de gezamenlijke tests en de workflows voor de betreffende `main`-commit. #574 is opnieuw gebaseerd op de nieuwe `main`. De vier aanvullende commits zijn met `range-diff` gecontroleerd. De openbare versie-API rapporteerde daarna `b73e73a`. De validatie gebruikte fixtures en alleen-lezen productieopvragingen. [Productieversie](https://app.contentscale.site/api/version)
+
+| Onderdeel | Bevinding en reparatie | Status | Bewijs |
+| --- | --- | --- | --- |
+| GSC Audit ↔ Free Growth | Queryvarianten, hostvarianten en schuine strepen konden hun eigen pagina-identiteit verliezen. Daarnaast kon dezelfde URL een niet-gekoppeld intern resultaat in publicatie- of ContentScore-historie laten belanden. GSC Audit en Free Growth gebruiken nu de exacte URL en de geverifieerde rapport-ID uit de handoff of de bestaande actieve uitnodiging. Een bezoeker krijgt alleen resultaten uit de uitnodiging van het eigen rapport. Het Free Growth-formulier uit GSC biedt uitsluitend eerder onderzoek binnen diezelfde geautoriseerde koppeling aan. | FIXED AND VERIFIED | `5fba60a`, regressie op een geïsoleerde database met twee rapporten, een queryvariant, uitnodigingsscope, intern onderzoek zonder koppeling ingetrokken bewijs en rechtstreeks heropenen vanuit de GSC-handoff. |
+| GSC-metingen vóór en na in Free Growth | De oudere meetroute gebruikte de interne rol en dezelfde URL als voldoende relatie. De meetroute en ContentScore gebruiken nu dezelfde geverifieerde rapport-ID of actieve rapportuitnodiging. Exacte GSC-perioden blijven beschikbaar in chronologische volgorde. Onvolledige cijfers tellen niet als overeenkomst; een daadwerkelijk gemeten nul blijft zichtbaar. | FIXED AND VERIFIED | Lokale PostgreSQL-regressie voor ongekoppelde interne resultaten, gekoppelde perioden, queryvarianten en ingetrokken rapporten. De bestaande regressies behouden de publicatienotitie, weergave in NL en ES en voorrang van de eigen export. |
+| GSC Audit → Free Growth → Tracker | De bestaande, geautoriseerde GSC-rapportlink projecteert uitgevoerde Free Growth-checks vanuit de unieke actieve rapportuitnodiging naar dezelfde exacte Tracker-pagina. Een expliciete koppeling aan een andere klant gaat voor. Direct en afgeleid bewijs tonen elk resultaat één keer. | FIXED AND VERIFIED | PostgreSQL- en HTTP-regressie voor twee klanten, een afwijkende queryvariant, intrekking, een dubbel gebruikte uitnodiging en een afzonderlijk geautoriseerde bron. |
+| Historische onderzoeken en Tracker | Bestaande geautoriseerde uitnodigingskoppelingen en Tracker-bewijslinks blijven geldig binnen hun eigen voorwaarden. Zelfstandige historische onderzoeken zonder verifieerbare bronkoppeling blijven via hun bestaande privélink beschikbaar. Automatische koppeling uit andere instroomroutes staat nog open. | NOT TESTED | De tests toetsen de rapportuitwisseling en de bestaande canonieke Tracker-uitlezing met afzonderlijke bronautorisatie. |
+| Volledige prospect- en Network-ketens | De geïsoleerde prospect- en Network-browserregressies zijn groen op `main`. Overdracht naar Tracker, echte publicatie/monitoring en de live providerketens blijven open. | NOT TESTED | Productieopvolging en betaalde of productiegevoelige tests vereisen een afzonderlijk geautoriseerde omgeving. |
 
 ## Aanvulling: controle met bestaande gegevens
 

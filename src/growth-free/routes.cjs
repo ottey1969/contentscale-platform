@@ -319,6 +319,7 @@ var REMEMBER=['url','query','market','language','search_location','email'],MEM='
 var savedResultRequest=0;
 function showSavedResult(){
  var box=document.getElementById('existingLocal'),link=document.getElementById('existingLocalLink'),field=document.getElementById('url');if(!box||!link)return;
+ if(new URLSearchParams(location.search).has('gsc_audit'))return;
  var request=++savedResultRequest;
  box.hidden=true;
  try{
@@ -543,6 +544,7 @@ function gscHtml(g,declined){var h='<h3 id="gsc">Search Console <small>(optional
   if(L.search_term&&!(L.source==='GSC_REPORT'&&!L.search_term_row))h+='<p>'+(L.search_term_row?'Your search term “'+esc(L.search_term)+'”: '+esc(L.search_term_row.impressions)+' impressions, '+esc(L.search_term_row.clicks)+' clicks, position '+esc(L.search_term_row.position==null?'–':L.search_term_row.position)+'.':'Your search term “'+esc(L.search_term)+'” is not in this export (no impressions in this period, or too rare to be listed).')+'</p>';
   if((L.top_queries||[]).length)h+='<h3>Search terms with the most impressions</h3><ol>'+L.top_queries.map(function(q){return '<li>'+esc(q.query)+' <small>— '+esc(q.impressions)+' impressions, '+esc(q.clicks)+' clicks'+(q.position==null?'':', position '+esc(q.position))+'</small></li>'}).join('')+'</ol>';
   if(g.difference&&g.difference.status==='DIFFERENT_TOTALS'){h+='<p class="note">'+esc({nl:'De cijfers verschillen voor dezelfde meetperiode. Controleer de URL, filters en zoektype in GSC voordat je conclusies trekt.',es:'Las cifras difieren para el mismo periodo. Comprueba la URL, los filtros y el tipo de búsqueda en GSC.',en:'Totals differ for the same period. Check the URL, filters and search type in GSC before drawing conclusions.'}[typeof PAGE_LANG==='string'?PAGE_LANG:'en'])+'</p><ul>'+Object.keys(g.difference.differences).map(function(k){var v=g.difference.differences[k];return '<li>'+esc(k)+': GSC Audit '+esc(v.audit)+' · Page export '+esc(v.page)+'</li>'}).join('')+'</ul>'}else if(g.difference&&g.difference.status==='DIFFERENT_PERIODS')h+='<p class="muted">'+esc({nl:'De exports hebben verschillende meetperioden; vergelijk ze niet als gelijke datasets.',es:'Los archivos corresponden a periodos distintos; no son directamente comparables.',en:'The exports cover different periods; they are not directly comparable.'}[typeof PAGE_LANG==='string'?PAGE_LANG:'en'])+'</p>';
+  else if(g.difference&&g.difference.status==='INSUFFICIENT_DATA')h+='<p class="muted">'+esc({nl:'Een of meer meetwaarden ontbreken voor de vergelijking.',es:'Faltan uno o más datos para completar la comparación.',en:'One or more measurements are missing from the comparison.'}[typeof PAGE_LANG==='string'?PAGE_LANG:'en'])+'</p>';
   if(g.uploads>1)h+='<p class="muted">'+esc(g.uploads)+' exports uploaded for this check; the latest is shown. All are kept for the comparison after publication.</p>';
  }else if(declined)h+='<p>You indicated at the start that this page has no Search Console data. The research ran without it; nothing else is needed.</p>';
  else h+='<p>No Search Console export uploaded. The check works without it; with an export filtered on exactly this page, the research also uses your real search terms.</p>';
@@ -1612,7 +1614,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
-      if(job.gscAudit)out.report.gsc_audit_evidence={source:'GSC_REPORT',period:job.gscAudit.period,totals:job.gscAudit.totals,page_url:job.url,query_rows:job.gscAudit.queries.length};
+      if(job.gscAudit)out.report.gsc_audit_evidence={source:'GSC_REPORT',report_id:job.gscAudit.gsc_report_id,
+       period:job.gscAudit.period,totals:job.gscAudit.totals,page_url:job.url,query_rows:job.gscAudit.queries.length};
        if(job.sitemap)out.report.sitemap_import={status:job.sitemap.urls.length?'IMPORTED_URL_INVENTORY_ONLY':'SITEMAP_UNAVAILABLE',source:job.sitemap.source||'VISITOR_XML_UPLOAD',file_name:job.sitemap.fileName,urls_found:job.sitemap.totalFound,urls_used:job.sitemap.urls.length,limited:job.sitemap.limited,urls:job.sitemap.urls,note:'Sitemap URLs are site inventory only. No imported page was treated as read, indexed, canonical or verified.'};
       if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
@@ -1654,17 +1657,25 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').set('Content-Security-Policy',"frame-ancestors 'none'");
    if(status!=='ACTIVE')return res.status(403).type('html').send(inviteClosed(config,status));
    res.type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',{token:String(req.query.invite),label:'',
-    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req),await existingFor(req,{inviteId:inv.id}),await auditFor(req,{invite:String(req.query.invite)})));
+    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req),...await formEvidence(req,{inviteId:inv.id,invite:String(req.query.invite)})));
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  // The form's language: ?lang=, the rank tracker account's language, the browser's, else English.
  // The latest finished result for the page in ?url=: the owner's (any check) or this invitation's.
- async function existingFor(req,{owner=false,inviteId=null}={}){
-  const u=req.query&&req.query.url;if(!u||typeof storage.latestDoneFor!=='function'||(!owner&&inviteId==null))return null;
+ async function existingFor(req,{owner=false,inviteId=null,audit=null}={}){
+  const u=req.query&&req.query.url;if(!u||(!owner&&inviteId==null))return null;
   const page=validatePublicUrl(u);if(page.error)return null;
-  try{const r=await storage.latestDoneFor(pool,{url:page.url,owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
+  try{
+   let r;
+   if(req.query?.gsc_audit){
+    if(!audit?.upload.gsc_report_id)return null;
+    [r]=await require('./contentscore.cjs').relatedChecks(pool,[page.url],{owner,reportId:audit.upload.gsc_report_id,invite:audit.relatedInvite});
+   }else if(typeof storage.latestDoneFor==='function')r=await storage.latestDoneFor(pool,{url:page.url,owner,inviteId});
+   return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null;
+  }catch(e){return null}
  }
  async function auditFor(req,{owner=false,invite=null}={}){const token=safeToken(req.query?.gsc_audit),pageUrl=String(req.query?.url||'');if(!token||!pageUrl)return null;try{const a=await require('./gsc-audit-handoff.cjs').loadAuditUpload(pool,{token,url:pageUrl,owner,invite});return a?{...a,token,pageUrl}:null}catch(e){return null}}
+ async function formEvidence(req,scope){const audit=await auditFor(req,scope);return [await existingFor(req,{...scope,audit}),audit]}
  const langFor=(req,account=null)=>formLang({query:req.query&&req.query.lang,account,acceptLanguage:req.get&&req.get('accept-language')});
  app.get(basePath,async(req,res)=>{
   // An unapproved public key must not look like a usable check when approval-only mode is enabled.
@@ -1677,12 +1688,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   // The owner (signed in) always gets the form, also on a domain without an access key (the admin page links here).
-  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req),await existingFor(req,{owner:true}),await auditFor(req,{owner:true})));
+  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req),...await formEvidence(req,{owner:true})));
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
   const indexable=!sessionValid(req)&&Object.keys(req.query||{}).every(key=>key==='lang');
-  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').type('html').send(formPage({...config,...entry,htmlLang:langFor(req),indexable},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req),sessionValid(req)?await existingFor(req,{owner:true}):null,await auditFor(req,{owner:sessionValid(req)})));
+  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').type('html').send(formPage({...config,...entry,htmlLang:langFor(req),indexable},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req),...await formEvidence(req,{owner:sessionValid(req)})));
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())
@@ -1833,7 +1844,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  async function gscFor(row){
   let list=[];try{list=await storage.listGscUploads(pool,row.id)}catch(e){console.warn('[free-growth] GSC uploads unavailable',String(e&&e.code||'unknown'))}
   // Numbers a GSC report already holds for this page come first; a real upload for the same side wins.
-  let fromReports=[];if(row.published_on||(row.publication_history||[]).length){try{fromReports=await require('./gsc-report-numbers.cjs').reportUploadsFor(pool,{url:row.url,admin:row.access_label==='admin',inviteId:row.invite_id||null})}catch(e){}}
+  let fromReports=[];if(row.published_on||(row.publication_history||[]).length){try{fromReports=await require('./gsc-report-numbers.cjs').reportUploadsFor(pool,{url:row.url,checkId:row.id,inviteId:row.invite_id||null})}catch(e){}}
   const term=searchTermOf(row),comparison=reminders.compareUploads([...fromReports,...list],row.published_on||null,term);
   const historical_comparisons=reminders.compareHistory(row.publication_history,[...fromReports,...list],term,row.published_on||null);
   if(!list.length)return {uploads:0,latest:null,comparison,historical_comparisons};
@@ -1906,6 +1917,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  }
 
  async function load(req,res){
+  res.set('Cache-Control','no-store');
   try{
    await storage.ensureTables(pool);
    const row=await storage.getCheck(pool,req.params.id,req.query.k);
@@ -2040,6 +2052,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   const [aiPart,gscPart,bestOwn]=await Promise.all([aiFor(row),gscFor(row),bestOwnFor(row)]);
+  const report=row.report?.gsc_audit_evidence?{...row.report,gsc_audit_evidence:{...row.report.gsc_audit_evidence,report_id:undefined}}:row.report;
   res.set('Cache-Control','no-store').set('Content-Disposition',`attachment; filename="growth-check-${row.public_id}.json"`)
    .json({generated_by:config.brand+' free Growth check',url:row.url,search_term:row.query||null,checked_at:row.finished_at,
     disclaimer:'Research data only. No ranking or traffic increase is promised. '+(gscPart.latest?(gscPart.latest.used_in_research?'A Search Console export verified for this exact page was used.':gscPart.latest.status==='VERIFIED_FOR_PAGE'?'The latest page-verified Search Console export was not used in the original research.':'A Search Console export was uploaded but is not verified for this exact page; it was not used as evidence.'):'Google Search Console data was not used.'),
@@ -2048,7 +2061,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     content_priorities:buildContentPriorities({summary:row.summary,aiGap:aiPart&&aiPart.gap,report:row.report,bestOwnPage:bestOwn}),
     ai_answers:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,summary:aiPart.summary,
      answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
-    report:row.report});
+    report});
  });
  // Optional Search Console export after the result (for example a newer period, or for the measurement after publication).
  // Stored with this check only; the research is not run again.

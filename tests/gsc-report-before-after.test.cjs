@@ -11,7 +11,7 @@ const A='https://nl.contentscale.site/ai-zichtbaarheid/',B='https://nl.contentsc
 const before={kpis:{period:{start:'2026-10-24',end:'2026-11-20',days:28}},pages:[
  {url:A,clicks:0,impressions:544,position:30.4},{url:B,clicks:0,impressions:1227,position:64.2},{url:C,clicks:4,impressions:90,position:8}]};
 const afterSnap={period:{start:'2026-11-22',end:'2026-12-19',days:28},pages:[{url:A,clicks:3,impressions:700,position:22.1},{url:C,clicks:5,impressions:80,position:7}]};
-const published=new Map([['https://nl.contentscale.site/ai-zichtbaarheid','2026-11-21'],['https://nl.contentscale.site/wat-is-een-ai-overview','2026-11-21']]);
+const published=new Map([['https://nl.contentscale.site/ai-zichtbaarheid/','2026-11-21'],['https://nl.contentscale.site/wat-is-een-ai-overview/','2026-11-21']]);
 
 test('compare: equal periods, only pages with a Growth date, a missing page is not comparable',()=>{
  const s=snapshot({kpis:{period:afterSnap.period},pages:afterSnap.pages.map(p=>({...p,queries:[{query:'x'}],audit:{}}))});

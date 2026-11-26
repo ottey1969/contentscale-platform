@@ -20,7 +20,7 @@ test('suggestion: only confirmed tasks; drafts and selections are not execution 
 });
 test('report: the note shows under the date chip, escaped',()=>{
  const U='https://nl.contentscale.site/wat-is-een-ai-overview/';
- const growth=new Map([['https://nl.contentscale.site/wat-is-een-ai-overview',{published_on:'2026-11-22',note:'Sectie <b>“Wat niet werkt”</b> toegevoegd.',owner_result:null,invite_result:null}]]);
+ const growth=new Map([[U,{published_on:'2026-11-22',note:'Sectie <b>“Wat niet werkt”</b> toegevoegd.',owner_result:null,invite_result:null}]]);
  const row={title:'x',lang:'nl',created_at:new Date(),expires_at:new Date(Date.now()+864e5),views:0,growth_invite:null,
   report:{pages:[{rank:1,url:U,action:'NO_CLICKS',clicks:0,impressions:1227,ctr:0,position:64.2,basis:'TOO_FEW'}],bands:[],queries:{},files:[],notes:[],kpis:{}}};
  const html=reportPage(row,{owner:false,config:{},growthPath:'/free-growth',growth});

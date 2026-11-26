@@ -3,6 +3,7 @@
 const { exactUrl } = require('./implementation-report.cjs');
 const { openReport } = require('./gsc-report/store.cjs');
 const growth = require('./growth-free/store.cjs');
+const { relatedChecks } = require('./growth-free/contentscore.cjs');
 
 const EVENT = 'proof_source_linked';
 const TYPES = new Set(['free_growth', 'gsc_audit']);
@@ -29,26 +30,59 @@ function auditPageEvidence(report, url) {
 
 async function loadProofSources(pool, { clientId, pageId, url, events }) {
   const out = { free_growth: [], gsc_audit: [] };
+  const directChecks = new Set();
+  const invitedChecks = new Set();
   for (const event of events) {
     const ref = event.event_data;
     if (event.event_type !== EVENT || !TYPES.has(ref?.type) || ref.url !== url) continue;
     if (ref.type === 'gsc_audit') {
       const row = (await pool.query(
-        'SELECT report,created_at FROM gsc_reports WHERE id=$1 AND revoked_at IS NULL AND expires_at>NOW()', [ref.source_id])).rows[0];
+        `SELECT r.report,r.created_at,CASE WHEN NOT EXISTS (
+           SELECT 1 FROM gsc_reports other WHERE other.id<>r.id AND other.growth_invite=r.growth_invite
+             AND other.revoked_at IS NULL AND other.expires_at>NOW()
+         ) THEN r.growth_invite END AS exclusive_invite
+         FROM gsc_reports r WHERE r.id=$1 AND r.revoked_at IS NULL AND r.expires_at>NOW()`, [ref.source_id])).rows[0];
       const evidence = row && auditPageEvidence(row.report, url);
-      if (evidence) out.gsc_audit.push({ ...evidence, recorded_at: row.created_at });
+      if (evidence) {
+        out.gsc_audit.push({ ...evidence, recorded_at: row.created_at });
+        if (row.exclusive_invite) {
+          const checks = await relatedChecks(pool, [url], { invite: row.exclusive_invite }).catch(error => {
+            if (['42P01', '42703'].includes(error.code)) return [];
+            throw error;
+          });
+          for (const check of checks) if (check.matching_invite === true) invitedChecks.add(String(check.id));
+        }
+      }
     } else {
-      const row = (await pool.query(
-        `SELECT url,query,finished_at,summary,publication_history,contentscore_history
-           FROM growth_free_checks WHERE id=$1 AND status='DONE'`, [ref.source_id])).rows[0];
-      if (!row || !exact(row.url, url)) continue;
-      const gsc = (await growth.listGscUploads(pool, ref.source_id)).filter(item => item.status === 'VERIFIED_FOR_PAGE');
-      const ai = (await growth.listAiAnswerObservations(pool, ref.source_id)).map(({ engine, parsed, created_at }) => ({
-        engine, recorded_at: created_at, source_status: parsed?.resources_status ?? null,
-        exact_url_listed: parsed?.sources_verifiable === true ? (parsed.sources || []).some(source => exact(source, url)) : null
-      }));
-      out.free_growth.push({ ...row, gsc, ai });
+      directChecks.add(String(ref.source_id));
     }
+  }
+  // An explicit binding takes precedence over access inherited through a report.
+  if (invitedChecks.size) {
+    const { rows } = await pool.query(
+      `SELECT e.event_data->>'source_id' AS id FROM tracker_case_study_events e
+       LEFT JOIN tracker_case_studies c ON c.id=e.case_study_id
+       WHERE e.event_type=$1 AND e.event_data->>'type'='free_growth' AND e.event_data->>'source_id'=ANY($2::text[])
+         AND (COALESCE(c.tracker_client_id,(to_jsonb(e)->>'tracker_client_id')::int) IS DISTINCT FROM $3::int
+           OR COALESCE(c.tracker_page_id,e.tracker_page_id) IS DISTINCT FROM $4::int
+           OR e.event_data->>'url' IS DISTINCT FROM $5)`,
+      [EVENT, [...invitedChecks], clientId, pageId, url]);
+    for (const row of rows) invitedChecks.delete(row.id);
+  }
+  for (const id of new Set([...directChecks, ...invitedChecks])) {
+    const row = (await pool.query(
+      `SELECT url,query,finished_at,summary,publication_history,contentscore_history,to_jsonb(c)->>'cached_from' AS cached_from,
+              jsonb_build_object('gsc_audit_evidence',to_jsonb(c)->'report'->'gsc_audit_evidence') AS report
+           FROM growth_free_checks c WHERE id=$1 AND status='DONE'`, [id])).rows[0];
+    if (!row || !exact(row.url, url)) continue;
+    const canReadResearch = await require('./growth-free/gsc-audit-handoff.cjs').auditResearchAvailable(pool,{...row,id});
+    const { report, cached_from, ...proof } = row;
+    const gsc = (await growth.listGscUploads(pool, id)).filter(item => item.status === 'VERIFIED_FOR_PAGE');
+    const ai = (canReadResearch ? await growth.listAiAnswerObservations(pool, id) : []).map(({ engine, parsed, created_at }) => ({
+      engine, recorded_at: created_at, source_status: parsed?.resources_status ?? null,
+      exact_url_listed: parsed?.sources_verifiable === true ? (parsed.sources || []).some(source => exact(source, url)) : null
+    }));
+    out.free_growth.push({ ...proof, summary: canReadResearch ? proof.summary : null, gsc, ai });
   }
   return { tracker_client_id: clientId, tracker_page_id: pageId, url, ...out };
 }
