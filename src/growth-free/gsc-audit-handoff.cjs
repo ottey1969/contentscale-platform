@@ -13,6 +13,18 @@ async function loadAuditUpload(pool,{token,url,owner=false,invite=null}){
  if(!token||(!owner&&!invite))return null;
  return auditUpload(await openReport(pool,token,{count:false}),{url,owner,invite});
 }
+// The checks already carry the verified report ID or the invitation used to start them.
+async function relatedReports(pool,{url,checkId=null,inviteId=null}){
+ if(!pool||!url||(!checkId&&!inviteId))return [];
+ return (await pool.query(`SELECT r.id,r.title,r.report FROM gsc_reports r
+  WHERE r.revoked_at IS NULL AND r.expires_at>NOW() AND (
+    EXISTS(SELECT 1 FROM growth_free_gsc_uploads u JOIN growth_free_checks c ON c.id=u.check_id
+      WHERE c.id=$1 AND c.url=$3 AND u.gsc_report_id=r.id AND u.status='VERIFIED_FOR_PAGE'
+        AND u.basis='GSC_AUDIT_EXACT_PAGE')
+    OR EXISTS(SELECT 1 FROM growth_free_invites i WHERE i.id=$2 AND i.revoked_at IS NULL AND i.expires_at>NOW()
+      AND i.token_hash=encode(sha256(convert_to(r.growth_invite,'UTF8')),'hex')))
+  ORDER BY r.created_at,r.id`,[checkId,inviteId,url])).rows;
+}
 // Compare only like-for-like exact-page totals, never interpret different periods as discrepancies.
 function auditDifference(rows){
  const audit=[...(rows||[])].reverse().find(x=>x.basis==='GSC_AUDIT_EXACT_PAGE');
@@ -27,4 +39,4 @@ function auditDifference(rows){
  }
  return {status:Object.keys(differences).length?'DIFFERENT_TOTALS':'MATCH',differences};
 }
-module.exports={auditUpload,loadAuditUpload,auditDifference};
+module.exports={auditUpload,loadAuditUpload,auditDifference,relatedReports};

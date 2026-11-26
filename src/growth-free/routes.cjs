@@ -1842,7 +1842,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  async function gscFor(row){
   let list=[];try{list=await storage.listGscUploads(pool,row.id)}catch(e){console.warn('[free-growth] GSC uploads unavailable',String(e&&e.code||'unknown'))}
   // Numbers a GSC report already holds for this page come first; a real upload for the same side wins.
-  let fromReports=[];if(row.published_on||(row.publication_history||[]).length){try{fromReports=await require('./gsc-report-numbers.cjs').reportUploadsFor(pool,{url:row.url,admin:row.access_label==='admin',inviteId:row.invite_id||null})}catch(e){}}
+  let fromReports=[];if(row.published_on||(row.publication_history||[]).length){try{fromReports=await require('./gsc-report-numbers.cjs').reportUploadsFor(pool,{url:row.url,checkId:row.id,inviteId:row.invite_id||null})}catch(e){}}
   const term=searchTermOf(row),comparison=reminders.compareUploads([...fromReports,...list],row.published_on||null,term);
   const historical_comparisons=reminders.compareHistory(row.publication_history,[...fromReports,...list],term,row.published_on||null);
   if(!list.length)return {uploads:0,latest:null,comparison,historical_comparisons};

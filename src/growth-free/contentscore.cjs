@@ -32,17 +32,16 @@ async function relatedChecks(pool,urls,{invite=null,reportId=null,owner=false}={
 
 async function sharedHistory(pool,row){
  if(!pool||!row)return [];
+ const reports=await require('./gsc-audit-handoff.cjs').relatedReports(pool,{url:row.url,checkId:row.id,inviteId:row.invite_id}).catch(()=>[]);
+ const groups=reports.map(r=>r.report?.contentscores?.[row.url]).map(scan=>Array.isArray(scan)?scan:[scan]);
  try{
-  const invite=row.invite_id?(await pool.query('SELECT token_hash FROM growth_free_invites WHERE id=$1 AND revoked_at IS NULL AND expires_at>NOW()',[row.invite_id])).rows[0]?.token_hash:null;
-  const reports=(await pool.query(`SELECT r.id,r.growth_invite,r.report->'contentscores'->$1::text AS scan,
-      EXISTS(SELECT 1 FROM growth_free_gsc_uploads u WHERE u.check_id=$2 AND u.gsc_report_id=r.id
-        AND u.status='VERIFIED_FOR_PAGE' AND u.basis='GSC_AUDIT_EXACT_PAGE') AS linked
-    FROM gsc_reports r WHERE r.revoked_at IS NULL AND r.expires_at>NOW() AND r.report->'contentscores' ? $1::text
-      AND (r.growth_invite IS NOT NULL OR EXISTS(SELECT 1 FROM growth_free_gsc_uploads u WHERE u.check_id=$2 AND u.gsc_report_id=r.id))`,[row.url,row.id])).rows;
-  const groups=reports.filter(r=>r.linked||(invite&&r.growth_invite&&hashToken(r.growth_invite)===invite)).map(r=>Array.isArray(r.scan)?r.scan:[r.scan]);
-  const checks=invite?(await pool.query("SELECT contentscore_history FROM growth_free_checks WHERE url=$1 AND status='DONE' AND invite_id=$2",[row.url,row.invite_id])).rows:[];
-  return mergeHistory(row.url,...groups,...checks.map(r=>r.contentscore_history));
- }catch(e){return []}
+  if(row.invite_id){
+   const checks=(await pool.query(`SELECT c.contentscore_history FROM growth_free_checks c JOIN growth_free_invites i ON i.id=c.invite_id
+    WHERE c.url=$1 AND c.status='DONE' AND i.id=$2 AND i.revoked_at IS NULL AND i.expires_at>NOW()`,[row.url,row.invite_id])).rows;
+   groups.push(...checks.map(r=>r.contentscore_history));
+  }
+ }catch(e){}
+ return mergeHistory(row.url,...groups);
 }
 async function forReport(pool,row,owner){
  const out={};

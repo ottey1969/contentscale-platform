@@ -8,6 +8,7 @@ const growth = require('../src/growth-free/store.cjs');
 const { auditUpload } = require('../src/growth-free/gsc-audit-handoff.cjs');
 const { growthFor } = require('../src/gsc-report/published.cjs');
 const { sharedHistory, forReport } = require('../src/growth-free/contentscore.cjs');
+const { reportUploadsFor } = require('../src/growth-free/gsc-report-numbers.cjs');
 
 const dbUrl = process.env.PREWRITE_E2E_DATABASE_URL || '';
 const local = /^postgres(?:ql)?:\/\/[^@]+@(?:localhost|127\.0\.0\.1):\d+\/[^?]*(?:test|e2e)/i.test(dbUrl);
@@ -51,6 +52,7 @@ test('private research is reusable only through the recorded GSC report or its a
     assert.ok(guest.get(url)?.invite_result?.includes(invited.public_id));
     assert.equal((await growthFor(pool, [url], { reportId: unrelated.id, owner: true })).size, 0);
     assert.deepEqual(await sharedHistory(pool, unbound), []);
+    assert.deepEqual(await reportUploadsFor(pool, { url, checkId: unbound.id, admin: true }), []);
     assert.deepEqual((await sharedHistory(pool, invited)).map(row => row.score), [45, 55]);
     assert.equal((await forReport(pool, affiliated, false))[url].score, 55);
     assert.equal((await forReport(pool, unrelated, true))[url].score, 97);
@@ -76,8 +78,13 @@ test('private research is reusable only through the recorded GSC report or its a
     assert.ok(scoped.text.includes('/r/' + linked.public_id) || scoped.text.includes('/r/' + invited.public_id));
     assert.equal((await growthFor(pool, [url], options)).get(url)?.note, 'invited change');
     assert.deepEqual((await sharedHistory(pool, linked)).map(row => row.score), [45]);
+    await gsc.setAfter(pool, affiliated.id, { period: { start: '2026-01-04', end: '2026-01-05' }, pages: [{ url, clicks: 3, impressions: 14 }] });
+    const numbers = await reportUploadsFor(pool, { url, checkId: linked.id });
+    assert.deepEqual(numbers.map(entry => entry.totals.clicks), [0, 3]);
+    assert.deepEqual(await reportUploadsFor(pool, { url: variant, checkId: linked.id }), []);
     await gsc.revokeReport(pool, affiliated.id);
     assert.deepEqual(await sharedHistory(pool, linked), []);
+    assert.deepEqual(await reportUploadsFor(pool, { url, checkId: linked.id }), []);
   } finally {
     await pool.end();
     await db.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');
