@@ -36,7 +36,7 @@ function auditPageEvidence(report, url) {
 }
 
 async function loadProofSources(pool, { clientId, pageId, url, events }) {
-  const out = { free_growth: [], gsc_audit: [], quick_scan: [] };
+  const out = { free_growth: [], gsc_audit: [], quick_scan: [], prospect_research: [] };
   const directChecks = new Set();
   const invitedChecks = new Set();
   for (const event of events) {
@@ -61,10 +61,15 @@ async function loadProofSources(pool, { clientId, pageId, url, events }) {
         }
       }
     } else if (ref.type === 'quick_scan') {
-      const { rows: [row] } = await pool.query(`SELECT url,scan_result,scan_completed_at
-        FROM prospect_quick_scans WHERE id=$1 AND revoked_at IS NULL`, [ref.source_id]);
+      const { rows: [row] } = await pool.query(`SELECT url,scan_result,scan_completed_at,
+          to_jsonb(s)->>'ceo_report_token' AS ceo_report_token,to_jsonb(s)->>'ceo_report_page_url' AS ceo_report_page_url,
+          to_jsonb(s)->>'audit20_report_url' AS audit20_report_url,to_jsonb(s)->>'audit20_status' AS audit20_status
+        FROM prospect_quick_scans s WHERE id=$1 AND revoked_at IS NULL`, [ref.source_id]);
       const evidence = quickScanEvidence(row, url);
-      if (evidence) out.quick_scan.push(evidence);
+      if (evidence) {
+        out.quick_scan.push(evidence);
+        out.prospect_research.push(...await require('./prospect-research-proof.cjs').prospectResearch(pool, row, url));
+      }
     } else {
       directChecks.add(String(ref.source_id));
     }

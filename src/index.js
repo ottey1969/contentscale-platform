@@ -8154,7 +8154,7 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
 // Body: { pages: [{url, keyword, intent, clicks, impressions, position, priority}], ...] }
 app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, max_pages, gsc_enabled FROM tracker_clients WHERE token=$1', [req.params.token]);
+    const cr = await pool.query("SELECT id, domain, extra_domains, max_pages, gsc_enabled FROM tracker_clients WHERE token=$1 AND status IS DISTINCT FROM 'deleted'", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
     // Admin's gsc_enabled toggle is authoritative — a client cannot unlock GSC-gated features (GSC
     // Brief, Impression Gap, cannibalization detection via query overlap) by simply importing data
@@ -8169,48 +8169,58 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     let _liveCount = parseInt(_cntR.rows[0].count) || 0;
     const _maxPages = cr.rows[0].max_pages || 1;
 
-    // Preload existing tracked pages + build a normalized-URL index so a re-import
-    // recognises the SAME pages regardless of http/https, www, or trailing slash.
-    function _normTrackUrl(u){ try{ var x=new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www\./,'') + x.pathname.toLowerCase().replace(/\/+$/,'') + (x.search||''); }catch(e){ return String(u||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,''); } }
-    const _existR = await pool.query("SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)", [clientId]);
-    const _normMap = new Map();
-    _existR.rows.forEach(function(row){ _normMap.set(_normTrackUrl(row.url), row.id); });
-
-    // Defense in depth: dedupe the incoming payload by normalized URL. If the same page arrives twice
-    // in one batch (http/https/www variants, or a query-only fallback pointing at the homepage),
-    // merge instead of letting the LAST row overwrite the correct totals:
-    // sum clicks/impressions, impressions-weighted position, keyword from the row with most impressions.
-    const _seen = new Map();
-    const _deduped = [];
-    for (const p of pages) {
-      const k = _normTrackUrl(p.url);
-      if (!_seen.has(k)) { _seen.set(k, p); _deduped.push(p); continue; }
-      const e = _seen.get(k);
-      const eImpr = e.impressions || 0, pImpr = p.impressions || 0;
-      if (e.position && p.position && (eImpr + pImpr) > 0) e.position = Math.round(((e.position * eImpr + p.position * pImpr) / (eImpr + pImpr)) * 10) / 10;
-      else if (p.position && !e.position) e.position = p.position;
-      if (pImpr > eImpr && p.keyword) e.keyword = p.keyword;
-      else if (!e.keyword && p.keyword) e.keyword = p.keyword;
-      e.clicks = (e.clicks || 0) + (p.clicks || 0);
-      e.impressions = eImpr + pImpr;
-      if (p.add) e.add = true;
+    const { exactUrl } = require('./implementation-report.cjs');
+    function importPageUrl(value) {
+      try { return exactUrl(value); } catch { return null; }
     }
-    const _pagesIn = _deduped;
+    function metric(value) {
+      if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+      const number = Number(value);
+      return Number.isFinite(number) && number >= 0 ? number : null;
+    }
+    const existing = await pool.query("SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY id", [clientId]);
+    const existingPages = new Map();
+    for (const row of existing.rows) {
+      const url = importPageUrl(row.url);
+      if (url && (!existingPages.has(url) || row.url === url)) existingPages.set(url, row.id);
+    }
+
+    // Merge observations only for the exact document. A total with a missing contribution stays unknown.
+    const incomingPages = new Map();
+    const invalidPages = [];
+    for (const raw of pages) {
+      const url = importPageUrl(raw?.url);
+      if (!url || !urlOnClientDomain(cr.rows[0], url)) {
+        invalidPages.push({ url: typeof raw?.url === 'string' ? raw.url : null, status: 'skipped_invalid_page' });
+        continue;
+      }
+      const page = { ...raw, url, clicks: metric(raw.clicks), impressions: metric(raw.impressions), position: metric(raw.position) };
+      const previous = incomingPages.get(url);
+      if (!previous) { incomingPages.set(url, page); continue; }
+      const impressions = previous.impressions == null || page.impressions == null ? null : previous.impressions + page.impressions;
+      previous.position = impressions > 0 && previous.position != null && page.position != null
+        ? Math.round((previous.position * previous.impressions + page.position * page.impressions) * 10 / impressions) / 10
+        : null;
+      if (page.keyword && (!previous.keyword || page.impressions > previous.impressions)) previous.keyword = page.keyword;
+      previous.clicks = previous.clicks == null || page.clicks == null ? null : previous.clicks + page.clicks;
+      previous.impressions = impressions;
+      if (page.add !== false) previous.add = page.add;
+    }
 
     let imported = 0;    // successfully processed (refreshed + new) — kept for compatibility
     let refreshed = 0;   // existing pages recognised + refreshed on their own spot
     let newAdded = 0;    // brand-new pages added
-    let skipped = 0;
+    let skipped = invalidPages.length;
     let caseStudyLocked = 0;
     let failed = 0;      // per-page DB errors — MUST be surfaced, never swallowed
     const touchedPageIds = [];
-    const results = [];
+    const results = [...invalidPages];
     const warnings = [];
     
-    for (const p of _pagesIn) {
+    for (const p of incomingPages.values()) {
       try {
-        // Recognise existing tracked page by normalized URL → refresh on its own spot (never duplicate, never counts against the limit)
-        const _matchId = _normMap.get(_normTrackUrl(p.url));
+        // Recognise existing tracked page by exact URL → refresh on its own spot (never duplicate, never counts against the limit)
+        const _matchId = existingPages.get(p.url);
         if (_matchId) {
           const gate=await _caseStudyGscInputAllowed(clientId,_matchId);
           if(!gate.allowed){
@@ -8223,7 +8233,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
           try {
             await pool.query(
               `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
-              [_matchId, clientId, p.clicks||0, p.impressions||0, p.position||null, p.keyword||null, p.priority||null]
+              [_matchId, clientId, p.clicks, p.impressions, p.position, p.keyword||null, p.priority||null]
             );
             imported++;
             refreshed++;
@@ -8261,17 +8271,16 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
         const _insR = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, intent, gsc_keyword, gsc_clicks, gsc_impressions, gsc_position, priority, created_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-           ON CONFLICT (tracker_client_id, url) WHERE tracker_client_id IS NOT NULL DO UPDATE SET 
-           intent=EXCLUDED.intent, gsc_clicks=EXCLUDED.gsc_clicks, gsc_impressions=EXCLUDED.gsc_impressions, gsc_position=EXCLUDED.gsc_position, priority=EXCLUDED.priority
+           ON CONFLICT (tracker_client_id, url) WHERE tracker_client_id IS NOT NULL DO NOTHING
            RETURNING id`,
-          [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks||0, p.impressions||0, p.position||null, p.priority||'medium']
+          [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks, p.impressions, p.position, p.priority||'medium']
         );
-        if (_insR.rows[0]) _normMap.set(_normTrackUrl(p.url), _insR.rows[0].id); // prevent duplicate inserts within this same batch
-        if (_insR.rows[0]) touchedPageIds.push(_insR.rows[0].id);
+        if (!_insR.rows[0]) { skipped++; results.push({ url: p.url, status: 'skipped_already_tracked' }); continue; }
+        touchedPageIds.push(_insR.rows[0].id);
         _liveCount++;
         imported++;
         newAdded++;
-        results.push({ url: p.url, id: _insR.rows[0] ? _insR.rows[0].id : null, status: 'new' });
+        results.push({ url: p.url, id: _insR.rows[0].id, status: 'new' });
       } catch(e) {
         console.warn('[import-gsc] page', p.url, e.message);
         failed++;
@@ -8281,7 +8290,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
 
     if(touchedPageIds.length){await _ensureMonitoringGateSchema();await pool.query('UPDATE tracker_pages SET monitoring_gsc_pages_at=NOW() WHERE tracker_client_id=$1 AND id=ANY($2::int[]) AND monitoring_waiting_input=TRUE',[clientId,touchedPageIds]).catch(()=>{});}
     res.json({ 
-      success: failed < pages.length, // only "success" if at least something landed
+      success: imported > 0 || (failed === 0 && invalidPages.length < pages.length),
       imported, 
       refreshed,
       new_added: newAdded,
@@ -21981,13 +21990,37 @@ app.post('/api/prospect-quick-scan/admin/import',requireAdmin,async(req,res)=>{
         if(old.revoked_at){
           existing++;items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:'revoked_existing',created:false,reused:false,blocked_duplicate:true,message:'Company already exists in Lead Crawler history and is revoked; duplicate not created.'});continue;
         }
-        const fitScore=Math.max(0,Math.min(100,Number(row.network_fit_score)||0)),fitEvidence=row.network_fit_evidence&&typeof row.network_fit_evidence==='object'?row.network_fit_evidence:{},fitLabel=String(row.network_fit_label||'').slice(0,40)||null,fitVertical=String(row.network_vertical||'').slice(0,120)||null,fitCandidate=row.network_publisher_candidate===true;
-        await client.query(`UPDATE prospect_quick_scans SET business_name=CASE WHEN COALESCE(business_name,'')='' THEN $1 ELSE business_name END,contact_email=CASE WHEN COALESCE(contact_email,'')='' THEN $2 ELSE contact_email END,contact_email_origin=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'crawler_import' ELSE contact_email_origin END,contact_email_comment=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE contact_email_comment END,contact_email_updated_at=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN NOW() ELSE contact_email_updated_at END,campaign=CASE WHEN COALESCE(campaign,'')='' THEN $3 ELSE campaign END,network_fit_score=GREATEST(COALESCE(network_fit_score,0),$5),network_fit_label=CASE WHEN $5>=COALESCE(network_fit_score,0) THEN $6 ELSE network_fit_label END,network_fit_evidence=CASE WHEN $5>=COALESCE(network_fit_score,0) THEN $7::jsonb ELSE network_fit_evidence END,network_publisher_candidate=COALESCE(network_publisher_candidate,FALSE) OR $8,network_vertical=CASE WHEN $5>=COALESCE(network_fit_score,0) THEN $9 ELSE network_vertical END,network_fit_checked_at=CASE WHEN $5>0 THEN NOW() ELSE network_fit_checked_at END,updated_at=NOW() WHERE token=$4`,[name,email,campaign,old.token,fitScore,fitLabel,JSON.stringify(fitEvidence),fitCandidate,fitVertical]);
-        existing++;networkSync.push({business_name:old.business_name||name,website_url:old.url||url,domain:old.domain||domain,token:old.token,lead_crawler_token:old.token,email,language,niche:row.niche||row.industry||fitEvidence.primary_niche||'',primary_niche:fitEvidence.primary_niche||null,sub_niche:fitEvidence.sub_niche||null,country:row.country||null,city:row.city||null,service_area:row.service_area||row.location||null,source:'lead_crawler',private_lead:{network_fit_score:fitScore,network_fit_label:fitLabel,network_publisher_candidate:fitCandidate,network_vertical:fitVertical,network_fit_evidence:fitEvidence},extra_metadata:{network_acquisition:{contract:'network-fit-v559',score:fitScore,publisher_candidate:fitCandidate,vertical:fitVertical}}});items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:old.status,created:false,reused:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token)});continue;
+        const incomingFit=row.network_fit_evidence;
+        const hasEvidence=incomingFit&&typeof incomingFit==='object'&&!Array.isArray(incomingFit)&&Object.keys(incomingFit).length>0;
+        const score=row.network_fit_score;
+        const hasFit=hasEvidence&&score!=null&&String(score).trim()!==''&&Number.isFinite(Number(score));
+        const incomingScore=hasFit?Math.round(Math.max(0,Math.min(100,Number(score)))):null;
+        const incomingLabel=String(row.network_fit_label||'').slice(0,40)||null;
+        const incomingVertical=String(row.network_vertical||'').slice(0,120)||null;
+        const {rows:[saved]}=await client.query(`UPDATE prospect_quick_scans SET
+          business_name=COALESCE(NULLIF(business_name,''),$1),
+          contact_email=COALESCE(NULLIF(contact_email,''),$2),
+          contact_email_origin=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'crawler_import' ELSE contact_email_origin END,
+          contact_email_comment=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE contact_email_comment END,
+          contact_email_updated_at=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN NOW() ELSE contact_email_updated_at END,
+          campaign=COALESCE(NULLIF(campaign,''),$3),
+          network_fit_score=CASE WHEN $5::smallint>=COALESCE(network_fit_score,0) THEN $5 ELSE network_fit_score END,
+          network_fit_label=CASE WHEN $5::smallint>=COALESCE(network_fit_score,0) THEN COALESCE($6,network_fit_label) ELSE network_fit_label END,
+          network_fit_evidence=CASE WHEN $5::smallint>=COALESCE(network_fit_score,0) THEN $7::jsonb ELSE network_fit_evidence END,
+          network_publisher_candidate=COALESCE(network_publisher_candidate,FALSE) OR $8,
+          network_vertical=CASE WHEN $5::smallint>=COALESCE(network_fit_score,0) THEN COALESCE($9,network_vertical) ELSE network_vertical END,
+          network_fit_checked_at=CASE WHEN $5::smallint>=COALESCE(network_fit_score,0) THEN NOW() ELSE network_fit_checked_at END,
+          updated_at=NOW() WHERE token=$4
+          RETURNING contact_email,language,network_fit_score,network_fit_label,network_fit_evidence,network_publisher_candidate,network_vertical`,
+        [name,email,campaign,old.token,incomingScore,incomingLabel,hasFit?JSON.stringify(incomingFit):null,hasFit&&row.network_publisher_candidate===true,incomingVertical]);
+        const {network_fit_score:fitScore,network_fit_label:fitLabel,network_fit_evidence:savedEvidence,
+          network_publisher_candidate:fitCandidate,network_vertical:fitVertical}=saved;
+        const fitEvidence=savedEvidence||{};
+        existing++;networkSync.push({business_name:old.business_name||name,website_url:old.url||url,domain:old.domain||domain,token:old.token,lead_crawler_token:old.token,email:saved.contact_email,language:saved.language||language,niche:row.niche||row.industry||fitEvidence.primary_niche||'',primary_niche:fitEvidence.primary_niche||null,sub_niche:fitEvidence.sub_niche||null,country:row.country||null,city:row.city||null,service_area:row.service_area||row.location||null,source:'lead_crawler',private_lead:{network_fit_score:fitScore,network_fit_label:fitLabel,network_publisher_candidate:fitCandidate,network_vertical:fitVertical,network_fit_evidence:fitEvidence},extra_metadata:{network_acquisition:{contract:'network-fit-v559',score:fitScore,publisher_candidate:fitCandidate,vertical:fitVertical}}});items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:old.status,created:false,reused:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token)});continue;
       }
       const token=require('crypto').randomBytes(32).toString('hex');
-      const fitScore=Math.max(0,Math.min(100,Number(row.network_fit_score)||0)),fitEvidence=row.network_fit_evidence&&typeof row.network_fit_evidence==='object'?row.network_fit_evidence:{},fitLabel=String(row.network_fit_label||'').slice(0,40)||null,fitVertical=String(row.network_vertical||'').slice(0,120)||null,fitCandidate=row.network_publisher_candidate===true;
-      await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,status,contact_email_origin,contact_email_comment,contact_email_updated_at,network_fit_score,network_fit_label,network_fit_evidence,network_publisher_candidate,network_vertical,network_fit_checked_at) VALUES($1,$2,$3,$4,'lead_crawler',$5,$6,$7,'created',CASE WHEN $6<>'' THEN 'crawler_import' ELSE NULL END,CASE WHEN $6<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE NULL END,CASE WHEN $6<>'' THEN NOW() ELSE NULL END,$8,$9,$10::jsonb,$11,$12,CASE WHEN $8>0 THEN NOW() ELSE NULL END)`,[token,name,url,domain,campaign,email,language,fitScore,fitLabel,JSON.stringify(fitEvidence),fitCandidate,fitVertical]);
+      const fitScore=Math.round(Math.max(0,Math.min(100,Number(row.network_fit_score)||0))),fitEvidence=row.network_fit_evidence&&typeof row.network_fit_evidence==='object'?row.network_fit_evidence:{},fitLabel=String(row.network_fit_label||'').slice(0,40)||null,fitVertical=String(row.network_vertical||'').slice(0,120)||null,fitCandidate=row.network_publisher_candidate===true;
+      await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,status,contact_email_origin,contact_email_comment,contact_email_updated_at,network_fit_score,network_fit_label,network_fit_evidence,network_publisher_candidate,network_vertical,network_fit_checked_at) VALUES($1,$2,$3,$4,'lead_crawler',$5,$6,$7,'created',CASE WHEN $6<>'' THEN 'crawler_import' ELSE NULL END,CASE WHEN $6<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE NULL END,CASE WHEN $6<>'' THEN NOW() ELSE NULL END,$8::smallint,$9,$10::jsonb,$11,$12,CASE WHEN $8::smallint>0 OR $10::jsonb<>'{}'::jsonb THEN NOW() ELSE NULL END)`,[token,name,url,domain,campaign,email,language,fitScore,fitLabel,JSON.stringify(fitEvidence),fitCandidate,fitVertical]);
       inserted++;networkSync.push({business_name:name,website_url:url,domain,token,lead_crawler_token:token,email,language,niche:row.niche||row.industry||fitEvidence.primary_niche||'',primary_niche:fitEvidence.primary_niche||null,sub_niche:fitEvidence.sub_niche||null,country:row.country||null,city:row.city||null,service_area:row.service_area||row.location||null,source:'lead_crawler',private_lead:{network_fit_score:fitScore,network_fit_label:fitLabel,network_publisher_candidate:fitCandidate,network_vertical:fitVertical,network_fit_evidence:fitEvidence},extra_metadata:{network_acquisition:{contract:'network-fit-v559',score:fitScore,publisher_candidate:fitCandidate,vertical:fitVertical}}});items.push({row:i+1,token,business_name:name,domain,status:'created',created:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',token)});
     }
     await client.query('COMMIT');
@@ -46151,7 +46184,26 @@ function openCaseStudy(pageId,caseId){
     }).join('');
     var casePicker=caseOptions?'<label>'+_csEscH(historyText[3])+' <select id="trackerProofCase">'+caseOptions+'</select></label>':'';
     var scanProof=(sources.quick_scan||[]).length?'<details><summary>Quick Scan</summary><ul>'+scoreLines(sources.quick_scan)+'</ul></details>':'';
-    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prewriteReports;
+    var researchLabels={en:['CEO Scan','20-page audit','Findings'],nl:['CEO Scan','20-pagina-audit','Bevindingen'],es:['Informe CEO','Auditoría de 20 páginas','Hallazgos']};
+    var researchText=researchLabels[proofLocale]||researchLabels.en;
+    var auditLinkText={en:'Open external audit report',nl:'Open extern auditrapport',es:'Abrir informe de auditoría externo'};
+    var prospectResearch=(sources.prospect_research||[]).map(function(item){
+      var heading=researchText[item.source==='ceo_scan'?0:1];
+      if(item.source==='audit20'&&item.external_url){
+        return '<details><summary>'+_csEscH(heading)+'</summary><p><a href="'+_csEscH(item.external_url)
+          +'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">'+_csEscH(auditLinkText[proofLocale]||auditLinkText.en)+'</a></p></details>';
+      }
+      var pages=(item.pages||[]).map(function(p){
+        return '<li>'+_csEscH(p.url+' · ContentScore '+(p.score==null?'—':p.score))+'</li>';
+      }).join('');
+      var findings=(item.findings||[]).map(function(f){
+        return '<li>'+_csEscH(f.title+' · '+f.url)+'</li>';
+      }).join('');
+      var stamp=item.recorded_at?' · '+utcStamp(item.recorded_at):'';
+      return '<details><summary>'+_csEscH(heading+stamp)+'</summary><ul>'+pages+'</ul>'
+        +(findings?'<h4>'+_csEscH(researchText[2])+'</h4><ul>'+findings+'</ul>':'')+'</details>';
+    }).join('');
+    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prospectResearch+prewriteReports;
     if(!d.case_study){
       var trackerMeasurements=snaps.map(function(row){
         var date=utcStamp(row.checked_at);
@@ -47085,10 +47137,14 @@ function _networkPrewriteEmitState(){
     },window.location.origin);
   }catch(e){}
 }
-function _networkPrewriteApplyEvidence(engine,evidence){
+function _networkPrewriteApplyEvidence(engine,evidence,googleSource){
   var ids={google_aio:'pwbAioText',chatgpt:'pwbChatgptText',perplexity:'pwbPerplexityText',claude:'pwbClaudeText',copilot:'pwbCopilotText'};
   var el=document.getElementById(ids[String(engine||'').toLowerCase()]);
   if(!el)return false;
+  if(engine==='google_aio'&&['ai_overview','gemini'].indexOf(googleSource)>=0){
+    var source=document.getElementById('pwbGoogleSource');
+    if(source)source.value=googleSource;
+  }
   el.value=String(evidence||'');
   try{el.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
   _pwbUpdateAiFiveCount();
@@ -47098,7 +47154,7 @@ function _networkPrewriteApplyEvidence(engine,evidence){
 window.addEventListener('message',function(e){
   if(e.origin!==window.location.origin||!e.data)return;
   if(e.data.type==='network-ai-evidence'&&Number(e.data.placement_id)===_networkPrewritePlacementId()){
-    _networkPrewriteApplyEvidence(e.data.engine,e.data.evidence);
+    _networkPrewriteApplyEvidence(e.data.engine,e.data.evidence,e.data.google_source);
   }
 });
 document.addEventListener('input',function(e){
@@ -48639,11 +48695,9 @@ function hideModal(id) {
 }
 
 async function api(path, method, body) {
-  var base = window.location.origin.indexOf('app.contentscale.site') > -1
-    ? '' : 'https://app.contentscale.site';
   var opts = { method: method||'GET', headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
-  var apiPath = base + '/api/tracker-client/' + TOKEN + path;
+  var apiPath = '/api/tracker-client/' + TOKEN + path;
   try {
     var _nq = new URLSearchParams(window.location.search || '');
     var _np = String(_nq.get('networkPlacement') || '').trim();

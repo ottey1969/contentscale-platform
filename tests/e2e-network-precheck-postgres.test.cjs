@@ -24,7 +24,7 @@ test('Network precheck discards a superseded publication and numbers concurrent 
       status TEXT, reward_credits INT, verified_at TIMESTAMPTZ, verification_decision TEXT, verification_note TEXT, reviewed_by_admin_id TEXT, reviewed_at TIMESTAMPTZ, updated_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE network_content (id INT, brand_name TEXT, owner_website_id INT, title TEXT, primary_niche TEXT, source_snapshot JSONB, prewrite_brief_id INT, verified_placements INT, distribution_status TEXT, updated_at TIMESTAMPTZ);
     CREATE TABLE network_websites (id INT, domain TEXT, status TEXT, brand_name TEXT);
-    CREATE TABLE network_publication_versions (id INT, placement_id INT, html TEXT, generation_input_snapshot JSONB, title TEXT, updated_at TIMESTAMPTZ DEFAULT NOW());
+    CREATE TABLE network_publication_versions (id INT, placement_id INT, html TEXT, generation_input_snapshot JSONB, title TEXT, quality_status TEXT, updated_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE network_verification_runs (placement_id INT, run_no INT, http_status INT, indexable BOOLEAN, canonical_ok BOOLEAN,
       brand_mention_ok BOOLEAN, source_link_ok BOOLEAN, content_match_ok BOOLEAN, password_protected BOOLEAN,
       result_status TEXT, details JSONB, checked_at TIMESTAMPTZ, UNIQUE(placement_id,run_no));
@@ -45,12 +45,14 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     const start = source.indexOf('async function lockPublicationEvidence');
     const manualStart = source.indexOf("app.post('/api/network/admin/placements/:id/manual-review'", start);
     const end = source.indexOf('  app.', manualStart + 10);
+    const attentionStart = source.indexOf("  app.get('/api/network/admin/attention'");
+    const attentionEnd = source.indexOf('  // PUBLISHING', attentionStart);
     assert.ok(start >= 0 && end > start);
     const handlers = new Map();
     let started = 0, entered;
     const reached = new Promise(resolve => { entered = resolve; });
     const blocked = new Promise(resolve => { unblock = resolve; });
-    let changeDuringReview=false, notifications=0;
+    let changeDuringReview=false, notifications=0, finalUrl, canonical, robotsHeader;
     const observedPool={
       connect:()=>pool.connect(),
       query:async (sql,args)=>{
@@ -62,21 +64,27 @@ test('Network precheck discards a superseded publication and numbers concurrent 
         return output;
       }
     };
-    vm.runInNewContext(source.slice(start, end), {
-      pool:observedPool, networkNotifyPublisherReviewDecision:async()=>{notifications++;return {state:'mocked'}}, app: { post(route, _admin, callback) { handlers.set(route, callback); } }, verifyAdmin() {}, wrap: callback => callback,
+    vm.runInNewContext(source.slice(start, end) + source.slice(attentionStart, attentionEnd), {
+      pool:observedPool, networkNotifyPublisherReviewDecision:async()=>{notifications++;return {state:'mocked'}},
+      app: { post(route, _admin, callback) { handlers.set(route, callback); }, get(route, _admin, callback) { handlers.set(route, callback); } }, verifyAdmin() {}, wrap: callback => callback,
+      safeJsonObject: value => value || {},
       safeFetchHtml: async url => {
         started++;
         if (started === 1) {
           entered();
           await blocked;
         }
-        return { html: '<article data-contentscale-placement="3">Approved edition</article>', response: { status: 200 }, finalUrl: url };
+        const tag = canonical ? '<link rel="canonical" href="' + canonical + '">' : '';
+        return { html: tag + '<article data-contentscale-placement="3">Approved edition</article>',
+          response: { status: 200, headers: new Headers(robotsHeader ? {'X-Robots-Tag': robotsHeader} : {}) }, finalUrl: finalUrl || url };
       },
       analyzeWebsiteHtml: () => ({ indexable: true }),
       cleanText: value => String(value || ''),
       htmlText: value => value.replace(/<[^>]*>/g, ''),
       publicationTextMatch: () => ({ matched: true }),
-      extractAttr: () => '',
+      extractAttr: () => canonical || '',
+      URL,
+      exactUrl: require('../src/implementation-report.cjs').exactUrl,
       _networkResolvePublisherReadinessV527: async () => ({ readiness: { final_ready: true, seo_copied_current: true } })
     });
     const invoke = async (route, requestBody) => {
@@ -88,6 +96,11 @@ test('Network precheck discards a superseded publication and numbers concurrent 
       return { status, body };
     };
     const verify = () => invoke('verify-live');
+    const attention = async () => {
+      let response;
+      await handlers.get('/api/network/admin/attention')({}, { set() { return this; }, json(body) { response = body; } });
+      return response;
+    };
     const stale = verify();
     await reached;
     await pool.query("UPDATE network_placements SET published_url='https://publisher.example/new-article',status='submitted' WHERE id=3");
@@ -102,6 +115,8 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     assert.ok(rows.every(row => row.details.published_url === 'https://publisher.example/new-article'));
     assert.equal((await pool.query('SELECT status FROM network_placements WHERE id=3')).rows[0].status, 'needs_review');
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_placement_review_events')).rows[0].n, 2);
+    await pool.query("UPDATE network_verification_runs SET details=details-'exact_document' WHERE run_no=2");
+    assert.equal((await invoke('manual-review', { decision: 'verified' })).status, 409);
 
     await pool.query("UPDATE network_publication_versions SET html='<p>Revised edition</p>',updated_at=NOW() WHERE id=7");
     const oldPrecheck = await invoke('manual-review', { decision: 'verified' });
@@ -123,6 +138,28 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_credit_transactions')).rows[0].n,1);
 
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_verification_runs')).rows[0].n, 3);
+
+    // Rechecking a verified placement records current evidence while retaining the original decision.
+    finalUrl = 'https://publisher.example/replaced/syndicated';
+    assert.equal((await verify()).body.precheck_passed, false);
+    const warning = (await attention()).items.find(item => item.placement_id === 3);
+    assert.equal(warning?.status, 'verified');
+    assert.equal(warning?.monitoring_warning, true);
+    finalUrl = undefined;
+    canonical = '/archive';
+    assert.equal((await verify()).body.precheck_passed, false);
+    canonical = '/replaced';
+    robotsHeader = 'googlebot: noindex';
+    assert.equal((await verify()).body.precheck_passed, false);
+    robotsHeader = undefined;
+    assert.equal((await verify()).body.precheck_passed, true);
+    assert.equal((await attention()).items.some(item => item.placement_id === 3), false);
+    const monitoring = await pool.query('SELECT result_status FROM network_verification_runs WHERE run_no>3 ORDER BY run_no');
+    assert.deepEqual(monitoring.rows.map(row => row.result_status), ['needs_review', 'needs_review', 'needs_review', 'passed']);
+    const placement = await pool.query('SELECT status,verification_decision FROM network_placements WHERE id=3');
+    assert.deepEqual(placement.rows[0], {status: 'verified', verification_decision: 'verified'});
+    assert.equal((await pool.query('SELECT balance FROM network_credit_wallets')).rows[0].balance, 7);
+    assert.equal(notifications, 1);
   } finally {
     unblock?.();
     await pool.end();
