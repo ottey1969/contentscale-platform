@@ -130,10 +130,15 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       assert.equal(await resume.locator('#existingLocal').isVisible(),true,'the exact page can reopen its result');
       await resume.evaluate(({url,result})=>{
         const oldKey=url.replace(/^https?:[/][/]/,'').replace(/[/]+$/,'').toLowerCase();
+        localStorage.removeItem('growthFreeForm');
         localStorage.setItem('growthFreeResults',JSON.stringify({[oldKey]:result}));
       },{url:URL_,result:oldResult.pathname+oldResult.search});
-      await resume.reload();
-      await resume.locator('#existingLocal').waitFor({state:'visible'});
+      await resume.goto(base+'/free-growth?key=e2e-open-key-1');
+      assert.equal(await resume.inputValue('#url'),'');
+      await resume.locator('#existingLocal').waitFor({state:'visible',timeout:4000});
+      const reopened=new URL(await resume.locator('#existingLocalLink').getAttribute('href'),base);
+      assert.equal(reopened.pathname,oldResult.pathname);
+      assert.equal(reopened.searchParams.get('k'),oldResult.searchParams.get('k'));
       const { latestDoneFor, recentResult }=require('../src/growth-free/store.cjs');
       assert.ok(await latestDoneFor(pool,{url:URL_,owner:true}));
       assert.equal(await latestDoneFor(pool,{url:URL_.replace('/roof-', '/Roof-'),owner:true}),null);
