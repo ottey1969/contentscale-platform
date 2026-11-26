@@ -106,7 +106,7 @@ function memoryStore(){
    cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null,ui_lang:o.uiLang||null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
-  async latestDoneFor(_p,{url,inviteId=null,owner=false}){const n=u=>String(u||'').toLowerCase().replace(/\/+$/,'');return [...checks].reverse().find(c=>c.status==='DONE'&&n(c.url)===n(url)&&(owner||(inviteId!=null&&c.invite_id===inviteId)))||null},
+  async latestDoneFor(_p,{url,inviteId=null,owner=false}){return [...checks].reverse().find(c=>c.status==='DONE'&&c.url===url&&(owner||(inviteId!=null&&c.invite_id===inviteId)))||null},
   // Same fencing as store.cjs: a token per run; only the active token may store or release (lease expiry via expire()).
   async claimWriting(_p,{checkId}){const c=checks.find(x=>x.id===checkId);if(c.writing_token&&!c.expired)return null;c.expired=false;c.writing_token='tok'+(++id);return c.writing_token},
   async releaseWriting(_p,{checkId,token}){const c=checks.find(x=>x.id===checkId);if(c.writing_token===token)c.writing_token=null},

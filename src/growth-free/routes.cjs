@@ -304,7 +304,9 @@ function simpleFromTracker(d){try{
 }catch(e){}}
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 // A result this browser already started for the page in the address: offered on top of the form (owner 2026-11-22).
-function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://');if(i>=0)u=u.slice(i+3);if(u.indexOf('www.')===0)u=u.slice(4);u=u.split('#')[0].split('?')[0];while(u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u}
+${validatePublicUrl.toString()}
+function normPage(u){return validatePublicUrl(u).url||''}
+function legacyPageKey(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://');if(i>=0)u=u.slice(i+3);if(u.indexOf('www.')===0)u=u.slice(4);u=u.split('#')[0].split('?')[0];while(u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u}
 
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
@@ -314,16 +316,42 @@ function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://')
 var REMEMBER=['url','query','market','language','search_location','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
 // Reopen a saved result from this browser, also on the bare landing URL.
+var savedResultRequest=0;
 function showSavedResult(){
  var box=document.getElementById('existingLocal'),link=document.getElementById('existingLocalLink'),field=document.getElementById('url');if(!box||!link)return;
+ var request=++savedResultRequest;
  box.hidden=true;
  try{
-  var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),u=field&&field.value||new URLSearchParams(location.search).get('url')||'',r=u?M[normPage(u)]:null;
-  if(!u){var keys=Object.keys(M);r=keys.length?M[keys[keys.length-1]]:null}
+  var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),u=field&&field.value||new URLSearchParams(location.search).get('url')||'';
+  var identity=normPage(u);
+  if(u&&!identity)return;
+  var keys=Object.keys(M).filter(function(key){return key===normPage(key)});
+  var r=identity?M[identity]:M[keys[keys.length-1]];
+  var legacy=!r&&Boolean(identity);
+  if(legacy)r=M[legacyPageKey(u)];
   if(typeof r!=='string'||!r.startsWith('/')||r.startsWith('//'))return;
   var dest=new URL(r,location.origin),prefix=${js(base)}+'/r/';
   if(dest.origin!==location.origin||!dest.pathname.startsWith(prefix)||!dest.searchParams.get('k'))return;
-  dest.searchParams.set('lang',${js(lang)});link.href=dest.pathname+dest.search;box.hidden=false;
+  var show=function(){
+    if(savedResultRequest!==request)return;
+    dest.searchParams.set('lang',${js(lang)});link.href=dest.pathname+dest.search;box.hidden=false;
+  };
+  if(!legacy){show();return;}
+  var id=dest.pathname.slice(prefix.length);
+  if(!/^[A-Za-z0-9_-]+$/.test(id))return;
+  fetch(${js(api)}+'/checks/'+id+'?identity=page&k='+encodeURIComponent(dest.searchParams.get('k')),{cache:'no-store'})
+   .then(function(res){return res.ok?res.json():null;})
+   .then(function(data){
+    if(!data||normPage(data.url)!==identity||savedResultRequest!==request)return;
+    try{
+      var latest=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');
+      if(latest[legacyPageKey(u)]===r&&!latest[identity]){
+        latest[identity]=r;delete latest[legacyPageKey(u)];
+        localStorage.setItem('growthFreeResults',JSON.stringify(latest));
+      }
+    }catch(e){}
+    show();
+   }).catch(function(){});
  }catch(e){}
 }
 showSavedResult();var savedResultField=document.getElementById('url');if(savedResultField){savedResultField.addEventListener('input',showSavedResult);savedResultField.addEventListener('change',showSavedResult)}
@@ -1633,7 +1661,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  // The latest finished result for the page in ?url=: the owner's (any check) or this invitation's.
  async function existingFor(req,{owner=false,inviteId=null}={}){
   const u=req.query&&req.query.url;if(!u||typeof storage.latestDoneFor!=='function'||(!owner&&inviteId==null))return null;
-  try{const r=await storage.latestDoneFor(pool,{url:String(u).slice(0,500),owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
+  const page=validatePublicUrl(u);if(page.error)return null;
+  try{const r=await storage.latestDoneFor(pool,{url:page.url,owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
  }
  async function auditFor(req,{owner=false,invite=null}={}){const token=safeToken(req.query?.gsc_audit),pageUrl=String(req.query?.url||'');if(!token||!pageUrl)return null;try{const a=await require('./gsc-audit-handoff.cjs').loadAuditUpload(pool,{token,url:pageUrl,owner,invite});return a?{...a,token,pageUrl}:null}catch(e){return null}}
  const langFor=(req,account=null)=>formLang({query:req.query&&req.query.lang,account,acceptLanguage:req.get&&req.get('accept-language')});
@@ -1948,6 +1977,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:withStyle(viewOf(row.written))});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
+  if(req.query.identity==='page')return res.set('Cache-Control','no-store').json({success:true,url:row.url});
   const [aiPart,gscPart,bestOwn]=await Promise.all([aiFor(row),gscFor(row),bestOwnFor(row)]);
   // AI-written topic names in the language of the check (phase 2 of "Spanish is Spanish"); quotes stay as written.
   let shown={summary:row.summary,aiGap:aiPart&&aiPart.gap};

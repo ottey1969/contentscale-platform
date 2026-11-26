@@ -115,6 +115,29 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       'Filters.csv': 'Filter,Value\nSearch type,Web\nPage,' + URL_ + '\n' }) });
     await p.click('#f button[type=submit]');
     await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 });
+    const oldResult = new URL(p.url());
+    await service.idle();
+    const resume = await ctx.newPage();
+    try {
+      for(const variant of [URL_.replace('/roof-', '/Roof-'), URL_+'?view=alternate', URL_.replace('://', '://www.')]){
+        await resume.goto(base+'/free-growth?key=e2e-open-key-1&url='+encodeURIComponent(variant));
+        assert.equal(await resume.locator('#existingLocal').isVisible(),false,variant);
+      }
+      const historical = require('./fixtures/free-growth-prt-emergency/check.json');
+      await resume.goto(base+'/free-growth?key=e2e-open-key-1&url='+encodeURIComponent(historical.url));
+      assert.equal(await resume.locator('#existingLocal').isVisible(),false,'an existing historical page cannot open a result for another page');
+      await resume.goto(base+'/free-growth?key=e2e-open-key-1&url='+encodeURIComponent(URL_));
+      assert.equal(await resume.locator('#existingLocal').isVisible(),true,'the exact page can reopen its result');
+      await resume.evaluate(({url,result})=>{
+        const oldKey=url.replace(/^https?:[/][/]/,'').replace(/[/]+$/,'').toLowerCase();
+        localStorage.setItem('growthFreeResults',JSON.stringify({[oldKey]:result}));
+      },{url:URL_,result:oldResult.pathname+oldResult.search});
+      await resume.reload();
+      await resume.locator('#existingLocal').waitFor({state:'visible'});
+      const { latestDoneFor }=require('../src/growth-free/store.cjs');
+      assert.ok(await latestDoneFor(pool,{url:URL_,owner:true}));
+      assert.equal(await latestDoneFor(pool,{url:URL_.replace('/roof-', '/Roof-'),owner:true}),null);
+    } finally { await resume.close(); }
     // 2. The result (Google research done by the real engine).
     await service.idle();
     await p.waitForSelector('#growthOneBrief', { timeout: 60000 });
