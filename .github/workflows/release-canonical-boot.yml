@@ -9,6 +9,7 @@ on:
       - 'src/network-acquisition-invitations.cjs'
       - 'public/network-acquisition.html'
       - 'src/network/register-network.js'
+      - 'src/network-publication-monitor.cjs'
       - 'src/network-maps-acquisition.cjs'
       - 'src/tracker-growth-execution.cjs'
       - 'public/lead-crawler.html'
