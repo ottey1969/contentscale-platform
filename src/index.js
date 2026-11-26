@@ -5988,7 +5988,7 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/reject', async (req, res
     res.json({ success: true, status: 'in_progress', reason: reason });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief, { normalise: _trackerPlainLiveHtml });
+require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief);
 app.post('/api/tracker-client/:token/prewrite-brief/:id/deadline', async (req, res) => {
   try {
     const r = await _resolvePWBrief(req.params.token, req.params.id);

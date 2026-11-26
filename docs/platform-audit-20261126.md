@@ -56,6 +56,14 @@ Een herstelstatus geldt uitsluitend voor het expliciet genoemde defect. Alle wij
 | EN, NL en ES | Navigatie → vertaalde velden → hervatten | — | — | — | Deeltests in echte Chromium, inclusief NL/ES Free Growth; geen volledige dekking per viewport en scherm | NOT TESTED | — |
 | CI en lint | Bron wijzigen → CI → kwaliteitspoort | ESLint miste configuratie. Een oude statische browserkopie begon met een afgebroken script | P2 | Configuratie en CI-lint toegevoegd, afgebroken duplicaat verwijderd | `npm run lint`, syntax en CI-lint | FIXED AND VERIFIED | `864e500` / #570 |
 
+### Vervolgaudit van Pre-Write-livebewijs
+
+| Module / functie | Gebruikersreis | Oorzaak | Prioriteit | Uitgevoerde reparatie en regressie | Status | Commit / PR |
+| --- | --- | --- | --- | --- | --- | --- |
+| Pre-Write, publicatie en Proof & History | Goedgekeurde Brief → Implementation Report → gemelde publicatie → onafhankelijk HTML-bewijs | De vergelijking verwijderde tags met reguliere expressies, gebruikte een ASCII-normalisatie voor de inhoud en vergeleek ingekorte metadata. Daardoor kon onder meer een verborgen tekstveld positief livebewijs opleveren. | P1 | De verificatie leest geparseerde HTML, sluit verborgen en inerte inhoud uit en vergelijkt volledige metadata en Unicode-tekst. De HTTP-regressie bewijst dat een verborgen tekstveld geen verificatie opslaat. De geïsoleerde tests controleren CREATE, EXPAND, de publicatiemelding, tenantisolatie en de onveranderde baseline. | FIXED AND VERIFIED | `e736f86` / [#572](https://github.com/ottey1969/contentscale-platform/pull/572) |
+
+De reparatie is getest met HTTP en een geïsoleerde PostgreSQL-compatibele engine. De echte PostgreSQL- en browserjobs draaien in GitHub CI. De controle leest statische HTML en voert geen scripts of externe CSS van de onderzochte site uit. Bestaande bewijsrecords zijn behouden. [CI-resultaten](https://github.com/ottey1969/contentscale-platform/pull/572/checks)
+
 ## Testuitvoering en grenzen
 
 - Lokaal: `npm test` registreerde 536 tests, 532 geslaagd, 0 mislukt en 4 overgeslagen wegens omgevingsvoorwaarden. Extra runs registreerden 23 gerichte tests, 9 database/HTTP-tests, 2 tests rond de echte case-study-server, 6 echte Chromium-tests en 56 module- en funneltests. In die extra runs slaagden 95 tests en werd 1 overgeslagen. De tweede testronde registreerde 48 aanvullende resultaten, 47 geslaagd en 1 mislukt. De mislukte lokale Free Growth-browserreis is na de assetcorrectie succesvol herhaald. Daarin zijn ook 36 kwaliteitschecks, 2 GSC Direct/Measurement-tests en 3 kaartregressies opgenomen. Vijf Network-acquisitietestbestanden slaagden daarnaast na de quotacorrectie. Totaal over de gerapporteerde runs: 685 geregistreerd, 679 geslaagd, 1 mislukt en hersteld, 5 overgeslagen. Testgevallen kunnen in meerdere runs terugkomen. Voorafgaande doelbewuste rode regressieruns zijn buiten deze telling gehouden.
