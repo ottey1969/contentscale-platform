@@ -94,6 +94,16 @@ jobs:
             echo 'FAIL: main-based full application did not start against disposable DB'
             exit 1
           fi
+          for i in $(seq 1 40); do
+            if grep -Fq 'All tables ready & migrated' /tmp/canonical-boot.log; then break; fi
+            if ! kill -0 "$app_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if ! grep -Fq 'All tables ready & migrated' /tmp/canonical-boot.log; then
+            tail -n 80 /tmp/canonical-boot.log
+            echo 'FAIL: canonical database initialization did not finish'
+            exit 1
+          fi
           node - <<'NODE'
           const fs=require('fs'),{Client}=require('pg');
           (async()=>{
@@ -103,8 +113,8 @@ jobs:
               throw Error('Canonical Network module '+build.network_module_version+' differs from expected '+build.network_expected_module_version);
             const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();
             try{
-              const q=await c.query("SELECT to_regclass('public.tracker_pages') AS pages,to_regclass('public.tracker_case_studies') AS cases");
-              if(!q.rows[0].pages||!q.rows[0].cases)throw Error('Canonical Tracker schema missing');
+              const q=await c.query("SELECT to_regclass('public.tracker_pages') AS pages,to_regclass('public.tracker_case_studies') AS cases,to_regclass('public.prewrite_briefs') AS briefs");
+              if(!q.rows[0].pages||!q.rows[0].cases||!q.rows[0].briefs)throw Error('Canonical Tracker or Pre-Write schema missing');
             }finally{await c.end()}
           })().catch(e=>{console.error(e);process.exitCode=1});
           NODE
