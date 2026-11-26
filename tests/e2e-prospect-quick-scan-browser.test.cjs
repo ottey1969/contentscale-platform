@@ -191,19 +191,47 @@ for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, c
       const { chromium } = require('playwright');
       const db = new Client({ connectionString: database });
       await db.connect();
-      const token = randomBytes(32).toString('hex');
+      let token = randomBytes(32).toString('hex');
       const domain = 'register-' + token.slice(0, 12) + '.example';
       const url = 'https://' + domain + '/Services/?version=1';
       const ceoUrl = 'https://' + domain + '/';
       const ceoToken = randomBytes(32).toString('hex');
       const auditToken = randomBytes(32).toString('hex');
+      const importPath = base + '/api/prospect-quick-scan/admin/import';
+      const crawlerScenario = index === 0 && size === 0 && process.env.LC_ADMIN_CODE;
+      const originalFit = { signals: ['recorded external source'] };
+      async function importCompany(company) {
+        const response = await fetch(importPath, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-admin-code': process.env.LC_ADMIN_CODE },
+          body: JSON.stringify({ companies: [{ business_name: 'Registration fixture', url: ceoUrl, language, ...company }] })
+        });
+        const result = await response.json();
+        assert.equal(response.status, 200, result.error);
+        assert.equal(result.scans_started, 0);
+        assert.equal(result.notifications_sent, 0);
+        return result;
+      }
       let browser;
       try {
         await fetch(base + '/api/prospect-quick-scan/test-missing-' + token);
         await db.query(`INSERT INTO opportunity_reports(token,domain,source_url,report_data)
           VALUES($1,$2,$3,$4),($5,$2,$6,$7)`, [ceoToken, domain, ceoUrl, { page_analysis: [{ url: ceoUrl, content_score: 0 }] },
           auditToken, url, { page_analysis: [{ url }], opportunities: [{ url, title: 'Saved audit finding' }] }]);
-        await db.query(`INSERT INTO prospect_quick_scans(token,domain,business_name,url,language,opened_count,
+        if (crawlerScenario) {
+          const initial = await importCompany({ network_fit_score: 0, network_fit_evidence: originalFit, network_fit_label: 'poor_fit' });
+          assert.equal(initial.inserted, 1);
+          token = initial.items[0].token;
+          // Paid research results are supplied as already persisted provider fixtures.
+          await db.query(`UPDATE prospect_quick_scans SET url=$2,opened_count=1,scan_result=$3,scan_completed_at=NOW(),
+            follow_up_status='replied',ceo_report_page_url=$4,ceo_report_token=$5,ceo_report_url=$6,audit20_report_url=$7 WHERE token=$1`,
+          [token, url, { score: 0, url }, ceoUrl, ceoToken, '/opportunity-report/' + ceoToken, '/report/' + auditToken.slice(0, 16)]);
+          const repeated = await importCompany({ url: 'https://www.' + domain + '/' });
+          assert.equal(repeated.inserted, 0);
+          assert.equal(repeated.items[0].token, token);
+          const persisted = (await db.query('SELECT network_fit_evidence,network_fit_label FROM prospect_quick_scans WHERE token=$1', [token])).rows[0];
+          assert.deepEqual(persisted, { network_fit_evidence: originalFit, network_fit_label: 'poor_fit' });
+        } else await db.query(`INSERT INTO prospect_quick_scans(token,domain,business_name,url,language,opened_count,
           scan_result,scan_completed_at,audit20_status,follow_up_status,ceo_report_page_url,ceo_report_token,ceo_report_url,audit20_report_url)
           VALUES($1,$2,'Registration fixture',$3,$5,1,$4,NOW(),'not_started','replied',$6,$7,$8,$9)`,
         [token, domain, url, { score: 0, url }, language, ceoUrl, ceoToken, '/opportunity-report/' + ceoToken, '/report/' + auditToken.slice(0, 16)]);

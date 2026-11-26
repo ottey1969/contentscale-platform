@@ -42,6 +42,7 @@ jobs:
           --health-retries 12
     env:
       NODE_ENV: test
+      LC_ADMIN_CODE: prospect-crawler-ci-fixture-only
       CI: 'true'
       CS_DEPLOYMENT_TIER: production
       ENABLE_TRACKER_SCHEDULER: '0'
