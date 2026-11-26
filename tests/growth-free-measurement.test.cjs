@@ -42,7 +42,7 @@ test('before/after: only page-verified exports, each on its own side of the date
 test('due reminders are sent once to the address of the check; a failed send is retried, at most three times', async () => {
   const rows = [{ id: 1, email: 'test-owner@acme-roofing.example', url: 'https://acme-roofing.example/', query: 'TEST', market: { language: 'nl' }, published_on: '2026-10-01', reminder_token: 'TESTTOKEN0123456789' }];
   const marked = [], sent = [];
-  const storage = { dueReminders: async () => rows, markReminder: async (p, x) => marked.push(x) };
+  const storage = { dueReminders: async () => rows, claimReminder: async () => rows[0], markReminder: async (p, x) => marked.push(x) };
   const out = await r.sendDueFreeReminders(null, storage, { now: NOW, model: null, send: async m => { sent.push(m); return true; },
     links: { result: () => 'https://app.example/free-growth/r/a?k=b', stop: t => 'https://app.example/free-growth/stop/' + t } });
   assert.deepEqual(out, { sent: 1, failed: 0 }); assert.deepEqual(sent[0].to, ['test-owner@acme-roofing.example']);
@@ -51,7 +51,7 @@ test('due reminders are sent once to the address of the check; a failed send is 
   const fail = await r.sendDueFreeReminders(null, storage, { now: NOW, model: null, send: async () => false, links: { result: () => 'x', stop: () => 'y' } });
   assert.deepEqual(fail, { sent: 0, failed: 1 });
   // Another language without a model: the English e-mail (never an unchecked translation).
-  const de = await r.sendDueFreeReminders(null, { ...storage, dueReminders: async () => [{ ...rows[0], market: { language: 'de' } }] }, { now: NOW, model: null, send: async m => { sent.push(m); return true; }, links: { result: () => 'x', stop: () => 'y' } });
+  const de = await r.sendDueFreeReminders(null, { ...storage, claimReminder: async () => ({ ...rows[0], market: { language: 'de' } }) }, { now: NOW, model: null, send: async m => { sent.push(m); return true; }, links: { result: () => 'x', stop: () => 'y' } });
   assert.equal(de.sent, 1); assert.match(sent[sent.length - 1].subject, /Four weeks/);
 });
 
@@ -74,7 +74,8 @@ test('Spanish is Spanish: the reminder follows the language of the check, Spanis
   assert.equal(r.languageOf({ ui_lang: 'es', market: { language: 'en' } }), 'es');
   assert.equal(r.languageOf({ market: { language: 'nl' } }), 'nl', 'older checks: market language');
   const sent = [], model = { call: async () => { throw Error('must not be called'); } };
-  await r.sendDueFreeReminders(null, { dueReminders: async () => [{ id: 1, email: 'test-owner@acme-roofing.example', url: 'https://acme-roofing.example/', query: 'TEST', ui_lang: 'es', market: { language: 'en' }, published_on: '2026-10-01', reminder_token: 'TESTTOKEN0123456789' }], markReminder: async () => {} },
+  const spanishRow = { id: 1, email: 'test-owner@acme-roofing.example', url: 'https://acme-roofing.example/', query: 'TEST', ui_lang: 'es', market: { language: 'en' }, published_on: '2026-10-01', reminder_token: 'TESTTOKEN0123456789' };
+  await r.sendDueFreeReminders(null, { dueReminders: async () => [{ id: 1 }], claimReminder: async () => spanishRow, markReminder: async () => {} },
     { now: new Date('2026-11-12T10:00:00Z'), model, send: async m => { sent.push(m); return true; }, links: { result: () => 'x', stop: () => 'y' } });
   assert.equal(sent.length, 1); assert.match(sent[0].subject, /Cuatro semanas/);
 });

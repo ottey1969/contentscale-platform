@@ -49,7 +49,8 @@ test('both existing Free Growth emails include saved page changes safely',()=>{
 });
 test('scheduled email receives the saved publication note without additional sends',async()=>{
  const {sendDueFreeReminders}=require('../src/growth-free/reminders.cjs');const sent=[],marked=[];
- const storage={dueReminders:async()=>[{id:1,url,email:'owner@example.com',published_on:'2026-11-25',published_note:'Added headings',ui_lang:'en',reminder_token:'token'}],markReminder:async(pool,data)=>marked.push(data)};
+ const row={id:1,url,email:'owner@example.com',published_on:'2026-11-25',published_note:'Added headings',ui_lang:'en',reminder_token:'token'};
+ const storage={dueReminders:async()=>[{id:row.id}],claimReminder:async()=>row,markReminder:async(pool,data)=>marked.push(data)};
  await sendDueFreeReminders({},storage,{send:async m=>{sent.push(m);return true},links:{result:()=>url,stop:()=>url}});
  assert.equal(sent.length,1);assert.ok(sent[0].html.includes('Added headings'));assert.deepEqual(sent[0].to,['owner@example.com']);assert.deepEqual(marked,[{id:1,sent:true}]);
 });
