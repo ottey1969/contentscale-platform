@@ -273,11 +273,13 @@ async function upsertCanonicalNetworkBusinessV540(db,input={}){
   let site=null;
   if(input.domain||input.website_url||input.canonical_url){try{site=normalizeSite(input.domain||input.website_url||input.canonical_url)}catch(_e){site=null}}
   const domain=site&&site.domain?site.domain:cleanText(input.domain,255).toLowerCase()||null;
-  if(domain)await db.query(`SELECT pg_advisory_xact_lock(hashtext(lower($1)))`,[domain]).catch(()=>{});
+  if(domain)await db.query(`SELECT pg_advisory_xact_lock(hashtext(lower($1)))`,[domain]);
   let found=null,resolvedViaLinkedSite=false;
   if(domain)found=(await db.query(`SELECT * FROM network_directory_businesses WHERE LOWER(domain)=LOWER($1) LIMIT 1`,[domain])).rows[0]||null;
-  if(!found&&domain){
-    found=(await db.query(`SELECT b.* FROM network_websites w LEFT JOIN LATERAL (SELECT a0.* FROM network_publisher_accounts a0 WHERE a0.website_id=w.id ORDER BY CASE a0.status WHEN 'active' THEN 0 ELSE 1 END,a0.updated_at DESC,a0.id DESC LIMIT 1) a ON TRUE LEFT JOIN network_publisher_applications pa ON pa.id=a.application_id JOIN network_directory_businesses b ON b.id=COALESCE(w.business_id,a.business_id,pa.business_id) WHERE LOWER(w.domain)=LOWER($1) LIMIT 1`,[domain]).catch(()=>({rows:[]}))).rows[0]||null;
+  const canResolveSite=!found&&domain&&(await db.query(`SELECT to_regclass('network_websites') IS NOT NULL
+    AND to_regclass('network_publisher_accounts') IS NOT NULL AND to_regclass('network_publisher_applications') IS NOT NULL AS ready`)).rows[0]?.ready;
+  if(canResolveSite){
+    found=(await db.query(`SELECT b.* FROM network_websites w LEFT JOIN LATERAL (SELECT a0.* FROM network_publisher_accounts a0 WHERE a0.website_id=w.id ORDER BY CASE a0.status WHEN 'active' THEN 0 ELSE 1 END,a0.updated_at DESC,a0.id DESC LIMIT 1) a ON TRUE LEFT JOIN network_publisher_applications pa ON pa.id=a.application_id JOIN network_directory_businesses b ON b.id=COALESCE(w.business_id,a.business_id,pa.business_id) WHERE LOWER(w.domain)=LOWER($1) LIMIT 1`,[domain])).rows[0]||null;
     resolvedViaLinkedSite=!!found;
   }
   if(!found&&input.contact_intelligence_id!=null)found=(await db.query(`SELECT * FROM network_directory_businesses WHERE contact_intelligence_id=$1 LIMIT 1`,[Number(input.contact_intelligence_id)||0])).rows[0]||null;
@@ -291,9 +293,15 @@ async function upsertCanonicalNetworkBusinessV540(db,input={}){
     const r=await db.query(`UPDATE network_directory_businesses SET
       business_name=$2,domain=COALESCE($3,domain),canonical_url=COALESCE($4,canonical_url),description=$5,
       primary_niche=$6,sub_niche=$7,topic_tags=$8::jsonb,market=$9,country=$10,language=$11,city=$12,
-      service_area=$13,business_scope=$14,public_visibility=$15,contact_intelligence_id=COALESCE($16,contact_intelligence_id),
-      lead_crawler_token=COALESCE($17,lead_crawler_token),source=COALESCE(source,$18),source_ref=COALESCE(source_ref,$19),metadata=$20::jsonb,updated_at=NOW()
-      WHERE id=$1 RETURNING *`,[found.id,m.business_name||found.business_name,(resolvedViaLinkedSite&&input.promote_primary_domain!==true)?null:domain,m.canonical_url||found.canonical_url||null,m.description||null,m.primary_niche||null,m.sub_niche||null,JSON.stringify(Array.isArray(m.topic_tags)?m.topic_tags:[]),m.market||null,m.country||null,m.language||null,m.city||null,m.service_area||null,m.business_scope||null,m.public_visibility||'listed',m.contact_intelligence_id||null,m.lead_crawler_token||null,m.source||null,m.source_ref||null,JSON.stringify(m.metadata||{})]);
+      service_area=$13,business_scope=$14,
+      public_visibility=CASE WHEN public_visibility='suppressed' AND NOT $21::boolean THEN public_visibility ELSE $15 END,
+      contact_intelligence_id=COALESCE($16,contact_intelligence_id),
+      lead_crawler_token=COALESCE($17,lead_crawler_token),source=COALESCE(source,$18),source_ref=COALESCE(source_ref,$19),
+      metadata=CASE WHEN public_visibility='suppressed' AND NOT $21::boolean AND metadata ? 'public_suppression'
+        THEN $20::jsonb||jsonb_build_object('public_suppression',metadata->'public_suppression') ELSE $20::jsonb END,
+      updated_at=NOW()
+      WHERE id=$1 RETURNING *`,[found.id,m.business_name||found.business_name,(resolvedViaLinkedSite&&input.promote_primary_domain!==true)?null:domain,m.canonical_url||found.canonical_url||null,m.description||null,m.primary_niche||null,m.sub_niche||null,JSON.stringify(Array.isArray(m.topic_tags)?m.topic_tags:[]),m.market||null,m.country||null,m.language||null,m.city||null,m.service_area||null,m.business_scope||null,m.public_visibility||'listed',m.contact_intelligence_id||null,m.lead_crawler_token||null,m.source||null,m.source_ref||null,JSON.stringify(m.metadata||{}),
+      input.allow_public_restore===true&&_networkBusinessSourceRankV540(input.source)>=NETWORK_BUSINESS_SOURCE_PRIORITY_V540.owner_verified]);
     return r.rows[0];
   }
   const businessName=cleanText(input.business_name||input.brand_name||domain||'Business',220);if(!businessName)throw new Error('Business name is required');
@@ -3205,24 +3213,47 @@ async function resolveCanonicalBusinessJourneysV542(pool,inputs=[]){
     profile_url:'/network/directory/'+encodeURIComponent(row.slug||''),marketplace_url:'/network/marketplace'+(row.primary_niche?('?niche='+encodeURIComponent(row.primary_niche)):'')
   }});
 }
+async function upsertLeadCrawlerBusiness(pool,input){
+  const niche=classifyNetworkNiche(input.niche||input.industry||'');
+  const contactId=input.contact_intelligence_id||input.id||null;
+  const client=await pool.connect();
+  try{
+    await client.query('BEGIN');
+    if(contactId!=null){
+      // Serialize with Contact Intelligence suppression before taking the directory identity lock.
+      const contact=(await client.query('SELECT status FROM contact_intelligence WHERE id=$1 FOR SHARE',[contactId])).rows[0];
+      if(!contact||contact.status==='suppressed'){
+        await client.query('COMMIT');
+        return null;
+      }
+    }
+    const result=await upsertCanonicalNetworkBusinessV540(client,{
+      business_name:input.business_name||input.company_name||input.username||input.domain,
+      domain:input.domain||input.website_url,
+      canonical_url:input.canonical_url||input.website_url||null,
+      description:_networkLeadCrawlerPublicDescriptionV542(input),
+      primary_niche:input.primary_niche||niche.main_niche,
+      sub_niche:input.sub_niche||niche.sub_niche,
+      topic_tags:Array.isArray(input.topic_tags)?input.topic_tags:niche.topics,
+      market:input.market||input.country||null,country:input.country||null,language:input.language||null,city:input.city||null,
+      service_area:input.service_area||input.location||null,business_scope:input.business_scope||null,
+      contact_intelligence_id:contactId,lead_crawler_token:input.lead_crawler_token||input.token||null,
+      public_visibility:input.public_visibility||'listed',source:'lead_crawler',source_ref:input.source_ref||input.source_url||input.linkedin_url||null,
+      private_lead:{contact_email:input.email||input.contact_email||null,phone:input.phone||null,contact_name:input.contact_name||null,employee_count:Number(input.employee_count||0)||null,source_consent:input.source_consent||null,source_bio:cleanText(input.bio,2400)||null},
+      extra_metadata:{contact_intelligence_source:input.source||null,industry:input.industry||null,lead_crawler_synced_at:new Date().toISOString()}
+    });
+    await client.query('COMMIT');
+    return result;
+  }catch(error){
+    await client.query('ROLLBACK').catch(()=>{});
+    throw error;
+  }finally{
+    client.release();
+  }
+}
 async function syncLeadCrawlerBusinessV540(pool,input={}){
   await ensureNetworkDirectorySchema(pool);
-  const niche=classifyNetworkNiche(input.niche||input.industry||'');
-  return upsertCanonicalNetworkBusinessV540(pool,{
-    business_name:input.business_name||input.company_name||input.username||input.domain,
-    domain:input.domain||input.website_url,
-    canonical_url:input.canonical_url||input.website_url||null,
-    description:_networkLeadCrawlerPublicDescriptionV542(input),
-    primary_niche:input.primary_niche||niche.main_niche,
-    sub_niche:input.sub_niche||niche.sub_niche,
-    topic_tags:Array.isArray(input.topic_tags)?input.topic_tags:niche.topics,
-    market:input.market||input.country||null,country:input.country||null,language:input.language||null,city:input.city||null,
-    service_area:input.service_area||input.location||null,business_scope:input.business_scope||null,
-    contact_intelligence_id:input.contact_intelligence_id||input.id||null,lead_crawler_token:input.lead_crawler_token||input.token||null,
-    public_visibility:input.public_visibility||'listed',source:'lead_crawler',source_ref:input.source_ref||input.source_url||input.linkedin_url||null,
-    private_lead:{contact_email:input.email||null,phone:input.phone||null,contact_name:input.contact_name||null,employee_count:Number(input.employee_count||0)||null,source_consent:input.source_consent||null,source_bio:cleanText(input.bio,2400)||null},
-    extra_metadata:{contact_intelligence_source:input.source||null,industry:input.industry||null,lead_crawler_synced_at:new Date().toISOString()}
-  });
+  return upsertLeadCrawlerBusiness(pool,input);
 }
 async function suppressLeadCrawlerBusinessV540(pool,input={}){
   await ensureNetworkDirectorySchema(pool);
@@ -3231,9 +3262,17 @@ async function suppressLeadCrawlerBusinessV540(pool,input={}){
 
 async function syncLeadCrawlerBusinessesV540(pool,items=[]){
   await ensureNetworkDirectorySchema(pool);
-  const out={synced:0,failed:0,items:[]};
+  const out={synced:0,failed:0,skipped:0,items:[]};
   for(const input of (Array.isArray(items)?items:[]).slice(0,2000)){
-    try{const niche=classifyNetworkNiche(input.niche||input.industry||'');const row=await upsertCanonicalNetworkBusinessV540(pool,{business_name:input.business_name||input.company_name||input.username||input.domain,domain:input.domain||input.website_url,canonical_url:input.canonical_url||input.website_url||null,description:_networkLeadCrawlerPublicDescriptionV542(input),primary_niche:input.primary_niche||niche.main_niche,sub_niche:input.sub_niche||niche.sub_niche,topic_tags:Array.isArray(input.topic_tags)?input.topic_tags:niche.topics,market:input.market||input.country||null,country:input.country||null,language:input.language||null,city:input.city||null,service_area:input.service_area||input.location||null,business_scope:input.business_scope||null,contact_intelligence_id:input.contact_intelligence_id||input.id||null,lead_crawler_token:input.lead_crawler_token||input.token||null,public_visibility:input.public_visibility||'listed',source:'lead_crawler',source_ref:input.source_ref||input.source_url||input.linkedin_url||null,private_lead:{contact_email:input.email||input.contact_email||null,phone:input.phone||null,contact_name:input.contact_name||null,employee_count:Number(input.employee_count||0)||null,source_consent:input.source_consent||null,source_bio:cleanText(input.bio,2400)||null},extra_metadata:{contact_intelligence_source:input.source||null,industry:input.industry||null,lead_crawler_synced_at:new Date().toISOString()}});out.synced++;out.items.push({id:row.id,slug:row.slug,domain:row.domain});}catch(e){out.failed++;if(out.items.length<30)out.items.push({error:cleanText(e&&e.message||e,240),domain:cleanText(input&&input.domain||input&&input.website_url,255)||null});}
+    try{
+      const row=await upsertLeadCrawlerBusiness(pool,input);
+      if(!row){out.skipped++;continue;}
+      out.synced++;
+      out.items.push({id:row.id,slug:row.slug,domain:row.domain});
+    }catch(error){
+      out.failed++;
+      if(out.items.length<30)out.items.push({error:cleanText(error.message||error,240),domain:cleanText(input&&input.domain||input&&input.website_url,255)||null});
+    }
   }
   return out;
 }
