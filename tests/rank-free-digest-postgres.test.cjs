@@ -53,17 +53,21 @@ test('Rank Tracker workers deliver one digest and never retry a round with an un
     await run(firstWorker, day(8), async () => { sends++; throw new Error('Provider reply lost'); });
     await run(secondWorker, day(9), accepted);
     assert.equal(sends, 2);
+    assert.equal((await firstWorker.stats(day(9))).digest_delivery_uncertain, 1);
     // A later complete round can send. An uncertain delivery cannot mark the prior digest as delivered.
     assert.equal((await firstWorker.projectOf(project.account_id)).last_digest_at.toISOString(), day(1).toISOString());
     await complete(day(15));
     await run(secondWorker, day(15), accepted);
     assert.equal(sends, 3);
+    assert.equal((await firstWorker.stats(day(15))).digest_delivery_uncertain, 0);
     await complete(day(22));
     const claims = await Promise.all([firstWorker.claimDigest(project.id, day(22)), secondWorker.claimDigest(project.id, day(22))]);
     assert.deepEqual(claims.sort(), [false, true]);
+    assert.equal((await firstWorker.stats(day(22))).digest_in_progress, 1);
     // A crash after claiming leaves the same durable state even when no callback records the outcome.
     await run(pgStore(pool), day(23), accepted);
     assert.equal(sends, 3);
+    assert.equal((await firstWorker.stats(day(23))).digest_delivery_uncertain, 1);
     assert.equal((await firstWorker.projectOf(project.account_id)).last_digest_at.toISOString(), day(15).toISOString());
   } finally {
     await pool.end();

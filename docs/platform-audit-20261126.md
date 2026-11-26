@@ -29,6 +29,8 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ### Rank Tracker-digest na een workercrash
 
+Rank Tracker Admin toont afzonderlijk recente reserveringen en reserveringen ouder dan één minuut waarvan de aflevering onzeker is. De provider heeft een timeout van tien seconden. De teller gebruikt de bestaande projectrij en telt een onzekere aflevering niet als verzonden.
+
 Twee workers konden op dezelfde voltooide meetronde allebei een digest versturen. De bestaande Rank Tracker-projectrij reserveert de ronde nu atomair vóór verzending. Na een crash of een onzekere providerrespons behoudt PostgreSQL de reservering, zonder het tijdstip van een bevestigde verzending te veranderen. Een bevestigde weigering behoudt de bestaande limiet en wachtperiode. Een latere volledig gemeten ronde kan opnieuw een eigen digest krijgen. De CI-regressie gebruikt geïsoleerd PostgreSQL en een transportstub. Werkelijke bezorging en de Serper-scanplanning over meerdere workers zijn nog niet getoetst.
 
 De goedgekeurde squashmerges #579 (`501462a`), #577 (`e9820ea`) en #578 (`841f9e7`) zijn achtereenvolgens uitgevoerd na groene CI. De regressies op de mergecommits dekten volledige geïsoleerde database-initialisatie, Network Test Lab in Chromium, Proof & History en de gelijktijdige Contact Intelligence-synchronisatie en onderdrukking. De concurrencyregressie van #578 draait ook in de canonieke CI.

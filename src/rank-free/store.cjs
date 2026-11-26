@@ -132,7 +132,9 @@ function pgStore(pool) {
     async stats(now) {
       const r = (await q(`SELECT (SELECT COUNT(*) FROM rank_free_accounts)::int accounts,
         (SELECT COUNT(*) FROM rank_free_accounts WHERE verified_at IS NOT NULL)::int verified,
-        (SELECT COUNT(*) FROM rank_free_keywords WHERE active)::int keywords`, []))[0];
+        (SELECT COUNT(*) FROM rank_free_keywords WHERE active)::int keywords,
+        (SELECT COUNT(*) FROM rank_free_projects WHERE digest_claimed_at>$1::timestamptz-INTERVAL '1 minute')::int digest_in_progress,
+        (SELECT COUNT(*) FROM rank_free_projects WHERE digest_claimed_at<=$1::timestamptz-INTERVAL '1 minute')::int digest_delivery_uncertain`, [now]))[0];
       return { ...r, calls_this_month: await this.usage(now) };
     },
   };
@@ -238,7 +240,13 @@ function memoryStore() {
       const p = db.projects.find(x => x.account_id === a.id);
       if (p) { const ks = db.keywords.filter(k => k.project_id === p.id).map(k => k.id); db.results = db.results.filter(r => !ks.includes(r.keyword_id)); db.keywords = db.keywords.filter(k => k.project_id !== p.id); db.projects = db.projects.filter(x => x !== p); }
       db.accounts = db.accounts.filter(x => x !== a); return true; },
-    async stats(now) { return { accounts: db.accounts.length, verified: db.accounts.filter(a => a.verified_at).length, keywords: db.keywords.filter(k => k.active).length, calls_this_month: await store.usage(now) }; },
+    async stats(now) {
+      const pending = db.projects.filter(p => p.digest_claimed_at);
+      const recent = pending.filter(p => Number(p.digest_claimed_at) > Number(now) - 60000).length;
+      return { accounts: db.accounts.length, verified: db.accounts.filter(a => a.verified_at).length,
+        keywords: db.keywords.filter(k => k.active).length, digest_in_progress: recent,
+        digest_delivery_uncertain: pending.length - recent, calls_this_month: await store.usage(now) };
+    },
   };
   return store;
 }
