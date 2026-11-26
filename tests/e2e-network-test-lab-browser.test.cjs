@@ -66,11 +66,13 @@ test('Network Test Lab completes its stored cross-role journey in Chromium', {
       assert.equal((await transition.json()).all_invariants_pass, true, stage);
     }
 
-    const [restored] = await Promise.all([
-      page.waitForResponse(r => r.url() === api + '/' + fixture && r.request().method() === 'GET'),
-      page.reload()
-    ]);
-    const evidence = await restored.json();
+    await page.reload();
+    await page.waitForFunction(id => {
+      const content = document.getElementById('fixtureJson')?.textContent;
+      if (!content?.trim().startsWith('{')) return false;
+      return String(JSON.parse(content).fixture?.id) === String(id);
+    }, fixture);
+    const evidence = JSON.parse(await page.locator('#fixtureJson').textContent());
     assert.equal(evidence.journey.complete, true);
     assert.equal(evidence.state.publication.placement_status, 'verified');
     assert.deepEqual(evidence.history.map(entry => entry.transition), ['created', ...stages]);
