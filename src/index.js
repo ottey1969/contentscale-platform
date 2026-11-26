@@ -21433,7 +21433,8 @@ async function _ensureContactIntelligenceTablesInit(){
     ['country','TEXT'],['city','TEXT'],['language',"TEXT DEFAULT 'unknown'"],['employee_count','BIGINT DEFAULT 0'],
     ['source_consent','TEXT'],['suppression_reason','TEXT'],['suppression_source','TEXT'],
     ['network_fit_score','SMALLINT DEFAULT 0'],['network_fit_label','TEXT'],['network_fit_evidence',"JSONB DEFAULT '{}'::jsonb"],
-    ['network_publisher_candidate','BOOLEAN DEFAULT FALSE'],['network_vertical','TEXT'],['network_fit_checked_at','TIMESTAMPTZ']
+    ['network_publisher_candidate','BOOLEAN DEFAULT FALSE'],['network_vertical','TEXT'],['network_fit_checked_at','TIMESTAMPTZ'],
+    ['staging_previous_status','TEXT']
   ])await pool.query(`ALTER TABLE contact_intelligence ADD COLUMN IF NOT EXISTS ${col[0]} ${col[1]}`);
   await pool.query(`CREATE TABLE IF NOT EXISTS contact_intelligence_verification_jobs(
     id UUID PRIMARY KEY,status TEXT NOT NULL DEFAULT 'queued',filters JSONB DEFAULT '{}'::jsonb,total BIGINT DEFAULT 0,

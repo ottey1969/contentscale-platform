@@ -5,7 +5,7 @@ const path=require('node:path');
 const {safeWebsite}=require('./lead-crawler-serpapi.cjs');
 const {discoverCompanyContact}=require('./network-business-email-fetch.cjs');
 const {registerNetworkAcquisitionInvitations,websiteEvidence}=require('./network-acquisition-invitations.cjs');
-const {registerContactStagingAdmin}=require('./network-contact-staging-admin.cjs');
+const {registerContactStagingAdmin,setContactStagingArchive}=require('./network-contact-staging-admin.cjs');
 const plain=(x,n=200)=>String(x??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0,n);
 function authorized(req){
  const configured=process.env.LC_ADMIN_CODE||'',submitted=String(req.get('x-admin-code')||'');
@@ -116,11 +116,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   try{
    await ensureContactIntelligence();
    if(action==='archive'||action==='restore'){
-    await pool.query('ALTER TABLE contact_intelligence ADD COLUMN IF NOT EXISTS staging_previous_status text');
-    const sql=action==='archive'
-     ? "UPDATE contact_intelligence SET staging_previous_status=status,status='archived',updated_at=now() WHERE id=ANY($1::bigint[]) AND status NOT IN ('archived','suppressed','promoted') RETURNING id"
-     : "UPDATE contact_intelligence SET status=CASE WHEN staging_previous_status IN ('qualified','needs_review','needs_domain','domain_verified','rejected_personal') THEN staging_previous_status ELSE 'needs_review' END,staging_previous_status=NULL,updated_at=now() WHERE id=ANY($1::bigint[]) AND status='archived' RETURNING id";
-    const result=await pool.query(sql,[ids]);
+    const result=await setContactStagingArchive(pool,ids,{restore:action==='restore'});
     return res.json({ok:true,changed:result.rowCount,skipped:ids.length-result.rowCount});
    }
    await readyDirectory();
