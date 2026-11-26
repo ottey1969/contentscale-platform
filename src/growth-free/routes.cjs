@@ -319,6 +319,7 @@ var REMEMBER=['url','query','market','language','search_location','email'],MEM='
 var savedResultRequest=0;
 function showSavedResult(){
  var box=document.getElementById('existingLocal'),link=document.getElementById('existingLocalLink'),field=document.getElementById('url');if(!box||!link)return;
+ if(new URLSearchParams(location.search).has('gsc_audit'))return;
  var request=++savedResultRequest;
  box.hidden=true;
  try{
@@ -1654,17 +1655,25 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').set('Content-Security-Policy',"frame-ancestors 'none'");
    if(status!=='ACTIVE')return res.status(403).type('html').send(inviteClosed(config,status));
    res.type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',{token:String(req.query.invite),label:'',
-    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req),await existingFor(req,{inviteId:inv.id}),await auditFor(req,{invite:String(req.query.invite)})));
+    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req),...await formEvidence(req,{inviteId:inv.id,invite:String(req.query.invite)})));
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  // The form's language: ?lang=, the rank tracker account's language, the browser's, else English.
  // The latest finished result for the page in ?url=: the owner's (any check) or this invitation's.
- async function existingFor(req,{owner=false,inviteId=null}={}){
-  const u=req.query&&req.query.url;if(!u||typeof storage.latestDoneFor!=='function'||(!owner&&inviteId==null))return null;
+ async function existingFor(req,{owner=false,inviteId=null,audit=null}={}){
+  const u=req.query&&req.query.url;if(!u||(!owner&&inviteId==null))return null;
   const page=validatePublicUrl(u);if(page.error)return null;
-  try{const r=await storage.latestDoneFor(pool,{url:page.url,owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
+  try{
+   let r;
+   if(req.query?.gsc_audit){
+    if(!audit?.upload.gsc_report_id)return null;
+    [r]=await require('./contentscore.cjs').relatedChecks(pool,[page.url],{owner,reportId:audit.upload.gsc_report_id,invite:audit.relatedInvite});
+   }else if(typeof storage.latestDoneFor==='function')r=await storage.latestDoneFor(pool,{url:page.url,owner,inviteId});
+   return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null;
+  }catch(e){return null}
  }
  async function auditFor(req,{owner=false,invite=null}={}){const token=safeToken(req.query?.gsc_audit),pageUrl=String(req.query?.url||'');if(!token||!pageUrl)return null;try{const a=await require('./gsc-audit-handoff.cjs').loadAuditUpload(pool,{token,url:pageUrl,owner,invite});return a?{...a,token,pageUrl}:null}catch(e){return null}}
+ async function formEvidence(req,scope){const audit=await auditFor(req,scope);return [await existingFor(req,{...scope,audit}),audit]}
  const langFor=(req,account=null)=>formLang({query:req.query&&req.query.lang,account,acceptLanguage:req.get&&req.get('accept-language')});
  app.get(basePath,async(req,res)=>{
   // An unapproved public key must not look like a usable check when approval-only mode is enabled.
@@ -1677,12 +1686,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   // The owner (signed in) always gets the form, also on a domain without an access key (the admin page links here).
-  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req),await existingFor(req,{owner:true}),await auditFor(req,{owner:true})));
+  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req),...await formEvidence(req,{owner:true})));
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
   const indexable=!sessionValid(req)&&Object.keys(req.query||{}).every(key=>key==='lang');
-  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').type('html').send(formPage({...config,...entry,htmlLang:langFor(req),indexable},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req),sessionValid(req)?await existingFor(req,{owner:true}):null,await auditFor(req,{owner:sessionValid(req)})));
+  res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').type('html').send(formPage({...config,...entry,htmlLang:langFor(req),indexable},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req),...await formEvidence(req,{owner:sessionValid(req)})));
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())

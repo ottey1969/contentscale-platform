@@ -7,7 +7,7 @@ function auditUpload(row,{url,owner=false,invite=null}={}){
  const p=key&&(rep.pages||[]).find(p=>exact(p.url)===key);
  if(!p||!['EXPORT','PAGE_EXPORT','PAGE_QUERY_EXPORT'].includes(p.source)||p.clicks==null||p.impressions==null)return null;
  const period=rep.kpis?.period||null;
- return {fileName:'GSC Audit: '+String(row.title||'').slice(0,150),upload:{status:'VERIFIED_FOR_PAGE',basis:'GSC_AUDIT_EXACT_PAGE',period,totals:{clicks:p.clicks,impressions:p.impressions,position:p.position??null},queries:Array.isArray(p.queries)?p.queries.slice(0,150):[],uploaded_at:row.created_at,source:'GSC_REPORT',gsc_report_id:row.id||null}};
+ return {fileName:'GSC Audit: '+String(row.title||'').slice(0,150),relatedInvite:row.growth_invite||null,upload:{status:'VERIFIED_FOR_PAGE',basis:'GSC_AUDIT_EXACT_PAGE',period,totals:{clicks:p.clicks,impressions:p.impressions,position:p.position??null},queries:Array.isArray(p.queries)?p.queries.slice(0,150):[],uploaded_at:row.created_at,source:'GSC_REPORT',gsc_report_id:row.id||null}};
 }
 async function loadAuditUpload(pool,{token,url,owner=false,invite=null}){
  if(!token||(!owner&&!invite))return null;

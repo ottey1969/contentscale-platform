@@ -18,7 +18,7 @@ async function relatedChecks(pool,urls,{invite=null,reportId=null,owner=false}={
  const result=await pool.query(`WITH invited AS (
    SELECT id FROM growth_free_invites WHERE token_hash=$1 AND revoked_at IS NULL AND expires_at>NOW()
  )
- SELECT c.url,c.public_id,c.access_key,c.contentscore_history,c.published_on::text,c.published_note,
+ SELECT c.url,c.public_id,c.access_key,c.contentscore_history,c.published_on::text,c.published_note,c.finished_at,
    EXISTS(SELECT 1 FROM invited i WHERE i.id=c.invite_id) AS matching_invite
  FROM growth_free_checks c
  WHERE c.status='DONE' AND c.url=ANY($2::text[])

@@ -55,11 +55,25 @@ test('private research is reusable only through the recorded GSC report or its a
     assert.equal((await forReport(pool, affiliated, false))[url].score, 55);
     assert.equal((await forReport(pool, unrelated, true))[url].score, 97);
 
+    const express = require('express');
+    const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
+    const app = express();
+    app.use(express.json());
+    const adminKey = 'test-owner-session-' + randomBytes(8).toString('hex');
+    registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({}), adminKey } });
+    const browser = require('supertest').agent(app);
+    await browser.post('/api/free-growth/admin/login').send({ key: adminKey }).expect(200);
+    const form = () => browser.get('/free-growth').query({ url, gsc_audit: unrelated.token }).expect(200);
+    await pool.query("UPDATE growth_free_checks SET finished_at=NOW()+interval '1 second' WHERE id=$1", [unbound.id]);
+    assert.ok(!(await form()).text.includes('/r/' + unbound.public_id), 'GSC handoff cannot suggest unbound research');
+
     const linked = await createCheck(url, 'admin', null, 65, 'explicitly linked');
     const source = auditUpload(affiliated, { url, owner: true });
     await growth.saveGscUpload(pool, { checkId: linked.id, ...source });
     const owner = await growthFor(pool, [url], { ...options, owner: true });
     assert.ok(owner.get(url)?.owner_result?.includes(linked.public_id));
+    const scoped = await browser.get('/free-growth').query({ url, gsc_audit: affiliated.token }).expect(200);
+    assert.ok(scoped.text.includes('/r/' + linked.public_id) || scoped.text.includes('/r/' + invited.public_id));
     assert.equal((await growthFor(pool, [url], options)).get(url)?.note, 'invited change');
     assert.deepEqual((await sharedHistory(pool, linked)).map(row => row.score), [45]);
     await gsc.revokeReport(pool, affiliated.id);
