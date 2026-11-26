@@ -4,6 +4,7 @@
 // Never touches Network, Contact Intelligence, CRM, or any database table.
 const crypto=require('node:crypto');
 const cache=new Map();
+const pendingPages=new Map();
 const providerCooldown=new Map();
 function providerFailureReason(status,body,provider){
  const info=String(body?.message||body?.error||'').slice(0,200).replace(/[\r\n]/g,' ');
@@ -124,26 +125,39 @@ function registerLeadCrawlerSerpApi(app,{
     return res.status(503).json({error:'Cannot verify existing Network companies. Try again when Network is available; no duplicate search results were issued.'});
    }
   }
+  const credential=crypto.createHash('sha256').update(primaryKey).digest('hex');
   const query=niche+' businesses in '+scope.location+', USA';
   const seen=new Set(knownDomains),leads=[],failures=[];
   let attempts=0,usedCache=true,provider=null,pagesChecked=0;
   // Serper.dev Maps returns about 20 businesses/page. Continue to the next
   // provider page when earlier results were already imported. Hard cap at 6.
   for(let page=0;page<6&&leads.length<20;page++){
-   const cacheKey=[scope.location.toLowerCase(),niche.toLowerCase(),String(page)].join('|');
+   const cacheKey=[credential,scope.location.toLowerCase(),niche.toLowerCase(),String(page)].join('|');
    const cached=cache.get(cacheKey);
    let rows=null,pageProvider=null;
    if(cached&&cached.until>Date.now()&&cached.provider==='google_maps_serper'&&primaryKey){
     rows=cached.rows;pageProvider=cached.provider;
    }else{
     usedCache=false;
-    if(!providerBlocked('Serper',primaryKey)){
+    let pending=pendingPages.get(cacheKey);
+    if(!pending&&!providerBlocked('Serper',primaryKey)){
      attempts++;
-     try{rows=await querySerper({fetchImpl,key:primaryKey,query,page});pageProvider='google_maps_serper';}
-     catch(err){
+     pending=querySerper({fetchImpl,key:primaryKey,query,page}).then(result=>{
+      cache.set(cacheKey,{until:Date.now()+20*60*1000,rows:result,provider:'google_maps_serper'});
+      if(cache.size>100)cache.delete(cache.keys().next().value);
+      return {rows:result};
+     }).catch(err=>{
       const message=err instanceof ProviderFailure?err.reason:(err?.name==='TimeoutError'?'timeout':'request failed');
-      failures.push('Serper '+message);providerFailed('Serper',primaryKey,message);console.warn('[lead-crawler] Serper provider failed:',message);
-     }
+      providerFailed('Serper',primaryKey,message);
+      console.warn('[lead-crawler] Serper provider failed:',message);
+      return {error:message};
+     }).finally(()=>pendingPages.delete(cacheKey));
+     pendingPages.set(cacheKey,pending);
+    }
+    if(pending){
+     const result=await pending;
+     if(result.error)failures.push('Serper '+result.error);
+     else{rows=result.rows;pageProvider='google_maps_serper';}
     }
     if(rows===null){
      if(!leads.length)return res.status(503).json({
@@ -152,8 +166,6 @@ function registerLeadCrawlerSerpApi(app,{
      });
      break; // Preserve already discovered, source-backed leads.
     }
-    cache.set(cacheKey,{until:Date.now()+20*60*1000,rows,provider:pageProvider});
-    if(cache.size>100)cache.delete(cache.keys().next().value);
    }
    pagesChecked++;
    provider=pageProvider;
