@@ -115,6 +115,38 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       'Filters.csv': 'Filter,Value\nSearch type,Web\nPage,' + URL_ + '\n' }) });
     await p.click('#f button[type=submit]');
     await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 });
+    const oldResult = new URL(p.url());
+    await service.idle();
+    const resume = await ctx.newPage();
+    try {
+      for(const variant of [URL_.replace('/roof-', '/Roof-'), URL_+'?view=alternate', URL_.replace('://', '://www.')]){
+        await resume.goto(base+'/free-growth?key=e2e-open-key-1&url='+encodeURIComponent(variant));
+        assert.equal(await resume.locator('#existingLocal').isVisible(),false,variant);
+      }
+      const historical = require('./fixtures/free-growth-prt-emergency/check.json');
+      await resume.goto(base+'/free-growth?key=e2e-open-key-1&url='+encodeURIComponent(historical.url));
+      assert.equal(await resume.locator('#existingLocal').isVisible(),false,'an existing historical page cannot open a result for another page');
+      await resume.goto(base+'/free-growth?key=e2e-open-key-1&url='+encodeURIComponent(URL_));
+      assert.equal(await resume.locator('#existingLocal').isVisible(),true,'the exact page can reopen its result');
+      await resume.evaluate(({url,result})=>{
+        const oldKey=url.replace(/^https?:[/][/]/,'').replace(/[/]+$/,'').toLowerCase();
+        localStorage.removeItem('growthFreeForm');
+        localStorage.setItem('growthFreeResults',JSON.stringify({[oldKey]:result}));
+      },{url:URL_,result:oldResult.pathname+oldResult.search});
+      await resume.goto(base+'/free-growth?key=e2e-open-key-1');
+      assert.equal(await resume.inputValue('#url'),'');
+      await resume.locator('#existingLocal').waitFor({state:'visible',timeout:4000});
+      const reopened=new URL(await resume.locator('#existingLocalLink').getAttribute('href'),base);
+      assert.equal(reopened.pathname,oldResult.pathname);
+      assert.equal(reopened.searchParams.get('k'),oldResult.searchParams.get('k'));
+      const { latestDoneFor, recentResult }=require('../src/growth-free/store.cjs');
+      assert.ok(await latestDoneFor(pool,{url:URL_,owner:true}));
+      assert.equal(await latestDoneFor(pool,{url:URL_.replace('/roof-', '/Roof-'),owner:true}),null);
+      const {engineVersion}=require('../src/growth-free/engine.cjs');
+      const {rows:[checked]}=await pool.query('SELECT url,query,market,access_label FROM growth_free_checks WHERE public_id=$1',[oldResult.pathname.split('/').pop()]);
+      const reused=await recentResult(pool,{url:checked.url,query:checked.query,market:checked.market,engineVersion:engineVersion(),accessLabel:checked.access_label});
+      assert.equal(Boolean(reused),false,'a report researched with an uploaded Search Console export cannot become a reusable result');
+    } finally { await resume.close(); }
     // 2. The result (Google research done by the real engine).
     await service.idle();
     await p.waitForSelector('#growthOneBrief', { timeout: 60000 });

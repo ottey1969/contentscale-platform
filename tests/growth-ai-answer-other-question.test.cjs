@@ -18,9 +18,9 @@ const GEO_ES='Un consultor GEO trabaja para que tu marca aparezca en las respues
 function app(store){
  const express=require('express');const {registerFreeGrowth,freeGrowthConfig}=require('../src/growth-free/routes.cjs');
  const a=express();a.use(express.json());
- registerFreeGrowth(a,null,{config:{...freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:'open-key-12345'}),perIp:50,daily:50,perEmail:50},storage:store,engine:async()=>({statusCode:200,report:{editorial_decision_gate:{decision:'NO_CHANGE'}}})});
+ registerFreeGrowth(a,null,{config:{...freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:'open-key-12345'}),perIp:50,daily:50,perEmail:2,adminKey:'synthetic-owner-admin-key'},storage:store,engine:async()=>({statusCode:200,report:{editorial_decision_gate:{decision:'NO_CHANGE'}}})});
  const srv=a.listen(0),base='http://127.0.0.1:'+srv.address().port;
- return {srv,post:async(p,b)=>{const r=await fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});return {status:r.status,body:await r.json()}}};
+ return {srv,post:async(p,b,h={})=>{const r=await fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json',...h},body:JSON.stringify(b)});return {status:r.status,body:await r.json()}}};
 }
 test('an answer already saved for another search term is refused with a clear message',async t=>{
  const asked=[];
@@ -28,11 +28,21 @@ test('an answer already saved for another search term is refused with a clear me
   answerUsedForOtherQuery:async(_p,{rawText,query})=>{asked.push(query);return rawText.includes('content cited by AI')?'how to get cited by AI':null},
   createCheck:async()=>{throw new Error('a refused start must not create a check')}};
  const s=app(store);t.after(()=>s.srv.close());
- const r=await s.post('/api/free-growth/checks',{key:'open-key-12345',url:'https://contentscale.site/',query:'content scaling',email:'owner@contentscale.site',consent:true,
-  ai_answers:[{engine:'chatgpt',text:'ANSWER:\n'+CITED+'\n\nRESOURCES:\nhttps://developers.google.com/search/docs'}]});
+ const r=await s.post('/api/free-growth/admin/run',{url:'https://contentscale.site/',query:'content scaling',
+  ai_answers:[{engine:'chatgpt',text:'ANSWER:\n'+CITED+'\n\nRESOURCES:\nhttps://developers.google.com/search/docs'}]},{'x-admin-key':'synthetic-owner-admin-key'});
  assert.equal(r.status,400);
  assert.match(r.body.error,/^ChatGPT Search: This answer is about another question\. It was saved for “how to get cited by AI”, not for “content scaling”\./);
  assert.deepEqual(asked,['content scaling']);
+});
+test('the public start does not look up historical questions without an authenticated research scope',async t=>{
+ let reads=0;
+ const store={ensureTables:async()=>{},usage:async()=>({by_email:1000,by_ip:0,total:0,by_key:0}),recentResult:async()=>null,
+  answerUsedForOtherQuery:async()=>{reads++;return null;}};
+ const s=app(store);t.after(()=>s.srv.close());
+ const r=await s.post('/api/free-growth/checks',{key:'open-key-12345',url:'https://contentscale.site/',query:'content scaling',
+  email:'owner@contentscale.site',consent:true,ai_answers:[{engine:'chatgpt',text:'ANSWER:'+CITED}]});
+ assert.equal(r.status,429,'the request reaches the normal daily cap without consulting another customer');
+ assert.equal(reads,0);
 });
 test('an answer with synonyms is still accepted: vocabulary alone never refuses',()=>{
  const v=ai.validateGrowthAnswer('Several roofers in New Jersey answer calls at night and tarp a leaking roof the same evening.','emergency roof repair nj','Who does emergency roof repair in NJ at night?');
@@ -49,11 +59,17 @@ test('PostgreSQL: the same text saved for another question is found; the same qu
   await store.ensureTables(pool);
   const mk=async q=>{const c=await store.createCheck(pool,{email:'test@example.org',ipHash:'x',url:'https://example.org/p/',host:'example.org',query:q,marketingConsent:false,accessLabel:'test'});ids.push(c.id);return c};
   const a=await mk('how to get cited by AI'),b=await mk('content scaling');
+  await pool.query('UPDATE growth_free_checks SET access_label=$2 WHERE id=$1',[a.id,'admin']);
   await store.saveAiAnswer(pool,{checkId:a.id,engine:'chatgpt',rawText:'  '+CITED+'\n',parsed:{}});
-  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'content scaling'}),'how to get cited by AI');
-  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'How to get cited by AI '}),null,'same question');
-  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:SCALING,query:'content scaling'}),null,'another text');
-  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:a.id,rawText:CITED,query:'content scaling'}),null,'its own check');
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'content scaling'}),null);
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'content scaling',owner:true}),'how to get cited by AI');
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'content scaling',inviteId:999999}),null);
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'How to get cited by AI ',owner:true}),null,'same question');
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:SCALING,query:'content scaling',owner:true}),null,'another text');
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:a.id,rawText:CITED,query:'content scaling',owner:true}),null,'its own check');
+  await pool.query("UPDATE growth_free_checks SET access_label='invite: test', invite_id=$2 WHERE id=$1",[a.id,123]);
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'content scaling',inviteId:123}),'how to get cited by AI');
+  assert.equal(await store.answerUsedForOtherQuery(pool,{checkId:b.id,rawText:CITED,query:'content scaling',inviteId:124}),null);
  }finally{if(ids.length)await pool.query('DELETE FROM growth_free_checks WHERE id=ANY($1)',[ids]);await pool.end()}
 });
 

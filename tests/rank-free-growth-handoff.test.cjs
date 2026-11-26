@@ -107,7 +107,7 @@ test('rank tracker → free Growth check: topic, e-mail, best customer question,
     void project;
   } finally {
     await browser.close(); srv.close();
-    if (growth && growth.stop) growth.stop();
+    await growth.idle();
     await pool.query("DELETE FROM growth_free_checks WHERE email LIKE 'test-%@acme-geo.example'").catch(() => {});
     await pool.end();
   }
@@ -153,8 +153,7 @@ test('a valid handoff is access of its own: also with personal approval required
     const again = await request(app).post('/api/free-growth/checks').send(body({}));
     assert.equal(again.status, 429); assert.match(again.body.error, /used the 1 free Growth checks from your rank tracker for this week/);
   } finally {
-    if (growth && growth.stop) growth.stop();
-    await new Promise(x => setTimeout(x, 300));
+    await growth.idle();
     await pool.query("DELETE FROM growth_free_checks WHERE email LIKE 'test-%@acme-geo.example'").catch(() => {});
     await pool.end();
   }

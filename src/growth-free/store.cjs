@@ -30,6 +30,8 @@ function ensureTables(pool){
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ)`);
   await addColumn('access_label','TEXT');
+  // Historical rows have no trusted record of the inputs used to build their report.
+  await addColumn('cache_eligible','BOOLEAN NOT NULL DEFAULT FALSE');
   // The visitor said at the start that there is no Search Console for this page (owner 2026-11-19): do not ask again.
   await addColumn('gsc_declined','BOOLEAN NOT NULL DEFAULT FALSE');
   await addColumn('invite_id','BIGINT');
@@ -147,19 +149,20 @@ async function usage(pool,{email,ipHash,accessLabel=null}){
 }
 
 // Only a result made by the same research code (engineVersion) is reused; older results are researched again.
-async function recentResult(pool,{url,query,market=null,engineVersion=null}){
- if(!engineVersion)return null;
+async function recentResult(pool,{url,query,market=null,engineVersion=null,accessLabel=null,inviteId=null}){
+ if(!engineVersion||!accessLabel)return null;
  return (await pool.query(`SELECT id,decision,summary,report FROM growth_free_checks
-   WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND report->>'engine_version'=$4 AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion])).rows[0]||null;
+   WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND report->>'engine_version'=$4 AND status='DONE' AND cache_eligible=TRUE AND access_label=$5
+     AND invite_id IS NOT DISTINCT FROM $6::bigint AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion,accessLabel,inviteId])).rows[0]||null;
 }
 
-async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null,uiLang=null,gscDeclined=false}){
+async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,cacheEligible=false,accessLabel=null,inviteId=null,market=null,uiLang=null,gscDeclined=false}){
  const row=(await pool.query(`INSERT INTO growth_free_checks
-   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market,emails)
-   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb)
+   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market,emails,cache_eligible)
+   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb,$19)
    RETURNING id,public_id,access_key,status`,
   [token(9),token(18),email,ipHash,url,host,query,cached?'DONE':'QUEUED',cached?cached.decision:null,
-   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null),JSON.stringify(emails&&emails.length>1?emails:null)])).rows[0];
+   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null),JSON.stringify(emails&&emails.length>1?emails:null),cacheEligible===true])).rows[0];
  if(row&&uiLang)await pool.query('UPDATE growth_free_checks SET ui_lang=$2 WHERE id=$1',[row.id,uiLang]);
  if(row&&uiLang)row.ui_lang=uiLang;
  if(row&&gscDeclined){await pool.query('UPDATE growth_free_checks SET gsc_declined=TRUE WHERE id=$1',[row.id]);row.gsc_declined=true}
@@ -288,10 +291,12 @@ async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
 }
 // The same answer text already saved for a check with another customer question (owner 2026-11-20: answers from an earlier
 // check ended up in a check about something else). Returns that other question, or null.
-async function answerUsedForOtherQuery(pool,{checkId,rawText,query}){
+async function answerUsedForOtherQuery(pool,{checkId,rawText,query,owner=false,inviteId=null}){
+ if(!owner&&inviteId==null)return null;
  const r=await pool.query(`SELECT c.query FROM growth_free_ai_answers a JOIN growth_free_checks c ON c.id=a.check_id
   WHERE a.check_id<>$1 AND btrim(a.raw_text,E' \t\r\n')=btrim($2,E' \t\r\n') AND btrim(c.query)<>'' AND lower(btrim(c.query))<>lower(btrim($3))
-  ORDER BY a.created_at DESC LIMIT 1`,[Number(checkId)||0,String(rawText||''),String(query||'')]);
+  AND (($4::boolean AND c.access_label='admin') OR ($5::bigint IS NOT NULL AND c.invite_id=$5))
+  ORDER BY a.created_at DESC LIMIT 1`,[Number(checkId)||0,String(rawText||''),String(query||''),!!owner,inviteId]);
  return r.rows[0]?r.rows[0].query:null;
 }
 // Transfer answers only when BOTH result capabilities are presented and the route
@@ -355,13 +360,13 @@ async function revokeInvite(pool,id){
 async function latestDoneFor(pool,{url,inviteId=null,owner=false}){
  if(!owner&&inviteId==null)return null;
  return (await pool.query(`SELECT public_id,access_key,finished_at,published_on::text AS published_on FROM growth_free_checks
-   WHERE status='DONE' AND lower(rtrim(url,'/'))=lower(rtrim($1,'/')) AND ($2::boolean OR invite_id=$3) ORDER BY finished_at DESC NULLS LAST LIMIT 1`,[String(url||''),!!owner,inviteId])).rows[0]||null;
+   WHERE status='DONE' AND url=$1 AND ($2::boolean OR invite_id=$3) ORDER BY finished_at DESC NULLS LAST LIMIT 1`,[String(url||''),!!owner,inviteId])).rows[0]||null;
 }
 // Only publication-confirmed checks of the same owner/invitation, exact page and market.
 async function treatedQuestions(pool,{url,market=null,owner=false,inviteId=null}){
  if(!owner&&inviteId==null)return [];
  const result=await pool.query(`SELECT query,report->'customer_question'->>'text' AS question FROM growth_free_checks
- WHERE status='DONE' AND published_on IS NOT NULL AND rtrim(url,'/')=rtrim($1,'/')
+ WHERE status='DONE' AND published_on IS NOT NULL AND url=$1
  AND COALESCE(market,'null'::jsonb)=$2::jsonb
  AND (($3::boolean AND access_label='admin') OR ($4::bigint IS NOT NULL AND invite_id=$4))`,[url,JSON.stringify(market||null),owner,inviteId]);
  return [...new Set(result.rows.map(r=>r.question||r.query).filter(Boolean))];

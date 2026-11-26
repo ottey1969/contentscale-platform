@@ -304,7 +304,9 @@ function simpleFromTracker(d){try{
 }catch(e){}}
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 // A result this browser already started for the page in the address: offered on top of the form (owner 2026-11-22).
-function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://');if(i>=0)u=u.slice(i+3);if(u.indexOf('www.')===0)u=u.slice(4);u=u.split('#')[0].split('?')[0];while(u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u}
+${validatePublicUrl.toString()}
+function normPage(u){return validatePublicUrl(u).url||''}
+function legacyPageKey(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://');if(i>=0)u=u.slice(i+3);if(u.indexOf('www.')===0)u=u.slice(4);u=u.split('#')[0].split('?')[0];while(u.charAt(u.length-1)==='/')u=u.slice(0,-1);return u}
 
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
@@ -314,16 +316,42 @@ function normPage(u){u=String(u||'').trim().toLowerCase();var i=u.indexOf('://')
 var REMEMBER=['url','query','market','language','search_location','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
 // Reopen a saved result from this browser, also on the bare landing URL.
+var savedResultRequest=0;
 function showSavedResult(){
  var box=document.getElementById('existingLocal'),link=document.getElementById('existingLocalLink'),field=document.getElementById('url');if(!box||!link)return;
+ var request=++savedResultRequest;
  box.hidden=true;
  try{
-  var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),u=field&&field.value||new URLSearchParams(location.search).get('url')||'',r=u?M[normPage(u)]:null;
-  if(!u){var keys=Object.keys(M);r=keys.length?M[keys[keys.length-1]]:null}
+  var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}'),u=field&&field.value||new URLSearchParams(location.search).get('url')||'';
+  var identity=normPage(u);
+  if(u&&!identity)return;
+  var keys=Object.keys(M),savedKey=identity||keys[keys.length-1];
+  if(identity&&!M[savedKey])savedKey=legacyPageKey(u);
+  var r=M[savedKey],legacy=savedKey!==normPage(savedKey);
   if(typeof r!=='string'||!r.startsWith('/')||r.startsWith('//'))return;
   var dest=new URL(r,location.origin),prefix=${js(base)}+'/r/';
   if(dest.origin!==location.origin||!dest.pathname.startsWith(prefix)||!dest.searchParams.get('k'))return;
-  dest.searchParams.set('lang',${js(lang)});link.href=dest.pathname+dest.search;box.hidden=false;
+  var show=function(){
+    if(savedResultRequest!==request)return;
+    dest.searchParams.set('lang',${js(lang)});link.href=dest.pathname+dest.search;box.hidden=false;
+  };
+  if(!legacy){show();return;}
+  var id=dest.pathname.slice(prefix.length);
+  if(!/^[A-Za-z0-9_-]+$/.test(id))return;
+  fetch(${js(api)}+'/checks/'+id+'?identity=page&k='+encodeURIComponent(dest.searchParams.get('k')),{cache:'no-store'})
+   .then(function(res){return res.ok?res.json():null;})
+   .then(function(data){
+    var savedIdentity=data&&normPage(data.url);
+    if(!savedIdentity||legacyPageKey(savedIdentity)!==savedKey||(identity&&savedIdentity!==identity)||savedResultRequest!==request)return;
+    try{
+      var latest=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');
+      if(latest[savedKey]===r&&!latest[savedIdentity]){
+        latest[savedIdentity]=r;delete latest[savedKey];
+        localStorage.setItem('growthFreeResults',JSON.stringify(latest));
+      }
+    }catch(e){}
+    show();
+   }).catch(function(){});
  }catch(e){}
 }
 showSavedResult();var savedResultField=document.getElementById('url');if(savedResultField){savedResultField.addEventListener('input',showSavedResult);savedResultField.addEventListener('change',showSavedResult)}
@@ -1633,7 +1661,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  // The latest finished result for the page in ?url=: the owner's (any check) or this invitation's.
  async function existingFor(req,{owner=false,inviteId=null}={}){
   const u=req.query&&req.query.url;if(!u||typeof storage.latestDoneFor!=='function'||(!owner&&inviteId==null))return null;
-  try{const r=await storage.latestDoneFor(pool,{url:String(u).slice(0,500),owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
+  const page=validatePublicUrl(u);if(page.error)return null;
+  try{const r=await storage.latestDoneFor(pool,{url:page.url,owner,inviteId});return r?{url:basePath+'/r/'+encodeURIComponent(r.public_id)+'?k='+encodeURIComponent(r.access_key),finished_at:r.finished_at,published_on:r.published_on}:null}catch(e){return null}
  }
  async function auditFor(req,{owner=false,invite=null}={}){const token=safeToken(req.query?.gsc_audit),pageUrl=String(req.query?.url||'');if(!token||!pageUrl)return null;try{const a=await require('./gsc-audit-handoff.cjs').loadAuditUpload(pool,{token,url:pageUrl,owner,invite});return a?{...a,token,pageUrl}:null}catch(e){return null}}
  const langFor=(req,account=null)=>formLang({query:req.query&&req.query.lang,account,acceptLanguage:req.get&&req.get('accept-language')});
@@ -1697,7 +1726,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // The owner, signed in with the admin key on this browser: no daily limits, AI writing as for the owner's checks.
    // Cookie-based, so it needs the custom header another website cannot send (CSRF), as every owner action.
    if(sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin'){
-    const input=readInput(b,res);if(!input)return;if(await refuseReusedAnswers(input.aiAnswers,input.query,res))return;
+    const input=readInput(b,res);if(!input)return;
     await storage.ensureTables(pool);
     return await start(res,input,{accessLabel:'admin',marketingConsent:tipsOf(b),fresh:b.fresh===true});
    }
@@ -1717,21 +1746,19 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const query=clean(b.query,300),topic=query?'':clean(b.topic,120);
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
-   if(await refuseReusedAnswers(aiAnswers,clean(b.query,300),res))return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
    const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
-   // A verified Search Console export changes the research, so a stored result without it is not reused.
-   // A topic from the rank tracker leads to its own customer question, so a stored result for the page is not reused.
-   const cached=(gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE')||sitemap||topic?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
+   const cacheEligible=!gsc&&!sitemap&&!topic&&!aiAnswers.length;
+   const cached=cacheEligible?await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion(),accessLabel:entry.label}):null;
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,cacheEligible,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
@@ -1771,12 +1798,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  }
  // An answer whose exact text was saved for another customer question is an answer to that question, not to this one.
  const otherQuestionMessage=(label,other,query)=>label+': This answer is about another question. It was saved for “'+other+'”, not for “'+query+'”. Ask the AI system the prompt shown for this search term and paste that answer.';
- async function otherQueryOf(checkId,text,query){
-  if(!query||typeof storage.answerUsedForOtherQuery!=='function')return null;
-  try{return await storage.answerUsedForOtherQuery(pool,{checkId,rawText:text,query})}catch{return null}
+ async function otherQueryOf(checkId,text,query,{owner=false,inviteId=null}={}){
+  if((!owner&&inviteId==null)||!query||typeof storage.answerUsedForOtherQuery!=='function')return null;
+  try{return await storage.answerUsedForOtherQuery(pool,{checkId,rawText:text,query,owner,inviteId})}catch{return null}
  }
- async function refuseReusedAnswers(list,query,res){
-  for(const x of list||[]){const other=await otherQueryOf(0,x.text,query);
+ async function refuseReusedAnswers(list,query,res,scope){
+  for(const x of list||[]){const other=await otherQueryOf(0,x.text,query,scope);
    if(other){res.status(400).json({success:false,error:otherQuestionMessage((ai.ENGINES.find(e=>e.id===x.engine)||{}).label||x.engine,other,query)});return true}}
   return false;
  }
@@ -1830,26 +1857,27 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {auditToken:safeToken(b.gsc_audit),email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,gscDeclined:b.no_gsc===true&&!gsc,sitemap,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false,inviteToken=null}){
+  if(await refuseReusedAnswers(input.aiAnswers,input.query,res,{owner:accessLabel==='admin',inviteId}))return;
   if(input.auditToken&&!input.gsc){const a=await require('./gsc-audit-handoff.cjs').loadAuditUpload(pool,{token:input.auditToken,url:input.url,owner:accessLabel==='admin',invite:inviteToken});if(!a)return res.status(409).json({success:false,error:'The GSC Audit data is unavailable for this exact page. Reopen the audit or upload the page export.'});input.gsc=a;input.gscDeclined=false;}
   // fresh: admin only, researches again even when a stored result exists.
   // A verified Search Console export changes the research, so a stored result without it is not reused.
   const treated=await treatedFor({url:input.url,market:input.market,owner:accessLabel==='admin',inviteId});
   if(input.query&&treated.some(q=>questionKey(q)===questionKey(input.query)))return res.status(409).json({success:false,code:'QUESTION_ALREADY_TREATED',error:'This question has already been published for this page and market. Choose a different customer question.'});
-  const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
-  const cached=fresh||withGsc||input.sitemap||input.topic||(!input.query&&treated.length)?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  const cacheEligible=!input.gsc&&!input.sitemap&&!input.topic&&!input.aiAnswers.length&&!input.rankRef&&(Boolean(input.query)||!treated.length);
+  const cached=!fresh&&cacheEligible?await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion(),accessLabel,inviteId}):null;
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
-  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null,gscDeclined:!!input.gscDeclined});
+  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,cacheEligible,accessLabel,inviteId,market:input.market,uiLang:input.uiLang||null,gscDeclined:!!input.gscDeclined});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscAudit:input.gsc?.upload?.source==='GSC_REPORT'?input.gsc.upload:null,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscAudit:input.gsc?.upload?.source==='GSC_REPORT'?input.gsc.upload:null,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
  // account must be among the addresses (the result and the reminder go to it); its own weekly limit and the daily total.
  async function startRankCheck(req,res,b,rk){
-  const input=readInput(b,res);if(!input)return;if(await refuseReusedAnswers(input.aiAnswers,input.query,res))return;
+  const input=readInput(b,res);if(!input)return;
   if(!input.emails.includes(String(rk.account.email).toLowerCase()))return res.status(403).json({success:false,error:'Use the e-mail address of your rank tracker ('+maskEmail(rk.account.email)+').'});
   // A signed handoff belongs to the confirmed site's host and tracked keyword, not just the email.
   // Reject other websites before creating an expensive check or linking publication to this keyword.
@@ -1866,7 +1894,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:!!(rk.account&&rk.account.marketing_consent),accessLabel:'rank-tracker'});
  }
  async function startInviteCheck(req,res,b){
-  const input=readInput(b,res);if(!input)return;if(await refuseReusedAnswers(input.aiAnswers,input.query,res))return;
+  const input=readInput(b,res);if(!input)return;
   await storage.ensureTables(pool);
   const inv=await storage.getInvite(pool,b.invite),status=store.inviteStatus(inv);
   if(status!=='ACTIVE')return res.status(403).json({success:false,error:INVITE_TEXT[status]});
@@ -1948,6 +1976,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:withStyle(viewOf(row.written))});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
+  if(req.query.identity==='page')return res.set('Cache-Control','no-store').json({success:true,url:row.url});
   const [aiPart,gscPart,bestOwn]=await Promise.all([aiFor(row),gscFor(row),bestOwnFor(row)]);
   // AI-written topic names in the language of the check (phase 2 of "Spanish is Spanish"); quotes stay as written.
   let shown={summary:row.summary,aiGap:aiPart&&aiPart.gap};
@@ -2295,7 +2324,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(ai.otherPrompt(text))return res.status(400).json({success:false,error:'This is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here, paste it into a new chat with web search on, and paste that answer.'});
    const parsed=ai.parseAiAnswer(text,{pageUrl:row.url,query:searchTermOf(row),question:(aiQuestionOf(row)||{}).text});
    if(parsed.validation_status==='invalid')return res.status(400).json({success:false,error:parsed.error_message||'This is not an answer to the search term.'});
-   {const other=await otherQueryOf(row.id,text,searchTermOf(row));if(other)return res.status(400).json({success:false,error:otherQuestionMessage((ai.ENGINES.find(e=>e.id===engine)||{}).label||engine,other,searchTermOf(row))})}
+   {const other=await otherQueryOf(row.id,text,searchTermOf(row),{owner:sessionValid(req),inviteId:row.invite_id});if(other)return res.status(400).json({success:false,error:otherQuestionMessage((ai.ENGINES.find(e=>e.id===engine)||{}).label||engine,other,searchTermOf(row))})}
    await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
    const aiPart=await aiFor(row,{waitGap:true});
    res.json({success:true,engine,parsed:{sources:parsed.sources.length,resources_status:parsed.resources_status,verifiable:parsed.sources_verifiable,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited,own_url_mentioned_not_cited:parsed.own_url_mentioned_not_cited},
@@ -2365,7 +2394,6 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     await storage.ensureTables(pool);
     const market=readMarket(b,res);if(market===undefined)return;
     const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
-    if(await refuseReusedAnswers(aiAnswers,clean(b.query,300),res))return;
     await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,300),market,aiAnswers},{accessLabel:'admin',fresh:b.fresh===true});
    }catch(e){console.error('[free-growth] admin run failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
   });
