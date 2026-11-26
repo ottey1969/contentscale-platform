@@ -246,6 +246,7 @@ $('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forg
 function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStore(pool), fetchImpl = global.fetch, sendEmail = null, now = () => new Date() } = {}) {
   if (!config.enabled) return null;
   const send = sendEmail || brevo(fetchImpl);
+  const sendDigest = sendEmail || brevo(fetchImpl, { classify: true });
   const handoff = require('./handoff.cjs').rankHandoff({ store });
   const emailReady = () => !!sendEmail || !!process.env.BREVO_API_KEY;
   const html = (res, body, code = 200) => res.status(code).set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').set('Content-Security-Policy', "frame-ancestors 'none'").type('html').send(body);
@@ -266,7 +267,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
   const runRound = () => kick || (kick = (async () => {
     try { await runDue({ store, key: config.serperKey, fetchImpl, now: now(), monthlyCap: config.monthlyCap });
-      await sendDigests({ store, send, baseUrl: config.baseUrl, growthUrl: config.growthUrl, growthLinks: config.growthLinks, callUrl: config.callUrl, now: now() }); } catch (e) { console.warn('[rank-free] round failed', e && e.message); }
+      await sendDigests({ store, send: sendDigest, baseUrl: config.baseUrl, growthUrl: config.growthUrl, growthLinks: config.growthLinks, callUrl: config.callUrl, now: now() }); } catch (e) { console.warn('[rank-free] round failed', e && e.message); }
     finally { kick = null; }
   })());
 

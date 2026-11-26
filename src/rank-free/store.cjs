@@ -7,6 +7,11 @@ const crypto = require('node:crypto');
 const hash = s => crypto.createHash('sha256').update(String(s)).digest('hex');
 const token = () => crypto.randomBytes(24).toString('base64url');
 const month = d => d.toISOString().slice(0, 7);
+const DIGEST_READY = `a.verified_at IS NOT NULL AND a.opted_out_at IS NULL
+  AND EXISTS(SELECT 1 FROM rank_free_keywords k WHERE k.project_id=p.id AND k.active)
+  AND NOT EXISTS(SELECT 1 FROM rank_free_keywords k WHERE k.project_id=p.id AND k.active AND
+    (k.last_checked_at IS NULL OR k.last_checked_at<=COALESCE(GREATEST(p.last_digest_at,p.digest_claimed_at),'epoch')))
+  AND (p.digest_fail_at IS NULL OR p.digest_fail_at<=$1::timestamptz-INTERVAL '1 hour')`;
 
 function pgStore(pool) {
   let ensured = null;
@@ -47,6 +52,7 @@ function pgStore(pool) {
     // A digest that could not be sent is tried again a limited number of times (see runner.cjs).
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS digest_fail_count INTEGER NOT NULL DEFAULT 0");
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS digest_fail_at TIMESTAMPTZ");
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS digest_claimed_at TIMESTAMPTZ");
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_results_kw_idx ON rank_free_results(keyword_id, checked_at DESC)');
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_keywords_due_idx ON rank_free_keywords(next_check_at) WHERE active');
     await pool.query(`CREATE TABLE IF NOT EXISTS rank_free_usage(month TEXT PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0)`);
@@ -102,21 +108,33 @@ function pgStore(pool) {
     async usage(now) { return Number(((await q('SELECT calls FROM rank_free_usage WHERE month=$1', [month(now)]))[0] || { calls: 0 }).calls); },
     async addUsage(now, n) { await q('INSERT INTO rank_free_usage(month,calls) VALUES($1,$2) ON CONFLICT(month) DO UPDATE SET calls=rank_free_usage.calls+EXCLUDED.calls', [month(now), n]); },
     async digestReady(now) {
-      // A project is ready for its e-mail when every active keyword has a result newer than the last e-mail.
+      // Each active keyword must have been checked since the last digest or an uncertain attempt.
       return q(`SELECT p.*, a.email, a.lang, a.dashboard_nonce FROM rank_free_projects p JOIN rank_free_accounts a ON a.id=p.account_id
-        WHERE a.verified_at IS NOT NULL AND a.opted_out_at IS NULL
-          AND EXISTS(SELECT 1 FROM rank_free_keywords k WHERE k.project_id=p.id AND k.active)
-          AND NOT EXISTS(SELECT 1 FROM rank_free_keywords k WHERE k.project_id=p.id AND k.active AND (k.last_checked_at IS NULL OR k.last_checked_at<=COALESCE(p.last_digest_at,'epoch')))
-          AND (p.digest_fail_at IS NULL OR p.digest_fail_at<=$1::timestamptz-INTERVAL '1 hour')`, [now]);
+        WHERE ${DIGEST_READY}`, [now]);
     },
-    async markDigest(projectId, now) { await q('UPDATE rank_free_projects SET last_digest_at=$2, digest_fail_count=0, digest_fail_at=NULL WHERE id=$1', [projectId, now]); },
-    async markDigestFailed(projectId, now) { return Number(((await q('UPDATE rank_free_projects SET digest_fail_count=COALESCE(digest_fail_count,0)+1, digest_fail_at=$2 WHERE id=$1 RETURNING digest_fail_count', [projectId, now]))[0] || {}).digest_fail_count || 0); },
+    async claimDigest(projectId, now) {
+      return (await q(`UPDATE rank_free_projects p SET digest_claimed_at=$1,
+        digest_fail_count=CASE WHEN p.digest_claimed_at IS NULL THEN p.digest_fail_count ELSE 0 END
+        FROM rank_free_accounts a WHERE p.id=$2 AND a.id=p.account_id AND ${DIGEST_READY}
+        RETURNING p.id`, [now, projectId])).length > 0;
+    },
+    async markDigest(projectId, now) {
+      await q(`UPDATE rank_free_projects SET last_digest_at=$2,digest_claimed_at=NULL,digest_fail_count=0,digest_fail_at=NULL
+        WHERE id=$1 AND (digest_claimed_at=$2 OR (digest_claimed_at IS NULL AND digest_fail_at=$2))`, [projectId, now]);
+    },
+    async markDigestFailed(projectId, now) {
+      const [row] = await q(`UPDATE rank_free_projects SET digest_fail_count=digest_fail_count+1,digest_fail_at=$2,digest_claimed_at=NULL
+        WHERE id=$1 AND digest_claimed_at=$2 RETURNING digest_fail_count`, [projectId, now]);
+      return row?.digest_fail_count || 0;
+    },
     async optOut(dashboardNonce, now) { return (await q('UPDATE rank_free_accounts SET opted_out_at=$2 WHERE dashboard_nonce=$1 RETURNING id', [dashboardNonce, now])).length > 0; },
     async forget(dashboardNonce) { return (await q('DELETE FROM rank_free_accounts WHERE dashboard_nonce=$1 RETURNING id', [dashboardNonce])).length > 0; },
     async stats(now) {
       const r = (await q(`SELECT (SELECT COUNT(*) FROM rank_free_accounts)::int accounts,
         (SELECT COUNT(*) FROM rank_free_accounts WHERE verified_at IS NOT NULL)::int verified,
-        (SELECT COUNT(*) FROM rank_free_keywords WHERE active)::int keywords`, []))[0];
+        (SELECT COUNT(*) FROM rank_free_keywords WHERE active)::int keywords,
+        (SELECT COUNT(*) FROM rank_free_projects WHERE digest_claimed_at>$1::timestamptz-INTERVAL '1 minute')::int digest_in_progress,
+        (SELECT COUNT(*) FROM rank_free_projects WHERE digest_claimed_at<=$1::timestamptz-INTERVAL '1 minute')::int digest_delivery_uncertain`, [now]))[0];
       return { ...r, calls_this_month: await this.usage(now) };
     },
   };
@@ -129,6 +147,14 @@ const CONFIRM_REUSE_MS = 7 * 86400000;
 function memoryStore() {
   const db = { accounts: [], projects: [], keywords: [], results: [], usage: {} };
   let id = 1;
+  function readyForDigest(p, now) {
+    if (p.digest_fail_at && p.digest_fail_at > new Date(now.getTime() - 3600e3)) return false;
+    const a = db.accounts.find(x => x.id === p.account_id);
+    if (!a.verified_at || a.opted_out_at) return false;
+    const ks = db.keywords.filter(k => k.project_id === p.id && k.active);
+    const last = Math.max(+(p.last_digest_at || 0), +(p.digest_claimed_at || 0));
+    return ks.length > 0 && ks.every(k => k.last_checked_at && k.last_checked_at > last);
+  }
   const store = {
     db,
     async signupsSince(ipHash, since) { return db.accounts.filter(a => a.ip_hash === ipHash && a.created_at >= since).length; },
@@ -185,21 +211,42 @@ function memoryStore() {
     async usage(now) { return db.usage[month(now)] || 0; },
     async addUsage(now, n) { db.usage[month(now)] = (db.usage[month(now)] || 0) + n; },
     async digestReady(now = new Date()) {
-      return db.projects.filter(p => {
-        if (p.digest_fail_at && p.digest_fail_at > new Date(now.getTime() - 3600e3)) return false;
-        const a = db.accounts.find(x => x.id === p.account_id); if (!a.verified_at || a.opted_out_at) return false;
-        const ks = db.keywords.filter(k => k.project_id === p.id && k.active);
-        return ks.length && ks.every(k => k.last_checked_at && (!p.last_digest_at || k.last_checked_at > p.last_digest_at));
-      }).map(p => { const a = db.accounts.find(x => x.id === p.account_id); return { ...p, email: a.email, lang: a.lang, dashboard_nonce: a.dashboard_nonce }; });
+      return db.projects.filter(p => readyForDigest(p, now))
+        .map(p => { const a = db.accounts.find(x => x.id === p.account_id); return { ...p, email: a.email, lang: a.lang, dashboard_nonce: a.dashboard_nonce }; });
     },
-    async markDigest(projectId, now) { Object.assign(db.projects.find(p => p.id === projectId), { last_digest_at: now, digest_fail_count: 0, digest_fail_at: null }); },
-    async markDigestFailed(projectId, now) { const p = db.projects.find(x => x.id === projectId); p.digest_fail_count = (p.digest_fail_count || 0) + 1; p.digest_fail_at = now; return p.digest_fail_count; },
+    async claimDigest(projectId, now) {
+      const p = db.projects.find(x => x.id === projectId);
+      if (!p || !readyForDigest(p, now)) return false;
+      if (p.digest_claimed_at) p.digest_fail_count = 0;
+      p.digest_claimed_at = now;
+      return true;
+    },
+    async markDigest(projectId, now) {
+      const p = db.projects.find(x => x.id === projectId);
+      if (p?.digest_claimed_at === now || (p?.digest_claimed_at == null && p?.digest_fail_at === now)) {
+        Object.assign(p, { last_digest_at: now, digest_claimed_at: null, digest_fail_count: 0, digest_fail_at: null });
+      }
+    },
+    async markDigestFailed(projectId, now) {
+      const p = db.projects.find(x => x.id === projectId);
+      if (p?.digest_claimed_at !== now) return 0;
+      p.digest_fail_count = (p.digest_fail_count || 0) + 1;
+      p.digest_fail_at = now;
+      p.digest_claimed_at = null;
+      return p.digest_fail_count;
+    },
     async optOut(h, now) { const a = db.accounts.find(x => x.dashboard_nonce === h); if (a) a.opted_out_at = now; return !!a; },
     async forget(h) { const a = db.accounts.find(x => x.dashboard_nonce === h); if (!a) return false;
       const p = db.projects.find(x => x.account_id === a.id);
       if (p) { const ks = db.keywords.filter(k => k.project_id === p.id).map(k => k.id); db.results = db.results.filter(r => !ks.includes(r.keyword_id)); db.keywords = db.keywords.filter(k => k.project_id !== p.id); db.projects = db.projects.filter(x => x !== p); }
       db.accounts = db.accounts.filter(x => x !== a); return true; },
-    async stats(now) { return { accounts: db.accounts.length, verified: db.accounts.filter(a => a.verified_at).length, keywords: db.keywords.filter(k => k.active).length, calls_this_month: await store.usage(now) }; },
+    async stats(now) {
+      const pending = db.projects.filter(p => p.digest_claimed_at);
+      const recent = pending.filter(p => Number(p.digest_claimed_at) > Number(now) - 60000).length;
+      return { accounts: db.accounts.length, verified: db.accounts.filter(a => a.verified_at).length,
+        keywords: db.keywords.filter(k => k.active).length, digest_in_progress: recent,
+        digest_delivery_uncertain: pending.length - recent, calls_this_month: await store.usage(now) };
+    },
   };
   return store;
 }

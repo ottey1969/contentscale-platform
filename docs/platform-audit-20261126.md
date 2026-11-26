@@ -27,6 +27,11 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ## Auditmatrix
 
+### Rank Tracker-digest na een workercrash
+
+Rank Tracker Admin toont afzonderlijk recente reserveringen en reserveringen ouder dan één minuut waarvan de aflevering onzeker is. De provider heeft een timeout van tien seconden. De teller gebruikt de bestaande projectrij en telt een onzekere aflevering niet als verzonden.
+
+Twee workers konden op dezelfde voltooide meetronde allebei een digest versturen. De bestaande Rank Tracker-projectrij reserveert de ronde nu atomair vóór verzending. Na een crash of een onzekere providerrespons behoudt PostgreSQL de reservering, zonder het tijdstip van een bevestigde verzending te veranderen. Een bevestigde weigering behoudt de bestaande limiet en wachtperiode. Een latere volledig gemeten ronde kan opnieuw een eigen digest krijgen. De CI-regressie gebruikt geïsoleerd PostgreSQL en een transportstub. Werkelijke bezorging en de Serper-scanplanning over meerdere workers zijn nog niet getoetst.
 ### Network-hercontrole na publicatie
 
 Bij een mislukte hercontrole komt de eerder geverifieerde plaatsing terug in de Admin-werklijst. Admin koppelt de waarschuwing aan de laatste controle van dezelfde URL en editie. Een nieuwe geslaagde controle haalt de waarschuwing uit de werklijst. De historie en het creditsaldo blijven behouden.
