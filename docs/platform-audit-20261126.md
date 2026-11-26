@@ -93,6 +93,16 @@ De reparatie is getest met HTTP en een geïsoleerde PostgreSQL-compatibele engin
 
 Aanbevolen volgorde voor afzonderlijk goedgekeurde merges is #571 → #572 → #573. Die drie PR’s hebben geen functionele onderlinge afhankelijkheid. Test de actuele `main` en CI na iedere merge. Het vervolg voor browserbewijs in #574 steunt op de parser van #572. Externe scripts of styles van andere origins vallen buiten de begrensde browsercontrole en een botblokkade blijft een blokkade.
 
+### Samengevoegde reparaties en geautoriseerd hergebruik
+
+PR’s #571, #572, #573 en #574 zijn in die volgorde via squash gemergd als respectievelijk `e98dfe5`, `0eaf5b9`, `41d1501` en `b73e73a`. Na elke merge slaagden de gezamenlijke tests en de workflows voor de betreffende `main`-commit. #574 is opnieuw gebaseerd op de nieuwe `main`. De vier aanvullende commits zijn met `range-diff` gecontroleerd. De openbare versie-API rapporteerde daarna `b73e73a`. De validatie gebruikte fixtures en alleen-lezen productieopvragingen. [Productieversie](https://app.contentscale.site/api/version)
+
+| Onderdeel | Bevinding en reparatie | Status | Bewijs |
+| --- | --- | --- | --- |
+| GSC Audit ↔ Free Growth | Queryvarianten, hostvarianten en schuine strepen konden hun eigen pagina-identiteit verliezen. Daarnaast kon dezelfde URL een niet-gekoppeld intern resultaat in publicatie- of ContentScore-historie laten belanden. GSC Audit en Free Growth gebruiken nu de exacte URL en de geverifieerde rapport-ID uit de handoff of de bestaande actieve uitnodiging. Een bezoeker krijgt alleen resultaten uit de uitnodiging van het eigen rapport. | FIXED AND VERIFIED | `5fba60a`, regressie op een geïsoleerde database met twee rapporten, een queryvariant, uitnodigingsscope, intern onderzoek zonder koppeling en ingetrokken bewijs. |
+| Historische onderzoeken en Tracker | Bestaande geautoriseerde uitnodigingskoppelingen en Tracker-bewijslinks blijven geldig binnen hun eigen voorwaarden. Zelfstandige historische onderzoeken zonder verifieerbare bronkoppeling blijven via hun bestaande privélink beschikbaar. Automatische koppeling aan Tracker vanuit alle instroomroutes staat nog open. | NOT TESTED | De tests toetsen de rapportuitwisseling en de bestaande canonieke Tracker-uitlezing met afzonderlijke bronautorisatie. |
+| Volledige prospect- en Network-ketens | De geïsoleerde prospect- en Network-browserregressies zijn groen op `main`. Overdracht naar Tracker, echte publicatie/monitoring en de live providerketens blijven open. | NOT TESTED | Productieopvolging en betaalde of productiegevoelige tests vereisen een afzonderlijk geautoriseerde omgeving. |
+
 ## Aanvulling: controle met bestaande gegevens
 
 Via alleen-lezen HTTPS-verzoeken zijn negen echte pagina's opgevraagd. Alle negen antwoordden met HTTP 200 op de gevraagde URL. Deze waarnemingen betreffen de toen actieve publieke versie.
