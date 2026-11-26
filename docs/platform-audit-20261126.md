@@ -86,3 +86,15 @@ Chromium kon in deze omgeving niet rechtstreeks naar de live URL's navigeren weg
 | Free Growth miste de openbare metabeschrijving; privéformulieren konden indexeerbaar renderen | De indexeringskeuze was afgeleid uit de titel, die publiek en privé hetzelfde is | P1 | EN/NL/ES-beschrijving uit de zichtbare tekst voor de openbare variant; sleutel- en andere besloten routes renderen met noindex. HTTP-regressie voor openbare en sleutelvariant | FIXED AND VERIFIED | `dd5f8ae` / #570 |
 
 De gerichte regressierun slaagde met 90 van 90. Daarin zijn de bestaande, in de repository vastgelegde PRT Free Growth-gegevens gebruikt door de concurrentielabel- en Tracker Brief-consistentietests. Dit is historische invoer en geen nieuwe klantmeting. De huidige live werking van privé-Tracker, GSC-resultaten, Admin, Network-uitnodigingen en providerrekeningen staat op **BLOCKED** zonder passende leesrechten of goedgekeurde exports. De wijzigingen in deze tabel staan op de PR-branch.
+
+## Hertest van de Free Growth-instroom
+
+| Module en gebruikersreis | Oorzaak en prioriteit | Reparatie en regressie | Status | Commit en PR |
+| --- | --- | --- | --- | --- |
+| Free Growth en Tracker: opgeslagen onderzoek openen | Hoofdletterverschillen in het pad, querystrings of hostvarianten konden op dezelfde opgeslagen snelkoppeling uitkomen. P1 | Browser en database gebruiken de gevalideerde exacte URL. Voor oude snelkoppelingen bevestigt de bestaande privéresultaatroute de URL, ook als het formulier leeg is. Chromium controleert hervatten, URL-varianten en de oude browseropslag. | FIXED AND VERIFIED | `a3dbd41`, `6e2526b` / #571 |
+| GSC Audit en Free Growth: onderzoek hergebruiken | De gedeelde cache accepteerde afgeronde onderzoeken ongeacht de gebruikte invoer. P0 | Alleen expliciet geschikt onderzoek uit dezelfde toegangscontext komt in aanmerking. PostgreSQL controleert ook oudere records, andere contexten en het geldige cachepad. | FIXED AND VERIFIED | `dc0eb8f`, `f8b2bb7` / #571 |
+| Free Growth en Rank Tracker: een AI-antwoord koppelen aan een vraag | De vergelijking met eerder bewaarde antwoorden zocht ook buiten de geautoriseerde onderzoekshistorie. P0 | Vergelijking vereist eigenaarstoegang of dezelfde uitnodiging. HTTP- en databasetests controleren publieke instroom en gescheiden uitnodigingen. | FIXED AND VERIFIED | `ae5fd0c` / #571 |
+
+De publieke PRT-pagina en de variant met een hoofdletter in het pad gaven beide HTTP 200. De variant verwees in de canonical-tag naar de oorspronkelijke PRT-URL. Dat signaal geldt voor deze website. De audit heeft alleen de publieke HTML opgevraagd. De private baseline en historische cachekopieën in productie zijn niet ingezien. [Publieke PRT-pagina](https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/)
+
+De integratietests gebruiken een geïsoleerde database met een echte Chromium-browser en afgeschermde externe providers. GitHub CI toont de afzonderlijke browser- en PostgreSQL-runs per commit. [PR #571](https://github.com/ottey1969/contentscale-platform/pull/571/checks)
