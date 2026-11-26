@@ -4009,12 +4009,12 @@ require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 require('./tracker-growth-gsc-direct.cjs').registerGrowthGscDirect(app,pool);
 function _trackerLiveProofText(proof, lang) {
   var labels = {
-    en: ['Approved content found in live HTML','SEO title','Meta description','Canonical URL','JSON-LD','Matched','No match'],
-    nl: ['Goedgekeurde inhoud gevonden in de live HTML','SEO-titel','Metabeschrijving','Canonieke URL','JSON-LD','Komt overeen','Komt niet overeen'],
-    es: ['Contenido aprobado encontrado en el HTML público','Título SEO','Metadescripción','URL canónica','JSON-LD','Coincide','No coincide']
+    en: ['Approved content found in live HTML','SEO title','Meta description','Canonical URL','JSON-LD','Matched','No match','Approved content found after browser rendering'],
+    nl: ['Goedgekeurde inhoud gevonden in de live HTML','SEO-titel','Metabeschrijving','Canonieke URL','JSON-LD','Komt overeen','Komt niet overeen','Goedgekeurde inhoud gevonden na weergave in de browser'],
+    es: ['Contenido aprobado encontrado en el HTML público','Título SEO','Metadescripción','URL canónica','JSON-LD','Coincide','No coincide','Contenido aprobado encontrado tras renderizar la página en el navegador']
   };
   var text = labels[lang] || labels.en;
-  var results = proof.status === 'approved_content_present' ? [text[0]] : [];
+  var results = proof.status === 'approved_content_present' ? [text[proof.source === 'LIVE_PUBLIC_BROWSER_RENDERED' ? 7 : 0]] : [];
   ['title','description','canonical','json_ld'].forEach(function(key, index) {
     if (proof.markup_checks && typeof proof.markup_checks[key] === 'boolean') {
       results.push(text[index + 1] + ' · ' + text[proof.markup_checks[key] ? 5 : 6]);

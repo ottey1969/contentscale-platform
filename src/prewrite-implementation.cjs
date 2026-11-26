@@ -6,6 +6,8 @@ const { jsonLd } = require('./growth-free/schema-help.cjs');
 
 const { createHash } = require('node:crypto');
 const { fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
+const { renderPublicGrowthPage } = require('./growth-safe-browser-renderer.cjs');
+const { isBotCheck } = require('./gsc-report/site-audit.cjs');
 const { VERSION, exactUrl, parseImplementationReport, ownerReport } = require('./implementation-report.cjs');
 
 function resolveTarget(brief, domain) {
@@ -84,6 +86,7 @@ function proofHtml(html, url) {
     try { markup.canonical = new URL(href, url).href; } catch {}
   }
   const text = [];
+  let executableScripts = false;
   const pending = [body, ...metadata.filter(node => node.tagName === 'script')].filter(Boolean);
   while (pending.length) {
     const node = pending.pop();
@@ -92,37 +95,54 @@ function proofHtml(html, url) {
       continue;
     }
     if (attribute(node, 'hidden') !== undefined || inlineHidden.test(attribute(node, 'style') || '')) continue;
-    if (node.tagName === 'script' && attribute(node, 'type')?.trim().toLowerCase() === 'application/ld+json') {
-      const data = node.childNodes.map(item => item.value || '').join('');
-      markup.nodes.push(...jsonLd('<script type="application/ld+json">' + data + '</script>').filter(item => item['@type']));
+    if (node.tagName === 'script') {
+      const type = attribute(node, 'type')?.trim().toLowerCase() || '';
+      if (type === 'application/ld+json') {
+        const data = node.childNodes.map(item => item.value || '').join('');
+        markup.nodes.push(...jsonLd('<script type="application/ld+json">' + data + '</script>').filter(item => item['@type']));
+      } else if (['', 'module', 'text/javascript', 'application/javascript'].includes(type)) {
+        executableScripts = true;
+      }
     }
     if (excludedText.has(node.tagName)) continue;
     for (let i = (node.childNodes?.length || 0) - 1; i >= 0; i--) pending.push(node.childNodes[i]);
   }
-  return { markup, text: normalized(text.join(' ')).toLowerCase() };
+  return { markup, text: normalized(text.join(' ')).toLowerCase(), executableScripts };
 }
 
-async function verifyApprovedContent(url, approvedHtml, fetchHtml) {
+async function verifyApprovedContent(url, approvedHtml, fetchHtml, renderHtml) {
   const { text: draft, markup: expected } = proofHtml(approvedHtml, url);
   const fields = ['title', 'description', 'canonical'].filter(field => expected[field]);
   if (draft.length < 200 && !fields.length && !expected.nodes.length) return null;
 
   const live = await fetchHtml(url, { redirects: 0, limit: 2500000 });
-  if (live.status !== 200 || live.final_url !== url || live.redirect_chain?.length || live.truncated) return null;
-  const { text: liveText, markup: found } = proofHtml(live.html, url);
+  if (live.status !== 200 || live.final_url !== url || live.redirect_chain?.length || live.truncated || isBotCheck(live.html)) return null;
+  const { text: liveText, markup: found, executableScripts } = proofHtml(live.html, url);
   const checks = Object.fromEntries(fields.map(field => [field, expected[field] === found[field]]));
   if (expected.nodes.length) {
     checks.json_ld = expected.nodes.every(node => found.nodes.some(candidate => isDeepStrictEqual(node, candidate)));
   }
-  const contentPresent = draft.length >= 200 && (' ' + liveText + ' ').includes(' ' + draft + ' ');
+  const includesDraft = text => (' ' + text + ' ').includes(' ' + draft + ' ');
+  let contentPresent = draft.length >= 200 && includesDraft(liveText);
+  let renderedEvidence = null;
+  if (draft.length >= 200 && !contentPresent && executableScripts && renderHtml) {
+    const { live: rendered } = await Promise.resolve().then(() => renderHtml(url, { verifyDocument: true })).catch(() => ({}));
+    if (rendered?.status === 200 && rendered.final_url === url && !rendered.redirect_chain?.length &&
+        !rendered.truncated && !isBotCheck(rendered.html) && typeof rendered.visible_text === 'string' &&
+        Date.parse(rendered.retrieved_at) >= Date.parse(live.retrieved_at) && includesDraft(normalized(rendered.visible_text).toLowerCase())) {
+      contentPresent = true;
+      renderedEvidence = rendered;
+    }
+  }
   const matched = Object.values(checks);
   if (!contentPresent && !matched.includes(true)) return null;
   return {
     status: contentPresent ? 'approved_content_present' :
       matched.every(Boolean) ? 'approved_markup_present' : 'approved_markup_partially_present',
     url,
-    observed_at: live.retrieved_at,
-    source: 'LIVE_PUBLIC_HTTPS',
+    observed_at: (renderedEvidence || live).retrieved_at,
+    source: renderedEvidence ? 'LIVE_PUBLIC_BROWSER_RENDERED' : 'LIVE_PUBLIC_HTTPS',
+    ...(renderedEvidence && matched.length ? { markup_source: 'LIVE_PUBLIC_HTTPS', markup_observed_at: live.retrieved_at } : {}),
     ...(draft.length >= 200 ? { content_check: contentPresent } : {}),
     ...(contentPresent ? { content_hash: createHash('sha256').update(draft).digest('hex') } : {}),
     ...(matched.length ? { markup_checks: checks } : {})
@@ -138,7 +158,7 @@ function response(result, trackerPageId) {
   };
 }
 
-function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowthHtml } = {}) {
+function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowthHtml, renderHtml = renderPublicGrowthPage } = {}) {
   const path = '/api/tracker-client/:token/prewrite-brief/:id';
   async function save(req, res, publishing) {
     let db;
@@ -257,7 +277,7 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
       let verification = previous;
       if (!previous || previous.content_check === false || Object.values(previous.markup_checks || {}).includes(false)) {
         try {
-          verification = await verifyApprovedContent(row.published_url, row.specialist_html, fetchHtml);
+          verification = await verifyApprovedContent(row.published_url, row.specialist_html, fetchHtml, renderHtml);
         } catch {
           return res.status(422).json({ success: false, status: 'verification_pending' });
         }

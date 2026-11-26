@@ -5,7 +5,7 @@
 const dns=require('node:dns').promises;
 const {validateUrl,publicV4,compactPublicHtml,RESEARCH_HTML_LIMIT}=require('./growth-public-html-reader.cjs');
 let busy=false;
-async function renderPublicGrowthPage(raw,{puppeteer=null,lookup=dns.lookup,timeoutMs=11000}={}){
+async function renderPublicGrowthPage(raw,{puppeteer=null,lookup=dns.lookup,timeoutMs=11000,verifyDocument=false}={}){
  if(busy)return {status:'RENDER_BUSY',live:null};
  busy=true;let browser;
  try{
@@ -27,21 +27,35 @@ async function renderPublicGrowthPage(raw,{puppeteer=null,lookup=dns.lookup,time
    try{
     const target=validateUrl(request.url());
     if(target.hostname!==url.hostname||++count>40)return void request.abort();
+    if(verifyDocument&&(!['GET','HEAD'].includes(request.method())||
+      request.isNavigationRequest()&&(request.frame()!==page.mainFrame()||target.href!==url.href||request.redirectChain().length)))
+     return void request.abort();
     return void request.continue();
    }catch{return void request.abort()}
   });
-  await page.goto(url.href,{waitUntil:'domcontentloaded',timeout:timeoutMs});
+  const response=await page.goto(url.href,{waitUntil:'domcontentloaded',timeout:timeoutMs});
+  if(verifyDocument&&(response?.status()!==200||response.request().redirectChain().length))
+   return {status:'RENDERED_DOCUMENT_NOT_VERIFIED',live:null};
   await new Promise(resolve=>setTimeout(resolve,900));
   const rendered=await page.content();
   const finalUrl=page.url();
+  if(verifyDocument&&finalUrl!==url.href)return {status:'RENDERED_DOCUMENT_NOT_VERIFIED',live:null};
   if(validateUrl(finalUrl).hostname!==url.hostname)
    return {status:'REDIRECTED_OUTSIDE_ORIGIN',live:null};
   if(!rendered||rendered.length<150)return {status:'RENDERED_HTML_INCOMPLETE',live:null};
   // The rendered DOM is compacted like a static research read: inline CSS/JS must not push the article past the cap.
   const readable=compactPublicHtml(rendered);
+  const visible=verifyDocument?await page.evaluate(limit=>{
+   const body=document.body;
+   if(!body?.getClientRects().length||getComputedStyle(body).visibility!=='visible')return {visibleText:'',truncated:false};
+   const text=body.innerText;
+   return {visibleText:text.slice(0,limit),truncated:text.length>limit};
+  },RESEARCH_HTML_LIMIT):null;
+  if(verifyDocument&&page.url()!==url.href)return {status:'RENDERED_DOCUMENT_NOT_VERIFIED',live:null};
   return {status:'BROWSER_RENDERED_SAME_ORIGIN',live:{
    html:readable.slice(0,RESEARCH_HTML_LIMIT),final_url:finalUrl,status:200,
-   retrieved_at:new Date().toISOString(),truncated:readable.length>RESEARCH_HTML_LIMIT,
+   ...(visible?{visible_text:visible.visibleText}:{}),
+   retrieved_at:new Date().toISOString(),truncated:readable.length>RESEARCH_HTML_LIMIT||visible?.truncated===true,
    capture:{raw_bytes:rendered.length,raw_cap_hit:false,readable_chars:readable.length,readable_limit:RESEARCH_HTML_LIMIT,
     cause:readable.length>RESEARCH_HTML_LIMIT?'READABLE_HTML_EXCEEDED_LIMIT':null},
    source:'LIVE_PUBLIC_BROWSER_RENDERED'}};

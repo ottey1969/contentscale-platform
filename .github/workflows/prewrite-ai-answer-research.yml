@@ -5,6 +5,8 @@ on:
       - 'src/prewrite-ai-answer-research.cjs'
       - 'src/prewrite-brief-research.cjs'
       - 'src/prewrite-implementation.cjs'
+      - 'src/growth-safe-browser-renderer.cjs'
+      - 'tests/prewrite-rendered-proof-browser.test.cjs'
       - 'src/implementation-report.cjs'
       - 'tests/prewrite-implementation.test.cjs'
       - 'src/tracker-proof-sources.cjs'
@@ -136,5 +138,5 @@ jobs:
         run: node --test tests/prewrite-implementation.test.cjs tests/tracker-proof-sources.test.cjs tests/gsc-report-before-after.test.cjs
       - name: Pre-Write research through the real server routes (Tracker page, Complete missing only, reopen)
         run: node --test tests/prewrite-brief-research-e2e.test.cjs tests/internal-usage-not-for-clients-e2e.test.cjs tests/tracker-case-study-end-e2e.test.cjs
-      - name: Free Growth end to end in a real browser against PostgreSQL (no Tracker writes)
-        run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/growth-free-e2e.test.cjs
+      - name: Free Growth and Pre-Write verification in a real browser
+        run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/growth-free-e2e.test.cjs tests/prewrite-rendered-proof-browser.test.cjs
