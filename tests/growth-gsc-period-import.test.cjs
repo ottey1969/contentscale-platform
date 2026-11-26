@@ -54,5 +54,20 @@ test('baseline and after period are read automatically when final; no access or 
   const idle=await importDueWindows(pool,{tokenProvider:async()=>{authCalls++;return 'fixture-token'},pull,now:new Date('2026-12-01T02:00:00Z')});
   assert.deepEqual(idle,{imported:0,access:null});
   assert.equal(authCalls,1,'no provider token is requested without a due window');
+  await pool.query(`INSERT INTO tracker_growth_publications(tracker_client_id,tracker_page_id,query,published_at)
+    SELECT $1,$2,'failed','2026-09-20T10:00:00Z' FROM generate_series(1,205)`,[c,p]);
+  const recent=(await pool.query("INSERT INTO tracker_growth_publications(tracker_client_id,tracker_page_id,query,published_at) VALUES($1,$2,'newest','2026-11-22T07:00:00Z') RETURNING id",[c,p])).rows[0].id;
+  const failedAttempts=[];
+  const provider=async input=>{
+    if(input.query==='failed'){failedAttempts.push(input.query);throw Error('Fixture Search Console timeout');}
+    return {clicks:0,impressions:10};
+  };
+  const cycle=async()=>importDueWindows(pool,{tokenProvider:token,pull:provider,now:new Date('2026-12-02T08:00:00Z')});
+  assert.equal((await cycle()).imported,1,'the latest due window is processed despite older failing rows');
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM tracker_growth_gsc_windows WHERE publication_id=$1",[recent])).rows[0].n,1);
+  await cycle();
+  await cycle();
+  assert.equal(failedAttempts.length,205,'failed publications can be tried once per UTC day');
+
  }finally{await pool.end();await control.query('DROP SCHEMA IF EXISTS '+schema+' CASCADE');await control.end()}
 });

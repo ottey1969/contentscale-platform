@@ -111,25 +111,38 @@ function registerGrowthGscDirect(app,pool,{env=process.env,pull=pullQueryWindow,
 // Console access; a publication whose read failed is retried on the next run, at most once a day per period).
 async function importDueWindows(pool,{env=process.env,pull=pullQueryWindow,tokenProvider=gscToken,now=new Date()}={}){
  const cutoff=new Date(now.getTime()-120*86400000);
+ const utcDay=now.toISOString().slice(0,10);
+ const {rows:[schema]}=await pool.query(`SELECT to_regclass('tracker_growth_publications') AS publications,
+   EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('tracker_growth_publications')
+     AND attname='gsc_scheduled_attempt_on' AND NOT attisdropped) AS migrated`);
+ if(!schema?.publications)return {imported:0,access:null};
+ if(!schema.migrated)await pool.query(`SET LOCAL lock_timeout='5s'; ALTER TABLE tracker_growth_publications
+   ADD COLUMN IF NOT EXISTS gsc_scheduled_attempt_on DATE`);
  let rows;
  try{rows=(await pool.query(`SELECT g.id,g.tracker_client_id,g.published_at,stored.have
    FROM tracker_growth_publications g CROSS JOIN LATERAL (
      SELECT ARRAY(SELECT w.period FROM tracker_growth_gsc_windows w
        WHERE w.tracker_client_id=g.tracker_client_id AND w.publication_id=g.id) AS have
    ) stored
-   WHERE g.published_at>$1 AND cardinality(stored.have)<2
+   WHERE g.published_at>$1 AND cardinality(stored.have)<2 AND g.gsc_scheduled_attempt_on IS DISTINCT FROM $2::date
      AND NOT EXISTS(SELECT 1 FROM tracker_case_studies c WHERE c.tracker_client_id=g.tracker_client_id
        AND c.tracker_page_id=g.tracker_page_id AND c.status='active')
-   ORDER BY g.published_at,g.id LIMIT 200`,[cutoff])).rows}
+   ORDER BY g.gsc_scheduled_attempt_on NULLS FIRST,g.published_at DESC,g.id LIMIT 200`,[cutoff,utcDay])).rows}
  catch(e){if(e.code!=='42P01')throw e;
   try{rows=(await pool.query(`SELECT g.id,g.tracker_client_id,g.published_at,ARRAY[]::text[] AS have FROM tracker_growth_publications g
-    WHERE g.published_at>$1 ORDER BY g.published_at,g.id LIMIT 200`,[cutoff])).rows}catch(e2){if(e2.code==='42P01')return {imported:0,access:null};throw e2}}
+    WHERE g.published_at>$1 AND g.gsc_scheduled_attempt_on IS DISTINCT FROM $2::date
+    ORDER BY g.gsc_scheduled_attempt_on NULLS FIRST,g.published_at DESC,g.id LIMIT 200`,[cutoff,utcDay])).rows}catch(e2){if(e2.code==='42P01')return {imported:0,access:null};throw e2}}
  let imported=0;
  let token;
  const batchToken=async()=>token??=await tokenProvider(env).catch(()=>null);
  for(const r of rows){
   const missing=finalPeriods(windowDates(r.published_at),now).filter(p=>!(r.have||[]).includes(p));
   if(!missing.length)continue;
+  if(!await batchToken())return {imported,access:false};
+  const claimed=await pool.query(`UPDATE tracker_growth_publications SET gsc_scheduled_attempt_on=$3::date
+    WHERE id=$1 AND tracker_client_id=$2 AND gsc_scheduled_attempt_on IS DISTINCT FROM $3::date RETURNING id`,
+    [r.id,r.tracker_client_id,utcDay]);
+  if(!claimed.rows.length)continue;
   const out=await importGscWindows(pool,{clientId:r.tracker_client_id,publicationId:Number(r.id),env,pull,tokenProvider:batchToken,now,periods:missing}).catch(e=>({status:'GSC_ERROR',error:e.message}));
   if(out.status==='NO_GSC_ACCESS')return {imported,access:false};
   if(out.status==='IMPORTED')imported+=out.periods.length;
