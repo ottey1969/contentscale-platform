@@ -26,7 +26,7 @@ test('lookup: latest date per page, only explicitly authorized checks with the s
   {matching_invite:true,url:'https://nl.contentscale.site/ai-zichtbaarheid/',published_on:'2026-11-21'},{matching_invite:true,url:'https://nl.contentscale.site/ai-zichtbaarheid',published_on:'2026-11-10'}]}}};
  const m=await publicationsFor(pool,['https://nl.contentscale.site/ai-zichtbaarheid/'],{invite:'inv-1'});
  assert.equal(m.get('https://nl.contentscale.site/ai-zichtbaarheid/'),'2026-11-21');
- assert.match(calls[0].sql,/url=ANY/);assert.match(calls[0].sql,/gsc_report_id/);assert.match(calls[0].sql,/token_hash/);
+ assert.match(calls[0].sql,/url=ANY/);assert.match(calls[0].sql,/c\.invite_id IN/);assert.match(calls[0].sql,/token_hash/);
  // No Free Growth tables yet: no dates, no error.
  const none=await publicationsFor({query:async()=>{throw Object.assign(Error('relation does not exist'),{code:'42P01'})}},['https://a.example/']);
  assert.equal(none.size,0);
@@ -85,7 +85,7 @@ test('owner finds completed research linked through its source report; recipient
  const pool={query:async(sql,args)=>{if(!String(sql).includes('ORDER BY c.finished_at DESC'))return {rows:[]};calls.push({sql,args});return {rows:[{url,public_id:'saved',access_key:'secret',access_label:'public',invite_id:null}]}}};
  const owner=await growthFor(pool,[url],{owner:true,reportId:38});
  assert.equal(owner.get(url).owner_result,'/r/saved?k=secret');
- assert.ok(calls[0].args.includes(true));
+ assert.equal(calls[0].args[2],38);assert.match(calls[0].sql,/u\.gsc_report_id=\$3/);
  const recipient=await growthFor(pool,[url],{owner:false});
  assert.equal(recipient.get(url)?.owner_result||null,null);
 });

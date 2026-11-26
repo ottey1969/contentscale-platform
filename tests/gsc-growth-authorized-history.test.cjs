@@ -82,9 +82,38 @@ test('private research is reusable only through the recorded GSC report or its a
     const numbers = await reportUploadsFor(pool, { url, checkId: linked.id });
     assert.deepEqual(numbers.map(entry => entry.totals.clicks), [0, 3]);
     assert.deepEqual(await reportUploadsFor(pool, { url: variant, checkId: linked.id }), []);
+
+    await pool.query(`
+      CREATE TABLE tracker_clients (id INT, token TEXT, status TEXT);
+      CREATE TABLE tracker_pages (id INT, tracker_client_id INT, url TEXT);
+      CREATE TABLE tracker_case_studies (id INT, tracker_client_id INT, tracker_page_id INT);
+      CREATE TABLE tracker_case_study_events (id BIGSERIAL,case_study_id INT NOT NULL,tracker_page_id INT,
+        event_type TEXT,event_at TIMESTAMPTZ DEFAULT NOW(),source TEXT,event_data JSONB);
+      INSERT INTO tracker_clients VALUES (1,'owner-a',NULL),(2,'owner-b',NULL);
+    `);
+    await pool.query('INSERT INTO tracker_pages VALUES (41,1,$1),(42,2,$1)', [url]);
+    require('../src/tracker-proof-sources.cjs').registerProofSourceRoutes(app, pool);
+    const ownerPath = '/api/tracker-client/owner-a/pages/41/proof-sources';
+    const otherPath = '/api/tracker-client/owner-b/pages/42/proof-sources';
+    const elsewhere = await createCheck(url, 'invited', invitation.id, 75, 'already linked elsewhere');
+    await browser.post(otherPath).send({ type: 'free_growth', id: elsewhere.public_id, key: elsewhere.access_key }).expect(200);
+    await browser.post(ownerPath).send({ type: 'gsc_audit', key: affiliated.token }).expect(200);
+    const trackerScores = async path => (await browser.get(path).expect(200)).body.proof_sources.free_growth
+      .flatMap(item => item.contentscore_history.map(scan => scan.score));
+    assert.deepEqual(await trackerScores(ownerPath), [55], 'only the authorized report invitation on the exact page travels into Tracker');
+    assert.deepEqual(await trackerScores(otherPath), [75], 'the existing other Tracker binding stays separate');
+    await browser.post(ownerPath).send({ type: 'free_growth', id: invited.public_id, key: invited.access_key }).expect(200);
+    assert.deepEqual(await trackerScores(ownerPath), [55], 'direct and inherited links still show one source');
+    await createCheck(url, 'invited', invitation.id, 69, 'second authorized result');
+    assert.deepEqual(await trackerScores(ownerPath), [55, 69]);
+    const ambiguous = await createReport(invitation.token, 85);
+    assert.deepEqual(await trackerScores(ownerPath), [55], 'a reused invitation cannot grant an inherited Tracker binding');
+    await gsc.revokeReport(pool, ambiguous.id);
+    assert.deepEqual(await trackerScores(ownerPath), [55, 69]);
     await gsc.revokeReport(pool, affiliated.id);
     assert.deepEqual(await sharedHistory(pool, linked), []);
     assert.deepEqual(await reportUploadsFor(pool, { url, checkId: linked.id }), []);
+    assert.deepEqual(await trackerScores(ownerPath), [55], 'an independently authorized Free Growth link remains');
   } finally {
     await pool.end();
     await db.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');

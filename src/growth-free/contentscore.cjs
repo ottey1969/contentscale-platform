@@ -15,18 +15,22 @@ function mergeHistory(url,...groups){
 }
 const hashToken=t=>require('node:crypto').createHash('sha256').update(String(t)).digest('hex');
 async function relatedChecks(pool,urls,{invite=null,reportId=null,owner=false}={}){
+ const values=[invite?hashToken(invite):'',urls];
+ let attached='';
+ if(owner&&reportId){
+  values.push(reportId);
+  attached=`OR EXISTS(SELECT 1 FROM growth_free_gsc_uploads u
+   WHERE u.check_id=c.id AND u.gsc_report_id=$3 AND u.status='VERIFIED_FOR_PAGE' AND u.basis='GSC_AUDIT_EXACT_PAGE')`;
+ }
  const result=await pool.query(`WITH invited AS (
    SELECT id FROM growth_free_invites WHERE token_hash=$1 AND revoked_at IS NULL AND expires_at>NOW()
  )
- SELECT c.url,c.public_id,c.access_key,c.contentscore_history,c.published_on::text,c.published_note,c.finished_at,
+ SELECT c.id,c.url,c.public_id,c.access_key,c.contentscore_history,c.published_on::text,c.published_note,c.finished_at,
    EXISTS(SELECT 1 FROM invited i WHERE i.id=c.invite_id) AS matching_invite
  FROM growth_free_checks c
  WHERE c.status='DONE' AND c.url=ANY($2::text[])
-   AND (c.invite_id IN (SELECT id FROM invited) OR ($4::boolean AND EXISTS(
-      SELECT 1 FROM growth_free_gsc_uploads u
-      WHERE u.check_id=c.id AND u.gsc_report_id=$3 AND u.status='VERIFIED_FOR_PAGE'
-         AND u.basis='GSC_AUDIT_EXACT_PAGE')))
- ORDER BY c.finished_at DESC NULLS LAST,c.id DESC`,[invite?hashToken(invite):'',urls,reportId,owner]);
+   AND (c.invite_id IN (SELECT id FROM invited) ${attached})
+ ORDER BY c.finished_at DESC NULLS LAST,c.id DESC`,values);
  return result.rows;
 }
 
