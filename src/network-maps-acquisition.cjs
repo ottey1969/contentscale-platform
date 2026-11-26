@@ -51,8 +51,16 @@ function candidate(raw){
  if(['app.contentscale.site','contentscale.site'].includes(domain))return null;
  return {name,address,phone,website:site,domain,niche,source:raw.source,place_id:plain(raw.place_id,180)};
 }
-function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=discoverCompanyContact,inspect=websiteEvidence,backfillDelayMs=12000}){
+function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=discoverCompanyContact,inspect=websiteEvidence,backfillDelayMs=12000,ensureDirectory=async()=>{}}){
  if(!app?.get||!app?.post||!pool?.query)throw Error('Network acquisition dependencies missing');
+ let directoryReady;
+ function readyDirectory(){
+  if(!directoryReady)directoryReady=Promise.resolve().then(()=>ensureDirectory(pool)).catch(error=>{
+   directoryReady=null;
+   throw error;
+  });
+  return directoryReady;
+ }
  const sessionAuth=req=>auth(req)||cookieSessionValid(req);
  app.post('/api/network/admin/acquisition/session', (req,res)=>{
   const client=String(req.ip||req.socket?.remoteAddress||'unknown');
@@ -127,6 +135,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
  app.get('/api/network/admin/acquisition/candidates',async(req,res)=>{
   if(!sessionAuth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   try{
+   await readyDirectory();
    const result=await pool.query(`SELECT n.id,n.business_name,n.domain,n.canonical_url,n.primary_niche,n.city,n.status,n.public_visibility,n.website_check,
     n.metadata->'acquisition'->'email_discovery' AS email_discovery,
     n.metadata->'acquisition'->'website_review' AS website_review,
@@ -181,6 +190,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
    emailBackfillRunning=true;
    let inspected=0,found=0;
    try{
+    await readyDirectory();
     const rows=await pool.query(`SELECT id FROM network_directory_businesses
       WHERE source='maps_acquisition'
         AND COALESCE(metadata->'acquisition'->'email_discovery'->>'email','')=''
@@ -245,6 +255,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
    'ON CONFLICT(slug) DO NOTHING RETURNING id'
   ].join(' ');
   try{
+   await readyDirectory();
    for(const c of unique.values()){
     const slug='nj-maps-'+crypto.createHash('sha256').update(c.domain).digest('hex').slice(0,20);
     const meta={acquisition:{source:c.source,source_address:c.address,source_phone:c.phone,

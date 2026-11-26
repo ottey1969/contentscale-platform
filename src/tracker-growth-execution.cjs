@@ -15,7 +15,8 @@ function registerGrowthExecution(app,pool,deps={}){
  // Keep NJ lead discovery on the existing server and outside Network/CRM writes.
  try{
   require('./lead-crawler-serpapi.cjs').registerLeadCrawlerSerpApi(app,{pool});
-  require('./network-maps-acquisition.cjs').registerNetworkMapsAcquisition({app,pool});
+  const {ensureNetworkDirectorySchema}=require('./network/register-network.js');
+  require('./network-maps-acquisition.cjs').registerNetworkMapsAcquisition({app,pool,ensureDirectory:ensureNetworkDirectorySchema});
  }catch(error){
   console.error('[lead-crawler-serpapi] registration failed:',error.message);
  }

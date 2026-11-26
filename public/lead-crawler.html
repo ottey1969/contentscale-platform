@@ -1798,7 +1798,10 @@
          }
          function lcInit(){
          const s=loadSession();
-         if(!s||!s.leads||!s.leads.length)return;
+         if(!Array.isArray(s?.leads)||!s.leads.length)return;
+         const savedCity=typeof s.city==='string'?s.city.trim():'';
+         const savedCountry=typeof s.country==='string'?s.country.trim():'';
+         const savedLocation=[savedCity,savedCountry].filter(Boolean).map(escHtml).join(', ');
          if(Array.isArray(s.industryPlan)&&s.industryPlan.length) INDUSTRIES=s.industryPlan;
          if(document.getElementById('industryMode')) document.getElementById('industryMode').value=s.industryMode||'presets';
          if(document.getElementById('customIndustries')) document.getElementById('customIndustries').value=s.customIndustries||'';
@@ -1809,16 +1812,16 @@
          const banner=document.getElementById('resumeBanner');
          banner.style.display='flex';
          document.getElementById('resumeText').innerHTML=
-         '<strong>'+s.leads.length+' leads</strong> saved for <strong>'+s.city+', '+s.country+'</strong> — '+
+         '<strong>'+s.leads.length+' leads</strong> saved'+(savedLocation?' for <strong>'+savedLocation+'</strong>':'')+' — '+
          done+'/'+INDUSTRIES.length+' business types done'+(remaining>0?' ('+remaining+' can still run)':' (complete)')+' — saved '+ageStr;
-         if(s.city==='New Jersey'||s.city.endsWith(', New Jersey')){
+         if(savedCity==='New Jersey'||savedCity.endsWith(', New Jersey')){
            document.getElementById('state').value='New Jersey';
-           document.getElementById('city').value=s.city==='New Jersey'?'':s.city.slice(0,-', New Jersey'.length);
+           document.getElementById('city').value=savedCity==='New Jersey'?'':savedCity.slice(0,-', New Jersey'.length);
          }else{
            document.getElementById('state').value='';
-           document.getElementById('city').value=s.city;
+           document.getElementById('city').value=savedCity;
          }
-         document.getElementById('country').value=s.country;
+         if(savedCountry)document.getElementById('country').value=savedCountry;
          initWaves();updateIndustryPlanUI();
          }
          lcInit();
