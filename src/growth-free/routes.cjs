@@ -2234,7 +2234,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    n?'<div class="card"><h1>Reminder stopped</h1><p>You will not get the e-mail about this check. Your result stays available with its link.</p></div>':'<div class="card"><h1>This link is not valid</h1><p>The reminder may already have been stopped, or the check was deleted.</p></div>',config));
  });
  // Hourly in the running app; off without an e-mail key, with GROWTH_FREE_REMINDERS=0, or in tests (they call it directly).
- const sendDue=(o={})=>reminders.sendDueFreeReminders(pool,storage,{send,links,model:config.mailModel,...o});
+ const sendDue=(o={})=>reminders.sendDueFreeReminders(pool,storage,{send:sendEmail||reminders.brevo(fetchImpl,{classify:true}),links,model:config.mailModel,...o});
  if(config.reminders!==false&&!sendEmail&&process.env.BREVO_API_KEY&&process.env.GROWTH_FREE_REMINDERS!=='0'&&process.env.NODE_ENV!=='test'){
   const tick=()=>storage.ensureTables(pool).then(()=>sendDue()).then(r=>{if(r.sent||r.failed)console.log('[free-growth] reminders',JSON.stringify(r))}).catch(e=>console.warn('[free-growth] reminders',String(e.code||e.message).slice(0,80)));
   const t=setInterval(tick,3600000);if(t.unref)t.unref();const first=setTimeout(tick,90000);if(first.unref)first.unref();
@@ -2504,7 +2504,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const hash=crypto.createHash('sha256').update(key).digest('hex');
    const sub=(await pool.query('SELECT token_hash FROM growth_free_calendar_subscription WHERE singleton=TRUE')).rows[0];
    if(!sub||!store.sameKey(sub.token_hash,hash))return res.status(404).end();
-   const rows=(await pool.query("SELECT public_id,email,emails,access_label,invite_id,url,host,query,reminder_due_at FROM growth_free_checks WHERE status='DONE' AND reminder_due_at IS NOT NULL AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 ORDER BY reminder_due_at,id")).rows;
+   const rows=(await pool.query("SELECT public_id,email,emails,access_label,invite_id,url,host,query,reminder_due_at FROM growth_free_checks WHERE status='DONE' AND reminder_due_at IS NOT NULL AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND reminder_dispatch_state IS NULL ORDER BY reminder_due_at,id")).rows;
    res.type('text/calendar; charset=utf-8').send(require('./reminder-calendar.cjs').buildCalendar(rows));
   }catch(e){res.status(503).end()}
  });
@@ -2528,8 +2528,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const date=x=>x?new Date(x).toISOString():'—';
    if(source==='growth'){
     await storage.ensureTables(pool);
-    const records=(await pool.query("SELECT id,email,emails,access_label,invite_id,url,host,status,published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,reminder_attempts FROM growth_free_checks WHERE reminder_due_at IS NOT NULL ORDER BY reminder_due_at,id")).rows;
-    rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,module:'Free Growth',due_at:r.reminder_due_at,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
+    const records=(await pool.query("SELECT id,email,emails,access_label,invite_id,url,host,status,published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,reminder_attempts,reminder_dispatch_state FROM growth_free_checks WHERE reminder_due_at IS NOT NULL ORDER BY reminder_due_at,id")).rows;
+    rows=records.flatMap(r=>reminders.recipientsOf(r).map(email=>({email,host:r.host,url:r.url,module:'Free Growth',due_at:r.reminder_due_at,status:r.reminder_opt_out_at?'Stopped':r.reminder_sent_at?'Sent':r.reminder_dispatch_state?'Awaiting delivery confirmation':r.reminder_attempts>=3?'Failed':r.status!=='DONE'?'Not ready':'Scheduled',detail:'Published '+date(r.published_on)+' · Due '+date(r.reminder_due_at)+' · Sent '+date(r.reminder_sent_at)})));
     note='Measurement reminders from Free Growth and Tracker Growth, grouped by website. Dates in UTC. Only saved reminders appear; a published page without a reminder is not scheduled.';
     try{
      const trackerTables=(await pool.query("SELECT to_regclass('tracker_growth_reminders') IS NOT NULL AND to_regclass('tracker_growth_publications') IS NOT NULL AND to_regclass('tracker_pages') IS NOT NULL AND to_regclass('tracker_clients') IS NOT NULL AS available")).rows[0];
