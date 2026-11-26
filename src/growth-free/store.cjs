@@ -125,7 +125,12 @@ function ensureTables(pool){
     period_end DATE,
     totals JSONB,
     queries JSONB,
+    gsc_report_id BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  if (!(await pool.query(`SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema()
+    AND table_name='growth_free_gsc_uploads' AND column_name='gsc_report_id'`)).rows.length) {
+   await pool.query(`SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_gsc_uploads ADD COLUMN IF NOT EXISTS gsc_report_id BIGINT`);
+  }
   await pool.query('CREATE INDEX IF NOT EXISTS growth_free_gsc_uploads_check_idx ON growth_free_gsc_uploads(check_id,created_at)');
   // Owner 2026-11-22: notes for nl.contentscale.site pages published before the note field existed (only empty notes).
   try{const n=await require('./publication-note.cjs').backfillNotes(pool,{host:'nl.contentscale.site'});if(n)console.log('[free-growth] publication notes filled:',n)}
@@ -273,9 +278,10 @@ async function optOutReminder(pool,t){
  return (await pool.query('UPDATE growth_free_checks SET reminder_opt_out_at=COALESCE(reminder_opt_out_at,NOW()) WHERE reminder_token=$1',[v])).rowCount||0;
 }
 async function saveGscUpload(pool,{checkId,fileName,upload}){
- return (await pool.query(`INSERT INTO growth_free_gsc_uploads(check_id,file_name,status,basis,period_start,period_end,totals,queries)
-   VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) RETURNING id,created_at`,[checkId,String(fileName||'').slice(0,200),upload.status,upload.basis||null,
-   upload.period&&upload.period.start||null,upload.period&&upload.period.end||null,JSON.stringify(upload.totals||null),JSON.stringify(upload.queries||[])])).rows[0];
+ return (await pool.query(`INSERT INTO growth_free_gsc_uploads(check_id,file_name,status,basis,period_start,period_end,totals,queries,gsc_report_id)
+   VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9) RETURNING id,created_at`,[checkId,String(fileName||'').slice(0,200),upload.status,upload.basis||null,
+   upload.period&&upload.period.start||null,upload.period&&upload.period.end||null,JSON.stringify(upload.totals||null),JSON.stringify(upload.queries||[]),
+   upload.basis==='GSC_AUDIT_EXACT_PAGE'?upload.gsc_report_id||null:null])).rows[0];
 }
 async function listGscUploads(pool,checkId){
  return (await pool.query("SELECT id,file_name,status,basis,period_start::text AS period_start,period_end::text AS period_end,totals,queries,created_at FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY created_at,id",[checkId])).rows;
