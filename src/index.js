@@ -2622,8 +2622,8 @@ app.use('/api/tracker-client/:token',function(req,res,next){
 
 app.post('/api/tracker-client/register', async (req, res) => {
   try {
-    const { domain, name, email, whatsapp, dealify_code } = req.body;
-    if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
+    const { domain, name, email, whatsapp, dealify_code, quick_scan_key } = req.body;
+    if (typeof domain !== 'string' || !domain.trim()) return res.status(400).json({ success: false, error: 'Domain required' });
     const publicBrandName = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 200);
     if (publicBrandName.length < 2 || /https?:\/\/|@/.test(publicBrandName)) {
       return res.status(400).json({ success: false, error: 'Public business / brand name required — enter the real name shown on the website, not a person, URL or internal client label.' });
@@ -2633,76 +2633,85 @@ app.post('/api/tracker-client/register', async (req, res) => {
     const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
     // Clean domain
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
+    const {registrationDomain,lockRegistrationDomain,findRegistration}=require('./tracker-registration-identity.cjs');
+    const cleanDomain = registrationDomain(domain);
     if (!cleanDomain || !cleanDomain.includes('.')) return res.status(400).json({ success: false, error: 'Invalid domain' });
 
-    // Check if domain already registered — bulletproof: strip www, check base domain
-    // Check if domain already registered — block ALL including deleted
-    const baseDomain = cleanDomain.replace(/^www\./, '');
-    const existing = await pool.query(
-      `SELECT id, token, email, name, status FROM tracker_clients
-       WHERE (
-         LOWER(REGEXP_REPLACE(domain, '^www\\.', '')) = $1
-         OR LOWER(domain) = $1
-         OR LOWER(domain) = $2
-       )
-       ORDER BY CASE WHEN status='active' THEN 0 WHEN status='paused' THEN 1 ELSE 2 END
-       LIMIT 1`,
-      [baseDomain, 'www.' + baseDomain]
-    );
-    if (existing.rows.length) {
-      // Never return existing tracker URL on public registration
-      // Always direct to Ottmar — he handles it via admin
-      const ex = existing.rows[0];
-      notifyOttmar(
-        '⚠️ Re-registration attempt: ' + cleanDomain,
-        '<p>Domain: ' + cleanDomain + '<br>Status: ' + ex.status + '<br>Email: ' + (email || 'none') + '</p>',
-        'Re-registration attempt: ' + cleanDomain + ' (status: ' + ex.status + ') — email: ' + (email || 'none')
-      ).catch(() => {});
-      return res.status(409).json({
-        success: false,
-        error: 'A tracker for ' + cleanDomain + ' already exists. Contact Ottmar to recover or reset your tracker: wa.me/31628073996'
-      });
-    }
-
-    // Dealify code validation — format: DEALIFY-XXXXX (1-5 codes allowed)
-    let maxPages = 1; // default free (was 3) — scan interval stays 3 days
-    let dealifyCodesCount = 0;
-    let isDealify = false;
-    if (dealify_code) {
-      // Accept comma-separated codes: "DEALIFY-ABC12, DEALIFY-DEF34"
-      // Accepted code prefixes per platform
-      const VALID_PREFIXES = ['DEALIFY-', 'CS-', 'APPSUMO-', 'AS-', 'PG-', 'PITCHGROUND-', 'SM-', 'SAASMANTRA-', 'LTD-', 'PRIME-'];
-      const codes = dealify_code.split(',').map(c => c.trim().toUpperCase()).filter(c => VALID_PREFIXES.some(p => c.startsWith(p)));
-      dealifyCodesCount = Math.min(codes.length, 5); // max 5 codes
-      if (dealifyCodesCount > 0) {
-        maxPages = dealifyCodesCount * 10; // 1 code = 10 pages, 2 = 20, etc.
-        isDealify = true;
-      }
-    }
-
-    // IP restriction — only for non-Dealify free registrations
-    if (!isDealify && clientIp) {
-      const ipCheck = await pool.query('SELECT COUNT(*) FROM tracker_clients WHERE registered_ip=$1', [clientIp]);
-      if (parseInt(ipCheck.rows[0].count) >= 1) {
-        return res.status(429).json({ success: false, error: 'One free tracker per device. Want more pages? Get lifetime access at contentscale.site/tracker' });
-      }
-    }
-
+    const acceptedPrefixes = ['DEALIFY-', 'CS-', 'APPSUMO-', 'AS-', 'PG-', 'PITCHGROUND-', 'SM-', 'SAASMANTRA-', 'LTD-', 'PRIME-'];
+    const codes = typeof dealify_code === 'string' ? dealify_code.split(',').map(code => code.trim().toUpperCase())
+      .filter(code => acceptedPrefixes.some(prefix => code.startsWith(prefix))) : [];
+    const dealifyCodesCount = Math.min(codes.length, 5);
+    const isDealify = dealifyCodesCount > 0;
+    const maxPages = isDealify ? dealifyCodesCount * 10 : 1;
     const token = generateClientToken();
-    await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, dealify_codes, gsc_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE)`,
-      [token, cleanDomain, publicBrandName, email||null, whatsapp||null, maxPages, clientIp||null, isDealify ? dealify_code : null]
-    ).catch(async () => {
-      // Fallback if dealify_codes column doesn't exist yet
-      await pool.query(
-        `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, gsc_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE)`,
-        [token, cleanDomain, publicBrandName, email||null, whatsapp||null, maxPages, clientIp||null]
-      );
-    });
 
-    // Live Brief Wall ("View tracker" page) is ON by default for every new domain
-    try { await pool.query(`UPDATE tracker_clients SET live_wall_enabled=TRUE WHERE token=$1`, [token]); } catch(e) {}
+    const proof = require('./tracker-proof-sources.cjs');
+    let scanToken;
+    if (quick_scan_key != null) {
+      if (typeof quick_scan_key !== 'string' || !/^(?:[a-f0-9]{16}|[a-f0-9]{64})$/i.test(quick_scan_key)) {
+        return res.status(400).json({ success: false, code: 'QUICK_SCAN_LINK_INVALID' });
+      }
+      if (!await _ensureProspectQuickScanTable()) return res.status(503).json({ success: false });
+      scanToken = quick_scan_key.length === 16
+        ? await _pqsResolveShortPrivate('prospect_quick_scans', quick_scan_key) : quick_scan_key.toLowerCase();
+      if (!scanToken) return res.status(404).json({ success: false, code: 'QUICK_SCAN_UNAVAILABLE' });
+      await proof.ensureProofSourceSchema(pool, _ensureCaseStudySchema);
+    }
+    const db = await pool.connect();
+    let registered, linkedPageId;
+    try {
+      await db.query('BEGIN');
+      await lockRegistrationDomain(db,cleanDomain);
+      const existing = await findRegistration(db,cleanDomain,true);
+      if (existing) {
+        notifyOttmar(
+          '⚠️ Re-registration attempt: ' + cleanDomain,
+          '<p>Domain: ' + cleanDomain + '<br>Status: ' + existing.status + '<br>Email: ' + (email || 'none') + '</p>',
+          'Re-registration attempt: ' + cleanDomain + ' (status: ' + existing.status + ') — email: ' + (email || 'none')
+        ).catch(() => {});
+        return res.status(409).json({
+          success: false,
+          error: 'A tracker for ' + cleanDomain + ' already exists. Contact Ottmar to recover or reset your tracker: wa.me/31628073996'
+        });
+      }
+      if (!isDealify && clientIp) {
+        await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['tracker-registration:ip:' + clientIp]);
+        const existingIp = (await db.query('SELECT 1 FROM tracker_clients WHERE registered_ip=$1 LIMIT 1', [clientIp])).rows[0];
+        if (existingIp) {
+          return res.status(429).json({ success: false, error: 'One free tracker per device. Want more pages? Get lifetime access at contentscale.site/tracker' });
+        }
+      }
+      const scan = scanToken ? await proof.quickScanForRegistration(db, scanToken, cleanDomain) : null;
+      if (scanToken && !scan) return res.status(404).json({ success: false, code: 'QUICK_SCAN_UNAVAILABLE' });
+      const values = [token, cleanDomain, publicBrandName, email || null, whatsapp || null, maxPages, clientIp || null];
+      await db.query('SAVEPOINT registration_columns');
+      let inserted;
+      try {
+        inserted = await db.query(`INSERT INTO tracker_clients
+          (token,domain,name,email,whatsapp,max_pages,registered_ip,dealify_codes,gsc_enabled)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE) RETURNING id`, [...values, isDealify ? dealify_code : null]);
+      } catch (error) {
+        if (error.code !== '42703') throw error;
+        await db.query('ROLLBACK TO SAVEPOINT registration_columns');
+        inserted = await db.query(`INSERT INTO tracker_clients
+          (token,domain,name,email,whatsapp,max_pages,registered_ip,gsc_enabled)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE) RETURNING id`, values);
+      }
+      if (scan) {
+        linkedPageId = await proof.registerQuickScanProof(db, inserted.rows[0].id, scan);
+        if (linkedPageId == null) return res.status(409).json({ success: false, code: 'QUICK_SCAN_ALREADY_LINKED' });
+      }
+      await db.query('COMMIT');
+      registered = inserted.rows[0];
+    } finally {
+      let rollbackError;
+      if (!registered) {
+        try { await db.query('ROLLBACK'); } catch (error) { rollbackError = error; }
+      }
+      db.release(rollbackError);
+    }
+    // Live Brief Wall is enabled for newly registered domains.
+    await pool.query('UPDATE tracker_clients SET live_wall_enabled=TRUE WHERE id=$1', [registered.id]).catch(() => {});
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
     const appUrl = process.env.APP_URL || 'https://app.contentscale.site';
@@ -2732,8 +2741,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
         + (isDealify ? '<p style="font-size:13px;color:#6b7280;margin-bottom:14px;">&#127881; Dealify activation: <strong>' + dealifyCodesCount + ' code' + (dealifyCodesCount>1?'s':'') + '</strong> &rarr; <strong>' + maxPages + ' pages</strong> tracked.</p>' : '')
         + '<p style="font-size:13px;color:#374151;line-height:1.7;">Questions? WhatsApp Ottmar directly: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
 
-      const clientId = (await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [token])).rows[0]?.id;
-      if (clientId) await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml, true).catch(() => {});
+      await sendTrackerEmail(registered.id, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml, true).catch(() => {});
     }
 
     // Notify Ottmar
@@ -2746,7 +2754,8 @@ app.post('/api/tracker-client/register', async (req, res) => {
       notifyOttmar('⭐ New tracker: ' + cleanDomain, '<p>' + msg + '</p>', msg).catch(() => {});
     }
 
-    res.json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false, max_pages: maxPages, dealify: isDealify });
+    res.set('Cache-Control','no-store').json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false,
+      max_pages: maxPages, dealify: isDealify, ...(linkedPageId == null ? {} : { linked_page_id: linkedPageId }) });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -11467,25 +11476,22 @@ app.post('/api/admin/tracker-clients/:id/email-last-brief', verifyAdmin, async (
 app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) => {
   try {
     const { domain, name, email, max_pages, source } = req.body;
-    if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
-
-    // Check existing
-    const existing = await pool.query('SELECT id, token FROM tracker_clients WHERE domain=$1 AND status != $2', [cleanDomain, 'deleted']);
-    if (existing.rows.length) {
-      const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + existing.rows[0].token;
-      return res.json({ success: true, token: existing.rows[0].token, url: existingUrl, existing: true });
-    }
-
-    const token = generateClientToken();
+    const {registrationDomain,reuseOrCreateRegistration}=require('./tracker-registration-identity.cjs');
+    const cleanDomain = registrationDomain(domain);
+    if (!cleanDomain) return res.status(400).json({ success: false, error: 'Domain required' });
     const maxPg = parseInt(max_pages) || 10;
-    // Final plan rule: free is exactly 1 page; 2+ pages are paid. GSC is ON for both,
-    // so every account can use evidence-based classification and see the full product loop.
-    const autoGsc = maxPg >= 1;
-    await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status, gsc_enabled) VALUES ($1,$2,$3,$4,$5,'active',$6)`,
-      [token, cleanDomain, name||null, email||null, maxPg, autoGsc]
-    );
+    const account = await reuseOrCreateRegistration(pool,cleanDomain,async db=>{
+      const token=generateClientToken();
+      const {rows}=await db.query(`INSERT INTO tracker_clients (token,domain,name,email,max_pages,status,gsc_enabled)
+        VALUES ($1,$2,$3,$4,$5,'active',$6) RETURNING id,token`,
+        [token,cleanDomain,name||null,email||null,maxPg,maxPg>=1]);
+      return rows[0];
+    });
+    const token=account.token;
+    if(account.existing){
+      const url=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+token;
+      return res.set('Cache-Control','no-store').json({success:true,token,url,existing:true});
+    }
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
 
@@ -27130,6 +27136,42 @@ function _pqsPublicPageV393(row,language){
   return '<!doctype html><html lang="'+lang+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="cs-build" content="'+e(CONTENTSCALE_BUILD_ID)+'"><title>'+e(copy.title)+' · '+e(row.business_name||row.domain||'ContentScale')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#050914;color:#e5edf7;font:14px/1.6 Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:1040px;margin:auto;padding:26px 18px 60px}.top{margin-bottom:18px}.brand{color:#67e8f9;font-size:11px;font-weight:950;letter-spacing:.13em}.top h1{font-size:clamp(27px,5vw,44px);line-height:1.08;margin:7px 0}.top p,.muted{color:#9fb0c5}.panel{padding:22px;margin:15px 0;border:1px solid #2b3d55;border-radius:16px;background:#0a1422}.btn{border:0;border-radius:10px;padding:13px 17px;background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff;font-weight:900;cursor:pointer}.btn:disabled{opacity:.58;cursor:wait}.eyebrow{color:#67e8f9;font-size:10px;font-weight:950;letter-spacing:.12em}.scoreLine{display:flex;align-items:end;gap:10px;margin:10px 0 20px}.scoreLine strong{font-size:52px;line-height:1;color:#67e8f9}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metrics div{padding:14px;border:1px solid #334155;border-radius:12px;background:#07101d}.metrics b,.metrics span{display:block}.metrics b{font-size:24px}.metrics span{color:#94a3b8}.recs{display:grid;gap:10px}.rec{display:grid;grid-template-columns:34px 1fr;gap:11px;padding:14px;border:1px solid #334155;border-radius:12px;background:#07101d}.recNo{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#312e81;color:#fff;font-weight:900}.rec h3,.rec p{margin:0 0 5px}.engines{display:grid;gap:9px}.engine{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:13px;border:1px solid #334155;border-radius:12px;background:#07101d}.engine small{display:block;color:#94a3b8}.engine details{grid-column:1/-1}.engine a{color:#67e8f9;overflow-wrap:anywhere}.aiHint{margin:10px 0 14px;padding:11px 13px;border-radius:9px;font-weight:750}.aiHint.yes{border:1px solid #16a34a;background:#052e16;color:#bbf7d0}.aiHint.wait{border:1px solid #f59e0b;background:#2b1907;color:#fde68a}.pill{padding:4px 9px;border-radius:999px;font-size:11px;font-weight:950}.pill.yes{color:#bbf7d0;background:#064e3b;border:1px solid #16a34a}.pill.no{color:#fecaca;background:#4c0519;border:1px solid #e11d48}.pill.wait{color:#fde68a;background:#422006;border:1px solid #f59e0b}.pqsOwnerTools{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin-top:16px;padding-top:12px;border-top:1px dashed #26364d}.pqsOwnerTools button{border:1px solid #334155;border-radius:8px;padding:7px 10px;background:#07101d;color:#94a3b8;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.pqsOwnerTools button:hover{border-color:#67e8f9;color:#67e8f9}.pqsOwnerTools button:disabled{cursor:wait;opacity:.65}.pqsOwnerTools span{color:#fbbf24;font-size:11px}.cs-prospect-footer{max-width:1040px;margin:18px auto 28px;padding:0 18px}.cs-prospect-specialist,.cs-prospect-privacy{background:#0b1728;border:1px solid #334155;border-radius:14px;padding:20px;margin-top:14px}.cs-prospect-contact{display:flex;gap:9px;flex-wrap:wrap}.cs-prospect-specialist a,.cs-prospect-specialist button{border:1px solid #67e8f9;border-radius:9px;padding:10px 15px;color:#67e8f9;background:transparent;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.cs-prospect-specialist button{background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff}.cs-prospect-privacy a{color:#67e8f9}@media(max-width:720px){.metrics{grid-template-columns:1fr}.panel{padding:16px}.wrap{padding-inline:12px}.pqsOwnerTools{align-items:flex-end;flex-direction:column}}</style></head><body><main class="wrap"><header class="top"><div class="brand">'+e(copy.brand)+'</div><h1>'+e(row.business_name||row.domain||copy.title)+'</h1><p>'+e(copy.intro)+'</p></header>'+completeBanner+funnel+notification+result+'<section class="panel" id="pqsAiEvidence"><div class="eyebrow">5 AI SYSTEMS</div><h2>'+e(copy.ai)+'</h2>'+aiHint+'<div class="engines">'+aiRows+'</div>'+ownerTools+'</section></main>'+footer+'<script>(function(){window.openChat=function(){if(window.Tawk_API&&typeof window.Tawk_API.maximize==="function"){window.Tawk_API.maximize();return}window.open("https://contentscale.site/contact/","_blank","noopener")}})();<\/script></body></html>';
 }
 
+function _pqsTrackerRegistration(row, language){
+  if(!row.scan_completed_at || row.audit20_status!=='ready')return '';
+  const copy={
+    en:{title:'Continue in Tracker',name:'Public business name',submit:'Create my Tracker',open:'Open my Tracker',failed:'Registration could not be completed. Try again.',existing:'This website already has a Tracker or this result is already linked.'},
+    nl:{title:'Verder in Tracker',name:'Openbare bedrijfsnaam',submit:'Maak mijn Tracker aan',open:'Open mijn Tracker',failed:'Registratie kon niet worden afgerond. Probeer opnieuw.',existing:'Deze website heeft al een Tracker of dit resultaat is al gekoppeld.'},
+    es:{title:'Continuar en Tracker',name:'Nombre público de la empresa',submit:'Crear mi Tracker',open:'Abrir mi Tracker',failed:'No se pudo completar el registro. Inténtalo de nuevo.',existing:'Este sitio ya tiene un Tracker o el resultado ya está vinculado.'}
+  }[_pqsLang3(language)];
+  const e=_pqsHtml;
+  return `<section class="panel"><h2>${e(copy.title)}</h2>
+    <form id="pqsTrackerRegistration" data-scan-token="${e(row.token)}" data-domain="${e(row.domain)}" data-failed="${e(copy.failed)}" data-existing="${e(copy.existing)}">
+      <label>${e(copy.name)} <input type="text" name="business" value="${e(row.business_name)}" minlength="2" maxlength="200" required></label>
+      <button type="submit" class="btn">${e(copy.submit)}</button>
+      <p role="status" aria-live="polite"></p>
+      <a class="btn" hidden>${e(copy.open)}</a>
+    </form></section><script>(function(){
+      var form=document.getElementById('pqsTrackerRegistration');
+      var button=form.querySelector('button'),status=form.querySelector('[role="status"]'),link=form.querySelector('a');
+      form.addEventListener('submit',async function(event){
+        event.preventDefault();button.disabled=true;status.textContent='';
+        var registered=false;
+        try{
+          var scanToken=form.dataset.scanToken;
+          var interest=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(scanToken)+'/tracker-interest',{method:'POST'});
+          if(!interest.ok)throw Error();
+          var response=await fetch('/api/tracker-client/register',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({domain:form.dataset.domain,name:form.elements.business.value,quick_scan_key:scanToken})});
+          var data=await response.json();
+          if(response.status===409){status.textContent=form.dataset.existing;return;}
+          if(!response.ok||!data.token||!data.linked_page_id)throw Error();
+          link.href='/track/'+encodeURIComponent(data.token);link.hidden=false;registered=true;
+        }catch(error){status.textContent=form.dataset.failed;}
+        finally{button.disabled=registered;}
+      });
+    })();</script>`;
+}
+
 app.get('/quick-scan/:token',async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');
   try{
@@ -27161,7 +27203,7 @@ app.get('/quick-scan/:token',async(req,res)=>{
     const language=_pqsResolveLanguage(row.language,row.domain),html=_pqsPublicPageV393(row,language);
     res.set('Cache-Control','no-store, no-cache, must-revalidate');
     res.set('X-ContentScale-Build',CONTENTSCALE_BUILD_ID);
-    const finalHtml=html; // Personal Quick Scan already follows the saved CEO prospect language.
+    const finalHtml=ownerPreview?html:html.replace('</body>',_pqsTrackerRegistration(row,language)+'</body>');
   res.type('html').send(finalHtml);
   }catch(e){console.error('[quick-scan public]',e.message);res.status(500).send('Quick Scan unavailable')}
 });
