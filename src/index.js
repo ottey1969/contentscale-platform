@@ -47108,10 +47108,14 @@ function _networkPrewriteEmitState(){
     },window.location.origin);
   }catch(e){}
 }
-function _networkPrewriteApplyEvidence(engine,evidence){
+function _networkPrewriteApplyEvidence(engine,evidence,googleSource){
   var ids={google_aio:'pwbAioText',chatgpt:'pwbChatgptText',perplexity:'pwbPerplexityText',claude:'pwbClaudeText',copilot:'pwbCopilotText'};
   var el=document.getElementById(ids[String(engine||'').toLowerCase()]);
   if(!el)return false;
+  if(engine==='google_aio'&&['ai_overview','gemini'].indexOf(googleSource)>=0){
+    var source=document.getElementById('pwbGoogleSource');
+    if(source)source.value=googleSource;
+  }
   el.value=String(evidence||'');
   try{el.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
   _pwbUpdateAiFiveCount();
@@ -47121,7 +47125,7 @@ function _networkPrewriteApplyEvidence(engine,evidence){
 window.addEventListener('message',function(e){
   if(e.origin!==window.location.origin||!e.data)return;
   if(e.data.type==='network-ai-evidence'&&Number(e.data.placement_id)===_networkPrewritePlacementId()){
-    _networkPrewriteApplyEvidence(e.data.engine,e.data.evidence);
+    _networkPrewriteApplyEvidence(e.data.engine,e.data.evidence,e.data.google_source);
   }
 });
 document.addEventListener('input',function(e){
