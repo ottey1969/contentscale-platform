@@ -52,6 +52,12 @@ test('concurrent free Growth workers deliver at most one reminder and retry only
     const pending = (await pool.query('SELECT reminder_dispatch_state,reminder_sent_at FROM growth_free_checks WHERE id=$1',[uncertain])).rows[0];
     assert.deepEqual(pending,{reminder_dispatch_state:'unknown',reminder_sent_at:null});
 
+    const interrupted = await createDue('interrupted','2026-01-04');
+    assert.ok(await store.claimReminder(pool,{id:interrupted,now:new Date('2026-01-04T12:00:00Z')}));
+    await run(async () => { receipts++; return true; },'2026-01-05');
+    assert.equal(receipts,1);
+    assert.equal((await pool.query('SELECT reminder_dispatch_state FROM growth_free_checks WHERE id=$1',[interrupted])).rows[0].reminder_dispatch_state,'unknown');
+
     const exhausted = await createDue('exhausted','2026-01-05');
     for (let attempt = 0; attempt < 3; attempt++) {
       assert.deepEqual(await run(async () => false,'2026-01-05'),{sent:0,failed:1});

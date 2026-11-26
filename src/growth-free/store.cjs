@@ -58,6 +58,7 @@ function ensureTables(pool){
   await addColumn('reminder_sent_at','TIMESTAMPTZ');
   await addColumn('reminder_attempts','INTEGER NOT NULL DEFAULT 0');
   await addColumn('reminder_dispatch_state','TEXT');
+  await addColumn('reminder_dispatch_started_at','TIMESTAMPTZ');
   await addColumn('reminder_token','TEXT');
   await addColumn('reminder_opt_out_at','TIMESTAMPTZ');
   // The domain the visitor used (one of this app's domains), so the e-mail links open on the same domain.
@@ -271,10 +272,14 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null,note=nul
 const DUE_REMINDER_SQL = `reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL
    AND reminder_attempts<3 AND reminder_dispatch_state IS NULL AND status='DONE'`;
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
+ // A stopped worker may have dispatched successfully before it lost its response.
+ await pool.query(`UPDATE growth_free_checks SET reminder_dispatch_state='unknown'
+   WHERE reminder_dispatch_state='sending' AND (reminder_dispatch_started_at IS NULL
+     OR reminder_dispatch_started_at<=$1::timestamptz-INTERVAL '30 minutes')`,[now]);
  return (await pool.query(`SELECT id FROM growth_free_checks WHERE ${DUE_REMINDER_SQL} ORDER BY reminder_due_at,id LIMIT $2`,[now,limit])).rows;
 }
 async function claimReminder(pool,{id,now}){
- return (await pool.query(`UPDATE growth_free_checks SET reminder_dispatch_state='sending',reminder_attempts=reminder_attempts+1
+ return (await pool.query(`UPDATE growth_free_checks SET reminder_dispatch_state='sending',reminder_dispatch_started_at=$1::timestamptz,reminder_attempts=reminder_attempts+1
    WHERE ${DUE_REMINDER_SQL} AND id=$2
    RETURNING id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,
      report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,published_note,reminder_token,reminder_base,ui_lang`,[now,id])).rows[0];
@@ -282,7 +287,7 @@ async function claimReminder(pool,{id,now}){
 async function markReminder(pool,{id,sent,unknown=false}){
  await pool.query(`UPDATE growth_free_checks SET reminder_dispatch_state=CASE WHEN $3 THEN 'unknown' ELSE NULL END,
    reminder_sent_at=CASE WHEN $2 THEN NOW() ELSE reminder_sent_at END
-   WHERE id=$1 AND reminder_dispatch_state='sending'`,[id,!!sent,!!unknown]);
+   WHERE id=$1 AND (reminder_dispatch_state='sending' OR ($2 AND reminder_dispatch_state='unknown'))`,[id,!!sent,!!unknown]);
 }
 // Unsubscribe from the e-mail link: only the reminder stops; the check and its result stay.
 async function optOutReminder(pool,t){
