@@ -291,10 +291,12 @@ async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
 }
 // The same answer text already saved for a check with another customer question (owner 2026-11-20: answers from an earlier
 // check ended up in a check about something else). Returns that other question, or null.
-async function answerUsedForOtherQuery(pool,{checkId,rawText,query}){
+async function answerUsedForOtherQuery(pool,{checkId,rawText,query,owner=false,inviteId=null}){
+ if(!owner&&inviteId==null)return null;
  const r=await pool.query(`SELECT c.query FROM growth_free_ai_answers a JOIN growth_free_checks c ON c.id=a.check_id
   WHERE a.check_id<>$1 AND btrim(a.raw_text,E' \t\r\n')=btrim($2,E' \t\r\n') AND btrim(c.query)<>'' AND lower(btrim(c.query))<>lower(btrim($3))
-  ORDER BY a.created_at DESC LIMIT 1`,[Number(checkId)||0,String(rawText||''),String(query||'')]);
+  AND (($4::boolean AND c.access_label='admin') OR ($5::bigint IS NOT NULL AND c.invite_id=$5))
+  ORDER BY a.created_at DESC LIMIT 1`,[Number(checkId)||0,String(rawText||''),String(query||''),!!owner,inviteId]);
  return r.rows[0]?r.rows[0].query:null;
 }
 // Transfer answers only when BOTH result capabilities are presented and the route
