@@ -72,6 +72,16 @@ test('private research is reusable only through the recorded GSC report or its a
     const linked = await createCheck(url, 'admin', null, 65, 'explicitly linked');
     const source = auditUpload(affiliated, { url, owner: true });
     await growth.saveGscUpload(pool, { checkId: linked.id, ...source });
+    await growth.saveGscUpload(pool, { checkId: invited.id, ...source });
+    await growth.saveGscUpload(pool, { checkId: linked.id, fileName: 'Independent page export', upload: {
+      status: 'VERIFIED_FOR_PAGE', basis: 'PAGE_QUERY_EXPORT', totals: { clicks: 2, impressions: 10 }
+    } });
+    assert.deepEqual((await growth.listGscUploads(pool, linked.id)).map(upload => upload.totals.clicks), [0, 2]);
+    assert.equal((await growth.listGscUploads(pool, invited.id)).length, 1);
+    await pool.query("UPDATE growth_free_invites SET expires_at=NOW()-interval '1 second' WHERE id=$1", [invitation.id]);
+    assert.deepEqual(await growth.listGscUploads(pool, invited.id), []);
+    assert.equal((await growth.listGscUploads(pool, linked.id)).length, 2);
+    await pool.query("UPDATE growth_free_invites SET expires_at=NOW()+interval '1 day' WHERE id=$1", [invitation.id]);
     const owner = await growthFor(pool, [url], { ...options, owner: true });
     assert.ok(owner.get(url)?.owner_result?.includes(linked.public_id));
     const scoped = await browser.get('/free-growth').query({ url, gsc_audit: affiliated.token }).expect(200);
@@ -104,16 +114,31 @@ test('private research is reusable only through the recorded GSC report or its a
     assert.deepEqual(await trackerScores(otherPath), [75], 'the existing other Tracker binding stays separate');
     await browser.post(ownerPath).send({ type: 'free_growth', id: invited.public_id, key: invited.access_key }).expect(200);
     assert.deepEqual(await trackerScores(ownerPath), [55], 'direct and inherited links still show one source');
+    const trackerGsc = async () => (await browser.get(ownerPath).expect(200).expect('Cache-Control','no-store')).body.proof_sources.free_growth.flatMap(item => item.gsc);
+    assert.equal((await trackerGsc()).length, 1);
     await createCheck(url, 'invited', invitation.id, 69, 'second authorized result');
     assert.deepEqual(await trackerScores(ownerPath), [55, 69]);
     const ambiguous = await createReport(invitation.token, 85);
     assert.deepEqual(await trackerScores(ownerPath), [55], 'a reused invitation cannot grant an inherited Tracker binding');
     await gsc.revokeReport(pool, ambiguous.id);
     assert.deepEqual(await trackerScores(ownerPath), [55, 69]);
+    const audited = await createCheck(url, 'admin', null, 66, 'audit-dependent research');
+    await growth.saveGscUpload(pool, { checkId: audited.id, ...source });
+    await growth.setStatus(pool, audited.id, { status: 'DONE', report: {
+      engine_version: 'audit-regression', gsc_audit_evidence: { source: 'GSC_REPORT', report_id: affiliated.id }
+    } });
+    await pool.query('UPDATE growth_free_checks SET cache_eligible=TRUE WHERE id=$1', [audited.id]);
+    assert.ok(await growth.getCheck(pool, audited.public_id, audited.access_key));
+    assert.equal(await growth.recentResult(pool, { url, query: 'test', engineVersion: 'audit-regression', accessLabel: 'admin' }), null);
     await gsc.revokeReport(pool, affiliated.id);
+    assert.equal(await growth.getCheck(pool, audited.public_id, audited.access_key), null);
+    assert.deepEqual((await growth.listGscUploads(pool, linked.id)).map(upload => upload.totals.clicks), [2]);
+    assert.deepEqual(await growth.listGscUploads(pool, invited.id), []);
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM growth_free_gsc_uploads WHERE check_id=$1', [linked.id])).rows[0].n, 2);
     assert.deepEqual(await sharedHistory(pool, linked), []);
     assert.deepEqual(await reportUploadsFor(pool, { url, checkId: linked.id }), []);
     assert.deepEqual(await trackerScores(ownerPath), [55], 'an independently authorized Free Growth link remains');
+    assert.deepEqual(await trackerGsc(), []);
   } finally {
     await pool.end();
     await db.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');

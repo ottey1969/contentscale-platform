@@ -27,6 +27,8 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ## Auditmatrix
 
+Een aanvullende regressie vóór de merge van #575 reproduceerde dat eerder overgenomen GSC-cijfers via de opslag van Free Growth beschikbaar bleven na intrekking. De uitlezing controleert nu de oorspronkelijke rapportautorisatie en de eventuele uitnodiging. De test houdt een onafhankelijk geüploade export en de historische databaserijen intact. Hij toetst ook het verlopen van een uitnodiging, de cache-uitsluiting van auditgebonden onderzoek en intrekking in Tracker Proof & History. [Regressie](../tests/gsc-growth-authorized-history.test.cjs)
+
 Een herstelstatus geldt uitsluitend voor het expliciet genoemde defect. De wijzigingen staan in de vermelde commits en pull requests. Een streepje betekent dat voor die rij geen defect of oplossing is vastgesteld. `NOT TESTED` betekent dat de volledige gebruikersreis niet aantoonbaar is uitgevoerd, ook als deeltests groen zijn.
 
 | Module / functie | Gebruikersreis | Bevinding en oorzaak | Prioriteit | Oplossing | Regressie en resultaat | Status | Commit / PR |

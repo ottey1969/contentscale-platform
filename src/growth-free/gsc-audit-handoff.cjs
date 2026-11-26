@@ -20,10 +20,21 @@ async function relatedReports(pool,{url,checkId=null,inviteId=null}){
   WHERE r.revoked_at IS NULL AND r.expires_at>NOW() AND (
     EXISTS(SELECT 1 FROM growth_free_gsc_uploads u JOIN growth_free_checks c ON c.id=u.check_id
       WHERE c.id=$1 AND c.url=$3 AND u.gsc_report_id=r.id AND u.status='VERIFIED_FOR_PAGE'
-        AND u.basis='GSC_AUDIT_EXACT_PAGE')
+        AND u.basis='GSC_AUDIT_EXACT_PAGE'
+        AND (c.invite_id IS NULL OR EXISTS(SELECT 1 FROM growth_free_invites i WHERE i.id=c.invite_id
+          AND i.revoked_at IS NULL AND i.expires_at>NOW()
+          AND i.token_hash=encode(sha256(convert_to(r.growth_invite,'UTF8')),'hex'))))
     OR EXISTS(SELECT 1 FROM growth_free_invites i WHERE i.id=$2 AND i.revoked_at IS NULL AND i.expires_at>NOW()
       AND i.token_hash=encode(sha256(convert_to(r.growth_invite,'UTF8')),'hex')))
   ORDER BY r.created_at,r.id`,[checkId,inviteId,url])).rows;
+}
+async function auditResearchAvailable(pool,row){
+ const evidence=row.report?.gsc_audit_evidence;
+ if(!evidence)return true;
+ const reports=await relatedReports(pool,{url:row.url,checkId:row.cached_from||row.id}).catch(()=>[]);
+ return evidence.report_id!=null
+  ?reports.some(report=>String(report.id)===String(evidence.report_id))
+  :reports.length===1;
 }
 // Compare only like-for-like exact-page totals, never interpret different periods as discrepancies.
 function auditDifference(rows){
@@ -43,4 +54,4 @@ function auditDifference(rows){
  if(Object.keys(differences).length)return {status:'DIFFERENT_TOTALS',differences};
  return {status:compared===fields.length?'MATCH':'INSUFFICIENT_DATA',differences};
 }
-module.exports={auditUpload,loadAuditUpload,auditDifference,relatedReports};
+module.exports={auditUpload,loadAuditUpload,auditDifference,relatedReports,auditResearchAvailable};

@@ -71,15 +71,18 @@ async function loadProofSources(pool, { clientId, pageId, url, events }) {
   }
   for (const id of new Set([...directChecks, ...invitedChecks])) {
     const row = (await pool.query(
-      `SELECT url,query,finished_at,summary,publication_history,contentscore_history
+      `SELECT url,query,finished_at,summary,publication_history,contentscore_history,cached_from,
+              jsonb_build_object('gsc_audit_evidence',report->'gsc_audit_evidence') AS report
            FROM growth_free_checks WHERE id=$1 AND status='DONE'`, [id])).rows[0];
     if (!row || !exact(row.url, url)) continue;
+    const canReadResearch = await require('./growth-free/gsc-audit-handoff.cjs').auditResearchAvailable(pool,{...row,id});
+    const { report, cached_from, ...proof } = row;
     const gsc = (await growth.listGscUploads(pool, id)).filter(item => item.status === 'VERIFIED_FOR_PAGE');
-    const ai = (await growth.listAiAnswerObservations(pool, id)).map(({ engine, parsed, created_at }) => ({
+    const ai = (canReadResearch ? await growth.listAiAnswerObservations(pool, id) : []).map(({ engine, parsed, created_at }) => ({
       engine, recorded_at: created_at, source_status: parsed?.resources_status ?? null,
       exact_url_listed: parsed?.sources_verifiable === true ? (parsed.sources || []).some(source => exact(source, url)) : null
     }));
-    out.free_growth.push({ ...row, gsc, ai });
+    out.free_growth.push({ ...proof, summary: canReadResearch ? proof.summary : null, gsc, ai });
   }
   return { tracker_client_id: clientId, tracker_page_id: pageId, url, ...out };
 }

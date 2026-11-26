@@ -1614,7 +1614,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
-      if(job.gscAudit)out.report.gsc_audit_evidence={source:'GSC_REPORT',period:job.gscAudit.period,totals:job.gscAudit.totals,page_url:job.url,query_rows:job.gscAudit.queries.length};
+      if(job.gscAudit)out.report.gsc_audit_evidence={source:'GSC_REPORT',report_id:job.gscAudit.gsc_report_id,
+       period:job.gscAudit.period,totals:job.gscAudit.totals,page_url:job.url,query_rows:job.gscAudit.queries.length};
        if(job.sitemap)out.report.sitemap_import={status:job.sitemap.urls.length?'IMPORTED_URL_INVENTORY_ONLY':'SITEMAP_UNAVAILABLE',source:job.sitemap.source||'VISITOR_XML_UPLOAD',file_name:job.sitemap.fileName,urls_found:job.sitemap.totalFound,urls_used:job.sitemap.urls.length,limited:job.sitemap.limited,urls:job.sitemap.urls,note:'Sitemap URLs are site inventory only. No imported page was treated as read, indexed, canonical or verified.'};
       if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
@@ -1916,6 +1917,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  }
 
  async function load(req,res){
+  res.set('Cache-Control','no-store');
   try{
    await storage.ensureTables(pool);
    const row=await storage.getCheck(pool,req.params.id,req.query.k);
@@ -2050,6 +2052,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   const [aiPart,gscPart,bestOwn]=await Promise.all([aiFor(row),gscFor(row),bestOwnFor(row)]);
+  const report=row.report?.gsc_audit_evidence?{...row.report,gsc_audit_evidence:{...row.report.gsc_audit_evidence,report_id:undefined}}:row.report;
   res.set('Cache-Control','no-store').set('Content-Disposition',`attachment; filename="growth-check-${row.public_id}.json"`)
    .json({generated_by:config.brand+' free Growth check',url:row.url,search_term:row.query||null,checked_at:row.finished_at,
     disclaimer:'Research data only. No ranking or traffic increase is promised. '+(gscPart.latest?(gscPart.latest.used_in_research?'A Search Console export verified for this exact page was used.':gscPart.latest.status==='VERIFIED_FOR_PAGE'?'The latest page-verified Search Console export was not used in the original research.':'A Search Console export was uploaded but is not verified for this exact page; it was not used as evidence.'):'Google Search Console data was not used.'),
@@ -2058,7 +2061,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     content_priorities:buildContentPriorities({summary:row.summary,aiGap:aiPart&&aiPart.gap,report:row.report,bestOwnPage:bestOwn}),
     ai_answers:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,summary:aiPart.summary,
      answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
-    report:row.report});
+    report});
  });
  // Optional Search Console export after the result (for example a newer period, or for the measurement after publication).
  // Stored with this check only; the research is not run again.

@@ -158,6 +158,7 @@ async function recentResult(pool,{url,query,market=null,engineVersion=null,acces
  if(!engineVersion||!accessLabel)return null;
  return (await pool.query(`SELECT id,decision,summary,report FROM growth_free_checks
    WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND report->>'engine_version'=$4 AND status='DONE' AND cache_eligible=TRUE AND access_label=$5
+     AND report->'gsc_audit_evidence' IS NULL
      AND invite_id IS NOT DISTINCT FROM $6::bigint AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion,accessLabel,inviteId])).rows[0]||null;
 }
 
@@ -185,6 +186,7 @@ async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
    ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,publication_history,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation,contentscore_history FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
+ if(!await require('./gsc-audit-handoff.cjs').auditResearchAvailable(pool,row))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
   await setStatus(pool,row.id,{status:'FAILED',error_code:'INTERRUPTED'});row.status='FAILED';row.error_code='INTERRUPTED';
@@ -284,7 +286,13 @@ async function saveGscUpload(pool,{checkId,fileName,upload}){
    upload.basis==='GSC_AUDIT_EXACT_PAGE'?upload.gsc_report_id||null:null])).rows[0];
 }
 async function listGscUploads(pool,checkId){
- return (await pool.query("SELECT id,file_name,status,basis,period_start::text AS period_start,period_end::text AS period_end,totals,queries,created_at FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY created_at,id",[checkId])).rows;
+ const {rows}=await pool.query("SELECT id,file_name,status,basis,period_start::text AS period_start,period_end::text AS period_end,totals,queries,created_at,gsc_report_id FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY created_at,id",[checkId]);
+ if(!rows.some(row=>row.basis==='GSC_AUDIT_EXACT_PAGE'))return rows.map(({gsc_report_id,...row})=>row);
+ const check=(await pool.query('SELECT url FROM growth_free_checks WHERE id=$1',[checkId])).rows[0];
+ const reports=await require('./gsc-audit-handoff.cjs').relatedReports(pool,{url:check?.url,checkId}).catch(()=>[]);
+ const active=new Set(reports.map(report=>String(report.id)));
+ return rows.filter(row=>row.basis!=='GSC_AUDIT_EXACT_PAGE'||active.has(String(row.gsc_report_id)))
+  .map(({gsc_report_id,...row})=>row);
 }
 async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
  await pool.query(`INSERT INTO growth_free_ai_answers AS prior(check_id,engine,raw_text,parsed) VALUES ($1,$2,$3,$4::jsonb)
