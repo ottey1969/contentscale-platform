@@ -38,8 +38,10 @@ test('Tracker registration returns the committed account and serializes duplicat
     const app = require('express')();
     app.use(require('express').json());
     const notices = [];
-    vm.runInNewContext(source.slice(start, end), {
-      app, pool, require: require('node:module').createRequire(require.resolve('../src/index.js')),
+    const adminStart = source.indexOf("app.post('/api/admin/tracker-clients/create-own'");
+    const adminEnd = source.indexOf('\n});', adminStart) + 4;
+    vm.runInNewContext(source.slice(start, end) + source.slice(adminStart, adminEnd), {
+      app, pool, verifyAdmin: (_req, _res, next) => next(), require: require('node:module').createRequire(require.resolve('../src/index.js')),
       _ensureProspectQuickScanTable: async () => true,
       _ensureCaseStudySchema: async () => true,
       process: { env: { APP_URL: 'https://tracker.example' } },
@@ -65,6 +67,15 @@ test('Tracker registration returns the committed account and serializes duplicat
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM tracker_clients WHERE domain='parallel.example'")).rows[0].n, 1);
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM tracker_clients')).rows[0].n, 4);
     assert.equal(notices.filter(subject => subject.includes('New tracker:')).length, 4);
+
+    const adminRegister = domain => api.post('/api/admin/tracker-clients/create-own').send({domain,name:'Administrative fixture'});
+    await pool.query("UPDATE tracker_clients SET domain='WWW.Free.Example',status=NULL WHERE domain='free.example'");
+    const reused = await adminRegister('https://free.example/').expect(200);
+    assert.equal(reused.body.token,free.body.token);
+    const dual = await Promise.all([adminRegister('shared.example'),register('https://www.shared.example/', '192.0.2.10')]);
+    assert.equal(dual[0].status,200);
+    assert.ok([200,409].includes(dual[1].status));
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM tracker_clients WHERE domain='shared.example'")).rows[0].n,1);
 
     const prospectPage = 'https://www.prospect.example/Services/?view=full';
     const prospectKey = '12'.repeat(32);

@@ -2633,7 +2633,8 @@ app.post('/api/tracker-client/register', async (req, res) => {
     const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
     // Clean domain
-    const cleanDomain = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
+    const {registrationDomain,lockRegistrationDomain,findRegistration}=require('./tracker-registration-identity.cjs');
+    const cleanDomain = registrationDomain(domain);
     if (!cleanDomain || !cleanDomain.includes('.')) return res.status(400).json({ success: false, error: 'Invalid domain' });
 
     const acceptedPrefixes = ['DEALIFY-', 'CS-', 'APPSUMO-', 'AS-', 'PG-', 'PITCHGROUND-', 'SM-', 'SAASMANTRA-', 'LTD-', 'PRIME-'];
@@ -2660,9 +2661,8 @@ app.post('/api/tracker-client/register', async (req, res) => {
     let registered, linkedPageId;
     try {
       await db.query('BEGIN');
-      await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['tracker-registration:domain:' + cleanDomain]);
-      const existing = (await db.query(`SELECT status FROM tracker_clients
-        WHERE regexp_replace(lower(trim(domain)), '^www[.]', '')=$1 LIMIT 1`, [cleanDomain])).rows[0];
+      await lockRegistrationDomain(db,cleanDomain);
+      const existing = await findRegistration(db,cleanDomain,true);
       if (existing) {
         notifyOttmar(
           '⚠️ Re-registration attempt: ' + cleanDomain,
@@ -11476,25 +11476,22 @@ app.post('/api/admin/tracker-clients/:id/email-last-brief', verifyAdmin, async (
 app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) => {
   try {
     const { domain, name, email, max_pages, source } = req.body;
-    if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
-
-    // Check existing
-    const existing = await pool.query('SELECT id, token FROM tracker_clients WHERE domain=$1 AND status != $2', [cleanDomain, 'deleted']);
-    if (existing.rows.length) {
-      const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + existing.rows[0].token;
-      return res.json({ success: true, token: existing.rows[0].token, url: existingUrl, existing: true });
-    }
-
-    const token = generateClientToken();
+    const {registrationDomain,reuseOrCreateRegistration}=require('./tracker-registration-identity.cjs');
+    const cleanDomain = registrationDomain(domain);
+    if (!cleanDomain) return res.status(400).json({ success: false, error: 'Domain required' });
     const maxPg = parseInt(max_pages) || 10;
-    // Final plan rule: free is exactly 1 page; 2+ pages are paid. GSC is ON for both,
-    // so every account can use evidence-based classification and see the full product loop.
-    const autoGsc = maxPg >= 1;
-    await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status, gsc_enabled) VALUES ($1,$2,$3,$4,$5,'active',$6)`,
-      [token, cleanDomain, name||null, email||null, maxPg, autoGsc]
-    );
+    const account = await reuseOrCreateRegistration(pool,cleanDomain,async db=>{
+      const token=generateClientToken();
+      const {rows}=await db.query(`INSERT INTO tracker_clients (token,domain,name,email,max_pages,status,gsc_enabled)
+        VALUES ($1,$2,$3,$4,$5,'active',$6) RETURNING id,token`,
+        [token,cleanDomain,name||null,email||null,maxPg,maxPg>=1]);
+      return rows[0];
+    });
+    const token=account.token;
+    if(account.existing){
+      const url=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+token;
+      return res.set('Cache-Control','no-store').json({success:true,token,url,existing:true});
+    }
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
 
