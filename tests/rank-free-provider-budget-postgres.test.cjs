@@ -55,6 +55,33 @@ test('Parallel Rank Tracker workers cannot overspend the shared provider budget'
     assert.equal(afterRestart.budget_reached, true);
     assert.equal(calls, 2);
     assert.equal(await store.usage(nextDay), 1);
+
+    const november = new Date('2026-11-30T23:59:00Z');
+    const december = new Date('2026-12-01T00:01:00Z');
+    let current = november, checked = 0;
+    const rollover = await runDue({ store, now: november, clock: () => current, key: 'fixture', monthlyCap: 7,
+      check: async () => {
+        checked++;
+        if (checked === 1) current = december;
+        return { ...result(), checked_at: current };
+      } });
+    assert.equal(rollover.checked, 2);
+    assert.equal(await store.usage(november), 2);
+    assert.equal(await store.usage(december), 1);
+
+    // An expired worker cannot append evidence or overwrite the schedule of a reclaimed keyword.
+    const leaseStart = new Date('2026-12-10T00:00:00Z');
+    const expired = new Date('2026-12-10T00:15:00Z');
+    const later = new Date('2026-12-10T00:16:00Z');
+    const reclaimed = new Date('2026-12-10T00:31:00Z');
+    const scheduled = new Date('2026-12-17T00:16:00Z');
+    const id = keywords[0].id;
+    assert.equal(await store.claimKeyword(id, leaseStart, expired), true);
+    assert.equal(await other.claimKeyword(id, later, reclaimed), true);
+    assert.equal(await other.saveResult(id, { ...result(), checked_at: later, position: 5 }, scheduled, reclaimed), true);
+    assert.equal(await store.saveResult(id, { ...result(), checked_at: later, position: 17 }, expired, expired), false);
+    assert.equal((await store.history(id))[0].position, 5);
+    assert.equal((await store.keywords(project.id)).find(row => row.id === id).next_check_at.toISOString(), scheduled.toISOString());
   } finally {
     await pool.end();
     try { await control.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE'); }

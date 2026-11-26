@@ -106,12 +106,18 @@ function pgStore(pool) {
         WHERE k.id=$1 AND k.project_id=p.id AND k.active AND k.next_check_at<=$2
           AND a.verified_at IS NOT NULL AND a.opted_out_at IS NULL RETURNING k.id`, [keywordId, now, until])).length > 0;
     },
-    async saveResult(keywordId, r, next) {
-      await q('INSERT INTO rank_free_results(keyword_id,checked_at,status,position,url,result) VALUES($1,$2,$3,$4,$5,$6)',
-        [keywordId, r.checked_at, r.status, r.position || null, r.url || null, r]);
-      await q('UPDATE rank_free_keywords SET last_checked_at=$2, next_check_at=$3, last_error=NULL, last_error_at=NULL WHERE id=$1', [keywordId, r.checked_at, next]);
+    async saveResult(keywordId, r, next, lease = null) {
+      return (await q(`WITH active_claim AS (
+        UPDATE rank_free_keywords SET last_checked_at=$2,next_check_at=$3,last_error=NULL,last_error_at=NULL
+        WHERE id=$1 AND ($8::timestamptz IS NULL OR next_check_at=$8) RETURNING id
+      ) INSERT INTO rank_free_results(keyword_id,checked_at,status,position,url,result)
+        SELECT id,$2,$4,$5,$6,$7 FROM active_claim RETURNING id`,
+      [keywordId, r.checked_at, next, r.status, r.position || null, r.url || null, r, lease])).length > 0;
     },
-    async postpone(keywordId, next, error = null, at = null) { await q('UPDATE rank_free_keywords SET next_check_at=$2, last_error=COALESCE($3,last_error), last_error_at=COALESCE($4,last_error_at) WHERE id=$1', [keywordId, next, error, at]); },
+    async postpone(keywordId, next, error = null, at = null, lease = null) {
+      await q(`UPDATE rank_free_keywords SET next_check_at=$2,last_error=COALESCE($3,last_error),last_error_at=COALESCE($4,last_error_at)
+        WHERE id=$1 AND ($5::timestamptz IS NULL OR next_check_at=$5)`, [keywordId, next, error, at, lease]);
+    },
     async usage(now) { return Number(((await q('SELECT calls FROM rank_free_usage WHERE month=$1', [month(now)]))[0] || { calls: 0 }).calls); },
     async addUsage(now, n) { await q('INSERT INTO rank_free_usage(month,calls) VALUES($1,$2) ON CONFLICT(month) DO UPDATE SET calls=rank_free_usage.calls+EXCLUDED.calls', [month(now), n]); },
     async reserveUsage(now, count, limit) {
@@ -220,9 +226,12 @@ function memoryStore() {
         return a.verified_at && !a.opted_out_at ? { keyword_id: k.id, keyword: k.keyword, project_id: p.id, host: p.host, gl: p.gl, hl: p.hl, maps_location: p.maps_location || null, search_location: p.search_location || null, maps_grid: p.maps_grid || [], account_id: a.id } : null;
       }).filter(Boolean).slice(0, limit);
     },
-    async saveResult(keywordId, r, next) {
+    async saveResult(keywordId, r, next, lease = null) {
+      const k = db.keywords.find(row => row.id === keywordId);
+      if (!k || (lease && Number(k.next_check_at) !== Number(lease))) return false;
       db.results.push({ keyword_id: keywordId, checked_at: r.checked_at, status: r.status, position: r.position || null, url: r.url || null, result: r });
-      Object.assign(db.keywords.find(k => k.id === keywordId), { last_checked_at: new Date(r.checked_at), next_check_at: next, last_error: null, last_error_at: null });
+      Object.assign(k, { last_checked_at: new Date(r.checked_at), next_check_at: next, last_error: null, last_error_at: null });
+      return true;
     },
     async claimKeyword(keywordId, now, until) {
       const k = db.keywords.find(row => row.id === keywordId);
@@ -232,7 +241,12 @@ function memoryStore() {
       k.next_check_at = until;
       return true;
     },
-    async postpone(keywordId, next, error = null, at = null) { const k = db.keywords.find(x => x.id === keywordId); k.next_check_at = next; if (error) { k.last_error = error; k.last_error_at = at; } },
+    async postpone(keywordId, next, error = null, at = null, lease = null) {
+      const k = db.keywords.find(x => x.id === keywordId);
+      if (!k || (lease && Number(k.next_check_at) !== Number(lease))) return;
+      k.next_check_at = next;
+      if (error) { k.last_error = error; k.last_error_at = at; }
+    },
     async usage(now) { return db.usage[month(now)] || 0; },
     async addUsage(now, n) { db.usage[month(now)] = (db.usage[month(now)] || 0) + n; },
     async reserveUsage(now, count, limit) {
