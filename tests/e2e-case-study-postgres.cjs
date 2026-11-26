@@ -36,7 +36,7 @@ async function run(){
   const prospectB=source.indexOf("app.post('/api/prospect-quick-scan/admin/:token/two-page-overview'",prospectA);
   const auditReadyA=source.indexOf("app.post('/api/prospect-quick-scan/admin/:token/audit20-ready'");
   const trackerInterestA=source.indexOf("app.post('/api/prospect-quick-scan/:token/tracker-interest'");
-  assert(prospectA>0&&prospectB>prospectA&&prospectB-prospectA<6500&&auditReadyA>0&&trackerInterestA>0,'Canonical sales transition boundaries changed');
+  assert(prospectA>0&&prospectB>prospectA&&prospectB-prospectA<6500&&auditReadyA>trackerInterestA&&trackerInterestA>0,'Canonical sales transition boundaries changed');
   const handlers={};let auditEmails=0;const ownerEvents=[];
   const salesContext={
     app:{post(route,...args){handlers[route]=args[args.length-1]}},
@@ -48,7 +48,7 @@ async function run(){
   };
   vm.runInNewContext(source.slice(prospectA,prospectB),salesContext,{timeout:4000});
   vm.runInNewContext(source.slice(auditReadyA,source.indexOf('\n',auditReadyA)),salesContext,{timeout:4000});
-  vm.runInNewContext(source.slice(trackerInterestA,source.indexOf('\n',trackerInterestA)),salesContext,{timeout:4000});
+  vm.runInNewContext(source.slice(trackerInterestA,auditReadyA),salesContext,{timeout:4000});
   async function sales(route,body={}){
     const res={statusCode:200,status(n){this.statusCode=n;return this},json(x){this.body=JSON.parse(JSON.stringify(x));return x}};
     await handlers[route]({params:{token:'prospect-e2e-synthetic'},body},res);
