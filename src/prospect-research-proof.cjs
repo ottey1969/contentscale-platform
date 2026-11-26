@@ -2,6 +2,9 @@
 
 const { exactUrl } = require('./implementation-report.cjs');
 const { registrationDomain } = require('./tracker-registration-identity.cjs');
+const { isIP } = require('node:net');
+
+const officialApp = 'https://app.contentscale.site';
 
 function pageUrl(value) {
   try { return exactUrl(value); } catch { return null; }
@@ -9,13 +12,26 @@ function pageUrl(value) {
 
 function auditReference(value) {
   try {
-    const official = 'https://app.contentscale.site';
-    const url = new URL(value, official);
-    const configured = process.env.APP_URL ? new URL(process.env.APP_URL).origin : official;
-    if (![official, configured].includes(url.origin) || url.username || url.password || url.search || url.hash) return null;
+    const url = new URL(value, officialApp);
+    const configured = process.env.APP_URL ? new URL(process.env.APP_URL).origin : officialApp;
+    if (![officialApp, configured].includes(url.origin) || url.username || url.password || url.search || url.hash) return null;
     const parts = url.pathname.match(/^\/(report|opportunity-report)\/([a-f0-9]+)\/?$/);
     if (!parts || (parts[1] === 'report' ? parts[2].length !== 16 : ![64, 96].includes(parts[2].length))) return null;
     return parts[2];
+  } catch { return null; }
+}
+
+function externalAuditLink(value) {
+  if (typeof value !== 'string' || !/^https:\/\//i.test(value) || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.replace(/\.$/, '');
+    const appHosts = [new URL(officialApp).hostname];
+    if (process.env.APP_URL) appHosts.push(new URL(process.env.APP_URL).hostname);
+    if (url.protocol !== 'https:' || url.username || url.password ||
+      !hostname.includes('.') || isIP(hostname) || /\.(localhost|local|internal)$/.test(hostname) ||
+      appHosts.includes(hostname)) return null;
+    return { source: 'audit20', external_url: url.href };
   } catch { return null; }
 }
 
@@ -64,10 +80,11 @@ async function prospectResearch(pool, prospect, page) {
   const domain = registrationDomain(new URL(page).hostname);
   const ceo = await storedReport(pool, prospect.ceo_report_token);
   const allowedCeoPage = pageUrl(prospect.ceo_report_page_url || ceo?.source_url);
-  const audit = prospect.audit20_status === 'ready' ? await storedReport(pool, auditReference(prospect.audit20_report_url)) : null;
+  const auditUrl = prospect.audit20_status === 'ready' ? prospect.audit20_report_url : null;
+  const audit = await storedReport(pool, auditReference(auditUrl));
   return [
     allowedCeoPage && projectReport('ceo_scan', ceo, domain, allowedCeoPage),
-    projectReport('audit20', audit, domain)
+    projectReport('audit20', audit, domain) || externalAuditLink(auditUrl)
   ].filter(Boolean);
 }
 

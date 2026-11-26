@@ -29,6 +29,8 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ### Gecombineerde hertest na #580–#584
 
+De vervolgbranch toont een extern gehost Audit20-rapport als bronlink vanuit Tracker zodra de bestaande prospectkoppeling geldig is en het rapport is vrijgegeven. Tracker haalt het externe rapport niet op en leidt er geen metingen of bevindingen uit af. De browser stuurt de Tracker-URL niet als verwijzer mee. PostgreSQL controleert intrekking, afscherming voor andere accounts en afwijzing van ongeschikte links. De bestaande Chromium-registratiereis controleert de link op mobiel in EN, NL en ES.
+
 GitHub-controles op de actuele basis waren vóór iedere squashmerge groen. De samengevoegde commits zijn `24431a3` (#580), `8f8b253` (#581), `531517c` (#582), `8b515df` (#583) en `07feba2` (#584). De gerichte hertests op die commits slaagden achtereenvolgens met 11, 12, 18, 19 en 21 tests, telkens met geïsoleerd PostgreSQL 16. Op `07feba2` zijn ook alle 9 gerichte Chromium-tests en alle 567 tests van `npm test` met geïsoleerd PostgreSQL geslaagd. De publieke productieversie meldde via `/api/version` dezelfde commit.
 
 Op de ontwikkelbranch toont Proof & History de opgeslagen CEO Scan en interne Audit20 via het bestaande geautoriseerde prospectbewijs. De Tracker-interface gebruikt de API van dezelfde origin, zodat een geïsoleerde of anders gehoste Tracker geen gegevens op de productiehost opvraagt. Chromium heeft de registratie en de historie weergave voor EN, NL en ES op 390 en 1280 px doorlopen. Extern gehoste Audit20-rapporten blijven toegankelijk via de oorspronkelijke prospect. De branch staat buiten `main`.

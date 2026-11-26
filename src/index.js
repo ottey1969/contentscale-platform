@@ -46162,8 +46162,13 @@ function openCaseStudy(pageId,caseId){
     var scanProof=(sources.quick_scan||[]).length?'<details><summary>Quick Scan</summary><ul>'+scoreLines(sources.quick_scan)+'</ul></details>':'';
     var researchLabels={en:['CEO Scan','20-page audit','Findings'],nl:['CEO Scan','20-pagina-audit','Bevindingen'],es:['Informe CEO','Auditoría de 20 páginas','Hallazgos']};
     var researchText=researchLabels[proofLocale]||researchLabels.en;
+    var auditLinkText={en:'Open external audit report',nl:'Open extern auditrapport',es:'Abrir informe de auditoría externo'};
     var prospectResearch=(sources.prospect_research||[]).map(function(item){
       var heading=researchText[item.source==='ceo_scan'?0:1];
+      if(item.source==='audit20'&&item.external_url){
+        return '<details><summary>'+_csEscH(heading)+'</summary><p><a href="'+_csEscH(item.external_url)
+          +'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">'+_csEscH(auditLinkText[proofLocale]||auditLinkText.en)+'</a></p></details>';
+      }
       var pages=(item.pages||[]).map(function(p){
         return '<li>'+_csEscH(p.url+' · ContentScore '+(p.score==null?'—':p.score))+'</li>';
       }).join('');
