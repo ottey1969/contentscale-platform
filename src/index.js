@@ -1086,7 +1086,7 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_profile_required_before_open_matching_v549: true,
   network_private_publisher_dashboard_email_v550: true,
   network_app_privacy_footer_v550: true,
-  network_expected_module_version: 'v550',
+  network_expected_module_version: 'v552',
   network_guided_workflow_v535: true,
   network_disabled_state_semantics_v535: true,
   prewrite_readonly_share_link: true,

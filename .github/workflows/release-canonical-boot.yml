@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'src/index.js'
+      - 'src/network/register-network.js'
+      - 'tests/e2e-prospect-quick-scan-browser.test.cjs'
       - 'tests/fixtures/staging-boot-schema.sql'
       - 'tests/staging-boot-no-egress.cjs'
       - '.github/workflows/release-canonical-boot.yml'
@@ -69,6 +71,10 @@ jobs:
           git diff --check
       - name: Prepare canonical production artifact (same as Docker build)
         run: node scripts/prepare-canonical-production.cjs
+      - name: Install Chromium for the prospect browser regression
+        run: |
+          npm install --ignore-scripts --no-save --no-package-lock playwright@1.47.2
+          npx playwright install --with-deps chromium
       - name: Boot full canonical application on localhost with external network denied
         run: |
           set -euo pipefail
@@ -92,6 +98,8 @@ jobs:
           (async()=>{
             const build=JSON.parse(fs.readFileSync('/tmp/canonical-build.json','utf8'));
             if(!build||typeof build!=='object')throw Error('Build info invalid');
+            if(!build.network_module_loaded||build.network_module_match!==true)
+              throw Error('Canonical Network module '+build.network_module_version+' differs from expected '+build.network_expected_module_version);
             const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();
             try{
               const q=await c.query("SELECT to_regclass('public.tracker_pages') AS pages,to_regclass('public.tracker_case_studies') AS cases");
@@ -100,5 +108,6 @@ jobs:
           })().catch(e=>{console.error(e);process.exitCode=1});
           NODE
           echo 'PASS: isolated canonical full-app boot and Tracker schema'
+          PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-prospect-quick-scan-browser.test.cjs
       - name: Writable Case Study baseline and replay on disposable PostgreSQL (rollback)
         run: node tests/e2e-case-study-postgres.cjs
