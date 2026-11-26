@@ -26837,13 +26837,16 @@ async function _pqsAttachCeoComparison(row){
     const q=await pool.query(`SELECT report_data FROM opportunity_reports WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[row.ceo_report_token]);
     if(!q.rows.length)return row;
     const report=typeof q.rows[0].report_data==='string'?JSON.parse(q.rows[0].report_data):q.rows[0].report_data||{};
-    const norm=v=>{try{const u=new URL(v);return (u.origin+u.pathname.replace(/\/+$/,'')).toLowerCase()}catch(e){return String(v||'').replace(/\/+$/,'').toLowerCase()}};
-    const target=norm(row.ceo_report_page_url),pages=Array.isArray(report.page_analysis)?report.page_analysis:[];
-    const p=pages.find(x=>norm(x&&x.url)===target)||pages[0]||{};
+    const {exactUrl}=require('./implementation-report.cjs');
+    const target=exactUrl(row.ceo_report_page_url);
+    const matches=x=>{try{return exactUrl(x?.url)===target}catch{return false}};
+    const pages=Array.isArray(report.page_analysis)?report.page_analysis:[];
+    const p=pages.find(matches);
     const groups=report.graaf&&Array.isArray(report.graaf.page_recommendations)?report.graaf.page_recommendations:[];
-    const g=groups.find(x=>norm(x&&x.url)===target)||groups[0]||{};
-    const raw=p.content_score??g.content_score??null,score=Number(raw);
-    row._ceo_comparison={score:Number.isFinite(score)?score:null,recommendation_count:Array.isArray(g.recommendations)?g.recommendations.length:0};
+    const g=groups.find(matches);
+    const raw=p?.content_score??g?.content_score;
+    const score=typeof raw==='string'&&raw.trim()?Number(raw):raw;
+    row._ceo_comparison={score:Number.isFinite(score)?score:null,recommendation_count:Array.isArray(g?.recommendations)?g.recommendations.length:0};
   }catch(e){console.warn('[quick-scan comparison]',e.message)}
   return row;
 }
