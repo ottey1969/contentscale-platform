@@ -158,6 +158,17 @@ test('Quick Scan confirmation retries an explicit quota rejection and holds an u
     assert.equal((await interest(unknown)).email_sent, false);
     assert.equal((await interest(unknown)).email_sent, false);
     assert.equal(await accepted(unknown), null);
+
+    const revoked = (await db.query('UPDATE prospect_quick_scans SET revoked_at=NOW() WHERE token=$1 RETURNING revoked_at', [unknown])).rows[0];
+    const fs = require('node:fs');
+    const vm = require('node:vm');
+    const source = fs.readFileSync(require.resolve('../src/index.js'), 'utf8');
+    const start = source.indexOf('let _pqsTableReady = null;');
+    const end = source.indexOf('function _pqsCleanUrl', start);
+    assert.ok(start >= 0 && end > start);
+    const initialized = await vm.runInNewContext(source.slice(start, end) + '\n_ensureProspectQuickScanTable()', { pool: db, console });
+    assert.equal(initialized, true);
+    assert.deepEqual((await db.query('SELECT revoked_at FROM prospect_quick_scans WHERE token=$1', [unknown])).rows[0], revoked);
   } finally {
     await db.query('DELETE FROM prospect_quick_scans WHERE token=ANY($1::text[])', [[retry,unknown]]);
     await db.end();

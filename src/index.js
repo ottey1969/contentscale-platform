@@ -21167,8 +21167,6 @@ function _ensureProspectQuickScanTable(){
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS ceo_report_page_url TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS entry_source TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
-  UPDATE prospect_quick_scans SET hidden_at=COALESCE(hidden_at,revoked_at),revoked_at=NULL
-    WHERE revoked_at IS NOT NULL AND scan_completed_at IS NULL;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS two_page_overview JSONB;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS two_page_overview_created_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interested BOOLEAN DEFAULT FALSE;
