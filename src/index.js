@@ -20983,7 +20983,29 @@ app.post('/api/prospect-quick-scan/:token/gsc-evidence',async(req,res)=>{
     _pqsSendLocalized(row,'gsc_connected','').catch(()=>{});return res.json({success:true,gsc_status:'connected',backup_saved:true});
   }catch(e){return res.status(500).json({success:false,error:e.message||'Could not save GSC evidence'});}
 });
-app.post('/api/prospect-quick-scan/:token/tracker-interest',async(req,res)=>{try{const token=String(req.params.token||'');const q=await pool.query(`UPDATE prospect_quick_scans SET tracker_interested=TRUE,tracker_interested_at=COALESCE(tracker_interested_at,NOW()),follow_up_status='tracker_interested',updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL AND tracker_interested IS DISTINCT FROM TRUE RETURNING *`,[token]);if(!q.rows.length){const existing=await pool.query('SELECT tracker_interested FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1',[token]);if(!existing.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});return res.json({success:true,status:'tracker_interested',already_interested:true});}_pqsNotifyOwner(q.rows[0],'tracker_interest').catch(()=>{});return res.json({success:true,status:'tracker_interested',message:'Interest received. ContentScale can now see that you are interested in the AI Citations Tracker.'});}catch(e){return res.status(500).json({success:false,error:e.message})}});
+app.post('/api/prospect-quick-scan/:token/tracker-interest', async (req, res) => {
+  try {
+    const token = String(req.params.token || '');
+    const interest = await pool.query(`UPDATE prospect_quick_scans
+      SET tracker_interested=TRUE,tracker_interested_at=COALESCE(tracker_interested_at,NOW()),
+          follow_up_status=CASE WHEN follow_up_status IN ('replied','won','closed')
+            THEN follow_up_status ELSE 'tracker_interested' END,
+          updated_at=NOW()
+      WHERE token=$1 AND revoked_at IS NULL AND tracker_interested IS DISTINCT FROM TRUE
+      RETURNING *`, [token]);
+    if (!interest.rows.length) {
+      const previous = await pool.query(`SELECT tracker_interested FROM prospect_quick_scans
+        WHERE token=$1 AND revoked_at IS NULL LIMIT 1`, [token]);
+      if (!previous.rows.length) return res.status(404).json({ success:false, error:'Prospect not found' });
+      return res.json({ success:true, status:'tracker_interested', already_interested:true });
+    }
+    _pqsNotifyOwner(interest.rows[0], 'tracker_interest').catch(() => {});
+    return res.json({ success:true, status:'tracker_interested',
+      message:'Interest received. ContentScale can now see that you are interested in the AI Citations Tracker.' });
+  } catch (e) {
+    return res.status(500).json({ success:false, error:e.message });
+  }
+});
 app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{try{const token=String(req.params.token||''),url=String((req.body||{}).report_url||'').trim();if(!/^https:\/\//i.test(url))return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});const q=await pool.query(`UPDATE prospect_quick_scans SET audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW() WHERE token=$2 AND revoked_at IS NULL AND audit20_interested=TRUE AND audit20_ready_at IS NULL RETURNING *`,[url,token]);if(!q.rows.length){const existing=await pool.query(`SELECT audit20_interested,audit20_ready_at,audit20_report_url FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);if(!existing.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});const x=existing.rows[0];if(!x.audit20_interested)return res.status(409).json({success:false,error:'Audit 20 requires recorded prospect interest'});if(x.audit20_ready_at)return res.json({success:true,already_ready:true,email_sent:false,report_url:x.audit20_report_url});return res.status(409).json({success:false,error:'Audit 20 not ready for this transition'});}const mail=await _pqsSendLocalized(q.rows[0],'audit_ready',url);if(mail.sent)await pool.query(`UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1`,[token]);return res.json({success:true,email_sent:mail.sent,report_url:url});}catch(e){return res.status(500).json({success:false,error:e.message})}});
 
 // PROSPECT CTA — explicit interest in the 20-Page Audit.
@@ -21001,7 +21023,9 @@ app.post('/api/prospect-quick-scan/:token/audit20-interest',async(req,res)=>{
     if(!row.scan_completed_at&&!['completed','complete','scan_ready'].includes(String(row.status||'')))return res.status(409).json({success:false,error:'Complete the Quick Scan first'});
     const interestWrite=await pool.query(`UPDATE prospect_quick_scans
       SET audit20_interested=TRUE,audit20_interested_at=COALESCE(audit20_interested_at,NOW()),
-          audit20_interest_note=$1,follow_up_status='audit20_interested',updated_at=NOW()
+          audit20_interest_note=$1,
+          follow_up_status=CASE WHEN follow_up_status IN ('replied','won','closed') THEN follow_up_status ELSE 'audit20_interested' END,
+          updated_at=NOW()
       WHERE token=$2 AND revoked_at IS NULL AND audit20_interested IS DISTINCT FROM TRUE RETURNING token`,[note,token]);
     if(!interestWrite.rows.length){
       const previous=await pool.query('SELECT audit20_interested FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1',[token]);
@@ -21143,13 +21167,13 @@ function _ensureProspectQuickScanTable(){
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS ceo_report_page_url TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS entry_source TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;
-  UPDATE prospect_quick_scans SET hidden_at=COALESCE(hidden_at,revoked_at),revoked_at=NULL
-    WHERE revoked_at IS NOT NULL AND scan_completed_at IS NULL;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS two_page_overview JSONB;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS two_page_overview_created_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interested BOOLEAN DEFAULT FALSE;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interested_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interest_email_sent_at TIMESTAMPTZ;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interest_email_status TEXT;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interest_email_retry_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_invite_sent_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_invite_message_id TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS ceo_reminder_sent_at TIMESTAMPTZ;
@@ -24610,26 +24634,65 @@ app.post('/api/prospect-quick-scan/:token/quickscan-interest',async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
   try{
     const token=String(req.params.token||'');
-    const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);
-    if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});
-    const row=q.rows[0];
-    if(!String(row.ceo_report_url||'').trim())return res.status(409).json({success:false,error:'CEO Prospect Report must exist first'});
-    await pool.query(`UPDATE prospect_quick_scans SET quickscan_interested=TRUE,quickscan_interested_at=COALESCE(quickscan_interested_at,NOW()),follow_up_status='quickscan_invited',updated_at=NOW() WHERE token=$1`,[token]);
     const base=String(process.env.APP_URL||'https://app.contentscale.site').replace(/\/$/,''),quickUrl=base+_pqsShortPrivatePath('scan',token);
+    const interest = await pool.query(`UPDATE prospect_quick_scans
+      SET quickscan_interested=TRUE,quickscan_interested_at=COALESCE(quickscan_interested_at,NOW()),
+          quickscan_interest_email_status=COALESCE(quickscan_interest_email_status,'ready'),
+          follow_up_status=CASE WHEN follow_up_status IN ('audit20_interested','tracker_interested','replied','won','closed')
+            THEN follow_up_status ELSE 'quickscan_invited' END,
+          updated_at=NOW()
+      WHERE token=$1 AND revoked_at IS NULL AND quickscan_interested IS DISTINCT FROM TRUE
+        AND btrim(COALESCE(ceo_report_url,'')) <> ''
+      RETURNING *`, [token]);
+    const alreadyInterested = !interest.rows.length;
+    let row = interest.rows[0];
+    if(alreadyInterested){
+      const previous = await pool.query(`SELECT *
+        FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`, [token]);
+      row = previous.rows[0];
+      if(!row)return res.status(404).json({success:false,error:'Prospect not found'});
+      if(!String(row.ceo_report_url||'').trim())return res.status(409).json({success:false,error:'CEO Prospect Report must exist first'});
+    } else {
+      _pqsNotifyOwner(row,'quickscan_interest').catch(()=>{});
+    }
     let emailSent=false;
     const email=String(row.contact_email||'').trim().toLowerCase(),key=process.env.BREVO_API_KEY||'';
     if(_pqsValidEmail(email)&&key){
-      const sup=await pool.query(`SELECT 1 FROM email_suppression WHERE lower(email)=lower($1) LIMIT 1`,[email]).catch(()=>({rows:[]}));
-      if(!sup.rows.length){
+      const claim=await pool.query(`UPDATE prospect_quick_scans
+        SET quickscan_interest_email_status='sending',quickscan_interest_email_retry_at=NULL
+        WHERE token=$1 AND revoked_at IS NULL AND btrim(COALESCE(ceo_report_url,''))<>''
+          AND lower(btrim(contact_email))=$2 AND quickscan_interest_email_sent_at IS NULL
+          AND (quickscan_interest_email_status='ready' OR
+            (quickscan_interest_email_status='retryable' AND quickscan_interest_email_retry_at<=NOW()))
+          AND NOT EXISTS(SELECT 1 FROM email_suppression WHERE lower(email)=$2)
+        RETURNING token`,[token,email]);
+      if(claim.rows.length){
         const company=String(row.business_name||row.domain||'your company').trim();
         const subject=company+' — your next ContentScale step';
         const body=`Hi ${company} team,\n\nYou indicated that you are interested in checking another important page after the CEO Prospect Report.\n\nChoose ONE OTHER service, product or commercial page on the same domain. It cannot be the page already used in the CEO Prospect Report.\n\nStart Quick Scan — Other Page:\n${quickUrl}\n\nContentScale will analyze ContentScore, GRAAF, CRAFT and technical signals for that page.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site`;
-        const rr=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email,name:company}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'Ottmar Francisca · ContentScale'},replyTo:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'Ottmar Francisca'},subject,textContent:body,htmlContent:'<div style="font-family:Arial,sans-serif;line-height:1.65;color:#172033;max-width:640px">'+body.split(/\n{2,}/).map(p=>'<p>'+_pqsHtml(p).replace(/\n/g,'<br>')+'</p>').join('')+'</div>'})});
-        if(rr.ok){emailSent=true;await pool.query(`UPDATE prospect_quick_scans SET quickscan_interest_email_sent_at=NOW(),updated_at=NOW() WHERE token=$1`,[token]);}
+        let providerResponse;
+        try {
+          providerResponse=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email,name:company}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'Ottmar Francisca · ContentScale'},replyTo:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'Ottmar Francisca'},subject,textContent:body,htmlContent:'<div style="font-family:Arial,sans-serif;line-height:1.65;color:#172033;max-width:640px">'+body.split(/\n{2,}/).map(p=>'<p>'+_pqsHtml(p).replace(/\n/g,'<br>')+'</p>').join('')+'</div>'})});
+        } catch (error) {
+          console.warn('[quick-scan] confirmation outcome unavailable:',error.name);
+        }
+        const retryable=providerResponse?.status===429;
+        emailSent=providerResponse?.ok===true;
+        const retryHeader=providerResponse?.headers.get('retry-after');
+        const retrySeconds=/^\d{1,6}$/.test(retryHeader||'')?Number(retryHeader):60;
+        const attemptStatus=emailSent?'sent':retryable?'retryable':
+          providerResponse?.status>=400&&providerResponse?.status<500&&providerResponse.status!==408?'rejected':'unknown';
+        // An interrupted send or uncertain provider response can already have been accepted.
+        // Only an explicit provider rejection for rate limiting may be retried here.
+        await pool.query(`UPDATE prospect_quick_scans SET quickscan_interest_email_status=$2,
+          quickscan_interest_email_sent_at=CASE WHEN $2='sent' THEN COALESCE(quickscan_interest_email_sent_at,NOW()) ELSE quickscan_interest_email_sent_at END,
+          quickscan_interest_email_retry_at=CASE WHEN $2='retryable' THEN NOW()+make_interval(secs=>$3) END
+          WHERE token=$1 AND quickscan_interest_email_status='sending'`,[token,attemptStatus,retrySeconds]);
       }
     }
-    _pqsNotifyOwner(Object.assign({},row,{follow_up_status:'quickscan_interested'}),'quickscan_interest').catch(()=>{});
-    return res.json({success:true,status:'quickscan_interested',quick_scan_url:quickUrl,email_sent:emailSent,message:'Interest received. ContentScale can now see that you want a Quick Scan for another important page.'});
+    return res.json({success:true,status:'quickscan_interested',quick_scan_url:quickUrl,email_sent:emailSent,
+      ...(alreadyInterested?{already_interested:true}:{}),
+      message:alreadyInterested?'Interest already recorded.':'Interest received. ContentScale can now see that you want a Quick Scan for another important page.'});
   }catch(e){return res.status(500).json({success:false,error:e.message||'Could not record Quick Scan interest'});}
 });
 

@@ -5,8 +5,8 @@ let source=fs.readFileSync(path,'utf8');
 const marker="app.post('/api/prospect-quick-scan/:token/tracker-interest'";
 const start=source.indexOf(marker);
 if(start<0)throw Error('Tracker interest handler not found');
-const end=source.indexOf('\n',start);
-if(end<0||end-start>2500)throw Error('Tracker interest handler layout changed; refuse unsafe patch');
+const end=source.indexOf("app.post('/api/prospect-quick-scan/admin/:token/audit20-ready'",start);
+if(end<0||end-start>3500)throw Error('Tracker interest handler boundary changed; refuse unsafe patch');
 const old=source.slice(start,end);
 if(old.includes('tracker_interested IS DISTINCT FROM TRUE')){
  console.log('Tracker interest route already guarded');process.exit(0);

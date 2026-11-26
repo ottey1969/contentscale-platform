@@ -7,8 +7,10 @@ const source=fs.readFileSync(require('node:path').resolve(__dirname,'../src/inde
 const marker="app.post('/api/prospect-quick-scan/:token/tracker-interest'";
 const pos=source.indexOf(marker);
 assert(pos>=0,'canonical tracker-interest handler missing');
-const line=source.slice(pos,source.indexOf('\n',pos));
-assert(line.includes('tracker_interested'),'canonical tracker interest update missing');
+const nextRoute=source.indexOf("app.post('/api/prospect-quick-scan/admin/:token/audit20-ready'",pos);
+assert(nextRoute>pos,'canonical tracker-interest handler boundary missing');
+const routeSource=source.slice(pos,nextRoute);
+assert(routeSource.includes('tracker_interested'),'canonical tracker interest update missing');
 function handlerFor(state){
   let handler,notifications=0,updates=0;
   const pool={query:async(sql)=>{
@@ -22,7 +24,7 @@ function handlerFor(state){
     if(sql.includes('SELECT tracker_interested'))return {rows:state.missing?[]:[{tracker_interested:state.interested}]};
     throw Error('Unexpected SQL');
   }};
-  vm.runInNewContext(line,{app:{post(_route,fn){handler=fn}},pool,_pqsNotifyOwner:async()=>{notifications++},console},{timeout:2000});
+  vm.runInNewContext(routeSource,{app:{post(_route,fn){handler=fn}},pool,_pqsNotifyOwner:async()=>{notifications++},console},{timeout:2000});
   async function invoke(){
     const res={code:200,status(n){this.code=n;return this},json(body){this.body=body;return body}};
     await handler({params:{token:'synthetic'}},res);
