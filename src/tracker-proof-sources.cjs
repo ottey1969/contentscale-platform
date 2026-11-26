@@ -71,9 +71,9 @@ async function loadProofSources(pool, { clientId, pageId, url, events }) {
   }
   for (const id of new Set([...directChecks, ...invitedChecks])) {
     const row = (await pool.query(
-      `SELECT url,query,finished_at,summary,publication_history,contentscore_history,cached_from,
-              jsonb_build_object('gsc_audit_evidence',report->'gsc_audit_evidence') AS report
-           FROM growth_free_checks WHERE id=$1 AND status='DONE'`, [id])).rows[0];
+      `SELECT url,query,finished_at,summary,publication_history,contentscore_history,to_jsonb(c)->>'cached_from' AS cached_from,
+              jsonb_build_object('gsc_audit_evidence',to_jsonb(c)->'report'->'gsc_audit_evidence') AS report
+           FROM growth_free_checks c WHERE id=$1 AND status='DONE'`, [id])).rows[0];
     if (!row || !exact(row.url, url)) continue;
     const canReadResearch = await require('./growth-free/gsc-audit-handoff.cjs').auditResearchAvailable(pool,{...row,id});
     const { report, cached_from, ...proof } = row;

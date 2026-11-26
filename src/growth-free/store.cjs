@@ -286,7 +286,7 @@ async function saveGscUpload(pool,{checkId,fileName,upload}){
    upload.basis==='GSC_AUDIT_EXACT_PAGE'?upload.gsc_report_id||null:null])).rows[0];
 }
 async function listGscUploads(pool,checkId){
- const {rows}=await pool.query("SELECT id,file_name,status,basis,period_start::text AS period_start,period_end::text AS period_end,totals,queries,created_at,gsc_report_id FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY created_at,id",[checkId]);
+ const {rows}=await pool.query("SELECT id,file_name,status,basis,period_start::text AS period_start,period_end::text AS period_end,totals,queries,created_at,to_jsonb(g)->>'gsc_report_id' AS gsc_report_id FROM growth_free_gsc_uploads g WHERE check_id=$1 ORDER BY created_at,id",[checkId]);
  if(!rows.some(row=>row.basis==='GSC_AUDIT_EXACT_PAGE'))return rows.map(({gsc_report_id,...row})=>row);
  const check=(await pool.query('SELECT url FROM growth_free_checks WHERE id=$1',[checkId])).rows[0];
  const reports=await require('./gsc-audit-handoff.cjs').relatedReports(pool,{url:check?.url,checkId}).catch(()=>[]);
