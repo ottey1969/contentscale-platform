@@ -21,8 +21,8 @@ test('Network precheck discards a superseded publication and numbers concurrent 
   try {
     await control.query('CREATE SCHEMA ' + schema);
     await pool.query(`CREATE TABLE network_placements (id INT PRIMARY KEY, content_id INT, publisher_website_id INT, published_url TEXT,
-      status TEXT, reward_credits INT, updated_at TIMESTAMPTZ DEFAULT NOW());
-    CREATE TABLE network_content (id INT, brand_name TEXT, owner_website_id INT, title TEXT, primary_niche TEXT, source_snapshot JSONB, prewrite_brief_id INT);
+      status TEXT, reward_credits INT, verified_at TIMESTAMPTZ, verification_decision TEXT, verification_note TEXT, reviewed_by_admin_id TEXT, reviewed_at TIMESTAMPTZ, updated_at TIMESTAMPTZ DEFAULT NOW());
+    CREATE TABLE network_content (id INT, brand_name TEXT, owner_website_id INT, title TEXT, primary_niche TEXT, source_snapshot JSONB, prewrite_brief_id INT, verified_placements INT, distribution_status TEXT, updated_at TIMESTAMPTZ);
     CREATE TABLE network_websites (id INT, domain TEXT, status TEXT, brand_name TEXT);
     CREATE TABLE network_publication_versions (id INT, placement_id INT, html TEXT, generation_input_snapshot JSONB, title TEXT, updated_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE network_verification_runs (placement_id INT, run_no INT, http_status INT, indexable BOOLEAN, canonical_ok BOOLEAN,
@@ -33,10 +33,13 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     CREATE TABLE network_publication_images (id INT,publication_version_id INT,image_role TEXT,image_name TEXT,prompt TEXT,alt_text TEXT,
       caption TEXT,suggested_filename TEXT,placement_hint TEXT,mime_type TEXT,original_filename TEXT,byte_size INT,
       status TEXT,sort_order INT,created_at TIMESTAMPTZ,updated_at TIMESTAMPTZ);
+    CREATE TABLE network_credit_wallets (id SERIAL PRIMARY KEY, website_id INT UNIQUE, balance INT, reserved INT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ);
+    CREATE TABLE network_credit_transactions (id SERIAL PRIMARY KEY,wallet_id INT,placement_id INT,transaction_type TEXT,amount INT,
+      idempotency_key TEXT UNIQUE,note TEXT,metadata JSONB,created_at TIMESTAMPTZ);
     INSERT INTO network_content(id,brand_name,owner_website_id) VALUES (5,'Network fixture',NULL);
     INSERT INTO network_websites(id,domain,status) VALUES (6,'publisher.example','approved');
     INSERT INTO network_placements(id,content_id,publisher_website_id,published_url,status,reward_credits)
-      VALUES (3,5,6,'https://publisher.example/article','submitted',0);
+      VALUES (3,5,6,'https://publisher.example/article','submitted',7);
     INSERT INTO network_publication_versions(id,placement_id,html,generation_input_snapshot) VALUES (7,3,'<p>Approved edition</p>','{}')`);
     const source = fs.readFileSync(require.resolve('../src/network/register-network.js'), 'utf8');
     const start = source.indexOf('async function lockPublicationEvidence');
@@ -47,8 +50,20 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     let started = 0, entered;
     const reached = new Promise(resolve => { entered = resolve; });
     const blocked = new Promise(resolve => { unblock = resolve; });
+    let changeDuringReview=false, notifications=0;
+    const observedPool={
+      connect:()=>pool.connect(),
+      query:async (sql,args)=>{
+        const output=await pool.query(sql,args);
+        if(changeDuringReview&&String(sql).includes('AS latest_run_no')){
+          changeDuringReview=false;
+          await pool.query("UPDATE network_placements SET published_url='https://publisher.example/replaced',status='submitted' WHERE id=3");
+        }
+        return output;
+      }
+    };
     vm.runInNewContext(source.slice(start, end), {
-      pool, app: { post(route, _admin, callback) { handlers.set(route, callback); } }, verifyAdmin() {}, wrap: callback => callback,
+      pool:observedPool, networkNotifyPublisherReviewDecision:async()=>{notifications++;return {state:'mocked'}}, app: { post(route, _admin, callback) { handlers.set(route, callback); } }, verifyAdmin() {}, wrap: callback => callback,
       safeFetchHtml: async url => {
         started++;
         if (started === 1) {
@@ -92,7 +107,22 @@ test('Network precheck discards a superseded publication and numbers concurrent 
     const oldPrecheck = await invoke('manual-review', { decision: 'verified' });
     assert.equal(oldPrecheck.status, 409);
     assert.match(oldPrecheck.body.error, /pre-check has not passed/i);
-    assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_verification_runs')).rows[0].n, 2);
+    changeDuringReview=true;
+    const staleChanges=await invoke('manual-review',{decision:'needs_changes'});
+    assert.equal(staleChanges.status,409);
+    assert.equal(notifications,0);
+    await verify();
+    const reviews=await Promise.all([
+      invoke('manual-review',{decision:'verified'}),invoke('manual-review',{decision:'verified'})
+    ]);
+    assert.equal(reviews.filter(r=>r.body.credits_awarded===true).length,1);
+    const replay=await invoke('manual-review',{decision:'verified'});
+    assert.equal(replay.body.credits_awarded,false);
+    assert.equal(notifications,1);
+    assert.equal((await pool.query('SELECT balance FROM network_credit_wallets')).rows[0].balance,7);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_credit_transactions')).rows[0].n,1);
+
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM network_verification_runs')).rows[0].n, 3);
   } finally {
     unblock?.();
     await pool.end();

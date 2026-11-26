@@ -5421,7 +5421,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
   }));
 
   async function lockPublicationEvidence(client,id){
-    const result=await client.query(`SELECT p.status,p.published_url,pv.id AS edition_id,pv.updated_at::text AS edition_revision
+    const result=await client.query(`SELECT p.status,p.verification_decision,p.published_url,pv.id AS edition_id,pv.updated_at::text AS edition_revision
       FROM network_placements p JOIN network_publication_versions pv ON pv.placement_id=p.id
       WHERE p.id=$1 FOR UPDATE OF p,pv`,[id]);
     return result.rows[0];
@@ -5535,21 +5535,29 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     if(!x.published_url)return res.status(409).json({success:false,error:'No live article URL has been submitted'});
     const adminId=cleanText(req.admin?.id||'admin',200);
 
-    if(decision==='needs_changes'){
-      const reviewNote=note||'Changes requested after manual review';
-      await pool.query(`UPDATE network_placements SET status='needs_review',verification_decision='needs_changes',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
-      await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-        VALUES ($1,'needs_changes','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
-      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'needs_changes',reviewNote);
-      return res.json({success:true,status:'needs_review',credits_awarded:false,publisher_email:publisherNotification.state});
-    }
-    if(decision==='rejected'){
-      const reviewNote=note||'Rejected after manual review';
-      await pool.query(`UPDATE network_placements SET status='rejected',verification_decision='rejected',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
-      await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-        VALUES ($1,'rejected','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
-      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'rejected',reviewNote);
-      return res.json({success:true,status:'rejected',credits_awarded:false,publisher_email:publisherNotification.state});
+    if(decision!=='verified'){
+      const status=decision==='needs_changes'?'needs_review':'rejected';
+      const reviewNote=note||(decision==='needs_changes'?'Changes requested after manual review':'Rejected after manual review');
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        const current=await lockPublicationEvidence(client,id);
+        if(!samePublicationEvidence(current,x)||current.status!==x.status){
+          await client.query('ROLLBACK');
+          return res.status(409).json({success:false,error:'The publication changed during review. Reload the current edition.'});
+        }
+        await client.query(`UPDATE network_placements SET status=$2,verification_decision=$3,verification_note=$4,
+          reviewed_by_admin_id=$5,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,status,decision,reviewNote,adminId]);
+        await client.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+          VALUES ($1,$2,'admin',$3,$4,$5,$6::jsonb,NOW())`,[id,decision,adminId,x.published_url,reviewNote,
+          JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
+        await client.query('COMMIT');
+      }catch(error){
+        await client.query('ROLLBACK').catch(()=>{});
+        throw error;
+      }finally{client.release();}
+      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,decision,reviewNote);
+      return res.json({success:true,status,credits_awarded:false,publisher_email:publisherNotification.state});
     }
 
     const _reviewImages=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[x.id]);
@@ -5567,9 +5575,23 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     try{
       await client.query('BEGIN');
       const current=await lockPublicationEvidence(client,id);
+      if(samePublicationEvidence(current,x)&&current.status==='verified'&&current.verification_decision==='verified'){
+        await client.query('COMMIT');
+        return res.json({success:true,status:'verified',credits_awarded:false,credits:x.reward_credits,already_verified:true});
+      }
       if(!samePublicationEvidence(current,x)||current.status!==x.status){
         await client.query('ROLLBACK');
         return res.status(409).json({success:false,error:'The publication changed during review. Reload the current edition.'});
+      }
+      if(!note){
+        const {rows:[latest]}=await client.query(`SELECT result_status FROM network_verification_runs
+          WHERE placement_id=$1 AND details->>'published_url'=$2 AND details->>'edition_id'=$3
+            AND details->>'edition_revision'=$4 ORDER BY run_no DESC LIMIT 1`,
+          [id,x.published_url,String(x.edition_id),x.edition_revision]);
+        if(latest?.result_status!=='passed'){
+          await client.query('ROLLBACK');
+          return res.status(409).json({success:false,error:'The live pre-check changed during review. Reload the latest result.'});
+        }
       }
       let wr=await client.query('SELECT * FROM network_credit_wallets WHERE website_id=$1 FOR UPDATE',[x.publisher_website_id]);
       if(!wr.rows[0])wr=await client.query(`INSERT INTO network_credit_wallets (website_id,balance,reserved,created_at,updated_at) VALUES ($1,0,0,NOW(),NOW()) ON CONFLICT (website_id) DO UPDATE SET updated_at=NOW() RETURNING *`,[x.publisher_website_id]);
@@ -5588,10 +5610,10 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
         SET status='verified',verified_at=COALESCE(verified_at,NOW()),verification_decision='verified',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW()
         WHERE id=$1`,[id,note||null,adminId]);
       await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status='verified',updated_at=NOW() WHERE id=$1`,[x.content_id]);
+      await client.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+      VALUES ($1,'verified','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,note||null,JSON.stringify({credits_awarded:creditAwarded,credits:x.reward_credits,precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
       await client.query('COMMIT');
     }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
-    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-      VALUES ($1,'verified','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,note||null,JSON.stringify({credits_awarded:creditAwarded,credits:x.reward_credits,precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
     const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'verified',note||'');
     res.json({success:true,status:'verified',credits_awarded:creditAwarded,credits:x.reward_credits,publisher_email:publisherNotification.state,rule:'Verified by manual admin decision. Reward is idempotent and can be awarded only once.'});
   }));
