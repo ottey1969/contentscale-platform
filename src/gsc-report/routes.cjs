@@ -295,17 +295,18 @@ function reportPage(row,{owner,config,growthPath,published=new Map(),growth=new 
  const B=t.ba,cmp=r.after?require('./compare.cjs').compare(r,r.after,published):null,cmpBy=new Map(cmp?cmp.pages.map(x=>[require('./published.cjs').norm(x.url),x]):[]);
  const fill=(s,o)=>s.replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
  const posMove=(b,a)=>b==null||a==null?'—':Math.abs(b-a)<0.05?B.same:fill(b>a?B.higher:B.lower,{n:pos(lang,Math.abs(b-a))});
- const signed=n=>(n>0?'+':'')+nf(lang,n);
+ const measuredValue=n=>n==null?'—':nf(lang,n);
+ const measurementChange=(before,after)=>before==null||after==null?'—':((after>before?'+':'')+nf(lang,after-before));
  const baCard=!cmp||!cmp.pages.length?'':`<div class="card" id="beforeAfter"><h2>${esc(B.title)}</h2><p><b>${esc(B.count.replace('{n}',nf(lang,cmp.pages.length)))}</b></p>`+
   (cmp.comparable?`<div class="scroll"><table class="tbl"><thead><tr><th></th><th class="num">${esc(B.before)}</th><th class="num">${esc(B.after)}</th><th class="num">${esc(B.change)}</th></tr></thead><tbody>
-   <tr><td>${esc(B.clicks)}</td><td class="num">${nf(lang,cmp.totals.before.clicks)}</td><td class="num">${nf(lang,cmp.totals.after.clicks)}</td><td class="num">${signed(cmp.totals.after.clicks-cmp.totals.before.clicks)}</td></tr>
-   <tr><td>${esc(B.impressions)}</td><td class="num">${nf(lang,cmp.totals.before.impressions)}</td><td class="num">${nf(lang,cmp.totals.after.impressions)}</td><td class="num">${signed(cmp.totals.after.impressions-cmp.totals.before.impressions)}</td></tr>
+   <tr><td>${esc(B.clicks)}</td><td class="num">${measuredValue(cmp.totals.before.clicks)}</td><td class="num">${measuredValue(cmp.totals.after.clicks)}</td><td class="num">${measurementChange(cmp.totals.before.clicks,cmp.totals.after.clicks)}</td></tr>
+   <tr><td>${esc(B.impressions)}</td><td class="num">${measuredValue(cmp.totals.before.impressions)}</td><td class="num">${measuredValue(cmp.totals.after.impressions)}</td><td class="num">${measurementChange(cmp.totals.before.impressions,cmp.totals.after.impressions)}</td></tr>
    <tr><td>${esc(B.position)}</td><td class="num">${pos(lang,cmp.totals.before.position)}</td><td class="num">${pos(lang,cmp.totals.after.position)}</td><td class="num">${esc(posMove(cmp.totals.before.position,cmp.totals.after.position))}</td></tr></tbody></table></div>
    <p class="muted">${esc(fill(B.periods,{a:day(lang,cmp.before_period.start),b:day(lang,cmp.before_period.end),c:day(lang,cmp.after_period.start),d:day(lang,cmp.after_period.end),n:cmp.after_period.days}))}. ${esc(B.caveat)}</p>`
    :`<p class="muted">${esc(cmp.reason==='PERIOD_LENGTH'?fill(B.length,{a:cmp.before_period.days,b:cmp.after_period.days}):B.unknown)}</p>`)+'</div>';
  const baLine=p=>{if(!cmp||!cmp.comparable)return '';const x=cmpBy.get(require('./published.cjs').norm(p.url));if(!x)return '';
   if(x.status!=='OK')return `<div class="ba muted">${esc(B.missing)}</div>`;
-  return `<div class="ba">${esc(fill(B.line,{cb:nf(lang,x.before.clicks),ib:nf(lang,x.before.impressions),pb:pos(lang,x.before.position)}))} → <b>${esc(fill(B.line_after,{ca:nf(lang,x.after.clicks),ia:nf(lang,x.after.impressions),pa:pos(lang,x.after.position)}))}</b></div>`};
+  return `<div class="ba">${esc(fill(B.line,{cb:measuredValue(x.before.clicks),ib:measuredValue(x.before.impressions),pb:pos(lang,x.before.position)}))} → <b>${esc(fill(B.line_after,{ca:measuredValue(x.after.clicks),ia:measuredValue(x.after.impressions),pa:pos(lang,x.after.position)}))}</b></div>`};
  // The page's existing Free Growth result: the owner's own for the owner, the invitation's for the company.
  const resultOf=p=>{const x=growth.get(require('./published.cjs').norm(p.url));if(!x)return null;return owner?(x.owner_result||x.invite_result):x.invite_result};
  const doneOn=p=>{const d=published.get(require('./published.cjs').norm(p.url));const g=growth.get(require('./published.cjs').norm(p.url));return d?` <span class="chip done">${esc(t.updated_on.replace('{d}',day(lang,d+'T12:00:00Z')))}</span>${g&&g.note?`<div class="done-note">${esc(g.note)}</div>`:''}`:''};

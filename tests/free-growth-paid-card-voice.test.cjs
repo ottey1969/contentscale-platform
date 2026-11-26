@@ -38,10 +38,11 @@ test('the paid card shows who "I" is: photo and name, never on a key with its ow
  assert.match(card,/class="hire-name"/);
  const cfg=freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:JSON.stringify([{key:'agency-key-123',brand:'Agency X'},{key:'own-key-456'}])});
  assert.equal(cfg.authorName,'Ottmar J.G. Francisca');
- assert.match(cfg.authorImage,/^https:\/\/contentscale\.site\/wp-content\/uploads\/.+headshot\.png$/);
+ assert.equal(cfg.authorImage,'/blog/images/ottmar-francisca.jpg');
  const agency=cfg.accessKeys.find(k=>k.key==='agency-key-123'),own=cfg.accessKeys.find(k=>k.key==='own-key-456');
  assert.equal(agency.authorImage,'');assert.equal(agency.authorName,'');
  assert.equal(own.authorImage,cfg.authorImage);
  const custom=freeGrowthConfig({GROWTH_FREE_AUTHOR_IMAGE:'http://insecure.example/p.png'});
- assert.equal(custom.authorImage.startsWith('https://'),true,'only https images');
+ assert.equal(custom.authorImage,cfg.authorImage,'insecure custom images fall back to the local author photo');
+ assert.equal(freeGrowthConfig({GROWTH_FREE_AUTHOR_IMAGE:'https://example.test/photo.jpg'}).authorImage,'https://example.test/photo.jpg');
 });

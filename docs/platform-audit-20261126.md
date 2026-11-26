@@ -1,0 +1,88 @@
+# ContentScale-platformaudit · 26 november 2026
+
+Scope van dit rapport is de eerste audit- en herstelslice op [PR #570](https://github.com/ottey1969/contentscale-platform/pull/570). De onderstaande resultaten gelden voor de uitgevoerde tests. De volledige platformaudit en productievalidatie staan nog open.
+
+## Inventarisatie
+
+De broninventarisatie omvatte 307 getrackte bestanden onder `src`, 119 onder `public`, 17 CI-workflows en 277 Node-testbestanden. Een lexicale scan vond 1.722 registratieregels met `app` of `router`, 170 unieke tabelnamen in `CREATE TABLE IF NOT EXISTS` en 98 unieke expliciete `process.env`-namen. De scan omvat historische bronkopieën en mist dynamisch samengestelde routes. De aantallen zijn bronindicaties en nog geen runtime-inventaris. Express en PostgreSQL vormen de serverkern. Andere directe afhankelijkheden zijn Puppeteer, bcryptjs, express-rate-limit, compression, SendGrid Mail, axios, multer, ws, dotenv, cors, helmet, morgan, joi en uuid.
+
+| Gebied | Geïnventariseerde bron en routes |
+| --- | --- |
+| Publieke UI, Tracker en beheer | `public/`, Tracker-templates en routehandlers in `src/index.js`, statische en SEO-regels in `index.cjs` |
+| Prospectfunnel en leadgeneratie | `src/prospect/`, Quick Scan en Audit20 in `src/index.js`, `public/lead-crawler.html` |
+| GSC, Growth en metingen | `src/gsc-report/`, `src/growth-free/`, `src/tracker-growth-*.cjs`, `src/rank-free/`; bestaande GSC-exports, Tracker-snapshots en brongebonden histories |
+| Pre-Write, publicatie en bewijs | `src/prewrite-*.cjs`, `src/implementation-report.cjs`, `src/tracker-proof-sources.cjs`, case-study-routes in `src/index.js` |
+| Netwerk en klanttoegang | `src/register-network.js`, `src/network/`, Tracker-, share- en administratieve toegangsroutes |
+| Infrastructuur | `db/`, `migrations/`, Dockerfile, Railway-configuratie, `scripts/prepare-canonical-production.cjs` en `.github/workflows/` |
+
+De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches in het bouwproces. De migratie-inventaris staat in [Canonical Architecture Migration](canonical-architecture-migration.md). Volledige consolidatie van route-eigenaarschap, bedrijfsidentiteit, paginastatussen en bewijsprojecties vereist een route- en datamodelaudit. Deze slice heeft de bestaande bronnen, cycli en opslag gebruikt.
+
+## Auditmatrix
+
+Een herstelstatus geldt uitsluitend voor het expliciet genoemde defect. Alle wijzigingen in deze tabel staan op [PR #570](https://github.com/ottey1969/contentscale-platform/pull/570). Een streepje betekent dat deze slice geen defect of oplossing heeft vastgesteld. `NOT TESTED` betekent dat de volledige gebruikersreis niet aantoonbaar is uitgevoerd, ook als deeltests groen zijn.
+
+| Module / functie | Gebruikersreis | Bevinding en oorzaak | Prioriteit | Oplossing | Regressie en resultaat | Status | Commit / PR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Dashboard | Inloggen → overzicht → module openen | — | — | — | Geen volledige browserreis | NOT TESTED | — |
+| Quick Scan en Audit20 | Prospect → Quick Scan → Audit20 → interesse | — | — | — | Handler-, kwaliteits- en contracttests geslaagd; volledige writable reis open | NOT TESTED | — |
+| Lead Crawler | Import → kwalificatie → verificatie → approval | — | — | — | Nicheregressie geslaagd; volledige browserreis open | NOT TESTED | — |
+| Contact Intelligence | Prospect → contactbewijs → outreach | — | — | — | Geen volledige reis | NOT TESTED | — |
+| Search Console-import | Exacte URL → aggregaat → Growth-meetvenster | Ontbrekende velden werden nul en de kwaliteitstest verwachtte bevestigde cannibalisatie uit queryoverlap | P1 | Ontbrekende waarden blijven onbekend. Directe import stopt vóór opslag bij onvolledige metrics. De test eist een review-signaal en verbiedt een onbewezen SEO-ingreep | `npm run test:quality` 36/36, GSC Direct en Measurement 2/2 | FIXED AND VERIFIED | `0735f62` / #570 |
+| GSC Audit | Import → paginaonderzoek → nieuwe meting → historie | — | — | — | GSC-historie en Free Growth-koppeling in geïsoleerde database geslaagd; volledige alternatieve instroom open | NOT TESTED | — |
+| Free Growth | URL → research → uitvoering → publicatie → meting | Standalone browser kreeg een ontbrekend favicon en de standaardfoto leunde op een externe WordPress-host | P2 | Bestaande foto via dezelfde origin, automatische favicon-opvraag uitgeschakeld. Expliciet geconfigureerde HTTPS-foto blijft ondersteund | Volledige browserreis tegen geïsoleerde PostgreSQL-engine met externe requests geblokkeerd, en 3 kaartregressies geslaagd | FIXED AND VERIFIED | `bfc45ff` / #570 |
+| Growth | Priority → research → treatment → uitvoering | — | — | — | Unit-, route- en CMS-handoffcontroles; volledige browserreis open | NOT TESTED | — |
+| Tracker | Meten → case afronden → heropenen → cyclus selecteren | Caseweergave las meetpunten van alle cycli op basis van pagina-ID | P1 | Meetpunten begrensd tot de gekozen cyclus. De beschermde baseline blijft de aparte beginmeting | `tracker-case-study-end-e2e.test.cjs`, volledige server en geïsoleerde PostgreSQL-engine geslaagd | FIXED AND VERIFIED | `de4458e` / #570 |
+| Opportunity Finder | Opportunity → review → bestemming en Brief | — | — | — | Bestaande tests in `npm test`; geen afzonderlijke browserreis | NOT TESTED | — |
+| Competitor Intelligence | SERP → marktmatch → bron en aanbeveling | — | — | — | Evidence- en bronkwaliteitscontroles geslaagd; volledige reis open | NOT TESTED | — |
+| Cannibalization | Zoekintentie → overlap → paginabesluit | — | — | — | Regels voor evidence en redirects getest; volledige browserreis open | NOT TESTED | — |
+| Pre-Write Brief | Onderzoek → CREATE/EXPAND → openen en hervatten | — | — | — | Research- en Growth-handoffbrowsertests, rapport-HTTP-tests; volledige ononderbroken reis open | NOT TESTED | — |
+| Citation Brief | Scan → broncontrole → goedkeuring → uitvoering | — | — | — | Geen volledige reis | NOT TESTED | — |
+| ContentScore | Invoer → score → uitvoering → herscan → vergelijking | — | — | — | GSC- en Growth-scorehistorietests geslaagd; volledige browserreis open | NOT TESTED | — |
+| GRAAF | Scan → analyse → aanbeveling → meting | — | — | — | Test gedeelde historie geslaagd; volledige browserreis open | NOT TESTED | — |
+| AI Visibility | AI-antwoord → broncontrole → citatie → meting | — | — | — | Intentie- en bronregressies en vijf-engine mijlpaaltests; volledige providerreis open | NOT TESTED | — |
+| External AI | Brief kopiëren → uitvoering → rapport terug | — | — | — | Contracttests; uitvoering door externe AI valt buiten de uitgevoerde tests | NOT TESTED | — |
+| Implementation Reports | Rapport invoeren → bewaren → ophalen | — | — | — | HTTP-tests tegen geïsoleerde database geslaagd, gekoppelde externe uitvoering open | NOT TESTED | — |
+| Publicatie | Expliciet melden → exacte URL controleren → bewaren | — | — | — | Geïsoleerde publicatie- en verificatietests geslaagd; geen klantwebsite gepubliceerd | NOT TESTED | — |
+| Proof & History | Selecteer cyclus → bekijk baseline en metingen | Verkeerde meetperiode in de cyclusweergave | P1 | Afgesloten cyclus gebruikt het feitelijke einde, metingen zonder vastgestelde eindgrens blijven onbekend | Actieve en afgesloten cyclus met twee verschillende metingen door de echte HTTP-route getest | FIXED AND VERIFIED | `de4458e` / #570 |
+| Network-acquisitie | Uitnodiging voorbereiden → verzenden → interesse en afzenderlimiet | Voltooide warm-up toonde nul resterende ruimte terwijl er geen warm-upplafond meer gold. Testfixture gebruikte een oude afzonderlijke quotaregel | P2 | API behoudt onbekende of onbegrensde ruimte als null, UI toont een streepje. Gedeelde teller en verzendvoorwaarden blijven afgedekt | Vijf acquisitietestbestanden geslaagd, inclusief mock-mail en herhaling | FIXED AND VERIFIED | `54e11db` / #570 |
+| ContentScale Network | Pre-Write → approval → generatie → AI Evidence → monitoring | — | — | — | Beide Network Pre-Write-regressies geslaagd; volledige Network-acquisitie en monitoring open | NOT TESTED | — |
+| Admin | Inloggen → beheer → rolgrenzen | Publieke Gemini Live-diagnostiek gaf interne configuratiegegevens vrij | P0 | Diagnostiek achter bestaande adminmiddleware, beperkt tot configuratiestatus | Routeaansluiting en serverboot gecontroleerd; complete Admin-reis open | NOT TESTED | `75d3481` / #570 |
+| Klantomgeving | Klantlink → eigen pagina → bewijs en historie | — | — | — | Exacte paginakoppeling en andere klant in HTTP-tests; volledige omgeving open | NOT TESTED | — |
+| E-mail en notificaties | Trigger → eenmalige verzending → retry | — | — | — | Golden Owner-digestcontrole geslaagd; geen echte mail verzonden | NOT TESTED | — |
+| Schedulers en automatische taken | Planning → uitvoeren → opnieuw uitvoeren → afsluiten | — | — | — | Case-afsluiting en scanre-autorisatie geslaagd; overige jobs open | NOT TESTED | — |
+| Gemini Live | Browser → server → provider → sessie | Herbruikbare servercredential zat in het openbare antwoord | P0 | Alleen een kortlevend, eenmalig providertoken via de gedocumenteerde Live API | `gemini-live-token.test.cjs`: HTTP, 2/2 geslaagd met mock, inclusief limiet en foutgevallen | FIXED AND VERIFIED | `75d3481`, `dfe0eb8` / #570 |
+| GSC, Gemini-onderzoek, ChatGPT, Perplexity, Claude, Copilot, Firecrawl, Serper | Providerbron → fouten en fallback → verwerking | — | — | — | Bestaande contracttests met fixtures; geen matrix van alle provideruitvalscenario’s | NOT TESTED | — |
+| WordPress, SendGrid en Railway | CMS-write, e-mailbezorging en productie-deploy | Geïsoleerde testscope en expliciete publicatie- en mergevoorwaarden | — | — | Geen productiewrite, mailbezorging of deployment uitgevoerd | BLOCKED | — |
+| EN, NL en ES | Navigatie → vertaalde velden → hervatten | — | — | — | Deeltests in echte Chromium, inclusief NL/ES Free Growth; geen volledige dekking per viewport en scherm | NOT TESTED | — |
+| CI en lint | Bron wijzigen → CI → kwaliteitspoort | ESLint miste configuratie. Een oude statische browserkopie begon met een afgebroken script | P2 | Configuratie en CI-lint toegevoegd, afgebroken duplicaat verwijderd | `npm run lint`, syntax en CI-lint | FIXED AND VERIFIED | `864e500` / #570 |
+
+## Testuitvoering en grenzen
+
+- Lokaal: `npm test` registreerde 536 tests, 532 geslaagd, 0 mislukt en 4 overgeslagen wegens omgevingsvoorwaarden. Extra runs registreerden 23 gerichte tests, 9 database/HTTP-tests, 2 tests rond de echte case-study-server, 6 echte Chromium-tests en 56 module- en funneltests. In die extra runs slaagden 95 tests en werd 1 overgeslagen. De tweede testronde registreerde 48 aanvullende resultaten, 47 geslaagd en 1 mislukt. De mislukte lokale Free Growth-browserreis is na de assetcorrectie succesvol herhaald. Daarin zijn ook 36 kwaliteitschecks, 2 GSC Direct/Measurement-tests en 3 kaartregressies opgenomen. Vijf Network-acquisitietestbestanden slaagden daarnaast na de quotacorrectie. Totaal over de gerapporteerde runs: 685 geregistreerd, 679 geslaagd, 1 mislukt en hersteld, 5 overgeslagen. Testgevallen kunnen in meerdere runs terugkomen. Voorafgaande doelbewuste rode regressieruns zijn buiten deze telling gehouden.
+- `npm run build` slaagde bij de intake en na de reparaties. De gegenereerde bronwijzigingen zijn teruggezet en niet gecommit. De compatibiliteitsbuild, geïsoleerde serverboot en de PostgreSQL-tests zijn afzonderlijk gecontroleerd. `npm run lint` slaagde na de reparatie.
+- CI: de bestaande pipeline bevat aparte browser-, PostgreSQL-, Network-, canonical- en regressiegates. De Gemini Live-HTTP-regressie, de GSC- en Brief-kwaliteitschecks en lint zijn aan de bestaande algemene workflow toegevoegd. Alle 10 controles waren groen op codecommit `864e500`, inclusief de browser- en PostgreSQL-jobs. GitHub toont de resultaten per commit. [PR-controles](https://github.com/ottey1969/contentscale-platform/pull/570/checks)
+- De baseline van Perfect Roofing Team, productiehistorie en WordPress zijn niet gewijzigd. De regressie gebruikt testrecords. Provideracceptatie van Gemini Live en daadwerkelijk productiegebruik zijn niet gevalideerd. Als de eerdere route met een echte credential was uitgerold, valt credentialrotatie onder het beheer van de provider. Er is in deze slice geen echte credential opgevraagd. Het actieve Live-model blijft configureerbaar via `GEMINI_LIVE_MODEL` en een expliciete `GEMINI_KEY_LIVE` is vereist.
+- Openstaand zijn de runtime-inventarisatie van de volledige applicatie, handmatige browserdekking per hoofdreis, de resterende auth- en datagrenscontrole, providerstoringen per integratie, en zuivere end-to-end runs van de gehele prospect- en Network-ketens. Historische resultaten zonder bewezen koppeling houden hun bestaande toegangsvoorwaarde.
+
+## Aanvulling: controle met bestaande gegevens
+
+Via alleen-lezen HTTPS-verzoeken zijn negen echte pagina's opgevraagd. Alle negen antwoordden met HTTP 200 op de gevraagde URL. Deze waarnemingen betreffen de toen actieve publieke versie.
+
+| Publieke bron | Waarneming |
+| --- | --- |
+| [ContentScale-app](https://app.contentscale.site/) | Engelse taal, één H1 en canonieke URL van de app |
+| [Free Growth](https://app.contentscale.site/free-growth) | Eén H1 en geen metabeschrijving in de productie-HTML. De opgehaalde HTML is met echte Chromium uitgevoerd op 390 en 1440 pixels, met het bestaande PRT-adres in het veld. De pagina had geen horizontale overflow of JavaScript-uitzonderingen. De knop bleef zonder e-mail en toestemming uitgeschakeld. Het formulier is niet verstuurd. |
+| [GSC Audit](https://app.contentscale.site/gsc) | Eén H1 en `X-Robots-Tag: noindex, nofollow` |
+| [SEO Audit](https://app.contentscale.site/seo-audit) | `X-Robots-Tag: noindex, follow`. Chromium vond in de opgehaalde HTML geen canonical of H1 in de DOM. De oude auditparser telde twee H1-tags uit rapportgeneratorstrings en een voorbeeldcanonical mee. |
+| [ContentScale Network](https://app.contentscale.site/network) | Eén H1, `noindex,follow` en canonical naar [de publieke WordPress-pagina](https://contentscale.site/network/). De toegangs- en publicatieketen is in productie niet uitgevoerd. |
+| [EN](https://contentscale.site/), [NL](https://nl.contentscale.site/), [ES](https://es.contentscale.site/) | De drie homepages hebben elk één H1, een eigen canonieke URL en afwisselende hreflang-links met EN als x-default. |
+| [Perfect Roofing Team](https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/) | Eén H1, een metabeschrijving, de exacte canonical en geen hreflang in de opgehaalde HTML. De publieke HTML geeft geen toegang tot de beschermde Tracker-baseline of de productiemeethistorie. |
+
+Chromium kon in deze omgeving niet rechtstreeks naar de live URL's navigeren wegens de lokale certificaatketen. De HTTPS-opvraag slaagde via curl. Voor DOM- en formuliercontrole is precies de daarmee opgehaalde HTML aan Chromium geleverd, met overige netwerkverzoeken geblokkeerd. Er zijn geen externe providers aangeroepen, formulieren ingestuurd of productierecords bewerkt.
+
+| Defect | Oorzaak | Prioriteit | Oplossing en verificatie | Status | Commit / PR |
+| --- | --- | --- | --- | --- | --- |
+| GSC Audit telde broncodestrings als on-page evidence | Structurele analyse zocht tags in de volledige HTML-bron inclusief uitvoerbare scripts en inerte HTML | P1 | Structurele analyse gebruikt pagina-elementen. JSON-LD blijft afzonderlijk beschikbaar. Regressie gebruikt het bestaande, uitgeleverde SEO Audit-bestand. Analyse van dezelfde live-HTML geeft na de reparatie dezelfde H1- en canonical-uitkomst als Chromium | FIXED AND VERIFIED | `06b88a0` / #570 |
+| Free Growth miste de openbare metabeschrijving; privéformulieren konden indexeerbaar renderen | De indexeringskeuze was afgeleid uit de titel, die publiek en privé hetzelfde is | P1 | EN/NL/ES-beschrijving uit de zichtbare tekst voor de openbare variant; sleutel- en andere besloten routes renderen met noindex. HTTP-regressie voor openbare en sleutelvariant | FIXED AND VERIFIED | `dd5f8ae` / #570 |
+
+De gerichte regressierun slaagde met 90 van 90. Daarin zijn de bestaande, in de repository vastgelegde PRT Free Growth-gegevens gebruikt door de concurrentielabel- en Tracker Brief-consistentietests. Dit is historische invoer en geen nieuwe klantmeting. De huidige live werking van privé-Tracker, GSC-resultaten, Admin, Network-uitnodigingen en providerrekeningen staat op **BLOCKED** zonder passende leesrechten of goedgekeurde exports. De wijzigingen in deze tabel staan op de PR-branch.

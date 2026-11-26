@@ -97,7 +97,7 @@ function ensureTables(pool){
     message TEXT,
     status TEXT NOT NULL DEFAULT 'NEW',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-  // AI answers pasted by the visitor, one per AI system per check (latest wins).
+  // Keep the current answer for each engine and retain earlier observations.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_ai_answers(
     id BIGSERIAL PRIMARY KEY,
     check_id BIGINT NOT NULL REFERENCES growth_free_checks(id) ON DELETE CASCADE,
@@ -105,7 +105,13 @@ function ensureTables(pool){
     raw_text TEXT NOT NULL,
     parsed JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    observation_history JSONB NOT NULL DEFAULT '[]'::jsonb,
     UNIQUE(check_id,engine))`);
+  if (!(await pool.query(`SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema()
+    AND table_name='growth_free_ai_answers' AND column_name='observation_history'`)).rows.length) {
+   await pool.query(`SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_ai_answers
+     ADD COLUMN IF NOT EXISTS observation_history JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  }
   // Optional Search Console exports uploaded by the visitor, per check (never in the Tracker). Removed with the check.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_gsc_uploads(
     id BIGSERIAL PRIMARY KEY,
@@ -272,8 +278,13 @@ async function listGscUploads(pool,checkId){
  return (await pool.query("SELECT id,file_name,status,basis,period_start::text AS period_start,period_end::text AS period_end,totals,queries,created_at FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY created_at,id",[checkId])).rows;
 }
 async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
- await pool.query(`INSERT INTO growth_free_ai_answers(check_id,engine,raw_text,parsed) VALUES ($1,$2,$3,$4::jsonb)
-   ON CONFLICT (check_id,engine) DO UPDATE SET raw_text=EXCLUDED.raw_text,parsed=EXCLUDED.parsed,created_at=NOW()`,[checkId,engine,rawText,JSON.stringify(parsed)]);
+ await pool.query(`INSERT INTO growth_free_ai_answers AS prior(check_id,engine,raw_text,parsed) VALUES ($1,$2,$3,$4::jsonb)
+   ON CONFLICT (check_id,engine) DO UPDATE
+     SET raw_text=EXCLUDED.raw_text,parsed=EXCLUDED.parsed,created_at=NOW(),
+         observation_history=prior.observation_history||jsonb_build_array(jsonb_build_object(
+           'raw_text',prior.raw_text,'parsed',prior.parsed,'created_at',
+           to_char(prior.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')))
+   WHERE prior.raw_text IS DISTINCT FROM EXCLUDED.raw_text OR prior.parsed IS DISTINCT FROM EXCLUDED.parsed`,[checkId,engine,rawText,JSON.stringify(parsed)]);
 }
 // The same answer text already saved for a check with another customer question (owner 2026-11-20: answers from an earlier
 // check ended up in a check about something else). Returns that other question, or null.
@@ -294,6 +305,15 @@ async function importAiAnswersFromCheck(pool,{targetCheckId,sourceCheckId}){
 }
 async function listAiAnswers(pool,checkId){
  return (await pool.query('SELECT engine,raw_text,parsed,created_at FROM growth_free_ai_answers WHERE check_id=$1 ORDER BY engine',[checkId])).rows;
+}
+async function listAiAnswerObservations(pool,checkId){
+ const {rows}=await pool.query(`SELECT engine,parsed,created_at,
+   COALESCE(to_jsonb(a)->'observation_history','[]'::jsonb) AS history
+   FROM growth_free_ai_answers a WHERE check_id=$1 ORDER BY engine`,[checkId]);
+ return rows.flatMap(({engine,parsed,created_at,history})=>[
+  ...history.map(item=>({engine,parsed:item.parsed,created_at:item.created_at})),
+  {engine,parsed,created_at}
+ ]);
 }
 const hashToken=t=>crypto.createHash('sha256').update(String(t)).digest('hex');
 const INVITE_COLUMNS='id,label,email_lock,max_checks,used_checks,expires_at,revoked_at,last_used_at,created_at';
@@ -350,4 +370,4 @@ async function appendContentScore(pool,{checkId,result}){
  const row=(await pool.query(`UPDATE growth_free_checks SET contentscore_history=COALESCE(contentscore_history,'[]'::jsonb)||jsonb_build_array($2::jsonb) WHERE id=$1 AND status='DONE' RETURNING contentscore_history`,[checkId,JSON.stringify(result)])).rows[0];
  return row?row.contentscore_history:null;
 }
-module.exports={appendContentScore,treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={appendContentScore,treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,listAiAnswerObservations,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

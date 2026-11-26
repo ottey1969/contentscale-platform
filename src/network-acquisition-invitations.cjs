@@ -58,7 +58,7 @@ async function networkWarmupSnapshot(pool){
    total_sent:pqsToday>=0?Number(legacy.rows[0]?.total_sent||0)+Number(network.rows[0]?.total_sent||0):0},
   sent_today:networkToday,total_sent:Number(network.rows[0]?.total_sent||0),
   interested:Number(network.rows[0]?.interested||0),daily_cap:networkCap,
-  remaining_today:Math.max(0,(dailyCap??used)-used),can_send_now:canSend,
+  remaining_today:networkCap==null?null:Math.max(0,networkCap-used),can_send_now:canSend,
   sender:'ContentScale Network', limit_reason:!active?'Original email warm-up is paused':!available?'Original sender warm-up daily limit reached':null
  };
 }

@@ -1,0 +1,172 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { resolveTarget, readReport, publicationReport } = require('../src/prewrite-implementation.cjs');
+
+const site = 'example.com';
+const url = 'https://example.com/Services/emergency/';
+const create = { content_decision: { recommended_treatment: 'CREATE_NEW_PAGE' }, meta_package: { url_slug: 'Services/emergency' } };
+const expand = { content_decision: { recommended_treatment: 'EXPAND_EXISTING_PAGE', closest_existing_url: url } };
+const report = { schema: 'contentscale.implementation.v1', url, status: 'implemented', summary: 'Added an emergency contact section.', change_types: ['content'] };
+
+test('CREATE uses the approved slug and EXPAND locks the existing exact URL', () => {
+  assert.deepEqual(resolveTarget(create, site), { mode: 'CREATE', url });
+  assert.deepEqual(resolveTarget(expand, site), { mode: 'EXPAND', url });
+  assert.throws(() => resolveTarget({ ...create, meta_package: { url_slug: '//other.example/emergency' } }, site));
+  assert.throws(() => resolveTarget({ content_decision: { ...expand.content_decision, closest_existing_url: 'https://other.example/emergency/' } }, site));
+  assert.throws(() => resolveTarget({}, site));
+});
+
+test('an implementation report records actual changes without inferring publication or verification', () => {
+  const result = readReport({ ...report, verified: true }, expand, site, 'nl');
+  assert.equal(result.report.status, 'implemented');
+  assert.equal(result.report.published_at, null);
+  assert.equal(result.report.verified, false);
+  assert.match(result.owner_report, /Wijzigingsrapport website/);
+  assert.throws(() => publicationReport(report, expand, site));
+});
+
+test('publication requires an explicit report with UTC time and exact page identity', () => {
+  const published = { ...report, status: 'published', published_at: '2026-01-01T10:00:00Z', evidence: 'CMS revision 18' };
+  for (const brief of [create, expand]) {
+    const result = publicationReport(published, brief, site, 'es');
+    assert.equal(result.report.url, url);
+    assert.equal(result.report.published_at, published.published_at);
+    assert.equal(result.report.evidence, published.evidence);
+    assert.equal(result.report.verified, false);
+    assert.match(result.owner_report, /Publicación comunicada/);
+  }
+  assert.throws(() => publicationReport({ ...published, published_at: null }, create, site));
+  assert.throws(() => publicationReport({ ...published, url: url.toLowerCase() }, expand, site));
+  assert.throws(() => publicationReport({ ...published, url: url + '?preview=1' }, expand, site));
+});
+
+test('the external editor gets the exact target and approved surgical changes', () => {
+  const { editorInstructions } = require('../src/prewrite-implementation.cjs');
+  const brief = { ...expand, surgical_changes: [{ where: 'Emergency section', change: 'Add the approved contact instructions' }] };
+  assert.match(editorInstructions(brief, site), /^EXPAND https:\/\/example\.com\/Services\/emergency\//);
+  assert.match(editorInstructions(brief, site), /Emergency section: Add the approved contact instructions/);
+  assert.match(editorInstructions(brief, site), /contentscale\.implementation\.v1/);
+  assert.match(editorInstructions(create, site), /^CREATE /);
+});
+
+const dbUrl = process.env.PREWRITE_E2E_DATABASE_URL || '';
+const dedicatedDb = dbUrl && /test|e2e/i.test(new URL(dbUrl).pathname);
+test('HTTP import and publication on isolated PostgreSQL preserve history and tenant identity', {
+  skip: !dedicatedDb && 'Set PREWRITE_E2E_DATABASE_URL to a dedicated test database'
+}, async () => {
+  const express = require('express');
+  const request = require('supertest');
+  const { Pool } = require('pg');
+  const { randomBytes } = require('node:crypto');
+  const { registerRoutes } = require('../src/prewrite-implementation.cjs');
+  const schema = 'pw_implementation_' + randomBytes(8).toString('hex');
+  const owner = new Pool({ connectionString: dbUrl });
+  const pool = new Pool({ connectionString: dbUrl, options: '-c search_path=' + schema, max: 1 });
+  try {
+    await owner.query('CREATE SCHEMA ' + schema);
+    await pool.query(`
+      CREATE TABLE tracker_clients (id INT PRIMARY KEY, domain TEXT, token TEXT);
+      CREATE TABLE prewrite_briefs (id INT PRIMARY KEY, client_id INT, status TEXT, keyword TEXT, language TEXT,
+        brief_json JSONB, specialist_html TEXT, tracker_page_id INT, published_at TIMESTAMPTZ, published_url TEXT,
+        implementation_reports JSONB NOT NULL DEFAULT '[]'::jsonb);
+      CREATE TABLE tracker_pages (id SERIAL PRIMARY KEY, tracker_client_id INT, url TEXT, keyword TEXT, intent TEXT,
+        check_frequency TEXT, next_check_at TIMESTAMPTZ, is_active BOOLEAN, implementation_status TEXT,
+        prewrite_brief_id INT, created_at TIMESTAMPTZ, baseline_data JSONB);
+      CREATE UNIQUE INDEX ON tracker_pages(tracker_client_id,url) WHERE tracker_client_id IS NOT NULL;
+      INSERT INTO tracker_clients VALUES (1,'example.com','owner'),(2,'example.com','other');
+    `);
+    const newUrl = 'https://example.com/new-page/';
+    const newBrief = { ...create, meta_package: { url_slug: 'new-page' } };
+    await pool.query("INSERT INTO prewrite_briefs(id,client_id,status,keyword,language,brief_json) VALUES (1,1,'approved','emergency','nl',$1),(2,1,'approved','new','es',$2)", [expand, newBrief]);
+    await pool.query("INSERT INTO tracker_pages(tracker_client_id,url,baseline_data) VALUES (1,$1,'{\"score\":42}'),(2,$1,'{\"score\":59}')", [url]);
+    const { rows: before } = await pool.query('SELECT * FROM tracker_pages ORDER BY id');
+    const approvedHtml = '<p>' + 'This is the approved emergency page content. '.repeat(8) + '</p>';
+    await pool.query('UPDATE prewrite_briefs SET specialist_html=$1 WHERE id=1', ['<title>Approved title</title>' + approvedHtml]);
+    const live = { status: 200, final_url: url, redirect_chain: [], retrieved_at: '2026-01-02T00:00:00Z', html: approvedHtml };
+    let liveRequests = 0;
+    const app = express();
+    app.use(express.json());
+    registerRoutes(app, pool, async (token, id) => {
+      const { rows: [row] } = await pool.query('SELECT b.id AS "briefId", c.id AS "clientId" FROM prewrite_briefs b JOIN tracker_clients c ON c.id=b.client_id WHERE c.token=$1 AND b.id=$2', [token, id]);
+      return row || { code: 404, error: 'Not found' };
+    }, {
+      normalise: html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+      fetchHtml: async () => { liveRequests++; return live; }
+    });
+    const base = '/api/tracker-client/owner/prewrite-brief/';
+    const api = request(app);
+    await api.get(base.replace('owner', 'other') + '1/implementation-report').expect(404);
+    await api.post(base + '1/publish').send({ published_url: url }).expect(400);
+    await api.post(base + '1/implementation-report').send({ report }).expect(200);
+    assert.equal((await pool.query('SELECT published_at FROM prewrite_briefs WHERE id=1')).rows[0].published_at, null);
+    const published = { ...report, status: 'published', published_at: '2026-01-01T10:00:00Z' };
+    await api.post(base + '1/implementation-report').send({ report: published }).expect(409);
+    const response = await api.post(base + '1/publish').send({ report: published }).expect(200);
+    assert.equal(response.body.tracker_page_id, before[0].id);
+    assert.equal(response.body.report.verified, false);
+    assert.match(response.body.owner_report, /Wijzigingsrapport/);
+    await api.post(base + '1/publish').send({ report: published }).expect(200);
+    const history = (await api.get(base + '1/implementation-report').expect(200)).body.history;
+    assert.deepEqual(history.map(item => item.report.status), ['implemented', 'published']);
+    assert.ok(history.every(item => item.recorded_at.endsWith('Z')));
+    await api.post(base.replace('owner', 'other') + '1/verify-live').expect(404);
+    const verification = (await api.post(base + '1/verify-live').expect(200)).body.verification;
+    assert.equal(verification.status, 'approved_content_present');
+    assert.equal(verification.markup_checks.title, false);
+    live.html = '<title>Approved title</title>' + approvedHtml;
+    live.retrieved_at = '2026-01-03T00:00:00Z';
+    const complete = (await api.post(base + '1/verify-live').expect(200)).body.verification;
+    assert.equal(complete.markup_checks.title, true);
+    assert.deepEqual((await api.post(base + '1/verify-live').expect(200)).body.verification, complete);
+    assert.equal(liveRequests, 2);
+    const verifiedHistory = (await api.get(base + '1/implementation-report').expect(200)).body.history;
+    assert.deepEqual(verifiedHistory[1].live_verification, complete);
+    assert.deepEqual(verifiedHistory[1].live_verification_history, [verification]);
+    assert.deepEqual((await pool.query('SELECT * FROM tracker_pages ORDER BY id')).rows, before);
+    await api.post(base + '2/publish').send({ report: { ...published, url: newUrl } }).expect(200);
+    const { rows: [page] } = await pool.query('SELECT * FROM tracker_pages WHERE tracker_client_id=1 AND url=$1', [newUrl]);
+    assert.equal(page.implementation_status, 'baseline_pending');
+    assert.equal(page.baseline_data, null);
+  } finally {
+    await pool.end();
+    await owner.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');
+    await owner.end();
+  }
+});
+
+test('live proof requires exact public response and the approved content, with no redirect or truncation', async () => {
+  const { verifyApprovedContent } = require('../src/prewrite-implementation.cjs');
+  const content = 'Approved content for the emergency page. '.repeat(8).trim();
+  const approved = '<article><p>' + content + '</p></article>';
+  const live = { html: '<main>' + approved + '</main>', status: 200, final_url: url, redirect_chain: [], retrieved_at: '2026-01-02T10:00:00.000Z' };
+  const normalise = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const verify = (response, draft = approved) => verifyApprovedContent(url, draft, async () => response, normalise);
+  const proof = await verify(live);
+  assert.equal(proof.status, 'approved_content_present');
+  assert.equal(proof.observed_at, live.retrieved_at);
+  assert.match(proof.content_hash, /^[a-f0-9]{64}$/);
+  assert.equal(await verify({ ...live, final_url: url + 'different' }), null);
+  assert.equal(await verify({ ...live, redirect_chain: [{ status: 301 }] }), null);
+  assert.equal(await verify({ ...live, truncated: true }), null);
+  assert.equal(await verify({ ...live, html: '<!--' + content + '-->' }), null);
+  assert.equal(await verify(live, '<p>Too little to verify</p>'), null);
+});
+
+test('live proof compares explicitly approved metadata and complete structured-data nodes', async () => {
+  const { verifyApprovedContent } = require('../src/prewrite-implementation.cjs');
+  const normalise = html => html.replace(/<[^>]+>/g, ' ').trim();
+  const snippet = '<title>Emergency roofing</title><meta name="description" content="Approved description">' +
+    '<link rel="canonical" href="' + url + '">' +
+    '<script type="application/ld+json">{"@type":"Service","name":"Roof repair"}</script>';
+  const verify = html => verifyApprovedContent(url, snippet, async () => ({
+    html, status: 200, final_url: url, retrieved_at: '2026-01-02T00:00:00Z'
+  }), normalise);
+  const all = await verify(snippet.replace('"@type":"Service","name":"Roof repair"', '"name":"Roof repair","@type":"Service"'));
+  assert.equal(all.status, 'approved_markup_present');
+  assert.deepEqual(all.markup_checks, { title: true, description: true, canonical: true, json_ld: true });
+  const partial = await verify(snippet.replace('Approved description', 'Different').replace('Roof repair', 'Other service'));
+  assert.deepEqual(partial.markup_checks, { title: true, description: false, canonical: true, json_ld: false });
+  assert.equal(await verify('<!--' + snippet + '-->'), null);
+});

@@ -70,14 +70,14 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
 (async()=>{
  assert.equal(warmupDailyCap(9),30,'day 9 must retain the original Lead Crawler 30/day target');
  assert.equal(warmupDailyCap(1),20);assert.equal(warmupDailyCap(43),null);
- assert.deepEqual([1,9,15,22,29,36,43].map(day=>networkCapForWarmup(day,true)),[4,6,8,10,15,20,20]);
+ assert.deepEqual([1,9,15,22,29,36,43].map(day=>networkCapForWarmup(day,true)),[20,30,40,50,75,100,null]);
  assert.equal(networkCapForWarmup(9,false),0,'paused warming must block invites');
  let limits=await run('GET','/api/network/admin/acquisition/outreach-status');
  assert.equal(limits.statusCode,200,'existing original warm-up progress must load through Network Acquisitie');
  assert.equal(limits.body.warmup.progress_day,9);
  assert.equal(limits.body.warmup.daily_cap,30);
  assert.equal(limits.body.warmup.total_sent,258,'send history is not reset when entering Network');
- assert.equal(limits.body.daily_cap,6,'Network may use 20% of day 9 sender allowance');
+ assert.equal(limits.body.daily_cap,30,'Network uses the same day 9 sender ceiling');
  assert.equal(limits.body.can_send_now,true);
  limits=await run('GET','/api/network/admin/acquisition/outreach-status',{}, {'x-admin-code':'bad'});
  assert.equal(limits.statusCode,403,'warm-up counters require admin session');
@@ -89,6 +89,13 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  assert.equal(reachingCap.warmup.sent_today,30,'shared sender count includes both acquisition streams');
  assert.equal(reachingCap.warmup.remaining_today,0);
  assert.equal(reachingCap.can_send_now,false,'Network must not exceed sender warm-up limit');
+ const completedWarmup=await networkWarmupSnapshot({query:async(sql)=>{
+  if(sql.includes('FROM warmup_config'))return {rows:[{progress_day:43,is_active:true}]};
+  return {rows:[{sent_today:50,total_sent:150,interested:0}]};
+ }});
+ assert.equal(completedWarmup.can_send_now,true);
+ assert.equal(completedWarmup.daily_cap,null);
+ assert.equal(completedWarmup.remaining_today,null,'an absent warm-up ceiling is never shown as zero remaining');
  let r=await run('POST','/api/network/admin/acquisition/prepare-invitation',{company_id:7,email:'info@acme.com',source_url:'https://acme.com/contact'},{'x-admin-code':'bad'});
  assert.equal(r.statusCode,403);assert.equal(sent,0);
  r=await run('POST','/api/network/admin/acquisition/prepare-invitation',{company_id:7,email:'info@acme.com',source_url:'https://acme.com/contact'});
@@ -102,7 +109,7 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  assert.equal(early.statusCode,409,'even direct POST must not record interest on unsent invitations');
  assert.equal(company.metadata.acquisition.invitation.status,'prepared','unsent interest cannot alter canonical state');
  r=await run('GET','/network/join/:token',{}, {},{token});
- assert.equal(r.statusCode,200);assert.match(r.body,/I am interested/);assert.doesNotMatch(r.body,/QuickScan/);
+ assert.equal(r.statusCode,200);assert.match(r.body,/Preview only/);assert.doesNotMatch(r.body,/I am interested|<form|QuickScan/);
  r=await run('GET','/network/join/:token/unsubscribe',{}, {},{token});
  assert.equal(r.statusCode,200);assert.match(r.body,/Confirm/);
  assert.equal(company.metadata.acquisition.invitation.status,'prepared','GET unsubscribe must not mutate');

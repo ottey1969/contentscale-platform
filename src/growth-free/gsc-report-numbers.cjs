@@ -6,7 +6,7 @@
 const crypto=require('node:crypto');
 const {norm}=require('../gsc-report/published.cjs');
 const hashToken=t=>crypto.createHash('sha256').update(String(t)).digest('hex');
-const num=x=>Number.isFinite(Number(x))?Number(x):0;
+const num=x=>x==null||x===''||!Number.isFinite(Number(x))?null:Number(x);
 async function reportUploadsFor(pool,{url,admin=false,inviteId=null}={}){
  const key=norm(url);if(!pool||!key||(!admin&&!inviteId))return [];
  let path='';try{path=new URL(url).pathname.replace(/\/+$/,'')}catch{return []}
@@ -21,7 +21,7 @@ async function reportUploadsFor(pool,{url,admin=false,inviteId=null}={}){
    const rep=r.report||{},add=(period,p)=>{if(!period||!period.start||!period.end||!p)return;
     out.push({status:'VERIFIED_FOR_PAGE',source:'GSC_REPORT',report_title:String(r.title||'').slice(0,160),file_name:'GSC report',
      period_start:String(period.start).slice(0,10),period_end:String(period.end).slice(0,10),
-     totals:{clicks:num(p.clicks),impressions:num(p.impressions),position:p.position==null?null:Number(p.position)},queries:Array.isArray(p.queries)?p.queries.slice(0,200):[]})};
+     totals:{clicks:num(p.clicks),impressions:num(p.impressions),position:num(p.position)},queries:Array.isArray(p.queries)?p.queries.slice(0,200):[]})};
    add(rep.kpis&&rep.kpis.period,(rep.pages||[]).find(p=>norm(p.url)===key));
    if(rep.after)add(rep.after.period,(rep.after.pages||[]).find(p=>norm(p.url)===key));
   }

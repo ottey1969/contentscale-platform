@@ -983,7 +983,7 @@ test('tips by e-mail: on by default, "Don\'t send me tips" opts out, older forms
 test('the form in English, Dutch and Spanish: ?lang=, the browser language, else English',async t=>{
  const s=await server();t.after(()=>s.srv.close());
  const nl=(await s.get('/free-growth?key=open-key-12345&lang=nl')).body;
- assert.match(nl,/<html lang="nl">/);assert.match(nl,/Wordt je pagina gevonden in Google/);assert.match(nl,/Start de gratis check/);assert.match(nl,/Stuur me geen tips/);assert.match(nl,/name="index,follow"|content="index,follow"/);
+ assert.match(nl,/<html lang="nl">/);assert.match(nl,/Wordt je pagina gevonden in Google/);assert.match(nl,/Start de gratis check/);assert.match(nl,/Stuur me geen tips/);assert.match(nl,/<meta name="robots" content="noindex">/);
  const es=(await s.get('/free-growth?key=open-key-12345',{'accept-language':'es-ES,es;q=0.9'})).body;
  assert.match(es,/<html lang="es">/);assert.match(es,/Iniciar el análisis gratuito/);
  const en=(await s.get('/free-growth?key=open-key-12345',{'accept-language':'de-DE'})).body;
@@ -1093,4 +1093,23 @@ test('publication history: exact windows and overlap warnings',()=>{
  const upload=(p,clicks,status='VERIFIED_FOR_PAGE')=>({status,period_start:p.start,period_end:p.end,totals:{clicks,impressions:100},queries:[]});
  const results=compareHistory([{published_on:date},{published_on:other}],[upload(w.before,1),upload(w.after,2),upload(w.after,999,'WRONG_PAGE')],'roof repair');
  assert.equal(results[0].before.totals.clicks,1);assert.equal(results[0].after.totals.clicks,2);assert.deepEqual(results[0].overlapping_publications,[other]);
+});
+
+test('public Growth has a localized description and capability links stay out of search indexes',async t=>{
+ const s=await server({config:{accessKeys:[{key:'open-key-12345',label:'own site',hosts:['app.contentscale.site','127.0.0.1'],origins:[]}]}});
+ t.after(()=>s.srv.close());
+ const {FORM_TEXTS}=require('../src/growth-free/form-texts.cjs');
+ const {pageAudit}=require('../src/gsc-report/site-audit.cjs');
+ for(const lang of ['en','nl','es']){
+  const publicForm=await s.get('/free-growth?lang='+lang,{host:'app.contentscale.site'});
+  const details=pageAudit(publicForm.body,'https://app.contentscale.site/free-growth?lang='+lang);
+  assert.equal(publicForm.status,200);
+  assert.equal(details.lang,lang);
+  assert.equal(details.description,FORM_TEXTS[lang].simpleIntro);
+  assert.equal(details.noindex,false);
+ }
+ const privateForm=await s.get('/free-growth?key=open-key-12345',{host:'app.contentscale.site'});
+ assert.equal(privateForm.status,200);
+ assert.equal(privateForm.headers.get('referrer-policy'),'no-referrer');
+ assert.equal(pageAudit(privateForm.body,'https://app.contentscale.site/free-growth').noindex,true);
 });

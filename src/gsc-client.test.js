@@ -2,7 +2,7 @@
  * gsc-client.test.js
  * Run: node gsc-client.test.js
  * Uses a mock fetch (no network, no auth) to test the transforms + pagination,
- * and proves the GSC data makes brief-quality's cannibalization check authoritative.
+ * and proves that GSC page overlap reaches the brief-quality review gate.
  */
 'use strict';
 const assert = require('node:assert');
@@ -72,8 +72,24 @@ test('returns aggregate metrics + top queries for a URL', async () => {
   assert.strictEqual(m.topQueries[0].query, 'ottmar francisca');
 });
 
+test('an absent aggregate remains unknown and an explicit zero remains measured', async () => {
+  const args = ['sc-domain:s', 'https://s/no-data/', { withQueries: false }, 'synthetic-token'];
+  const empty = await G.getPageMetrics(...args, mockFetch({}));
+  assert.deepStrictEqual(empty, { clicks: null, impressions: null, ctr: null, position: null, topQueries: [] });
+  const measured = await G.getPageMetrics(...args, mockFetch({ '|0': [{ clicks: 0, impressions: 40, ctr: 0 }] }));
+  assert.deepStrictEqual(measured, { clicks: 0, impressions: 40, ctr: 0, position: null, topQueries: [] });
+});
+
+test('an exact GSC query row with an unknown metric cannot become a saved zero', async () => {
+  const { pullQueryWindow } = require('./tracker-growth-gsc-direct.cjs');
+  const args = { siteUrl: 'sc-domain:s', pageUrl: 'https://s/', query: 'test', token: 'synthetic-token', startDate: '2026-01-01', endDate: '2026-01-28' };
+  const fetchWithClicks = clicks => mockFetch({ 'query|0': [{ keys: ['test'], clicks, impressions: 40 }] });
+  await assert.rejects(pullQueryWindow({ ...args, fetchImpl: fetchWithClicks(null) }), /Invalid GSC metrics/);
+  assert.deepStrictEqual(await pullQueryWindow({ ...args, fetchImpl: fetchWithClicks(0) }), { clicks: 0, impressions: 40 });
+});
+
 console.log('buildScanInputs + brief-quality integration');
-test('GSC query->pages makes detectCannibalization authoritative (source=gsc)', async () => {
+test('GSC query-to-page overlap reaches review without claiming verified cannibalization', async () => {
   const fetchImpl = mockFetch({
     '|0': [{ clicks: 8, impressions: 8678, ctr: 0.0009, position: 5.7 }],
     'query|0': [{ keys: ['emergency roof repair nj'], clicks: 8, impressions: 8678, position: 5.7 }],
@@ -85,15 +101,18 @@ test('GSC query->pages makes detectCannibalization authoritative (source=gsc)', 
   const inputs = await G.buildScanInputs({ siteUrl: 'sc-domain:s', pageUrl: 'https://s/', keyword: 'emergency roof repair nj', token: 'tok', fetchImpl });
   assert.strictEqual(inputs.gsc.impressions, 8678);
   assert.ok(inputs.gscQueryPages.length >= 2);
-  // feed into brief-quality — should report source 'gsc' and cannibalized true
   const c = Q.detectCannibalization({
     keyword: 'emergency roof repair nj',
     page: { url: 'https://s/' },
     site: { gscQueryPages: inputs.gscQueryPages },
   });
   assert.strictEqual(c.source, 'gsc');
-  assert.strictEqual(c.cannibalized, true);
-  assert.strictEqual(c.pages.length, 2);
+  assert.strictEqual(c.cannibalized, false);
+  assert.strictEqual(c.possibleOverlap, true);
+  assert.strictEqual(c.needsReview, true);
+  assert.strictEqual(c.verifiedDuplicateContent, false);
+  assert.deepStrictEqual(c.pages, ['https://s/', 'https://s/24-hour-emergency-roof-repair-nj/']);
+  assert.match(c.note, /Do not shorten, canonicalize, noindex or redirect/);
 });
 
 process.on('exit', () => {

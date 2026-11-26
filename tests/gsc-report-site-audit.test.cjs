@@ -173,3 +173,14 @@ test('a Search Console export and the domain together: the numbers stay, the pub
  assert.equal(by('/hidden/').action,'BLOCKED','a page Google is told not to index is the first thing to fix, whatever its numbers');
  assert.equal(by('/thin/').source,'CRAWL');
 });
+
+test('the shipped SEO Audit page does not turn report-generator strings into on-page SEO evidence',()=>{
+ const fs=require('node:fs');
+ const path=require('node:path');
+ const shipped=fs.readFileSync(path.join(__dirname,'../public/seo-audit.html'),'utf8');
+ const evidence=pageAudit(shipped,'https://app.contentscale.site/seo-audit');
+ assert.equal(evidence.canonical,null);
+ assert.deepEqual(evidence.h1,[]);
+ assert.ok(!evidence.issues.includes('H1_MULTIPLE'));
+ assert.ok(!evidence.issues.includes('CANONICAL_ELSEWHERE'));
+});

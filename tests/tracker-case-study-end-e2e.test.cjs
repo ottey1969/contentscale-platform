@@ -65,6 +65,25 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     assert.deepEqual([after.baseline_at.toISOString(), after.baseline_data, after.baseline_locked], [before.baseline_at.toISOString(), before.baseline_data, true], 'baseline unchanged');
     const ev = (await db.query("SELECT event_data FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='case_study_ended'", [csId])).rows;
     assert.equal(ev.length, 1); assert.equal(ev[0].event_data.baseline_preserved, true); assert.equal(ev[0].event_data.new_case_study_needs_new_baseline, true);
+    const historyPath = '/api/tracker-client/' + token + '/pages/' + pageId + '/proof-history';
+    const getHistory = (query = '') => fetch(base + historyPath + query).then(async r => ({status:r.status, body:await r.json()}));
+    const endedHistory = await getHistory();
+    assert.equal(endedHistory.status, 200);
+    assert.equal(endedHistory.body.case_study?.status, 'completed');
+    assert.deepEqual(endedHistory.body.case_study.baseline_data, baseline);
+    assert.ok(endedHistory.body.events.some(event => event.event_type === 'case_study_ended'));
+    assert.equal((await getHistory('?case_id=abc')).status, 400);
+    const reportToken = crypto.randomBytes(24).toString('hex');
+    const fiveEngines = ['google_aio','chatgpt','perplexity','claude','copilot'];
+    await db.query('UPDATE tracker_case_studies SET report_token=$2 WHERE id=$1',[csId,reportToken]);
+    await db.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data)
+      VALUES($1,$2,'cycle_day_30_report','test',$3)`,[csId,pageId,{
+      baseline:{ai_evidence:{google_aio:{exact_page_cited:false}}},
+      current:{ai_evidence:fiveEngines.map(engine=>({engine,exact_page_cited:false}))}
+    }]);
+    const milestone = await fetch(base+'/case-study-report/'+reportToken);
+    assert.equal(milestone.status,200);
+    assert.match(await milestone.text(),/Exact-page AI citations \(5 engines\)<\/th><td>—<\/td><td>0<\/td><td>—<\/td>/);
     // Ending the Case Study ends its evidence checkpoint: the scanner is no longer locked on it.
     const gate = (await db.query('SELECT monitoring_waiting_input,monitoring_gate_label,monitoring_request_at FROM tracker_pages WHERE id=$1', [pageId])).rows[0];
     assert.deepEqual([gate.monitoring_waiting_input, gate.monitoring_gate_label, gate.monitoring_request_at], [false, null, null], 'case-study checkpoint cleared');
@@ -130,6 +149,20 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     const rows = (await db.query('SELECT id,status,baseline_data FROM tracker_case_studies WHERE tracker_client_id=$1 ORDER BY id', [clientId])).rows;
     assert.deepEqual(rows.map(r => [r.id, r.status]), [[csId, 'completed'], [second, 'active']]);
     assert.deepEqual(rows[0].baseline_data, baseline, 'the ended baseline is untouched');
+    const originalReading = (await db.query(`INSERT INTO tracker_snapshots(page_id,checked_at,score)
+      VALUES($1,$2,42) RETURNING id`,[pageId, new Date(after.ended_at.getTime()-1000)])).rows[0].id;
+    const nextReading = (await db.query(`INSERT INTO tracker_snapshots(page_id,checked_at,score)
+      SELECT $1,baseline_at+interval '1 second',87 FROM tracker_case_studies WHERE id=$2 RETURNING id`,[pageId,second])).rows[0].id;
+    const currentHistory = await getHistory();
+    assert.equal(currentHistory.body.case_study.id, second);
+    assert.deepEqual(currentHistory.body.snapshots.map(row=>row.id),[nextReading]);
+    assert.deepEqual(currentHistory.body.case_studies.map(study => study.id), [second, csId]);
+    const originalHistory = await getHistory('?case_id=' + csId);
+    assert.deepEqual(originalHistory.body.case_study.baseline_data, baseline);
+    assert.deepEqual(originalHistory.body.snapshots.map(row=>row.id),[originalReading]);
+    assert.ok(originalHistory.body.events.some(event => event.event_type === 'case_study_ended'));
+    const otherPageId = (await db.query("INSERT INTO tracker_pages(tracker_client_id,url,keyword) VALUES ($1,'https://test-cs.example/another/','TEST') RETURNING id",[clientId])).rows[0].id;
+    assert.equal((await fetch(base+historyPath.replace('/pages/'+pageId+'/', '/pages/'+otherPageId+'/')+'?case_id='+csId)).status,404);
     // History events go to the active Case Study first.
     assert.match(SRC, /ORDER BY \(status=\\'active\\'\) DESC,id DESC LIMIT 1/);
     assert.doesNotMatch(log, /\[case-study-end\]/);

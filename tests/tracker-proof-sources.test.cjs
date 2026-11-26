@@ -1,0 +1,117 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { auditPageEvidence } = require('../src/tracker-proof-sources.cjs');
+const url = 'https://example.test/Page/';
+
+test('proof projects exact-page GSC and ContentScore history without inventing metrics', () => {
+  const recorded = { url, source: 'PAGE_EXPORT', clicks: 0, impressions: null, position: null };
+  const score = { score: 42, scanned_at: '2026-01-02T00:00:00Z' };
+  const report = { pages: [recorded], kpis: { period: { start: '2026-01-01', end: '2026-01-02' } }, contentscores: { [url]: score } };
+  const evidence = auditPageEvidence(report, url);
+  assert.equal(evidence.observations[0].clicks, 0);
+  assert.equal(evidence.observations[0].impressions, null);
+  assert.equal(evidence.observations[0].ctr, null);
+  assert.deepEqual(evidence.contentscore, [score]);
+  assert.equal(auditPageEvidence(report, url.toLowerCase()), null);
+  assert.equal(auditPageEvidence({ pages: [{ ...recorded, source: 'CRAWL' }] }, url).observations.length, 0);
+});
+
+const dbUrl = process.env.PREWRITE_E2E_DATABASE_URL || '';
+test('proof linking requires both capabilities and never updates the protected baseline', {
+  skip: !(dbUrl && /test|e2e/i.test(new URL(dbUrl).pathname)) && 'Set PREWRITE_E2E_DATABASE_URL to a dedicated test database'
+}, async () => {
+  const { Pool } = require('pg');
+  const express = require('express');
+  const request = require('supertest');
+  const { randomBytes } = require('node:crypto');
+  const { registerProofSourceRoutes, loadProofSources } = require('../src/tracker-proof-sources.cjs');
+  const schema = 'proof_sources_' + randomBytes(8).toString('hex');
+  const owner = new Pool({ connectionString: dbUrl });
+  const pool = new Pool({ connectionString: dbUrl, options: '-c search_path=' + schema, max: 1 });
+  const auditKey = 't'.repeat(32);
+  const growthKey = 'g'.repeat(32);
+  try {
+    await owner.query('CREATE SCHEMA ' + schema);
+    await pool.query('SET search_path=' + schema);
+    await pool.query(`
+      CREATE TABLE tracker_clients (id INT, token TEXT, status TEXT);
+      CREATE TABLE tracker_pages (id INT, tracker_client_id INT, url TEXT);
+      CREATE TABLE tracker_case_studies (id INT, tracker_client_id INT, tracker_page_id INT, canonical_url TEXT, status TEXT, baseline_data JSONB);
+      CREATE TABLE tracker_case_study_events (id BIGSERIAL,case_study_id INT NOT NULL,tracker_page_id INT,event_type TEXT,event_at TIMESTAMPTZ DEFAULT NOW(),source TEXT,event_data JSONB);
+      CREATE TABLE growth_free_checks (id BIGINT,public_id TEXT,access_key TEXT,url TEXT,status TEXT,query TEXT,finished_at TIMESTAMPTZ,summary JSONB,publication_history JSONB,contentscore_history JSONB);
+      CREATE TABLE growth_free_ai_answers (check_id BIGINT,engine TEXT,raw_text TEXT,parsed JSONB,created_at TIMESTAMPTZ DEFAULT NOW(),UNIQUE(check_id,engine));
+      CREATE TABLE growth_free_gsc_uploads (id INT,check_id BIGINT,file_name TEXT,status TEXT,basis TEXT,period_start DATE,period_end DATE,totals JSONB,queries JSONB,created_at TIMESTAMPTZ);
+      INSERT INTO tracker_clients VALUES(1,'first',NULL),(2,'second',NULL);
+    `);
+    const auditStore = require('../src/gsc-report/store.cjs');
+    await auditStore.ensureTables(pool);
+    await pool.query("INSERT INTO tracker_pages VALUES (5,1,$1),(6,2,$1),(7,1,lower($1))", [url]);
+    await pool.query("INSERT INTO tracker_case_studies VALUES (10,1,5,$1,'active','{\"score\":42}'),(11,2,6,$1,'active','{\"score\":59}'),(12,1,7,lower($1),'active','{}')", [url]);
+    await pool.query("INSERT INTO growth_free_checks(id,public_id,access_key,url,status,query) VALUES(1,'growth',$1,$2,'DONE','query')", [growthKey, url]);
+    await pool.query("INSERT INTO gsc_reports(token,report,expires_at) VALUES($1,$2,NOW()+interval '1 day')", [auditKey, {
+      pages: [{ url, source: 'PAGE_EXPORT', clicks: 0, impressions: 10 }], kpis: { period: { start: '2026-01-01', end: '2026-01-02' } }
+    }]);
+    const app = express();
+    app.use(express.json());
+    registerProofSourceRoutes(app, pool);
+    const api = request(app);
+    const link = (token, page, body) => api.post('/api/tracker-client/' + token + '/pages/' + page + '/case-study/proof-sources').send(body);
+    const growth = { type: 'free_growth', id: 'growth', key: growthKey };
+    const audit = { type: 'gsc_audit', key: auditKey };
+    await link('second', 5, audit).expect(404);
+    await link('first', 7, audit).expect(404);
+    await link('first', 5, { ...growth, key: 'wrong' }).expect(404);
+    await link('first', 5, audit).expect(200);
+    await link('first', 5, audit).expect(200);
+    await link('first', 5, growth).expect(200);
+    await link('second', 6, audit).expect(409);
+    const { rows: events } = await pool.query('SELECT * FROM tracker_case_study_events');
+    assert.equal(events.length, 2);
+    assert.ok(events.every(event => event.tracker_page_id === 5));
+    assert.ok(!JSON.stringify(events).includes(auditKey) && !JSON.stringify(events).includes(growthKey));
+    const proof = await loadProofSources(pool, { clientId: 1, pageId: 5, url, events });
+    assert.equal(proof.gsc_audit[0].observations[0].clicks, 0);
+    assert.equal(proof.free_growth[0].query, 'query');
+    const second = { period: { start: '2026-01-03', end: '2026-01-04' }, pages: [{ url, clicks: null, impressions: 12 }] };
+    const third = { period: { start: '2026-01-05', end: '2026-01-06' }, pages: [{ url, clicks: 1, impressions: 14 }] };
+    await auditStore.setAfter(pool, 1, second);
+    await auditStore.setAfter(pool, 1, third);
+    await auditStore.setAfter(pool, 1, third);
+    const updated = await loadProofSources(pool, { clientId: 1, pageId: 5, url, events });
+    assert.deepEqual(updated.gsc_audit[0].observations.map(item => item.clicks), [0, null, 1]);
+    await pool.query("UPDATE tracker_case_study_events SET case_study_id=10,tracker_client_id=NULL WHERE source='gsc_audit'");
+    const priorLink = await api.get('/api/tracker-client/first/pages/5/proof-sources').expect(200);
+    assert.equal(priorLink.body.proof_sources.gsc_audit.length, 1);
+    await link('first', 5, audit).expect(200);
+    const ordinaryUrl = 'https://example.test/Other/';
+    await pool.query("INSERT INTO tracker_pages VALUES (8,1,$1),(9,2,$1)", [ordinaryUrl]);
+    await pool.query("INSERT INTO growth_free_checks(id,public_id,access_key,url,status,query) VALUES(2,'ordinary',$1,$2,'DONE','ordinary query')", [growthKey, ordinaryUrl]);
+    const ordinary = { ...growth, id: 'ordinary' };
+    await api.post('/api/tracker-client/first/pages/8/proof-sources').send(ordinary).expect(200);
+    await api.post('/api/tracker-client/first/pages/8/proof-sources').send(ordinary).expect(200);
+    await api.post('/api/tracker-client/second/pages/9/proof-sources').send(ordinary).expect(409);
+    const growthStore = require('../src/growth-free/store.cjs');
+    await pool.query(`ALTER TABLE growth_free_ai_answers ADD COLUMN observation_history JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    const observation = { checkId: 2, engine: 'chatgpt' };
+    const withoutCitation = { resources_status: 'MISSING', sources_verifiable: false, sources: [] };
+    const withCitation = { resources_status: 'LISTED', sources_verifiable: true, sources: [ordinaryUrl] };
+    await growthStore.saveAiAnswer(pool, { ...observation, rawText: 'First answer', parsed: withoutCitation });
+    await growthStore.saveAiAnswer(pool, { ...observation, rawText: 'Second answer', parsed: withCitation });
+    await growthStore.saveAiAnswer(pool, { ...observation, rawText: 'Second answer', parsed: withCitation });
+    const ordinaryProof = await api.get('/api/tracker-client/first/pages/8/proof-sources').expect(200);
+    assert.equal(ordinaryProof.body.proof_sources.free_growth.length, 1);
+    assert.equal(ordinaryProof.body.proof_sources.free_growth[0].query, 'ordinary query');
+    assert.deepEqual(ordinaryProof.body.proof_sources.free_growth[0].ai.map(item => item.exact_url_listed), [null, true]);
+    await api.get('/api/tracker-client/second/pages/8/proof-sources').expect(404);
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM tracker_case_studies')).rows[0].count, 3);
+    await pool.query('UPDATE gsc_reports SET revoked_at=NOW()');
+    assert.deepEqual((await loadProofSources(pool, { clientId: 1, pageId: 5, url, events })).gsc_audit, []);
+    assert.deepEqual((await pool.query('SELECT baseline_data FROM tracker_case_studies WHERE id=10')).rows[0].baseline_data, { score: 42 });
+  } finally {
+    await pool.end();
+    await owner.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');
+    await owner.end();
+  }
+});

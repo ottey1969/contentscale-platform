@@ -32,8 +32,8 @@ async function pullQueryWindow({siteUrl,pageUrl,query,startDate,endDate,token,fe
  const r=await getPageMetrics(siteUrl,pageUrl,{startDate,endDate,withQueries:true,queryLimit:25000},token,fetchImpl);
  const match=r.topQueries.find(x=>name(x.query)===name(query));
  if(!match)throw Error('Exact page/query row not returned by GSC; cannot assume zero or manufacture results');
- if(!Number.isFinite(Number(match.clicks))||!Number.isFinite(Number(match.impressions)))throw Error('Invalid GSC metrics');
- return {clicks:Number(match.clicks),impressions:Number(match.impressions)};
+ if(!Number.isFinite(match.clicks)||!Number.isFinite(match.impressions))throw Error('Invalid GSC metrics');
+ return {clicks:match.clicks,impressions:match.impressions};
 }
 // Reads both 28-day Search Console windows of a publication and stores them; used by the measurement page button, the
 // page itself when it opens after the periods are complete, and the reminder e-mail (owner 2026-11-02: "everything that
