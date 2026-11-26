@@ -9,6 +9,7 @@ const dns = require('dns').promises;
 const net = require('net');
 const crypto = require('crypto');
 const { exactUrl } = require('../implementation-report.cjs');
+const { ensureMonitoringSchedule, runNetworkPublicationMonitoring } = require('../network-publication-monitor.cjs');
 const { validateNetworkAi, KEYS: networkAiEngines } = require('../network-prewrite-contract.cjs');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
@@ -2711,6 +2712,7 @@ async function ensureNetworkTables(pool) {
     await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS verification_decision TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS reviewed_by_admin_id TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`).catch(()=>{});
+    await ensureMonitoringSchedule(client);
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_placement_review_events (
       id BIGSERIAL PRIMARY KEY,
@@ -5469,15 +5471,16 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
   }
   const liveEvidenceStates=new Set(['submitted','verifying','needs_review','verified']);
 
-  app.post('/api/network/admin/placements/:id/verify-live', verifyAdmin, wrap(async (req,res)=>{
-    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+  async function checkLivePublication(id, { adminId = 'admin', lease = null } = {}) {
+    const reply = (status, body) => ({status,body});
+    const actor = lease ? 'system' : 'admin';
     const q=await pool.query(`SELECT p.*,c.brand_name,c.owner_website_id,w.domain AS publisher_domain,w.status AS publisher_status,
       pv.html AS edition_html,pv.generation_input_snapshot,pv.id AS edition_id,pv.updated_at::text AS edition_revision,ow.domain AS owner_domain
       FROM network_placements p JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id
       JOIN network_publication_versions pv ON pv.placement_id=p.id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[id]);
-    const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Generated placement not found'});
-    if(!x.published_url)return res.status(409).json({success:false,error:'Save the exact live URL before verification'});
-    if(!liveEvidenceStates.has(x.status))return res.status(409).json({success:false,error:'Placement is not ready for live verification'});
+    const x=q.rows[0];if(!x)return reply(404,{success:false,error:'Generated placement not found'});
+    if(!x.published_url)return reply(409,{success:false,error:'Save the exact live URL before verification'});
+    if(!liveEvidenceStates.has(x.status))return reply(409,{success:false,error:'Placement is not ready for live verification'});
     let fetched,fetchError='';
     try{fetched=await safeFetchHtml(x.published_url)}catch(e){fetchError=e.message}
     const html=String(fetched&&fetched.html||'');
@@ -5516,17 +5519,22 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       await client.query('BEGIN');
       const current=await lockPublicationEvidence(client,id);
       if(!samePublicationEvidence(current,x)||!liveEvidenceStates.has(current.status)){
-        return res.status(409).json({success:false,error:'The publication changed during verification. Run the live pre-check again.'});
+        return reply(409,{success:false,error:'The publication changed during verification. Run the live pre-check again.'});
+      }
+      if(lease){
+        const {rows:[claim]}=await client.query(`UPDATE network_placements SET monitoring_due_at=NOW()+INTERVAL '24 hours'
+          WHERE id=$1 AND status='verified' AND monitoring_due_at=$2::timestamptz AND monitoring_due_at>NOW() RETURNING id`,[id,lease]);
+        if(!claim)return reply(409,{success:false,error:'The monitoring reservation expired or the placement changed.'});
       }
       const rn=await client.query('SELECT COALESCE(MAX(run_no),0)+1 AS n FROM network_verification_runs WHERE placement_id=$1',[id]);
       const runNo=Number(rn.rows[0].n)||1;
       await client.query(`INSERT INTO network_verification_runs (placement_id,run_no,http_status,indexable,canonical_ok,brand_mention_ok,source_link_ok,content_match_ok,password_protected,result_status,details,checked_at)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,NOW())`,[id,runNo,statusCode,indexable,canonicalOk,brandOk,sourceOk,staticHtmlPresent,passwordProtected,result,JSON.stringify(details)]);
-      await client.query(`UPDATE network_placements SET status=CASE WHEN status='verified' THEN 'verified' ELSE 'needs_review' END,updated_at=NOW() WHERE id=$1`,[id]);
+      if(!lease)await client.query(`UPDATE network_placements SET status=CASE WHEN status='verified' THEN 'verified' ELSE 'needs_review' END,updated_at=NOW() WHERE id=$1`,[id]);
       await client.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-        VALUES ($1,$2,'admin',$3,$4,NULL,$5::jsonb,NOW())`,[
+        VALUES ($1,$2,$3,$4,$5,NULL,$6::jsonb,NOW())`,[
           id,passed?'precheck_passed':'precheck_needs_review',
-          cleanText(req.admin?.id||'admin',200),
+          actor, lease ? 'publication-monitor' : cleanText(adminId,200),
           x.published_url,
           JSON.stringify({run_no:runNo,result_status:result,checks:{http_ok:httpOk,exact_document:exactDocument,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,brand_mention_ok:brandOk,source_link_ok:sourceOk}})
         ]);
@@ -5537,7 +5545,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       if(!committed){try{await client.query('ROLLBACK');}catch(error){rollbackError=error;}}
       client.release(rollbackError);
     }
-    res.json({
+    return reply(200,{
       success:true,
       precheck_passed:passed,
       result_status:result,
@@ -5549,8 +5557,14 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
         ? 'Pre-check passed. This does NOT verify the placement and does NOT award credits. Open the live page and make the final manual decision.'
         : 'Pre-check found issues. No credits released. Review the live page manually and request changes or reject it.'
     });
-  }));
+  }
 
+  app.post('/api/network/admin/placements/:id/verify-live', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.id);
+    if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    const result=await checkLivePublication(id,{adminId:req.admin?.id});
+    res.status(result.status).json(result.body);
+  }));
 
   app.post('/api/network/admin/placements/:id/manual-review', verifyAdmin, wrap(async (req,res)=>{
     const id=Number(req.params.id),decision=cleanText(req.body?.decision,40).toLowerCase(),note=cleanText(req.body?.note,2000);
@@ -8743,6 +8757,21 @@ if(!key){gt.textContent='Enter your ContentScale admin username and password fir
 api('/api/network/admin/status').then(()=>{gate.remove();main.style.display='block';load()}).catch(e=>{gt.textContent=e.message==='AUTH'?'Your admin session is not valid. Log in with ContentScale Admin.':'Could not verify the Network admin session.';login.style.display='inline-flex'});
 })();</script></body></html>`);
   });
+
+  if(envEnabled()&&process.env.NODE_ENV==='production'){
+    let ready=false,running=false;
+    const monitor=async()=>{
+      if(running||!envEnabled())return;
+      running=true;
+      try{
+        if(!ready){await ensureNetworkTables(pool);ready=true;}
+        await runNetworkPublicationMonitoring({pool,check:checkLivePublication});
+      }catch(error){console.warn('[network-monitoring] schedule unavailable',error.code||error.name);}
+      finally{running=false;}
+    };
+    setTimeout(monitor,120000).unref();
+    setInterval(monitor,30*60*1000).unref();
+  }
 
   return { registered: true, enabled: envEnabled(), module_version: NETWORK_MODULE_VERSION, schema_version: NETWORK_SCHEMA_VERSION };
 }
