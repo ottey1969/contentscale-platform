@@ -70,3 +70,58 @@ test('Growth → Pre-Write validates account page ID AND URL before pre-filling'
   assert.equal(await ok.isVisible('#prewriteBriefModal'),true);
  }finally{await browser.close();await new Promise(ok=>server.close(ok));}
 });
+
+test('Proof & History links an existing Quick Scan from each supported browser locale', {
+ skip: !chromium && 'Playwright unavailable'
+}, async () => {
+ const source = fs.readFileSync(path.join(__dirname, '../src/index.js'), 'utf8');
+ const start = source.indexOf('function openCaseStudy(pageId,caseId)');
+ const end = source.indexOf('function csPosHist(pageId)', start);
+ assert.ok(start >= 0 && end > start);
+ // The Tracker emits this script from its HTML template literal.
+ const script = require('node:vm').runInNewContext('`' + source.slice(start, end) + '`');
+ const browser = await chromium.launch();
+ try {
+  for (const [locale, label, width] of [
+   ['en-US', 'Link a research result', 1200],
+   ['nl-NL', 'Koppel een onderzoeksresultaat', 390],
+   ['es-ES', 'Vincular un resultado de investigación', 390]
+  ]) {
+   const page = await browser.newPage({ locale, viewport: { width, height: 840 } });
+   const scanKey = 'ab'.repeat(locale === 'en-US' ? 32 : 8);
+   const scanPath = (locale === 'en-US' ? '/quick-scan/' : '/scan/') + scanKey;
+   const requests = [];
+   const errors = [];
+   page.on('pageerror', error => errors.push(error.message));
+   await page.evaluate(() => {
+    window._csEscH = value => String(value ?? '');
+    window.api = async (path, method, body) => {
+     if (method === 'POST') {
+      window.proofLink = { path, body };
+      return { success: true };
+     }
+     return { success: true, page_url: 'https://fixture.example/Service/',
+      proof_sources: { quick_scan: window.proofLink ? [{ score: 0, scanned_at: '2026-01-02T00:00:00Z' }] : [] } };
+    };
+   });
+   await page.addScriptTag({ content: script });
+   await page.evaluate(() => openCaseStudy(42));
+   page.on('dialog', async dialog => {
+    requests.push(dialog.type());
+    await dialog.accept('https://app.example' + scanPath);
+   });
+   await page.getByRole('button', { name: label }).click();
+   await page.waitForFunction(() => window.proofLink);
+   assert.deepEqual(await page.evaluate(() => window.proofLink), {
+    path: '/pages/42/proof-sources', body: { type: 'quick_scan', key: scanKey }
+   });
+   await page.locator('summary').getByText('Quick Scan', { exact: true }).click();
+   assert.equal(await page.getByText(/ContentScore 0$/).isVisible(), true);
+   assert.deepEqual(requests, ['prompt']);
+   assert.deepEqual(errors, []);
+   await page.close();
+  }
+ } finally {
+  await browser.close();
+ }
+});

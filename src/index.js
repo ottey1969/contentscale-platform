@@ -4023,7 +4023,10 @@ function _trackerLiveProofText(proof, lang) {
   return results.concat(proof.observed_at || []).join(' · ');
 }
 const trackerProofSources=require('./tracker-proof-sources.cjs');
-trackerProofSources.registerProofSourceRoutes(app,pool,{ensureCaseSchema:_ensureCaseStudySchema});
+trackerProofSources.registerProofSourceRoutes(app,pool,{
+  ensureCaseSchema:_ensureCaseStudySchema,
+  resolveQuickScanToken:key=>_pqsResolveShortPrivate('prospect_quick_scans',key)
+});
 app.get(['/api/tracker-client/:token/pages/:pageId/case-study','/api/tracker-client/:token/pages/:pageId/proof-history'],async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
@@ -46062,9 +46065,9 @@ function openCaseStudy(pageId,caseId){
     var engineTable='<div style="overflow-x:auto;border:1px solid #1e3a8a;border-radius:9px;"><table style="width:100%;border-collapse:collapse;min-width:700px;font-size:10px;"><thead><tr style="background:#0b1220;color:#94a3b8;text-align:left;"><th style="padding:8px;">ENGINE</th><th style="padding:8px;">REVISION</th><th style="padding:8px;">RECOMMENDED</th><th style="padding:8px;">LOCAL / MAPS</th><th style="padding:8px;">DOMAIN CITED</th><th style="padding:8px;">EXACT PAGE</th><th style="padding:8px;">VERIFIED</th></tr></thead><tbody>'+engineOrder.map(function(k){var r=latestByEngine[k],isCurrent=r&&Number(r.revision_cycle||1)===currentRevision;if(!r)return '<tr style="border-top:1px solid #172033;"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td colspan="6" style="padding:8px;color:#fbbf24;">NOT CHECKED — manual evidence required</td></tr>';return '<tr style="border-top:1px solid #172033;opacity:'+(isCurrent?'1':'.58')+';"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td style="padding:8px;color:'+(isCurrent?'#7dd3fc':'#94a3b8')+';">'+(isCurrent?'CURRENT · R':'PRIOR · R')+_csEscH(r.revision_cycle||1)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_recommended)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_local_result)+'</td><td style="padding:8px;">'+evidenceCell(r.domain_cited)+'</td><td style="padding:8px;">'+evidenceCell(r.exact_page_cited)+'</td><td style="padding:8px;color:#94a3b8;white-space:nowrap;">'+_csEscH(utcStamp(r.updated_at||r.verified_at))+'</td></tr>';}).join('')+'</tbody></table></div><div style="font-size:10px;color:'+(currentCount===5?'#4ade80':'#fbbf24')+';margin-top:7px;font-weight:800;">Revision '+currentRevision+': '+currentCount+'/5 manually checked'+(currentCount===5?' · complete':' · recheck all five engines after publication')+'. Prior revisions are comparison evidence only.</div>';
     var proofLocale=(navigator.language||'en').split('-')[0];
     var proofLabels={
-      en:['Link Free Growth or GSC Audit','Paste your private result link','Unable to link this result to the exact page','Clicks','Impressions','Position','CTR','Publication history','AI visibility','Exact URL in supplied sources','Exact URL absent from supplied sources'],
-      nl:['Koppel Free Growth of GSC Audit','Plak je privélink naar het resultaat','Dit resultaat kon niet aan de exacte pagina worden gekoppeld','Klikken','Vertoningen','Positie','CTR','Publicatiehistorie','AI-zichtbaarheid','Exacte URL in aangeleverde bronnen','Exacte URL ontbreekt in aangeleverde bronnen'],
-      es:['Vincular Free Growth o GSC Audit','Pega tu enlace privado al resultado','No se pudo vincular el resultado a la página exacta','Clics','Impresiones','Posición','CTR','Historial de publicación','Visibilidad en IA','URL exacta en las fuentes aportadas','URL exacta ausente de las fuentes aportadas']
+      en:['Link a research result','Paste the private result link from Free Growth, GSC Audit or Quick Scan','Unable to link this result to the exact page','Clicks','Impressions','Position','CTR','Publication history','AI visibility','Exact URL in supplied sources','Exact URL absent from supplied sources'],
+      nl:['Koppel een onderzoeksresultaat','Plak de privélink van Free Growth, GSC Audit of Quick Scan','Dit resultaat kon niet aan de exacte pagina worden gekoppeld','Klikken','Vertoningen','Positie','CTR','Publicatiehistorie','AI-zichtbaarheid','Exacte URL in aangeleverde bronnen','Exacte URL ontbreekt in aangeleverde bronnen'],
+      es:['Vincular un resultado de investigación','Pega el enlace privado de Free Growth, GSC Audit o Quick Scan','No se pudo vincular el resultado a la página exacta','Clics','Impresiones','Posición','CTR','Historial de publicación','Visibilidad en IA','URL exacta en las fuentes aportadas','URL exacta ausente de las fuentes aportadas']
     };
     var labels=proofLabels[proofLocale]||proofLabels.en, sources=d.proof_sources||{};
     var scoreLines=function(rows){return rows.map(function(row){
@@ -46105,7 +46108,8 @@ function openCaseStudy(pageId,caseId){
         +_csEscH(historyText[study.status==='active'?4:5]+' · '+utcStamp(study.baseline_at))+'</option>';
     }).join('');
     var casePicker=caseOptions?'<label>'+_csEscH(historyText[3])+' <select id="trackerProofCase">'+caseOptions+'</select></label>':'';
-    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+prewriteReports;
+    var scanProof=(sources.quick_scan||[]).length?'<details><summary>Quick Scan</summary><ul>'+scoreLines(sources.quick_scan)+'</ul></details>':'';
+    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prewriteReports;
     if(!d.case_study){
       var trackerMeasurements=snaps.map(function(row){
         var date=utcStamp(row.checked_at);
@@ -46140,10 +46144,11 @@ function openCaseStudy(pageId,caseId){
     document.getElementById('caseStudyLinkProof').onclick=async function(){
       var input=prompt(labels[1]);if(!input)return;
       try{
-        var link=new URL(input), match=link.pathname.match(/[/]r[/]([^/]+)[/]?$/);
-        if(!match)throw Error();
-        var id=decodeURIComponent(match[1]),key=link.searchParams.get('k');
-        await api('/pages/'+pageId+'/proof-sources','POST',{type:key?'free_growth':'gsc_audit',id:id,key:key||id});
+        var link=new URL(input), scan=link.pathname.match(/^[/](?:quick-scan|scan)[/]([^/]+)[/]?$/);
+        var match=link.pathname.match(/[/]r[/]([^/]+)[/]?$/);
+        if(!scan&&!match)throw Error();
+        var id=decodeURIComponent((scan||match)[1]),key=link.searchParams.get('k');
+        await api('/pages/'+pageId+'/proof-sources','POST',scan?{type:'quick_scan',key:id}:{type:key?'free_growth':'gsc_audit',id:id,key:key||id});
         openCaseStudy(pageId,caseId);
       }catch(e){alert(labels[2]);}
     };

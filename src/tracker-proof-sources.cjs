@@ -6,13 +6,20 @@ const growth = require('./growth-free/store.cjs');
 const { relatedChecks } = require('./growth-free/contentscore.cjs');
 
 const EVENT = 'proof_source_linked';
-const TYPES = new Set(['free_growth', 'gsc_audit']);
+const TYPES = new Set(['free_growth', 'gsc_audit', 'quick_scan']);
 const EXPORT_SOURCES = new Set(['EXPORT', 'PAGE_EXPORT', 'PAGE_QUERY_EXPORT']);
 const exact = (value, url) => {
   try { return exactUrl(value) === url; } catch { return false; }
 };
 const numeric = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const history = value => Array.isArray(value) ? value : value ? [value] : [];
+
+function quickScanEvidence(row, url) {
+  const result = row?.scan_result;
+  if (!result || !row.scan_completed_at || !exact(row.url, url) ||
+      (result.url && !exact(result.url, url)) || result.success === false) return null;
+  return { url, score: numeric(result.score), scanned_at: row.scan_completed_at };
+}
 
 function auditPageEvidence(report, url) {
   const find = rows => (rows || []).find(page => exact(page.url, url));
@@ -29,7 +36,7 @@ function auditPageEvidence(report, url) {
 }
 
 async function loadProofSources(pool, { clientId, pageId, url, events }) {
-  const out = { free_growth: [], gsc_audit: [] };
+  const out = { free_growth: [], gsc_audit: [], quick_scan: [] };
   const directChecks = new Set();
   const invitedChecks = new Set();
   for (const event of events) {
@@ -53,6 +60,11 @@ async function loadProofSources(pool, { clientId, pageId, url, events }) {
           for (const check of checks) if (check.matching_invite === true) invitedChecks.add(String(check.id));
         }
       }
+    } else if (ref.type === 'quick_scan') {
+      const { rows: [row] } = await pool.query(`SELECT url,scan_result,scan_completed_at
+        FROM prospect_quick_scans WHERE id=$1 AND revoked_at IS NULL`, [ref.source_id]);
+      const evidence = quickScanEvidence(row, url);
+      if (evidence) out.quick_scan.push(evidence);
     } else {
       directChecks.add(String(ref.source_id));
     }
@@ -116,7 +128,7 @@ const PROOF_EVENTS_SCHEMA = `
     ALTER COLUMN case_study_id DROP NOT NULL
 `;
 
-function registerProofSourceRoutes(app, pool, { ensureCaseSchema } = {}) {
+function registerProofSourceRoutes(app, pool, { ensureCaseSchema, resolveQuickScanToken } = {}) {
   const path = '/api/tracker-client/:token/pages/:pageId';
   let schemaReady;
   function ensureProofSchema() {
@@ -149,13 +161,23 @@ function registerProofSourceRoutes(app, pool, { ensureCaseSchema } = {}) {
       const page = await ownedPage(pool, req.params.token, req.params.pageId);
       if (!page) return res.status(404).json({ success: false });
       const url = exactUrl(page.url);
-      const source = type === 'free_growth' ? (await pool.query(
-        "SELECT id,url,access_key FROM growth_free_checks WHERE public_id=$1 AND status='DONE'", [id])).rows[0]
-        : await openReport(pool, key, { count: false });
-      const permitted = source && (type === 'free_growth'
-        ? growth.sameKey(source.access_key, key) && exact(source.url, url)
-        : auditPageEvidence(source.report, url));
-      if (!permitted) return res.status(404).json({ success: false });
+      let source;
+      if (type === 'free_growth') {
+        const { rows: [check] } = await pool.query(
+          "SELECT id,url,access_key FROM growth_free_checks WHERE public_id=$1 AND status='DONE'", [id]);
+        if (check && growth.sameKey(check.access_key, key) && exact(check.url, url)) source = check;
+      } else if (type === 'gsc_audit') {
+        const report = await openReport(pool, key, { count: false });
+        if (report && auditPageEvidence(report.report, url)) source = report;
+      } else {
+        const scanToken = /^[a-f0-9]{16}$/i.test(key) && resolveQuickScanToken ? await resolveQuickScanToken(key) : key;
+        if (scanToken) {
+          const { rows: [scan] } = await pool.query(`SELECT id,url,scan_result,scan_completed_at
+            FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`, [scanToken]);
+          if (quickScanEvidence(scan, url)) source = scan;
+        }
+      }
+      if (!source) return res.status(404).json({ success: false });
       await ensureProofSchema();
       db = await pool.connect();
       await db.query('BEGIN');
