@@ -43,7 +43,9 @@ test('proof linking requires both capabilities and never updates the protected b
       CREATE TABLE growth_free_checks (id BIGINT,public_id TEXT,access_key TEXT,url TEXT,status TEXT,query TEXT,finished_at TIMESTAMPTZ,summary JSONB,publication_history JSONB,contentscore_history JSONB);
       CREATE TABLE growth_free_ai_answers (check_id BIGINT,engine TEXT,raw_text TEXT,parsed JSONB,created_at TIMESTAMPTZ DEFAULT NOW(),UNIQUE(check_id,engine));
       CREATE TABLE growth_free_gsc_uploads (id INT,check_id BIGINT,file_name TEXT,status TEXT,basis TEXT,period_start DATE,period_end DATE,totals JSONB,queries JSONB,created_at TIMESTAMPTZ);
-      CREATE TABLE prospect_quick_scans (id BIGINT,token TEXT,url TEXT,scan_result JSONB,scan_completed_at TIMESTAMPTZ,revoked_at TIMESTAMPTZ);
+      CREATE TABLE prospect_quick_scans (id BIGINT,token TEXT,url TEXT,scan_result JSONB,scan_completed_at TIMESTAMPTZ,revoked_at TIMESTAMPTZ,
+        ceo_report_token TEXT,ceo_report_page_url TEXT,audit20_report_url TEXT,audit20_status TEXT);
+      CREATE TABLE opportunity_reports (token TEXT,domain TEXT,source_url TEXT,report_data JSONB,created_at TIMESTAMPTZ,revoked_at TIMESTAMPTZ);
       INSERT INTO tracker_clients VALUES(1,'first',NULL),(2,'second',NULL);
     `);
     const auditStore = require('../src/gsc-report/store.cjs');
@@ -112,7 +114,7 @@ test('proof linking requires both capabilities and never updates the protected b
     assert.deepEqual((await loadProofSources(pool, { clientId: 1, pageId: 5, url, events })).gsc_audit, []);
     assert.deepEqual((await pool.query('SELECT baseline_data FROM tracker_case_studies WHERE id=10')).rows[0].baseline_data, { score: 42 });
 
-    await pool.query(`INSERT INTO prospect_quick_scans VALUES
+    await pool.query(`INSERT INTO prospect_quick_scans(id,token,url,scan_result,scan_completed_at,revoked_at) VALUES
       (3,$1,$2,$3,NOW(),NULL)`, [prospectKey, url, { score: 0, url, provider_usage: { tokens: 1234 } }]);
     const scan = { type: 'quick_scan', key: prospectKey };
     await link('first', 7, scan).expect(404);
@@ -126,12 +128,49 @@ test('proof linking requires both capabilities and never updates the protected b
     assert.ok(measurements[0].scanned_at);
     assert.deepEqual(Object.keys(measurements[0]).sort(), ['scanned_at', 'score', 'url']);
     assert.equal((await pool.query("SELECT COUNT(*)::int AS count FROM tracker_case_study_events WHERE source='quick_scan'")).rows[0].count, 1);
+    const ceoPage = 'https://example.test/Original/';
+    const ceoToken = 'cd'.repeat(32);
+    const auditToken = 'ef'.repeat(32);
+    await pool.query(`INSERT INTO opportunity_reports VALUES
+      ($1,'example.test',$3,$4,'2026-01-01T00:00:00Z',NULL),
+      ($2,'example.test',$5,$6,'2026-01-02T00:00:00Z',NULL)`,[ceoToken,auditToken,ceoPage,{
+        page_analysis:[{url:ceoPage,content_score:0,title:'Original page',internal_usage:'private-fixture'}]
+      },url,{
+        page_analysis:[{url,title:'Audit page',content_score:null},{url:'https://other.example/Other/',content_score:90}],
+        opportunities:[{url,title:'Improve the introduction',status:'observed',internal_usage:'private-fixture'}]
+      }]);
+    await pool.query(`UPDATE prospect_quick_scans SET ceo_report_token=$1,ceo_report_page_url=$2,audit20_report_url=$3,audit20_status='ready' WHERE id=3`,
+      [ceoToken,ceoPage,'https://app.contentscale.site/report/'+auditToken.slice(0,16)]);
+    const savedResearch = async () => (await api.get('/api/tracker-client/first/pages/5/proof-sources').expect(200)).body.proof_sources.prospect_research;
+    const research = await savedResearch();
+    assert.deepEqual(research.map(item=>[item.source,item.pages.map(page=>[page.url,page.score])]),[
+      ['ceo_scan',[[ceoPage,0]]],['audit20',[[url,null]]]
+    ]);
+    assert.equal(research[1].findings[0].title,'Improve the introduction');
+    assert.doesNotMatch(JSON.stringify(research),/private-fixture|other[.]example|cdcdcdcd|efefefef/);
+    await pool.query('UPDATE opportunity_reports SET revoked_at=NOW() WHERE token=$1',[ceoToken]);
+    assert.deepEqual((await savedResearch()).map(item=>item.source),['audit20']);
+    const externalUrl = 'https://reports.example.com/Audit20?share=existing#summary';
+    await pool.query('UPDATE prospect_quick_scans SET audit20_report_url=$1 WHERE id=3', [externalUrl]);
+    assert.deepEqual(await savedResearch(), [{ source: 'audit20', external_url: externalUrl }]);
+    const otherAccount = await api.get('/api/tracker-client/second/pages/6/proof-sources').expect(200);
+    assert.deepEqual(otherAccount.body.proof_sources.prospect_research, []);
+    await pool.query("UPDATE prospect_quick_scans SET audit20_status='not_started' WHERE id=3");
+    assert.deepEqual(await savedResearch(), []);
+    await pool.query("UPDATE prospect_quick_scans SET audit20_status='ready' WHERE id=3");
+    for (const unsupported of ['//reports.example.com/audit', 'http://reports.example.com/audit',
+      'https://app.contentscale.site/report/expired', 'https://localhost/audit', 'https://user:secret@reports.example.com/audit']) {
+      await pool.query('UPDATE prospect_quick_scans SET audit20_report_url=$1 WHERE id=3', [unsupported]);
+      assert.deepEqual(await savedResearch(), []);
+    }
+    await pool.query('UPDATE prospect_quick_scans SET audit20_report_url=$1 WHERE id=3', [externalUrl]);
     await pool.query('UPDATE prospect_quick_scans SET scan_result=$1 WHERE id=3', [{ url }]);
     assert.equal((await scanHistory())[0].score, null);
     await pool.query('UPDATE prospect_quick_scans SET scan_result=$1 WHERE id=3', [{ score: 5, url: url.toLowerCase() }]);
     assert.deepEqual(await scanHistory(), []);
     await pool.query('UPDATE prospect_quick_scans SET revoked_at=NOW() WHERE id=3');
     assert.deepEqual(await scanHistory(), []);
+    assert.deepEqual(await savedResearch(), []);
     assert.deepEqual((await pool.query('SELECT baseline_data FROM tracker_case_studies WHERE id=10')).rows[0].baseline_data, { score: 42 });
   } finally {
     await pool.end();

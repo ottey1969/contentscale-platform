@@ -9,6 +9,7 @@ const dns = require('dns').promises;
 const net = require('net');
 const crypto = require('crypto');
 const { exactUrl } = require('../implementation-report.cjs');
+const { validateNetworkAi, KEYS: networkAiEngines } = require('../network-prewrite-contract.cjs');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
@@ -2121,22 +2122,19 @@ function buildApprovedBriefContract(briefJson){
 }
 
 
-function _networkAiEvidenceStateV500(b){
-  const ae=safeJsonObject(b&&b.ai_system_evidence),keys=['google_aio','chatgpt','perplexity','claude','copilot'],labels={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
-  const checked=keys.filter(k=>ae[k]&&ae[k].checked===true),missing=keys.filter(k=>!checked.includes(k));
-  return {checked_count:checked.length,checked,missing,missing_labels:missing.map(k=>labels[k]||k),complete:checked.length===5};
+function _networkAiEvidenceStateV500(brief, keyword) {
+  return validateNetworkAi(brief, keyword);
 }
-function _networkFiveAiResearchV500(b){
+function _networkFiveAiResearchV500(b,keyword){
   const keys=['google_aio','chatgpt','perplexity','claude','copilot'],labels={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'},ae=safeJsonObject(b&&b.ai_system_evidence),analysis=safeJsonObject(b&&b.ai_systems_analysis);
-  const systems={};
+  const systems={},state=_networkAiEvidenceStateV500(b||{},keyword);
   for(const k of keys){
     const ev=safeJsonObject(ae[k]),an=safeJsonObject(analysis[k]),raw=String(ev.text||'').trim();
     let summary=cleanText(an.answer_summary||'',1200);
     if((!summary||/^not checked$/i.test(summary))&&raw){let x=raw,at=x.toUpperCase().indexOf('RESOURCES:');if(at>=0)x=x.slice(0,at);summary=cleanText(x.replace(/^ANSWER:\s*/i,''),1200);}
     const urls=Array.from(new Set([].concat(Array.isArray(an.citation_sources)?an.citation_sources.map(x=>x&&x.exact_url||''):[],extractUrlsDeep(raw)).map(x=>cleanText(x,1600)).filter(x=>/^https:\/\//i.test(x)))).slice(0,10);
-    systems[k]={label:labels[k],checked:ev.checked===true,source:cleanText(ev.source||an.evidence_source||'',80),answer_summary:summary,citation_sources:urls};
+    systems[k]={label:labels[k],checked:state.details[k].checked,source:cleanText(ev.source||an.evidence_source||'',80),answer_summary:summary,citation_sources:urls};
   }
-  const state=_networkAiEvidenceStateV500(b||{});
   return {required:5,checked:state.checked_count,complete:state.complete,missing:state.missing_labels,systems,rule:'Use these five saved AI-system answers as research evidence to strengthen coverage and source awareness. Do not merge systems into fake consensus and do not call non-Google evidence a Google AI Overview finding.'};
 }
 function _networkReaderInternalUrlV500(raw,publisherDomain){
@@ -2197,7 +2195,7 @@ function _networkAutoSelectInternalDestinationV502(b,publisherDomain){
 function _networkBriefHash(briefJson){  return crypto.createHash('sha256').update(JSON.stringify(safeJsonObject(briefJson))).digest('hex');
 }
 function _networkBriefApprovalReadiness(briefJson,opts={}){
-  const b=safeJsonObject(briefJson),q=safeJsonObject(b.ai_quality_check),contract=buildApprovedBriefContract(b),missing=[],aiState=_networkAiEvidenceStateV500(b),internalState=_networkInternalDestinationStateV500(b,opts.publisher_domain||'');
+  const b=safeJsonObject(briefJson),q=safeJsonObject(b.ai_quality_check),contract=buildApprovedBriefContract(b),missing=[],aiState=_networkAiEvidenceStateV500(b,opts.keyword),internalState=_networkInternalDestinationStateV500(b,opts.publisher_domain||'');
   if(q.ready_for_generation!==true)missing.push('ai_quality_check.ready_for_generation');
   if(Number(q.readiness_score||0)<90)missing.push('readiness_score_below_90');
   if(!contract||!Array.isArray(contract.planned_h2s)||contract.planned_h2s.length<3)missing.push('canonical_outline');
@@ -2213,7 +2211,7 @@ async function _networkApproveBriefSnapshot(pool,briefId,adminId,opts={}){
   await ensureNetworkPrewriteApprovalTable(pool);
   const r=await pool.query(`SELECT id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 LIMIT 1`,[Number(briefId)]),brief=r.rows[0];
   if(!brief){const e=new Error('Prewrite Brief not found');e.status=404;throw e;}
-  const readiness=_networkBriefApprovalReadiness(brief.brief_json||{},opts);
+  const readiness=_networkBriefApprovalReadiness(brief.brief_json||{},{...opts,keyword:brief.keyword});
   if(!readiness.passed){const e=new Error('Brief is not ready for approval. Complete the Brief first: '+readiness.missing.join(', '));e.status=409;e.details=readiness;throw e;}
   const hash=_networkBriefHash(brief.brief_json||{}),client=await pool.connect();
   try{
@@ -3585,6 +3583,7 @@ ${networkGuidedCssV535()}</style></head><body>
 <section class="card workflowCard" data-stage="1"><div class="top"><div><h2>1 · Prewrite Brief evidence</h2><div class="tiny">Proof of the exact research brief used at generation time. <strong>SEO Intelligence + AIO Spy.</strong></div></div><a class="btn secondary" id="viewPrewrite" target="_blank" style="display:none">View full brief</a></div><div id="prewriteEvidence" class="metaBox" style="margin-top:12px">Loading…</div></section>
 <section class="card workflowCard" data-stage="1" id="aiAnswerCheckCard"><div class="top"><div><h2 style="margin-bottom:4px">AIO Spy · AI answer check</h2><div class="tiny">Uses the exact linked Prewrite keyword automatically. Same query for every AI system. Captures the real answer + exact source URLs and syncs the evidence back to the Prewrite.</div></div><span class="status" id="aiCheckKeywordStatus">Waiting for Prewrite keyword…</span></div>
 <div class="grid" style="margin-top:12px"><div class="field"><label>Exact Prewrite keyword / question</label><input id="aiCheckKeyword" readonly placeholder="Linked Prewrite keyword appears automatically"></div><div class="field"><label>AI system</label><select id="aiCheckEngine"><option value="google_aio">Google AIO / Gemini</option><option value="chatgpt">ChatGPT Search</option><option value="perplexity">Perplexity</option><option value="claude">Claude</option><option value="copilot">Microsoft Copilot</option></select></div></div>
+<div class="field" id="aiCheckGoogleField" style="margin-top:12px"><label for="aiCheckGoogleSource">Google source</label><select id="aiCheckGoogleSource"><option value="">Choose a source</option><option value="ai_overview">Google AI Overview</option><option value="gemini">Gemini</option></select></div>
 <div class="field" style="margin-top:12px"><label>Prompt — keyword inserted automatically</label><textarea id="aiCheckPrompt" class="aiCheckPrompt" readonly></textarea></div>
 <div class="actions" style="margin-top:10px"><button class="btn" id="copyAiCheckPrompt" type="button">Copy prompt</button></div>
 <div class="field" style="margin-top:14px"><label>Paste the complete AI answer here</label><textarea id="aiCheckAnswer" class="aiCheckAnswer" placeholder="Paste the complete answer from the selected AI system, including all source URLs"></textarea></div>
@@ -3639,10 +3638,15 @@ function applySingleNextAction(d){
 function aiCheckPromptText(q){const nl=String.fromCharCode(10)+String.fromCharCode(10);return ['Answer this exact user query as a real user would receive the answer:','QUERY:',q||'[NO LINKED PREWRITE KEYWORD]','Instructions:','- Use the query EXACTLY as written. Do not rewrite, broaden or replace it.','- Actually answer the query. Do not explain these instructions and do not return a template.','- Use current live web/search capabilities when available.','- Research the current web before answering when web search is available.','- Use multiple independent relevant sources when genuinely available; do not invent extra sources just to reach a number.','- Do not invent facts, citations or URLs.','- Preserve every exact cited/source page URL as a complete https:// URL.','- Never replace an exact page URL with only a root domain when the exact page is available.','- Never invent, reconstruct, guess or repair URLs.','- If the interface renders a URL as a clickable Markdown link, that is acceptable, but the underlying exact https:// URL must remain visible and complete.','Return ONLY these two sections:','ANSWER:','[the actual complete answer to the exact query]','RESOURCES:','https://exact-source-page-1','https://exact-source-page-2','[continue with every real source actually used or shown; if none, write NO VERIFIED RESOURCES]','Do NOT add MENTIONED, RECOMMENDED, company lists, brand lists, summaries, classifications or any other section.','Final validation: answer the query, preserve exact https:// source URLs, include no invented URLs, and return only ANSWER and RESOURCES.'].join(nl)}
 function _aiCheckKey(q){return String(q||'').trim().toLowerCase().replace(/\s+/g,' ').slice(0,240)}
 function _aiCheckRead(){let d={answers:{},engine:'google_aio',drafts:{},active_keyword:''};try{d=JSON.parse(localStorage.getItem(aiCheckStoreKey)||'null')||d}catch(_e){}if(!d.answers)d.answers={};if(!d.drafts)d.drafts={};return d}
-function aiCheckLoadDraft(){const d=_aiCheckRead(),e=document.getElementById('aiCheckEngine'),a=document.getElementById('aiCheckAnswer'),k=_aiCheckKey(aiCheckKeyword);if(e&&d.engine&&Array.from(e.options).some(o=>o.value===d.engine))e.value=d.engine;const bucket=(k&&d.drafts[k])||null;if(a&&e){if(bucket&&bucket.answers)a.value=bucket.answers[e.value]||'';else a.value=d.answers[e.value]||''}}
+function aiCheckLoadDraft(){const d=_aiCheckRead(),e=document.getElementById('aiCheckEngine'),a=document.getElementById('aiCheckAnswer'),k=_aiCheckKey(aiCheckKeyword);if(e&&d.engine&&Array.from(e.options).some(o=>o.value===d.engine))e.value=d.engine;const bucket=(k&&d.drafts[k])||null;googleSelect.value=bucket?.google_source||'';showGoogleSource();if(a&&e){if(bucket&&bucket.answers)a.value=bucket.answers[e.value]||'';else a.value=d.answers[e.value]||''}}
 function aiCheckPersist(){const e=document.getElementById('aiCheckEngine'),a=document.getElementById('aiCheckAnswer'),d=_aiCheckRead(),k=_aiCheckKey(aiCheckKeyword);if(!e||!a)return;d.engine=e.value;if(k){if(!d.drafts[k])d.drafts[k]={answers:{},keyword:aiCheckKeyword,saved_at:''};if(!d.drafts[k].answers)d.drafts[k].answers={};d.drafts[k].keyword=aiCheckKeyword;d.drafts[k].answers[e.value]=a.value;d.drafts[k].saved_at=new Date().toISOString();d.active_keyword=k;const keys=Object.keys(d.drafts).sort((x,y)=>Date.parse(d.drafts[y].saved_at||0)-Date.parse(d.drafts[x].saved_at||0));keys.slice(20).forEach(x=>delete d.drafts[x])}else{d.answers[e.value]=a.value}localStorage.setItem(aiCheckStoreKey,JSON.stringify(d))}
 function renderAiCheck(prewrite){const q=String(prewrite&&prewrite.keyword||prewrite&&prewrite.working_title||'').trim(),kw=document.getElementById('aiCheckKeyword'),prompt=document.getElementById('aiCheckPrompt'),badge=document.getElementById('aiCheckKeywordStatus'),copy=document.getElementById('copyAiCheckPrompt'),analyse=document.getElementById('analyseAiCheck');const oldKey=_aiCheckKey(aiCheckKeyword),newKey=_aiCheckKey(q);if(oldKey&&oldKey!==newKey)aiCheckPersist();aiCheckKeyword=q;if(kw)kw.value=q;if(prompt)prompt.value=q?aiCheckPromptText(q):'';if(oldKey!==newKey)aiCheckLoadDraft();document.getElementById('aiCheckAnswer').addEventListener('input',aiCheckPersist);if(badge){badge.textContent=q?'Keyword synced from open Prewrite ✓':'Waiting for Prewrite keyword…';badge.style.borderColor=q?'#166534':'#92400e';badge.style.color=q?'#86efac':'#fde68a'}if(copy)copy.disabled=!q;if(analyse)analyse.disabled=!q}
-async function analyseAiCheck(){const raw=document.getElementById('aiCheckAnswer').value||'',status=document.getElementById('aiCheckStatus'),engine=document.getElementById('aiCheckEngine').value;const upper=raw.toUpperCase(),resourceAt=upper.indexOf('RESOURCES:'),answerPart=resourceAt>=0?raw.slice(0,resourceAt):raw;let answer=answerPart.trim();if(answer.toUpperCase().indexOf('ANSWER:')===0)answer=answer.slice(7).trim();const urls=[],seen=new Set();let pos=0;while(true){let h1=raw.indexOf('https://',pos),h2=raw.indexOf('http://',pos),at=h1<0?h2:(h2<0?h1:Math.min(h1,h2));if(at<0)break;let end=at;while(end<raw.length){const ch=raw.charAt(end),cc=raw.charCodeAt(end);if(ch===' '||cc===10||cc===13||cc===9||ch==='<'||ch==='>'||ch===']'||ch==='['||ch==='('||ch===')'||cc===34||cc===39)break;end++}let u=raw.slice(at,end);while(u&&'.,;:!?*_'.indexOf(u.slice(-1))>=0)u=u.slice(0,-1);try{const x=new URL(u);if((x.protocol==='http:'||x.protocol==='https:')&&!seen.has(x.href)){seen.add(x.href);urls.push(x.href)}}catch(_e){}pos=Math.max(end,at+7)}if(!answer){status.className='aiCheckStatus warn';status.textContent='✕ No ANSWER content recognized.';return}aiCheckPersist();try{if(prewriteFrame&&prewriteFrame.contentWindow)prewriteFrame.contentWindow.postMessage({type:'network-ai-evidence',placement_id:pid,engine:engine,evidence:raw},window.location.origin)}catch(_e){}if(!linkedPrewriteBriefId){status.className='aiCheckStatus ok';status.innerHTML='<strong>✓ Added to the open Prewrite form</strong><div class="tiny" style="margin-top:6px">No CURRENT Prewrite link exists for this Publisher Edition, so no server save was attempted. The left form can still receive the evidence live. Save/link the current Brief first, then persistent AI evidence can be stored.</div>'+(urls.length?'<div style="margin-top:8px;word-break:break-all">'+urls.map(u=>'<div><a target="_blank" rel="noopener noreferrer" href="'+esc(u)+'">'+esc(u)+'</a></div>').join('')+'</div>':'');return}status.className='aiCheckStatus';status.textContent='Answer added to the open Prewrite. Saving persistent evidence…';try{const d=await api('/api/network/admin/publications/'+pid+'/ai-evidence',{method:'POST',body:JSON.stringify({engine:engine,evidence:raw})});status.className=d.complete_5_of_5?'aiCheckStatus ok':'aiCheckStatus warn';status.innerHTML='<strong>'+(d.complete_5_of_5?'✓ Five-system research complete':'⚠ Research still incomplete')+' · saved to Brief #'+esc(d.brief_id)+'</strong><div class="tiny" style="margin-top:6px">'+urls.length+' exact source URL(s) captured for '+esc(document.getElementById('aiCheckEngine').options[document.getElementById('aiCheckEngine').selectedIndex].text)+' · '+esc(d.checked_count)+'/5 AI systems.</div>'+(!d.complete_5_of_5?'<div class="tiny" style="margin-top:6px;color:#fde68a">Missing: '+esc((d.missing_ai_systems||[]).join(', ')||'unknown')+'. Approval stays blocked; existing research is preserved.</div>':'')+(d.requires_regeneration?'<div class="tiny" style="margin-top:6px;color:#fde68a">The Brief changed after Publisher Edition generation. Regenerate before final delivery.</div>':'')+(urls.length?'<div style="margin-top:8px;word-break:break-all">'+urls.map(u=>'<div><a target="_blank" rel="noopener noreferrer" href="'+esc(u)+'">'+esc(u)+'</a></div>').join('')+'</div>':'')}catch(e){const unlinked=/Create or link the Prewrite Brief first/i.test(String(e&&e.message||''));if(unlinked){status.className='aiCheckStatus ok';status.innerHTML='<strong>✓ Added to the open Prewrite form</strong><div class="tiny" style="margin-top:6px">This Prewrite has not been saved/linked yet. Generate or save the Brief and this evidence will be included with it.</div>'+(urls.length?'<div style="margin-top:8px;word-break:break-all">'+urls.map(u=>'<div><a target="_blank" rel="noopener noreferrer" href="'+esc(u)+'">'+esc(u)+'</a></div>').join('')+'</div>':'')}else{status.className='aiCheckStatus warn';status.textContent='✕ Added to the open Prewrite form, but persistent save failed: '+e.message}}}
+const googleField=document.getElementById('aiCheckGoogleField'),googleSelect=document.getElementById('aiCheckGoogleSource'),checkEngine=document.getElementById('aiCheckEngine');
+const googleCopy=({nl:['Google-bron','Kies een bron','Kies Google AI Overview of Gemini.'],es:['Fuente de Google','Elige una fuente','Elige Google AI Overview o Gemini.']})[(navigator.language||'en').split('-')[0]]||['Google source','Choose a source','Choose Google AI Overview or Gemini.'];
+googleField.querySelector('label').textContent=googleCopy[0];googleSelect.options[0].textContent=googleCopy[1];
+function showGoogleSource(){googleField.hidden=checkEngine.value!=='google_aio';}
+checkEngine.addEventListener('change',showGoogleSource);googleSelect.addEventListener('change',aiCheckPersist);showGoogleSource();
+async function analyseAiCheck(){const raw=document.getElementById('aiCheckAnswer').value||'',status=document.getElementById('aiCheckStatus'),engine=document.getElementById('aiCheckEngine').value;const googleSource=engine==='google_aio'?googleSelect.value:'';if(engine==='google_aio'&&!googleSource){status.className='aiCheckStatus warn';status.textContent=googleCopy[2];return}const upper=raw.toUpperCase(),resourceAt=upper.indexOf('RESOURCES:'),answerPart=resourceAt>=0?raw.slice(0,resourceAt):raw;let answer=answerPart.trim();if(answer.toUpperCase().indexOf('ANSWER:')===0)answer=answer.slice(7).trim();const urls=[],seen=new Set();let pos=0;while(true){let h1=raw.indexOf('https://',pos),h2=raw.indexOf('http://',pos),at=h1<0?h2:(h2<0?h1:Math.min(h1,h2));if(at<0)break;let end=at;while(end<raw.length){const ch=raw.charAt(end),cc=raw.charCodeAt(end);if(ch===' '||cc===10||cc===13||cc===9||ch==='<'||ch==='>'||ch===']'||ch==='['||ch==='('||ch===')'||cc===34||cc===39)break;end++}let u=raw.slice(at,end);while(u&&'.,;:!?*_'.indexOf(u.slice(-1))>=0)u=u.slice(0,-1);try{const x=new URL(u);if((x.protocol==='http:'||x.protocol==='https:')&&!seen.has(x.href)){seen.add(x.href);urls.push(x.href)}}catch(_e){}pos=Math.max(end,at+7)}if(!answer){status.className='aiCheckStatus warn';status.textContent='✕ No ANSWER content recognized.';return}aiCheckPersist();try{if(prewriteFrame&&prewriteFrame.contentWindow)prewriteFrame.contentWindow.postMessage({type:'network-ai-evidence',placement_id:pid,engine:engine,evidence:raw,google_source:googleSource},window.location.origin)}catch(_e){}if(!linkedPrewriteBriefId){status.className='aiCheckStatus ok';status.innerHTML='<strong>✓ Added to the open Prewrite form</strong><div class="tiny" style="margin-top:6px">No CURRENT Prewrite link exists for this Publisher Edition, so no server save was attempted. The left form can still receive the evidence live. Save/link the current Brief first, then persistent AI evidence can be stored.</div>'+(urls.length?'<div style="margin-top:8px;word-break:break-all">'+urls.map(u=>'<div><a target="_blank" rel="noopener noreferrer" href="'+esc(u)+'">'+esc(u)+'</a></div>').join('')+'</div>':'');return}status.className='aiCheckStatus';status.textContent='Answer added to the open Prewrite. Saving persistent evidence…';try{const d=await api('/api/network/admin/publications/'+pid+'/ai-evidence',{method:'POST',body:JSON.stringify({engine:engine,evidence:raw,google_source:googleSource})});status.className=d.complete_5_of_5?'aiCheckStatus ok':'aiCheckStatus warn';status.innerHTML='<strong>'+(d.complete_5_of_5?'✓ Five-system research complete':'⚠ Research still incomplete')+' · saved to Brief #'+esc(d.brief_id)+'</strong><div class="tiny" style="margin-top:6px">'+urls.length+' exact source URL(s) captured for '+esc(document.getElementById('aiCheckEngine').options[document.getElementById('aiCheckEngine').selectedIndex].text)+' · '+esc(d.checked_count)+'/5 AI systems.</div>'+(!d.complete_5_of_5?'<div class="tiny" style="margin-top:6px;color:#fde68a">Missing: '+esc((d.missing_ai_systems||[]).join(', ')||'unknown')+'. Approval stays blocked; existing research is preserved.</div>':'')+(d.requires_regeneration?'<div class="tiny" style="margin-top:6px;color:#fde68a">The Brief changed after Publisher Edition generation. Regenerate before final delivery.</div>':'')+(urls.length?'<div style="margin-top:8px;word-break:break-all">'+urls.map(u=>'<div><a target="_blank" rel="noopener noreferrer" href="'+esc(u)+'">'+esc(u)+'</a></div>').join('')+'</div>':'')}catch(e){const unlinked=/Create or link the Prewrite Brief first/i.test(String(e&&e.message||''));if(unlinked){status.className='aiCheckStatus ok';status.innerHTML='<strong>✓ Added to the open Prewrite form</strong><div class="tiny" style="margin-top:6px">This Prewrite has not been saved/linked yet. Generate or save the Brief and this evidence will be included with it.</div>'+(urls.length?'<div style="margin-top:8px;word-break:break-all">'+urls.map(u=>'<div><a target="_blank" rel="noopener noreferrer" href="'+esc(u)+'">'+esc(u)+'</a></div>').join('')+'</div>':'')}else{status.className='aiCheckStatus warn';status.textContent='✕ Added to the open Prewrite form, but persistent save failed: '+e.message}}}
 function renderPrewriteAction(prewrite){
   const btn=document.getElementById('prewriteStepBtn'),hint=document.getElementById('prewriteStepHint'),top=document.getElementById('openPrewriteTop');
   if(!btn||!hint)return;
@@ -4379,7 +4383,7 @@ ${html.slice(0,52000)}`;
       const prewriteIntel=Object.assign({},approvalCtx.brief,{brief_json:approvalCtx.brief_snapshot});
       const seedKeyword=cleanText(prewriteIntel&&prewriteIntel.keyword||'',220);
       const prewriteText=JSON.stringify(approvalCtx.brief_snapshot||{}).slice(0,48000),prewriteHash=approvalCtx.brief_hash;
-      const fiveAiResearch=_networkFiveAiResearchV500(approvalCtx.brief_snapshot||{});
+      const fiveAiResearch=_networkFiveAiResearchV500(approvalCtx.brief_snapshot||{},seedKeyword);
       if(!fiveAiResearch.complete)throw new Error('Approved Brief lost five-system AI research integrity. Reopen the Brief and complete the missing AI evidence before generation.');
       const googleManual=safeJsonObject(snap.google_manual);
       const generationLinkIntel=linkIntelligenceFromSources({source_domain:x.owner_domain||'',publisher_domain:x.publisher_domain||''},prewriteIntel);
@@ -4706,8 +4710,8 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       evidence_research_complete:!!(_briefJson.evidence_research&&_briefJson.evidence_research.completed===true),
       evidence_quality_complete:!!(_briefJson.evidence_research&&_briefJson.evidence_research.quality_ladder&&_briefJson.evidence_research.quality_ladder.completed===true),
       evidence_approved_items:Number(_briefJson.evidence_research&&_briefJson.evidence_research.quality_ladder&&_briefJson.evidence_research.quality_ladder.approved_items||0),
-      ai_systems_checked:_networkAiEvidenceStateV500(_briefJson).checked_count,
-      ai_systems_missing:_networkAiEvidenceStateV500(_briefJson).missing_labels,
+      ai_systems_checked:_networkAiEvidenceStateV500(_briefJson,prewriteBrief?.keyword).checked_count,
+      ai_systems_missing:_networkAiEvidenceStateV500(_briefJson,prewriteBrief?.keyword).missing_labels,
       internal_link_targets:_arrCount(_briefJson.internal_link_targets,_briefJson.link_intelligence&&_briefJson.link_intelligence.internal),
       internal_selected_url:String(_briefJson.link_research&&_briefJson.link_research.internal&&_briefJson.link_research.internal.selected_url||(_briefJson.internal_link_targets&&_briefJson.internal_link_targets[0]&&_briefJson.internal_link_targets[0].link_to)||''),
       internal_link_research_status:cleanText(_briefJson.link_research&&_briefJson.link_research.internal&&_briefJson.link_research.internal.status||'',80),
@@ -4716,7 +4720,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     }:null;
     const _currentPrewriteHash=prewriteBrief?crypto.createHash('sha256').update(JSON.stringify(prewriteBrief.brief_json||{})).digest('hex'):'';
     const _generationPrewriteHash=cleanText(row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_hash||'',128);
-    const _aiCov=_networkAiEvidenceStateV500(_briefJson),_intCov=_networkInternalDestinationStateV500(_briefJson,row.publisher_domain);
+    const _aiCov=_networkAiEvidenceStateV500(_briefJson,prewriteBrief?.keyword),_intCov=_networkInternalDestinationStateV500(_briefJson,row.publisher_domain);
     const prewriteEvidence=prewriteBrief?{id:prewriteBrief.id,keyword:prewriteBrief.keyword,working_title:prewriteBrief.working_title,language:prewriteBrief.language,region:prewriteBrief.region,competitors_scraped:prewriteBrief.competitors_scraped,created_at:prewriteBrief.created_at,link_source:row.current_prewrite_brief_id?'network_content':'generation_snapshot',hash:_currentPrewriteHash,generation_hash:_generationPrewriteHash,generation_match:_generationPrewriteHash===_currentPrewriteHash,requires_regeneration:(_generationPrewriteHash!==_currentPrewriteHash),ai_systems_checked:_aiCov.checked_count,ai_systems_missing:_aiCov.missing_labels,ai_complete:_aiCov.complete,internal_destination:_intCov.selected_url,internal_destination_ready:_intCov.complete,publisher_domain:normalizeHost(row.publisher_domain||''),internal_destination_auto_upgraded:!!(_internalAutoUpgrade&&_internalAutoUpgrade.changed),internal_destination_selection_source:_internalAutoUpgrade&&_internalAutoUpgrade.source||String(_briefJson.link_research&&_briefJson.link_research.internal&&_briefJson.link_research.internal.selection_source||'')}:null;
     const linkIntel=linkIntelligenceFromSources(row,prewriteBrief);
     const savedIntel=(row.generation_input_snapshot&&row.generation_input_snapshot.link_intelligence)||{};
@@ -4772,7 +4776,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const briefId=Number(row.prewrite_brief_id||0);if(!briefId)return res.status(409).json({success:false,error:'A linked Prewrite Brief is required before fidelity repair.'});
     const snap=safeJsonObject(row.generation_input_snapshot),requestedApprovalId=Number(req.body&&req.body.approval_id||0),approvalId=requestedApprovalId||Number(snap.approved_prewrite_approval_id||0);
     let approvalCtx;try{approvalCtx=await _networkGetValidApproval(pool,briefId,approvalId)}catch(e){return res.status(Number(e.status)||409).json({success:false,error:e.message,code:e.code||'approval_invalid',details:e.details||null})}
-    const brief=safeJsonObject(approvalCtx.brief_snapshot),aiState=_networkAiEvidenceStateV500(brief),intState=_networkInternalDestinationStateV500(brief,row.publisher_domain);
+    const brief=safeJsonObject(approvalCtx.brief_snapshot),aiState=_networkAiEvidenceStateV500(brief,row.seed_keyword),intState=_networkInternalDestinationStateV500(brief,row.publisher_domain);
     if(!aiState.complete)return res.status(409).json({success:false,error:'Research integrity is incomplete: '+aiState.checked_count+'/5 AI systems. Complete the missing AI evidence first; existing research is preserved.',missing_ai:aiState.missing_labels});
     if(!intState.complete)return res.status(409).json({success:false,error:'Choose the required publisher-domain internal destination before article repair. No research rerun is needed.'});
     const contract=(snap.approved_brief_contract&&Object.keys(safeJsonObject(snap.approved_brief_contract)).length)?safeJsonObject(snap.approved_brief_contract):buildApprovedBriefContract(brief);
@@ -5016,9 +5020,10 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
 
   app.post('/api/network/admin/publications/:placementId/ai-evidence', verifyAdmin, wrap(async (req,res)=>{
     const placementId=Number(req.params.placementId),engine=cleanText(req.body&&req.body.engine||'',40).toLowerCase(),evidence=String(req.body&&req.body.evidence||'').trim();
-    const allowed=new Set(['google_aio','chatgpt','perplexity','claude','copilot']);
+    const googleSource=cleanText(req.body?.google_source||'',40).toLowerCase();
     if(!placementId)return res.status(400).json({success:false,error:'Invalid placement'});
-    if(!allowed.has(engine))return res.status(400).json({success:false,error:'Unknown AI system'});
+    if(!networkAiEngines.includes(engine))return res.status(400).json({success:false,error:'Unknown AI system'});
+    if(engine==='google_aio'&&!['ai_overview','gemini'].includes(googleSource))return res.status(422).json({success:false,error:'Choose the actual Google source: AI Overview or Gemini.'});
     if(!evidence)return res.status(400).json({success:false,error:'Paste the AI answer first'});
     const pq=await pool.query(`SELECT p.id,c.id AS content_id,c.prewrite_brief_id,pv.id AS publication_version_id,pv.generation_input_snapshot
       FROM network_placements p JOIN network_content c ON c.id=p.content_id
@@ -5029,21 +5034,29 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const briefId=Number(placement.prewrite_brief_id||0);
     if(!briefId)return res.status(409).json({success:false,error:'Create or link the Prewrite Brief first. The AI answer must belong to a specific Brief.'});
     const client=await pool.connect();
-    let checkedCount=0,newHash='',requiresRegeneration=!!placement.publication_version_id,updatedBrief=null;
+    let aiState,newHash='',requiresRegeneration=!!placement.publication_version_id;
     try{
       await client.query('BEGIN');
-      const br=await client.query(`SELECT id,brief_json FROM prewrite_briefs WHERE id=$1 FOR UPDATE`,[briefId]);
+      const br=await client.query(`SELECT id,keyword,brief_json FROM prewrite_briefs WHERE id=$1 FOR UPDATE`,[briefId]);
       if(!br.rows[0]){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Linked Prewrite Brief not found'})}
-      const brief=safeJsonObject(br.rows[0].brief_json),ae=safeJsonObject(brief.ai_system_evidence),existing=safeJsonObject(ae[engine]),now=new Date().toISOString();updatedBrief=brief;
-      ae[engine]=Object.assign({},existing,{checked:true,source:'manual',manual:true,text:evidence});
+      const brief=safeJsonObject(br.rows[0].brief_json),ae=safeJsonObject(brief.ai_system_evidence),now=new Date().toISOString();
+      const candidate={...safeJsonObject(ae[engine]),checked:true,source:'manual',manual:true,text:evidence};
+      if(engine==='google_aio')candidate.google_source=googleSource;
+      aiState=_networkAiEvidenceStateV500({...brief,ai_system_evidence:{...ae,[engine]:candidate}},br.rows[0].keyword);
+      if(!aiState.details[engine].checked){
+        await client.query('ROLLBACK');
+        return res.status(422).json({success:false,error:'This is not a valid answer to the exact Pre-Write query.',reason:aiState.details[engine].reason,engine});
+      }
+      ae[engine]=candidate;
       ae.checked_at=now;
-      const _five=['google_aio','chatgpt','perplexity','claude','copilot'];
-      checkedCount=_five.filter(k=>ae[k]&&ae[k].checked).length;
-      ae.checked_count=checkedCount;
+      ae.checked_count=aiState.checked_count;
       brief.ai_system_evidence=ae;
       brief.research_contract=safeJsonObject(brief.research_contract);brief.research_contract.ai_systems_required=5;brief.research_contract.internal_destination_required=true;
       const wc=safeJsonObject(brief.what_we_checked);
-      wc.ai_systems_checked=checkedCount;wc.ai_systems_manual_checked=_five.filter(k=>ae[k]&&ae[k].manual===true).length;wc.ai_systems_status=Object.fromEntries(_five.map(k=>[k,!!(ae[k]&&ae[k].checked)]));wc.ai_systems_missing=_five.filter(k=>!(ae[k]&&ae[k].checked));
+      wc.ai_systems_checked=aiState.checked_count;
+      wc.ai_systems_manual_checked=aiState.checked.filter(key=>ae[key].manual===true).length;
+      wc.ai_systems_status=Object.fromEntries(networkAiEngines.map(key=>[key,aiState.details[key].checked]));
+      wc.ai_systems_missing=aiState.missing;
       if(engine==='google_aio'){wc.google_direct_answer='manually captured by user ('+evidence.length+' chars)';wc.google_direct_answer_manual_text=evidence;}
       brief.what_we_checked=wc;
       const rawUrls=Array.from(new Set((evidence.match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]).map(u=>String(u).replace(/[)\]>,.;]+$/,''))));
@@ -5058,8 +5071,9 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       }
       await client.query('COMMIT');
     }catch(e){try{await client.query('ROLLBACK')}catch(_e){}throw e}finally{client.release()}
-    const _aiState=_networkAiEvidenceStateV500(updatedBrief||{}),missing=_aiState.missing_labels;
-    res.json({success:true,brief_id:briefId,engine,checked_count:checkedCount,missing_ai_systems:missing,missing_ai_system_keys:_aiState.missing,complete_5_of_5:checkedCount===5,hash:newHash,requires_regeneration:requiresRegeneration,message:checkedCount===5?'AI answer saved. Five-system evidence is now complete (5/5).':'AI answer saved, but research is not complete yet: '+checkedCount+'/5 AI systems captured. Missing: '+missing.join(', ')});
+    res.json({success:true,brief_id:briefId,engine,checked_count:aiState.checked_count,missing_ai_systems:aiState.missing_labels,
+      missing_ai_system_keys:aiState.missing,complete_5_of_5:aiState.complete,hash:newHash,requires_regeneration:requiresRegeneration,
+      message:aiState.complete?'AI answer saved. Five-system evidence is now complete (5/5).':'AI answer saved, but research is not complete yet: '+aiState.checked_count+'/5 AI systems captured. Missing: '+aiState.missing_labels.join(', ')});
   }));
 
   app.post('/api/network/admin/publications/:placementId/link-prewrite', verifyAdmin, wrap(async (req,res)=>{
@@ -7200,7 +7214,7 @@ ${networkGuidedCssV535()}</style></head><body><main><div class="tiny">CONTENTSCA
   async function _networkResolvePublisherReadinessV527(row,images){
     const snap=safeJsonObject(row.generation_input_snapshot),prewriteId=Number(row.current_prewrite_brief_id||snap.prewrite_brief_id||0);
     let brief=null;if(prewriteId){const br=await pool.query('SELECT id,keyword,working_title,brief_json FROM prewrite_briefs WHERE id=$1 LIMIT 1',[prewriteId]);brief=br.rows[0]||null;}
-    const briefJson=safeJsonObject(brief&&brief.brief_json),ai=_networkAiEvidenceStateV500(briefJson),intState=_networkInternalDestinationStateV500(briefJson,row.publisher_domain);
+    const briefJson=safeJsonObject(brief&&brief.brief_json),ai=_networkAiEvidenceStateV500(briefJson,brief?.keyword),intState=_networkInternalDestinationStateV500(briefJson,row.publisher_domain);
     const currentHash=brief?crypto.createHash('sha256').update(JSON.stringify(brief.brief_json||{})).digest('hex'):'';
     const generationHash=cleanText(snap.prewrite_hash||'',128),generationCurrent=!!(brief&&generationHash&&generationHash===currentHash&&!snap.prewrite_requires_regeneration);
     const standard=publicationStandardChecks(row.html||''),metaTitleLen=String(row.meta_title||'').trim().length,metaDescLen=String(row.meta_description||'').trim().length,metaReady=metaTitleLen>0&&metaTitleLen<=60&&metaDescLen>=140&&metaDescLen<=160;
