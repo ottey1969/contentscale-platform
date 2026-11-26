@@ -78,3 +78,59 @@ test('Contact Intelligence can recover Network synchronization with the same pro
     await control.end();
   }
 });
+
+test('concurrent Network synchronization respects Contact Intelligence suppression and canonical identity', {
+  skip: !isolated && 'requires disposable local PostgreSQL',
+  timeout: 20000
+}, async () => {
+  const { Pool } = require('pg');
+  const network = require('../src/network/register-network.js');
+  const schema = 'network_sync_' + crypto.randomBytes(8).toString('hex');
+  const control = new Pool({ connectionString: database, max: 1 });
+  const pool = new Pool({ connectionString: database, options: '-c search_path=' + schema, max: 6 });
+  try {
+    await control.query('CREATE SCHEMA ' + schema);
+    await pool.query(`CREATE TABLE contact_intelligence (id BIGINT PRIMARY KEY, status TEXT);
+      INSERT INTO contact_intelligence VALUES (1,'promoted'),(2,'promoted')`);
+    await network.ensureNetworkDirectorySchema(pool);
+
+    const input = { domain: 'sync.example', business_name: 'Network fixture', contact_intelligence_id: 1 };
+    const sync = (row, databasePool = pool) => network.syncLeadCrawlerBusinessesV540(databasePool, [row]);
+    const results = await Promise.all([sync(input), sync({ ...input, business_name: 'Second fixture' })]);
+    assert.ok(results.every(result => result.synced === 1 && result.failed === 0));
+    assert.equal(results[0].items[0].id, results[1].items[0].id);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM network_directory_businesses WHERE domain='sync.example'")).rows[0].n, 1);
+
+    // Hold the suppression transaction while another connection starts the canonical write.
+    const writer = await pool.connect();
+    try {
+      await writer.query('BEGIN');
+      await writer.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=2");
+      let entered;
+      const started = new Promise(resolve => { entered = resolve; });
+      const signalQuery = db => (sql, params) => {
+        if (/SELECT[\s\S]*FROM (?:contact_intelligence|network_directory_businesses)\b/i.test(sql)) entered();
+        return db.query(sql, params);
+      };
+      const observed = { query: signalQuery(pool), async connect() {
+        const db = await pool.connect();
+        return { query: signalQuery(db), release: () => db.release() };
+      } };
+      const delayed = sync({ ...input, domain: 'suppressed.example', contact_intelligence_id: 2 }, observed);
+      await started;
+      await writer.query('COMMIT');
+      const suppressed = await network.suppressLeadCrawlerBusinessesV540(pool, [{ contact_intelligence_id: 2 }]);
+      assert.equal(suppressed.failed, 0);
+      assert.equal((await delayed).failed, 0);
+      assert.equal((await delayed).skipped, 1);
+    } finally {
+      await writer.query('ROLLBACK');
+      writer.release();
+    }
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM network_directory_businesses WHERE domain='suppressed.example' AND public_visibility='listed'")).rows[0].n, 0);
+  } finally {
+    await pool.end();
+    await control.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');
+    await control.end();
+  }
+});
