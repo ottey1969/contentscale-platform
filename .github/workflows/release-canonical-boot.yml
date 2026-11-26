@@ -7,6 +7,7 @@ on:
       - 'src/index.js'
       - 'src/network/register-network.js'
       - 'tests/e2e-prospect-quick-scan-browser.test.cjs'
+      - 'tests/e2e-network-test-lab-browser.test.cjs'
       - 'tests/fixtures/staging-boot-schema.sql'
       - 'tests/staging-boot-no-egress.cjs'
       - '.github/workflows/release-canonical-boot.yml'
@@ -71,7 +72,7 @@ jobs:
           git diff --check
       - name: Prepare canonical production artifact (same as Docker build)
         run: node scripts/prepare-canonical-production.cjs
-      - name: Install Chromium for the prospect browser regression
+      - name: Install Chromium for the prospect and Network browser regressions
         run: |
           npm install --ignore-scripts --no-save --no-package-lock playwright@1.47.2
           npx playwright install --with-deps chromium
@@ -79,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check src/index.js
-          node --require ./tests/staging-boot-no-egress.cjs index.cjs >/tmp/canonical-boot.log 2>&1 &
+          NETWORK_ENABLED=1 node --require ./tests/staging-boot-no-egress.cjs index.cjs >/tmp/canonical-boot.log 2>&1 &
           app_pid=$!
           trap 'kill $app_pid 2>/dev/null || true' EXIT
           reached=0
@@ -109,5 +110,6 @@ jobs:
           NODE
           echo 'PASS: isolated canonical full-app boot and Tracker schema'
           PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-prospect-quick-scan-browser.test.cjs
+          NETWORK_E2E_BASE="$APP_URL" node --test tests/e2e-network-test-lab-browser.test.cjs
       - name: Writable Case Study baseline and replay on disposable PostgreSQL (rollback)
         run: node tests/e2e-case-study-postgres.cjs
