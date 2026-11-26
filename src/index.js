@@ -46161,7 +46161,8 @@ function openCaseStudy(pageId,caseId){
       var findings=(item.findings||[]).map(function(f){
         return '<li>'+_csEscH(f.title+' · '+f.url)+'</li>';
       }).join('');
-      return '<details><summary>'+_csEscH(heading+' · '+utcStamp(item.recorded_at))+'</summary><ul>'+pages+'</ul>'
+      var stamp=item.recorded_at?' · '+utcStamp(item.recorded_at):'';
+      return '<details><summary>'+_csEscH(heading+stamp)+'</summary><ul>'+pages+'</ul>'
         +(findings?'<h4>'+_csEscH(researchText[2])+'</h4><ul>'+findings+'</ul>':'')+'</details>';
     }).join('');
     var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prospectResearch+prewriteReports;

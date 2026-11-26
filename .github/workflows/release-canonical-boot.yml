@@ -6,6 +6,9 @@ on:
     paths:
       - 'src/index.js'
       - 'src/network/register-network.js'
+      - 'src/prospect-research-proof.cjs'
+      - 'src/tracker-registration-identity.cjs'
+      - 'src/tracker-proof-sources.cjs'
       - 'tests/e2e-prospect-quick-scan-browser.test.cjs'
       - 'tests/e2e-contact-promotion-postgres.test.cjs'
       - 'tests/e2e-tracker-registration-postgres.test.cjs'
