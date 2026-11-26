@@ -21174,6 +21174,8 @@ function _ensureProspectQuickScanTable(){
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interested BOOLEAN DEFAULT FALSE;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interested_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interest_email_sent_at TIMESTAMPTZ;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interest_email_status TEXT;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_interest_email_retry_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_invite_sent_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS quickscan_invite_message_id TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS ceo_reminder_sent_at TIMESTAMPTZ;
@@ -24637,36 +24639,62 @@ app.post('/api/prospect-quick-scan/:token/quickscan-interest',async(req,res)=>{
     const base=String(process.env.APP_URL||'https://app.contentscale.site').replace(/\/$/,''),quickUrl=base+_pqsShortPrivatePath('scan',token);
     const interest = await pool.query(`UPDATE prospect_quick_scans
       SET quickscan_interested=TRUE,quickscan_interested_at=COALESCE(quickscan_interested_at,NOW()),
+          quickscan_interest_email_status=COALESCE(quickscan_interest_email_status,'ready'),
           follow_up_status=CASE WHEN follow_up_status IN ('audit20_interested','tracker_interested','replied','won','closed')
             THEN follow_up_status ELSE 'quickscan_invited' END,
           updated_at=NOW()
       WHERE token=$1 AND revoked_at IS NULL AND quickscan_interested IS DISTINCT FROM TRUE
         AND btrim(COALESCE(ceo_report_url,'')) <> ''
       RETURNING *`, [token]);
-    if(!interest.rows.length){
-      const previous = await pool.query(`SELECT ceo_report_url
+    const alreadyInterested = !interest.rows.length;
+    let row = interest.rows[0];
+    if(alreadyInterested){
+      const previous = await pool.query(`SELECT *
         FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`, [token]);
-      const prospect = previous.rows[0];
-      if(!prospect)return res.status(404).json({success:false,error:'Prospect not found'});
-      if(!String(prospect.ceo_report_url||'').trim())return res.status(409).json({success:false,error:'CEO Prospect Report must exist first'});
-      return res.json({success:true,status:'quickscan_interested',quick_scan_url:quickUrl,email_sent:false,already_interested:true,
-        message:'Interest already recorded.'});
+      row = previous.rows[0];
+      if(!row)return res.status(404).json({success:false,error:'Prospect not found'});
+      if(!String(row.ceo_report_url||'').trim())return res.status(409).json({success:false,error:'CEO Prospect Report must exist first'});
+    } else {
+      _pqsNotifyOwner(row,'quickscan_interest').catch(()=>{});
     }
-    const row = interest.rows[0];
     let emailSent=false;
     const email=String(row.contact_email||'').trim().toLowerCase(),key=process.env.BREVO_API_KEY||'';
     if(_pqsValidEmail(email)&&key){
-      const sup=await pool.query(`SELECT 1 FROM email_suppression WHERE lower(email)=lower($1) LIMIT 1`,[email]).catch(()=>({rows:[]}));
-      if(!sup.rows.length){
+      const claim=await pool.query(`UPDATE prospect_quick_scans
+        SET quickscan_interest_email_status='sending',quickscan_interest_email_retry_at=NULL
+        WHERE token=$1 AND revoked_at IS NULL AND btrim(COALESCE(ceo_report_url,''))<>''
+          AND lower(btrim(contact_email))=$2 AND quickscan_interest_email_sent_at IS NULL
+          AND (quickscan_interest_email_status='ready' OR
+            (quickscan_interest_email_status='retryable' AND quickscan_interest_email_retry_at<=NOW()))
+          AND NOT EXISTS(SELECT 1 FROM email_suppression WHERE lower(email)=$2)
+        RETURNING token`,[token,email]);
+      if(claim.rows.length){
         const company=String(row.business_name||row.domain||'your company').trim();
         const subject=company+' — your next ContentScale step';
         const body=`Hi ${company} team,\n\nYou indicated that you are interested in checking another important page after the CEO Prospect Report.\n\nChoose ONE OTHER service, product or commercial page on the same domain. It cannot be the page already used in the CEO Prospect Report.\n\nStart Quick Scan — Other Page:\n${quickUrl}\n\nContentScale will analyze ContentScore, GRAAF, CRAFT and technical signals for that page.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site`;
-        const rr=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email,name:company}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'Ottmar Francisca · ContentScale'},replyTo:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'Ottmar Francisca'},subject,textContent:body,htmlContent:'<div style="font-family:Arial,sans-serif;line-height:1.65;color:#172033;max-width:640px">'+body.split(/\n{2,}/).map(p=>'<p>'+_pqsHtml(p).replace(/\n/g,'<br>')+'</p>').join('')+'</div>'})});
-        if(rr.ok){emailSent=true;await pool.query(`UPDATE prospect_quick_scans SET quickscan_interest_email_sent_at=NOW(),updated_at=NOW() WHERE token=$1`,[token]);}
+        let providerResponse;
+        try {
+          providerResponse=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',signal:AbortSignal.timeout(10000),headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email,name:company}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'Ottmar Francisca · ContentScale'},replyTo:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'Ottmar Francisca'},subject,textContent:body,htmlContent:'<div style="font-family:Arial,sans-serif;line-height:1.65;color:#172033;max-width:640px">'+body.split(/\n{2,}/).map(p=>'<p>'+_pqsHtml(p).replace(/\n/g,'<br>')+'</p>').join('')+'</div>'})});
+        } catch (error) {
+          console.warn('[quick-scan] confirmation outcome unavailable:',error.name);
+        }
+        const retryable=providerResponse?.status===429;
+        emailSent=providerResponse?.ok===true;
+        const retryHeader=providerResponse?.headers.get('retry-after');
+        const retrySeconds=/^\d{1,6}$/.test(retryHeader||'')?Number(retryHeader):60;
+        const attemptStatus=emailSent?'sent':retryable?'retryable':
+          providerResponse?.status>=400&&providerResponse?.status<500&&providerResponse.status!==408?'rejected':'unknown';
+        // An interrupted send or uncertain provider response can already have been accepted.
+        // Only an explicit provider rejection for rate limiting may be retried here.
+        await pool.query(`UPDATE prospect_quick_scans SET quickscan_interest_email_status=$2,
+          quickscan_interest_email_sent_at=CASE WHEN $2='sent' THEN COALESCE(quickscan_interest_email_sent_at,NOW()) ELSE quickscan_interest_email_sent_at END,
+          quickscan_interest_email_retry_at=CASE WHEN $2='retryable' THEN NOW()+make_interval(secs=>$3) END
+          WHERE token=$1 AND quickscan_interest_email_status='sending'`,[token,attemptStatus,retrySeconds]);
       }
     }
-    _pqsNotifyOwner(row,'quickscan_interest').catch(()=>{});
-    return res.json({success:true,status:'quickscan_interested',quick_scan_url:quickUrl,email_sent:emailSent,message:'Interest received. ContentScale can now see that you want a Quick Scan for another important page.'});
+    return res.json({success:true,status:'quickscan_interested',quick_scan_url:quickUrl,email_sent:emailSent,
+      ...(alreadyInterested?{already_interested:true}:{}),
+      message:alreadyInterested?'Interest already recorded.':'Interest received. ContentScale can now see that you want a Quick Scan for another important page.'});
   }catch(e){return res.status(500).json({success:false,error:e.message||'Could not record Quick Scan interest'});}
 });
 

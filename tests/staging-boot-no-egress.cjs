@@ -11,4 +11,19 @@ net.Socket.prototype.connect=function(...args){
  if(!local(host))throw Error('STAGING-CI-EGRESS-DENIED: '+String(host).slice(0,70));
  return rawConnect.apply(this,args);
 };
-globalThis.fetch=async()=>{throw Error('STAGING-CI-EXTERNAL-FETCH-DENIED')};
+const confirmationAttempts=new Map();
+globalThis.fetch=async(url, options)=>{
+ if(process.env.BREVO_API_KEY==='staging-ci-quick-scan-fixture'
+   && url==='https://api.brevo.com/v3/smtp/email' && options?.method==='POST'){
+  const email=JSON.parse(options.body).to?.[0]?.email||'';
+  if(/^(retry|unknown)\+[0-9a-f]+@confirm\.example$/.test(email)){
+   const attempts=(confirmationAttempts.get(email)||0)+1;
+   confirmationAttempts.set(email,attempts);
+   if(attempts===1 && email.startsWith('unknown+')) throw Error('STAGING-CI-PROVIDER-RESPONSE-LOST');
+   if(attempts===1)return new Response('{}',{status:429,headers:{'Retry-After':'0'}});
+   if(attempts===2)return new Response('{}',{status:201});
+   throw Error('STAGING-CI-DUPLICATE-CONFIRMATION');
+  }
+ }
+ throw Error('STAGING-CI-EXTERNAL-FETCH-DENIED');
+};

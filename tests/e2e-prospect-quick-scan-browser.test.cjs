@@ -125,3 +125,41 @@ test('Prospect reopens exact CEO evidence and records explicit interest without 
     await db.end();
   }
 });
+
+test('Quick Scan confirmation retries an explicit quota rejection and holds an unknown outcome', {
+  skip: !(localApp && localDb && process.env.PROSPECT_E2E_MAIL_FIXTURE === '1') && 'requires the isolated app and mail response fixture',
+  timeout: 30000
+}, async () => {
+  const { Client } = require('pg');
+  const db = new Client({ connectionString: database });
+  await db.connect();
+  const suffix = randomBytes(10).toString('hex');
+  const retry = 'test-mail-retry-' + suffix;
+  const unknown = 'test-mail-unknown-' + suffix;
+  try {
+    await fetch(base + '/api/prospect-quick-scan/test-missing-' + suffix);
+    await db.query('CREATE TABLE IF NOT EXISTS email_suppression (email TEXT PRIMARY KEY)');
+    await db.query(`INSERT INTO prospect_quick_scans(token,domain,business_name,url,ceo_report_url,contact_email)
+      VALUES ($1,'confirm.example','Confirmation retry','https://confirm.example/','/opportunity-report/fixture',$3),
+             ($2,'confirm.example','Confirmation unknown','https://confirm.example/','/opportunity-report/fixture',$4)`,
+    [retry, unknown, 'retry+' + suffix + '@confirm.example', 'unknown+' + suffix + '@confirm.example']);
+    const interest = async token => {
+      const response = await fetch(base + '/api/prospect-quick-scan/' + token + '/quickscan-interest', { method: 'POST' });
+      assert.equal(response.status, 200);
+      return response.json();
+    };
+    assert.equal((await interest(retry)).email_sent, false);
+    const recoveries = await Promise.all([interest(retry),interest(retry)]);
+    assert.equal(recoveries.filter(result => result.email_sent).length, 1);
+    assert.ok(recoveries.every(result => result.already_interested === true));
+    assert.equal((await interest(retry)).email_sent, false);
+    const accepted = async token => (await db.query('SELECT quickscan_interest_email_sent_at AS accepted FROM prospect_quick_scans WHERE token=$1',[token])).rows[0].accepted;
+    assert.ok(await accepted(retry));
+    assert.equal((await interest(unknown)).email_sent, false);
+    assert.equal((await interest(unknown)).email_sent, false);
+    assert.equal(await accepted(unknown), null);
+  } finally {
+    await db.query('DELETE FROM prospect_quick_scans WHERE token=ANY($1::text[])', [[retry,unknown]]);
+    await db.end();
+  }
+});
