@@ -27,6 +27,11 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ## Auditmatrix
 
+### Network-hercontrole na publicatie
+
+Bij een mislukte hercontrole komt de eerder geverifieerde plaatsing terug in de Admin-werklijst. Admin koppelt de waarschuwing aan de laatste controle van dezelfde URL en editie. Een nieuwe geslaagde controle haalt de waarschuwing uit de werklijst. De historie en het creditsaldo blijven behouden.
+
+De bestaande Network-precheck kon HTML van een andere URL accepteren na een redirect en beschouwde een canonical op een ander pad van hetzelfde domein als geldig. Een `X-Robots-Tag` met `noindex` telde niet mee. De precheck vergelijkt nu de exacte opgehaalde URL en eventuele canonical met de ingestuurde publicatie. Een nieuwe, foutloze controle kan de handmatige review onderbouwen. Legacy-runs blijven in de geschiedenis en gelden niet als bewijs van de nieuwe controle. De PostgreSQL-regressie bevestigt ook dat een nieuwe hercontrole eerdere handmatige verificatie en toegekende credits bewaart. Dit is de bestaande handmatige route. Automatische planning en bewijs met echte publishers zijn nog open.
 ### Gecombineerde hertest na #580–#584
 
 De uitgebreide Chrome-regressie begint bij de echte Lead Crawler-importroute en doorloopt import, herimport, expliciete registratie en Proof & History. PostgreSQL reproduceerde eerst een onverenigbaar parametertype bij de import en daarna dat een import zonder nieuwe onderzoeksgegevens een opgeslagen nulscore met onderbouwing overschreef. De route bewaart de eerder opgeslagen onderbouwing en gebruikt die ook bij synchronisatie naar Network. CEO Scan en Audit20 zijn voor deze test als opgeslagen providerresultaten aangeleverd. Provideruitvoering en de volledige bediening van het Lead Crawler-beheerscherm zijn nog open.
