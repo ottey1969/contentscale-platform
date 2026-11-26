@@ -134,9 +134,13 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       },{url:URL_,result:oldResult.pathname+oldResult.search});
       await resume.reload();
       await resume.locator('#existingLocal').waitFor({state:'visible'});
-      const { latestDoneFor }=require('../src/growth-free/store.cjs');
+      const { latestDoneFor, recentResult }=require('../src/growth-free/store.cjs');
       assert.ok(await latestDoneFor(pool,{url:URL_,owner:true}));
       assert.equal(await latestDoneFor(pool,{url:URL_.replace('/roof-', '/Roof-'),owner:true}),null);
+      const {engineVersion}=require('../src/growth-free/engine.cjs');
+      const {rows:[checked]}=await pool.query('SELECT url,query,market,access_label FROM growth_free_checks WHERE public_id=$1',[oldResult.pathname.split('/').pop()]);
+      const reused=await recentResult(pool,{url:checked.url,query:checked.query,market:checked.market,engineVersion:engineVersion(),accessLabel:checked.access_label});
+      assert.equal(Boolean(reused),false,'a report researched with an uploaded Search Console export cannot become a reusable result');
     } finally { await resume.close(); }
     // 2. The result (Google research done by the real engine).
     await service.idle();

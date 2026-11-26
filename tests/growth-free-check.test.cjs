@@ -100,10 +100,10 @@ function memoryStore(){
   async revokeInvite(_p,i){const v=inv(i);if(!v||v.revoked_at)return null;v.revoked_at=new Date();return {id:i}},
   async ensureTables(){},
   async usage(_p,{email,ipHash,accessLabel}){const d=checks.filter(c=>!c.cached_from);return {by_email:d.filter(c=>c.email===email).length,by_ip:d.filter(c=>c.ip_hash===ipHash).length,total:d.length,by_key:d.filter(c=>c.access_label===accessLabel).length}},
-  async recentResult(_p,{url,query,market=null,engineVersion=null}){return engineVersion&&[...checks].reverse().find(c=>c.url===url&&c.query===query&&JSON.stringify(c.market||null)===JSON.stringify(market||null)&&c.status==='DONE'&&c.report?.engine_version===engineVersion)||null},
+  async recentResult(_p,{url,query,market=null,engineVersion=null,accessLabel,inviteId=null}){return engineVersion&&[...checks].reverse().find(c=>c.cache_eligible&&c.access_label===accessLabel&&(c.invite_id??null)===inviteId&&c.url===url&&c.query===query&&JSON.stringify(c.market||null)===JSON.stringify(market||null)&&c.status==='DONE'&&c.report?.engine_version===engineVersion)||null},
   async createCheck(_p,o){const c={id:++id,public_id:'pub'+id,access_key:'key'+id+'abcdefgh',email:o.email,ip_hash:o.ipHash,url:o.url,query:o.query,market:o.market||null,
    status:o.cached?'DONE':'QUEUED',decision:o.cached?o.cached.decision:null,summary:o.cached?o.cached.summary:null,report:o.cached?o.cached.report:null,
-   cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null,ui_lang:o.uiLang||null};checks.push(c);return c},
+   cached_from:o.cached?o.cached.id:null,cache_eligible:o.cacheEligible,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null,ui_lang:o.uiLang||null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
   async latestDoneFor(_p,{url,inviteId=null,owner=false}){return [...checks].reverse().find(c=>c.status==='DONE'&&c.url===url&&(owner||(inviteId!=null&&c.invite_id===inviteId)))||null},
@@ -878,7 +878,7 @@ test('ensureTables: an existing column is not altered again; a missing one is ad
   return {rows:[]}}};
  await store.ensureTables(pool);
  const alters=seen.filter(x=>/ALTER TABLE/.test(x));
- assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS publication_history JSONB NOT NULL DEFAULT '[]'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS implementation JSONB NOT NULL DEFAULT '{}'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS contentscore_history JSONB NOT NULL DEFAULT '[]'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing columns');
+ assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS cache_eligible BOOLEAN NOT NULL DEFAULT FALSE","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS publication_history JSONB NOT NULL DEFAULT '[]'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS implementation JSONB NOT NULL DEFAULT '{}'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS contentscore_history JSONB NOT NULL DEFAULT '[]'::jsonb","SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing columns');
  delete require.cache[require.resolve('../src/growth-free/store.cjs')];
 });
 

@@ -1751,16 +1751,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
-   // A verified Search Console export changes the research, so a stored result without it is not reused.
-   // A topic from the rank tracker leads to its own customer question, so a stored result for the page is not reused.
-   const cached=(gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE')||sitemap||topic?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
+   const cacheEligible=!gsc&&!sitemap&&!topic&&!aiAnswers.length;
+   const cached=cacheEligible?await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion(),accessLabel:entry.label}):null;
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,cacheEligible,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
@@ -1864,15 +1863,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   // A verified Search Console export changes the research, so a stored result without it is not reused.
   const treated=await treatedFor({url:input.url,market:input.market,owner:accessLabel==='admin',inviteId});
   if(input.query&&treated.some(q=>questionKey(q)===questionKey(input.query)))return res.status(409).json({success:false,code:'QUESTION_ALREADY_TREATED',error:'This question has already been published for this page and market. Choose a different customer question.'});
-  const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
-  const cached=fresh||withGsc||input.sitemap||input.topic||(!input.query&&treated.length)?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  const cacheEligible=!input.gsc&&!input.sitemap&&!input.topic&&!input.aiAnswers.length&&!input.rankRef&&(Boolean(input.query)||!treated.length);
+  const cached=!fresh&&cacheEligible?await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion(),accessLabel,inviteId}):null;
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
-  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null,gscDeclined:!!input.gscDeclined});
+  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,cacheEligible,accessLabel,inviteId,market:input.market,uiLang:input.uiLang||null,gscDeclined:!!input.gscDeclined});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscAudit:input.gsc?.upload?.source==='GSC_REPORT'?input.gsc.upload:null,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId,approved:accessLabel==='admin'||!!inviteId,treated,gscAudit:input.gsc?.upload?.source==='GSC_REPORT'?input.gsc.upload:null,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
