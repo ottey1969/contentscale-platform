@@ -2,7 +2,7 @@
 -- CI boot fixture only; not a migration.
 
 CREATE TABLE IF NOT EXISTS public."content_profiles" (
-  "id" integer,
+  "id" integer PRIMARY KEY,
   "name" character varying(255),
   "domain" character varying(500),
   "sitemap_url" character varying(500),
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS public."content_profiles" (
 );
 
 CREATE TABLE IF NOT EXISTS public."engine_access_codes" (
-  "id" integer,
+  "id" integer PRIMARY KEY,
   "code" character varying(50),
   "client_name" character varying(255),
   "gemini_key" text,
@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS public."tracker_classifications" (
 );
 
 CREATE TABLE IF NOT EXISTS public."tracker_clients" (
-  "id" integer,
+  "id" integer PRIMARY KEY,
   "token" character varying(64),
   "domain" text,
   "whatsapp" character varying(30),
@@ -384,7 +384,7 @@ CREATE TABLE IF NOT EXISTS public."tracker_owner_questions" (
 );
 
 CREATE TABLE IF NOT EXISTS public."tracker_pages" (
-  "id" integer,
+  "id" integer PRIMARY KEY,
   "profile_id" integer,
   "engine_code_id" integer,
   "url" text,
