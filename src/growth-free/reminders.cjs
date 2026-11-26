@@ -144,12 +144,15 @@ function compareHistory(history,uploads,term,activeDate=null){
  });
 }
 
-function brevo(fetchImpl) {
+function brevo(fetchImpl,{classify=false}={}) {
   return ({ to, subject, html }) => {
     const key = process.env.BREVO_API_KEY; if (!key || typeof fetchImpl !== 'function') return Promise.resolve(false);
     return fetchImpl('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'api-key': key }, signal: AbortSignal.timeout(10000),
       body: JSON.stringify({ to: to.map(email => ({ email })), sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Growth' }, subject, htmlContent: html }) })
-      .then(r => !!(r && r.ok)).catch(() => false);
+      .then(r => {
+        if(r?.ok)return true;
+        return classify && !(r && r.status >= 400 && r.status < 500 && r.status !== 408) ? 'unknown' : false;
+      }).catch(() => classify ? 'unknown' : false);
   };
 }
 // The language of the e-mail: the language the visitor used the check in (owner 2026-11-12: "Spanish is Spanish, English
@@ -164,15 +167,18 @@ const modelFor = model => model === undefined ? (() => { try { return require('.
 // Sends every due reminder once (at most 3 attempts). links: { result(row), stop(token) }.
 async function sendDueFreeReminders(pool, storage, { send, links, now = new Date(), model } = {}) {
   let sent = 0, failed = 0;
-  for (const row of await storage.dueReminders(pool, { now })) {
+  for (const {id} of await storage.dueReminders(pool, { now })) {
+    const row = await storage.claimReminder(pool,{id,now});
+    if(!row)continue;
     const lang = languageOf(row);
     // Written languages (en/nl/es) go as written; any other language is translated and checked, else English.
     const own = T[lang] ? lang : null, write = msg => own ? msg : localize(msg, lang, { model: modelFor(model) });
     const m = await write(reminderMessage({ url: row.url, query: String(row.query || (row.summary && row.summary.checked && row.summary.checked.search_term) || ''), publishedOn: row.published_on, note: row.published_note,
       resultLink: links.result(row), stopLink: links.stop(row.reminder_token, row), lang: own || 'en' }));
-    const ok = await Promise.resolve(send({ to: recipientsOf(row), subject: m.subject, html: m.html })).catch(() => false);
-    await storage.markReminder(pool, { id: row.id, sent: ok });
-    if (ok) sent++; else failed++;
+    const outcome = await Promise.resolve().then(() => send({ to: recipientsOf(row), subject: m.subject, html: m.html })).catch(() => 'unknown');
+    const accepted = outcome === true;
+    await storage.markReminder(pool, { id: row.id, sent: accepted, ...(outcome !== true && outcome !== false ? {unknown:true} : {}) });
+    if (accepted) sent++; else failed++;
   }
   return { sent, failed };
 }

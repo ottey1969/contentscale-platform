@@ -57,6 +57,7 @@ function ensureTables(pool){
   await addColumn('reminder_due_at','TIMESTAMPTZ');
   await addColumn('reminder_sent_at','TIMESTAMPTZ');
   await addColumn('reminder_attempts','INTEGER NOT NULL DEFAULT 0');
+  await addColumn('reminder_dispatch_state','TEXT');
   await addColumn('reminder_token','TEXT');
   await addColumn('reminder_opt_out_at','TIMESTAMPTZ');
   // The domain the visitor used (one of this app's domains), so the e-mail links open on the same domain.
@@ -267,12 +268,21 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null,note=nul
     published_on=$2::date,reminder_due_at=$3::timestamptz,reminder_token=COALESCE(reminder_token,$4),reminder_opt_out_at=CASE WHEN $3::timestamptz IS NULL THEN reminder_opt_out_at ELSE NULL END,reminder_base=COALESCE($5,reminder_base),published_note=$6
    WHERE id=$1 RETURNING emails,published_on::text AS published_on,published_note,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base,publishedOn?(note||null):null,implementationReport?JSON.stringify(implementationReport):null])).rows[0]||null;
 }
+const DUE_REMINDER_SQL = `reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL
+   AND reminder_attempts<3 AND reminder_dispatch_state IS NULL AND status='DONE'`;
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
- return (await pool.query(`SELECT id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,published_note,reminder_token,reminder_base,ui_lang FROM growth_free_checks
-   WHERE reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND status='DONE' ORDER BY reminder_due_at LIMIT $2`,[now,limit])).rows;
+ return (await pool.query(`SELECT id FROM growth_free_checks WHERE ${DUE_REMINDER_SQL} ORDER BY reminder_due_at,id LIMIT $2`,[now,limit])).rows;
 }
-async function markReminder(pool,{id,sent}){
- await pool.query('UPDATE growth_free_checks SET reminder_attempts=reminder_attempts+1,reminder_sent_at=CASE WHEN $2 THEN NOW() ELSE reminder_sent_at END WHERE id=$1',[id,!!sent]);
+async function claimReminder(pool,{id,now}){
+ return (await pool.query(`UPDATE growth_free_checks SET reminder_dispatch_state='sending',reminder_attempts=reminder_attempts+1
+   WHERE ${DUE_REMINDER_SQL} AND id=$2
+   RETURNING id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,
+     report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,published_note,reminder_token,reminder_base,ui_lang`,[now,id])).rows[0];
+}
+async function markReminder(pool,{id,sent,unknown=false}){
+ await pool.query(`UPDATE growth_free_checks SET reminder_dispatch_state=CASE WHEN $3 THEN 'unknown' ELSE NULL END,
+   reminder_sent_at=CASE WHEN $2 THEN NOW() ELSE reminder_sent_at END
+   WHERE id=$1 AND reminder_dispatch_state='sending'`,[id,!!sent,!!unknown]);
 }
 // Unsubscribe from the e-mail link: only the reminder stops; the check and its result stay.
 async function optOutReminder(pool,t){
@@ -389,4 +399,4 @@ async function appendContentScore(pool,{checkId,result}){
  const row=(await pool.query(`UPDATE growth_free_checks SET contentscore_history=COALESCE(contentscore_history,'[]'::jsonb)||jsonb_build_array($2::jsonb) WHERE id=$1 AND status='DONE' RETURNING contentscore_history`,[checkId,JSON.stringify(result)])).rows[0];
  return row?row.contentscore_history:null;
 }
-module.exports={appendContentScore,treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,listAiAnswerObservations,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={appendContentScore,treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,claimReminder,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,listAiAnswerObservations,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
