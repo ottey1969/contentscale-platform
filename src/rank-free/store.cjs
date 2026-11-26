@@ -56,6 +56,7 @@ function pgStore(pool) {
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_results_kw_idx ON rank_free_results(keyword_id, checked_at DESC)');
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_keywords_due_idx ON rank_free_keywords(next_check_at) WHERE active');
     await pool.query(`CREATE TABLE IF NOT EXISTS rank_free_usage(month TEXT PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0)`);
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_usage ADD COLUMN IF NOT EXISTS reserved INTEGER NOT NULL DEFAULT 0");
   })().catch(e => { ensured = null; throw e; }));
   const q = async (sql, args) => { await ensure(); return (await pool.query(sql, args)).rows; };
   return {
@@ -99,6 +100,12 @@ function pgStore(pool) {
         WHERE k.active AND k.next_check_at IS NOT NULL AND k.next_check_at<=$1 AND a.verified_at IS NOT NULL AND a.opted_out_at IS NULL
         ORDER BY k.next_check_at, k.id LIMIT $2`, [now, limit]);
     },
+    async claimKeyword(keywordId, now, until) {
+      return (await q(`UPDATE rank_free_keywords k SET next_check_at=$3
+        FROM rank_free_projects p JOIN rank_free_accounts a ON a.id=p.account_id
+        WHERE k.id=$1 AND k.project_id=p.id AND k.active AND k.next_check_at<=$2
+          AND a.verified_at IS NOT NULL AND a.opted_out_at IS NULL RETURNING k.id`, [keywordId, now, until])).length > 0;
+    },
     async saveResult(keywordId, r, next) {
       await q('INSERT INTO rank_free_results(keyword_id,checked_at,status,position,url,result) VALUES($1,$2,$3,$4,$5,$6)',
         [keywordId, r.checked_at, r.status, r.position || null, r.url || null, r]);
@@ -107,6 +114,16 @@ function pgStore(pool) {
     async postpone(keywordId, next, error = null, at = null) { await q('UPDATE rank_free_keywords SET next_check_at=$2, last_error=COALESCE($3,last_error), last_error_at=COALESCE($4,last_error_at) WHERE id=$1', [keywordId, next, error, at]); },
     async usage(now) { return Number(((await q('SELECT calls FROM rank_free_usage WHERE month=$1', [month(now)]))[0] || { calls: 0 }).calls); },
     async addUsage(now, n) { await q('INSERT INTO rank_free_usage(month,calls) VALUES($1,$2) ON CONFLICT(month) DO UPDATE SET calls=rank_free_usage.calls+EXCLUDED.calls', [month(now), n]); },
+    async reserveUsage(now, count, limit) {
+      const reserved = await q(`INSERT INTO rank_free_usage(month,reserved) SELECT $1,$2::int WHERE $2::int<=$3
+        ON CONFLICT(month) DO UPDATE SET reserved=rank_free_usage.reserved+EXCLUDED.reserved
+        WHERE rank_free_usage.calls+rank_free_usage.reserved+EXCLUDED.reserved<=$3 RETURNING month`,
+      [month(now), count, limit]);
+      return reserved.length > 0;
+    },
+    async settleUsage(now, reserved, actual) {
+      await q('UPDATE rank_free_usage SET reserved=reserved-$2,calls=calls+$3 WHERE month=$1', [month(now), reserved, actual]);
+    },
     async digestReady(now) {
       // Each active keyword must have been checked since the last digest or an uncertain attempt.
       return q(`SELECT p.*, a.email, a.lang, a.dashboard_nonce FROM rank_free_projects p JOIN rank_free_accounts a ON a.id=p.account_id
@@ -145,7 +162,7 @@ function pgStore(pool) {
 // it expires. The same window is in the SQL of pgStore.verify.
 const CONFIRM_REUSE_MS = 7 * 86400000;
 function memoryStore() {
-  const db = { accounts: [], projects: [], keywords: [], results: [], usage: {} };
+  const db = { accounts: [], projects: [], keywords: [], results: [], usage: {}, reservedUsage: {} };
   let id = 1;
   function readyForDigest(p, now) {
     if (p.digest_fail_at && p.digest_fail_at > new Date(now.getTime() - 3600e3)) return false;
@@ -207,9 +224,27 @@ function memoryStore() {
       db.results.push({ keyword_id: keywordId, checked_at: r.checked_at, status: r.status, position: r.position || null, url: r.url || null, result: r });
       Object.assign(db.keywords.find(k => k.id === keywordId), { last_checked_at: new Date(r.checked_at), next_check_at: next, last_error: null, last_error_at: null });
     },
+    async claimKeyword(keywordId, now, until) {
+      const k = db.keywords.find(row => row.id === keywordId);
+      const p = db.projects.find(row => row.id === k?.project_id);
+      const a = db.accounts.find(row => row.id === p?.account_id);
+      if (!k?.active || !k.next_check_at || k.next_check_at > now || !a?.verified_at || a.opted_out_at) return false;
+      k.next_check_at = until;
+      return true;
+    },
     async postpone(keywordId, next, error = null, at = null) { const k = db.keywords.find(x => x.id === keywordId); k.next_check_at = next; if (error) { k.last_error = error; k.last_error_at = at; } },
     async usage(now) { return db.usage[month(now)] || 0; },
     async addUsage(now, n) { db.usage[month(now)] = (db.usage[month(now)] || 0) + n; },
+    async reserveUsage(now, count, limit) {
+      const key = month(now), reserved = db.reservedUsage[key] || 0;
+      if ((db.usage[key] || 0) + reserved + count > limit) return false;
+      db.reservedUsage[key] = reserved + count;
+      return true;
+    },
+    async settleUsage(now, reserved, actual) {
+      db.reservedUsage[month(now)] -= reserved;
+      await store.addUsage(now, actual);
+    },
     async digestReady(now = new Date()) {
       return db.projects.filter(p => readyForDigest(p, now))
         .map(p => { const a = db.accounts.find(x => x.id === p.account_id); return { ...p, email: a.email, lang: a.lang, dashboard_nonce: a.dashboard_nonce }; });

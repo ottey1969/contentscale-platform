@@ -107,4 +107,4 @@ jobs:
       - name: End-to-end Free Growth browser and isolated PostgreSQL test
         run: node --test --test-concurrency=1 tests/growth-free-e2e.test.cjs tests/growth-free-insufficient-e2e.test.cjs tests/growth-free-owner-e2e.test.cjs tests/growth-free-contacts.test.cjs tests/growth-free-ai-answer-import.test.cjs tests/growth-ai-answer-other-question.test.cjs tests/rank-free-growth-handoff.test.cjs tests/gsc-report-postgres.test.cjs tests/gsc-report-browser-e2e.test.cjs tests/growth-free-reminder-delivery-postgres.test.cjs
       - name: Rank Tracker digest worker restart and concurrency
-        run: node --test tests/rank-free-digest-postgres.test.cjs
+        run: node --test tests/rank-free-digest-postgres.test.cjs tests/rank-free-provider-budget-postgres.test.cjs
