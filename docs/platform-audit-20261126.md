@@ -27,6 +27,10 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 ## Auditmatrix
 
+### Rank Tracker-digest na een workercrash
+
+Twee workers konden op dezelfde voltooide meetronde allebei een digest versturen. De bestaande Rank Tracker-projectrij reserveert de ronde nu atomair vóór verzending. Na een crash of een onzekere providerrespons behoudt PostgreSQL de reservering, zonder het tijdstip van een bevestigde verzending te veranderen. Een bevestigde weigering behoudt de bestaande limiet en wachtperiode. Een latere volledig gemeten ronde kan opnieuw een eigen digest krijgen. De CI-regressie gebruikt geïsoleerd PostgreSQL en een transportstub. Werkelijke bezorging en de Serper-scanplanning over meerdere workers zijn nog niet getoetst.
+
 De goedgekeurde squashmerges #579 (`501462a`), #577 (`e9820ea`) en #578 (`841f9e7`) zijn achtereenvolgens uitgevoerd na groene CI. De regressies op de mergecommits dekten volledige geïsoleerde database-initialisatie, Network Test Lab in Chromium, Proof & History en de gelijktijdige Contact Intelligence-synchronisatie en onderdrukking. De concurrencyregressie van #578 draait ook in de canonieke CI.
 
 De Railway-configuratie in de repository vraagt één replica. De Serper-cache en lopende aanvragen zijn procesgeheugen en delen geen resultaat tussen processen, ook niet bij overlappende deploys. De bestaande PostgreSQL-boekhouding voor Firecrawl bewaart tellers en geen providerresultaten. Een gedeelde Serper-test met echte Railway-workers en facturatie is niet uitgevoerd. [Railway-configuratie](../railway.json)

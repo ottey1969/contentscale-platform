@@ -90,13 +90,17 @@ async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.cont
     for (const r of rows) for (const x of (r.curr && Array.isArray(r.curr.suggestions) ? r.curr.suggestions : [])) if (!tracked.has(x) && !suggestions.includes(x) && suggestions.length < 5) suggestions.push(x);
     const mail = digestEmail(p.lang, { host: p.host, countryLabel: countryName(String(p.gl).toUpperCase()) + (p.search_location ? ' · ' + p.search_location : ''), rows, suggestions, best,
       dashboard: baseUrl + '/rank-tracker/d/' + token, stop: baseUrl + '/rank-tracker/stop/' + token });
-    const ok = await send({ to: [p.email], subject: mail.subject, html: mail.html }).catch(() => false);
+    if (store.claimDigest && !await store.claimDigest(p.id, now)) continue;
+    const outcome = await Promise.resolve().then(() =>
+      send({ to: [p.email], subject: mail.subject, html: mail.html })).catch(() => 'unknown');
     // Do not acknowledge an unsent digest as delivered: it is tried again after at least an hour, without rerunning paid
     // Google checks. Bounded (owner 2026-11-14): the scheduler runs every 15 minutes, so an address that keeps failing would
     // otherwise get hundreds of attempts a week. After DIGEST_TRIES failures this round is closed; the next weekly round
     // sends a new e-mail.
-    if (ok) { await store.markDigest(p.id, now); out.sent++; continue; }
+    if (outcome === true) { await store.markDigest(p.id, now); out.sent++; continue; }
     out.failed++;
+    // Leave the reservation in place when a worker crashes or the provider response is ambiguous.
+    if (outcome !== false) { console.warn('[rank-free] digest delivery uncertain; this round will not be retried', p.id); continue; }
     const tries = typeof store.markDigestFailed === 'function' ? await store.markDigestFailed(p.id, now) : DIGEST_TRIES;
     if (tries >= DIGEST_TRIES) { await store.markDigest(p.id, now); console.warn('[rank-free] digest not delivered after', tries, 'attempts; round closed', p.id); }
     else console.warn('[rank-free] digest delivery failed; retry in at least an hour', p.id, 'attempt', tries);
