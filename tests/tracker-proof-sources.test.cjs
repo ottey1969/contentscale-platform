@@ -150,6 +150,20 @@ test('proof linking requires both capabilities and never updates the protected b
     assert.doesNotMatch(JSON.stringify(research),/private-fixture|other[.]example|cdcdcdcd|efefefef/);
     await pool.query('UPDATE opportunity_reports SET revoked_at=NOW() WHERE token=$1',[ceoToken]);
     assert.deepEqual((await savedResearch()).map(item=>item.source),['audit20']);
+    const externalUrl = 'https://reports.example.com/Audit20?share=existing#summary';
+    await pool.query('UPDATE prospect_quick_scans SET audit20_report_url=$1 WHERE id=3', [externalUrl]);
+    assert.deepEqual(await savedResearch(), [{ source: 'audit20', external_url: externalUrl }]);
+    const otherAccount = await api.get('/api/tracker-client/second/pages/6/proof-sources').expect(200);
+    assert.deepEqual(otherAccount.body.proof_sources.prospect_research, []);
+    await pool.query("UPDATE prospect_quick_scans SET audit20_status='not_started' WHERE id=3");
+    assert.deepEqual(await savedResearch(), []);
+    await pool.query("UPDATE prospect_quick_scans SET audit20_status='ready' WHERE id=3");
+    for (const unsupported of ['//reports.example.com/audit', 'http://reports.example.com/audit',
+      'https://app.contentscale.site/report/expired', 'https://localhost/audit', 'https://user:secret@reports.example.com/audit']) {
+      await pool.query('UPDATE prospect_quick_scans SET audit20_report_url=$1 WHERE id=3', [unsupported]);
+      assert.deepEqual(await savedResearch(), []);
+    }
+    await pool.query('UPDATE prospect_quick_scans SET audit20_report_url=$1 WHERE id=3', [externalUrl]);
     await pool.query('UPDATE prospect_quick_scans SET scan_result=$1 WHERE id=3', [{ url }]);
     assert.equal((await scanHistory())[0].score, null);
     await pool.query('UPDATE prospect_quick_scans SET scan_result=$1 WHERE id=3', [{ score: 5, url: url.toLowerCase() }]);

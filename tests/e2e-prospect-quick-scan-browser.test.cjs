@@ -176,11 +176,11 @@ test('Quick Scan confirmation retries an explicit quota rejection and holds an u
 });
 
 const registrationLocales = [
-  ['en', 'en-US', 'Create my Tracker', 'Open my Tracker', 'Proof & History', 'CEO Scan', '20-page audit'],
-  ['nl', 'nl-NL', 'Maak mijn Tracker aan', 'Open mijn Tracker', 'Bewijs en historie', 'CEO Scan', '20-pagina-audit'],
-  ['es', 'es-ES', 'Crear mi Tracker', 'Abrir mi Tracker', 'Evidencias e historial', 'Informe CEO', 'Auditoría de 20 páginas']
+  ['en', 'en-US', 'Create my Tracker', 'Open my Tracker', 'Proof & History', 'CEO Scan', '20-page audit', 'Open external audit report'],
+  ['nl', 'nl-NL', 'Maak mijn Tracker aan', 'Open mijn Tracker', 'Bewijs en historie', 'CEO Scan', '20-pagina-audit', 'Open extern auditrapport'],
+  ['es', 'es-ES', 'Crear mi Tracker', 'Abrir mi Tracker', 'Evidencias e historial', 'Informe CEO', 'Auditoría de 20 páginas', 'Abrir informe de auditoría externo']
 ];
-for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, ceoLabel, auditLabel]] of registrationLocales.entries()) {
+for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, ceoLabel, auditLabel, externalLabel]] of registrationLocales.entries()) {
   for (const [size, width] of [390, 1280].entries()) {
     const ip = '192.0.2.' + (10 + index * 2 + size);
     test('A reviewed Audit20 prospect can register and reopen evidence (' + locale + ', ' + width + 'px)', {
@@ -255,6 +255,18 @@ for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, c
         assert.equal(await proof.getByText(ceoUrl + ' · ContentScore 0', { exact: true }).isVisible(), true);
         assert.equal(await proof.getByText(url + ' · ContentScore —', { exact: true }).isVisible(), true);
         assert.equal(await proof.getByText('Saved audit finding · ' + url, { exact: true }).isVisible(), true);
+        if (size === 0) {
+          const externalUrl = 'https://reports.example.com/audit?share=existing#summary';
+          await db.query('UPDATE prospect_quick_scans SET audit20_report_url=$1 WHERE token=$2', [externalUrl, token]);
+          await page.reload();
+          await page.getByRole('button', { name: proofLabel, exact: true }).click({ timeout: 7000 });
+          await proof.locator('summary').filter({ hasText: auditLabel }).click({ timeout: 7000 });
+          const link = proof.getByRole('link', { name: externalLabel });
+          assert.equal(await link.getAttribute('href'), externalUrl);
+          assert.equal(await link.getAttribute('target'), '_blank');
+          assert.equal(await link.getAttribute('referrerpolicy'), 'no-referrer');
+          assert.equal(await proof.getByText('Saved audit finding · ' + url, { exact: true }).count(), 0);
+        }
         assert.equal((await db.query('SELECT follow_up_status FROM prospect_quick_scans WHERE token=$1', [token])).rows[0].follow_up_status, 'replied');
       } finally {
         if (browser) await browser.close();
