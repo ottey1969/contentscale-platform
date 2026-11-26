@@ -20,3 +20,14 @@ test('differences only compare verified totals for the same period',()=>{
  assert.equal(auditDifference([a,{...b,status:'NOT_VERIFIED_FOR_PAGE'}]),null);
  assert.equal(auditDifference([a,{...b,totals:a.totals}]).status,'MATCH');
 });
+
+test('unknown or blank GSC totals do not count as a measured match',()=>{
+ const {auditDifference}=require('../src/growth-free/gsc-audit-handoff.cjs');
+ const audit={basis:'GSC_AUDIT_EXACT_PAGE',status:'VERIFIED_FOR_PAGE',period_start:'2026-10-01',period_end:'2026-10-31',totals:{clicks:0,impressions:8,position:null}};
+ const page={...audit,basis:'EXACT_PAGE_FILTER'};
+ assert.equal(auditDifference([audit,page]).status,'INSUFFICIENT_DATA');
+ assert.equal(auditDifference([audit,{...page,totals:{clicks:' ',impressions:8,position:5}}]).status,'INSUFFICIENT_DATA');
+ assert.deepEqual(auditDifference([audit,{...page,totals:{clicks:0,impressions:12,position:null}}]),{
+  status:'DIFFERENT_TOTALS',differences:{impressions:{audit:8,page:12}}
+ });
+});
