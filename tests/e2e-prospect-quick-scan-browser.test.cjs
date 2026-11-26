@@ -176,11 +176,11 @@ test('Quick Scan confirmation retries an explicit quota rejection and holds an u
 });
 
 const registrationLocales = [
-  ['en', 'en-US', 'Create my Tracker', 'Open my Tracker'],
-  ['nl', 'nl-NL', 'Maak mijn Tracker aan', 'Open mijn Tracker'],
-  ['es', 'es-ES', 'Crear mi Tracker', 'Abrir mi Tracker']
+  ['en', 'en-US', 'Create my Tracker', 'Open my Tracker', 'Proof & History', 'CEO Scan', '20-page audit'],
+  ['nl', 'nl-NL', 'Maak mijn Tracker aan', 'Open mijn Tracker', 'Bewijs en historie', 'CEO Scan', '20-pagina-audit'],
+  ['es', 'es-ES', 'Crear mi Tracker', 'Abrir mi Tracker', 'Evidencias e historial', 'Informe CEO', 'Auditoría de 20 páginas']
 ];
-for (const [index, [language, locale, registerLabel, trackerLabel]] of registrationLocales.entries()) {
+for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, ceoLabel, auditLabel]] of registrationLocales.entries()) {
   for (const [size, width] of [390, 1280].entries()) {
     const ip = '192.0.2.' + (10 + index * 2 + size);
     test('A reviewed Audit20 prospect can register and reopen evidence (' + locale + ', ' + width + 'px)', {
@@ -194,13 +194,19 @@ for (const [index, [language, locale, registerLabel, trackerLabel]] of registrat
       const token = randomBytes(32).toString('hex');
       const domain = 'register-' + token.slice(0, 12) + '.example';
       const url = 'https://' + domain + '/Services/?version=1';
+      const ceoUrl = 'https://' + domain + '/';
+      const ceoToken = randomBytes(32).toString('hex');
+      const auditToken = randomBytes(32).toString('hex');
       let browser;
       try {
         await fetch(base + '/api/prospect-quick-scan/test-missing-' + token);
-        await db.query(`INSERT INTO prospect_quick_scans(token,domain,business_name,url,ceo_report_url,language,opened_count,
-          scan_result,scan_completed_at,audit20_status,follow_up_status)
-          VALUES($1,$2,'Registration fixture',$3,'/opportunity-report/fixture',$5,1,$4,NOW(),'not_started','replied')`,
-        [token, domain, url, { score: 0, url }, language]);
+        await db.query(`INSERT INTO opportunity_reports(token,domain,source_url,report_data)
+          VALUES($1,$2,$3,$4),($5,$2,$6,$7)`, [ceoToken, domain, ceoUrl, { page_analysis: [{ url: ceoUrl, content_score: 0 }] },
+          auditToken, url, { page_analysis: [{ url }], opportunities: [{ url, title: 'Saved audit finding' }] }]);
+        await db.query(`INSERT INTO prospect_quick_scans(token,domain,business_name,url,language,opened_count,
+          scan_result,scan_completed_at,audit20_status,follow_up_status,ceo_report_page_url,ceo_report_token,ceo_report_url,audit20_report_url)
+          VALUES($1,$2,'Registration fixture',$3,$5,1,$4,NOW(),'not_started','replied',$6,$7,$8,$9)`,
+        [token, domain, url, { score: 0, url }, language, ceoUrl, ceoToken, '/opportunity-report/' + ceoToken, '/report/' + auditToken.slice(0, 16)]);
         browser = await chromium.launch();
         const context = await browser.newContext({ locale, viewport: { width, height: 840 }, extraHTTPHeaders: { 'X-Forwarded-For': ip } });
         await context.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
@@ -232,6 +238,23 @@ for (const [index, [language, locale, registerLabel, trackerLabel]] of registrat
         const body = await response.json();
         assert.equal(body.proof_sources.quick_scan[0].url, url);
         assert.equal(body.proof_sources.quick_scan[0].score, 0);
+        await context.addInitScript(() => localStorage.setItem('cs_welcome_seen', '1'));
+        const [tracker] = await Promise.all([
+          page.waitForResponse(response => new URL(response.url()).pathname === '/track/' + account.token),
+          form.getByRole('link', { name: trackerLabel }).click()
+        ]);
+        assert.equal(tracker.status(), 200);
+        const trackerData = await page.request.get(base + '/api/tracker-client/' + account.token);
+        assert.equal(trackerData.status(), 200, await trackerData.text());
+        await page.getByRole('button', { name: proofLabel, exact: true }).click({ timeout: 7000 }).catch(async error => {
+          throw new Error(JSON.stringify({ errors, listed: (await trackerData.json()).pages?.map(item => item.id), pageList: await page.locator('#pagesList').innerText() }), { cause: error });
+        });
+        const proof = page.locator('#caseStudyBox');
+        await proof.locator('summary').filter({ hasText: ceoLabel }).click({ timeout: 7000 });
+        await proof.locator('summary').filter({ hasText: auditLabel }).click({ timeout: 7000 });
+        assert.equal(await proof.getByText(ceoUrl + ' · ContentScore 0', { exact: true }).isVisible(), true);
+        assert.equal(await proof.getByText(url + ' · ContentScore —', { exact: true }).isVisible(), true);
+        assert.equal(await proof.getByText('Saved audit finding · ' + url, { exact: true }).isVisible(), true);
         assert.equal((await db.query('SELECT follow_up_status FROM prospect_quick_scans WHERE token=$1', [token])).rows[0].follow_up_status, 'replied');
       } finally {
         if (browser) await browser.close();
@@ -242,6 +265,7 @@ for (const [index, [language, locale, registerLabel, trackerLabel]] of registrat
           await db.query('DELETE FROM tracker_clients WHERE id=$1', [client.id]);
         }
         await db.query('DELETE FROM prospect_quick_scans WHERE token=$1', [token]);
+        await db.query('DELETE FROM opportunity_reports WHERE token = ANY($1)', [[ceoToken, auditToken]]);
         await db.end();
       }
     });

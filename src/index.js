@@ -8154,7 +8154,7 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
 // Body: { pages: [{url, keyword, intent, clicks, impressions, position, priority}], ...] }
 app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, max_pages, gsc_enabled FROM tracker_clients WHERE token=$1', [req.params.token]);
+    const cr = await pool.query("SELECT id, domain, extra_domains, max_pages, gsc_enabled FROM tracker_clients WHERE token=$1 AND status IS DISTINCT FROM 'deleted'", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
     // Admin's gsc_enabled toggle is authoritative — a client cannot unlock GSC-gated features (GSC
     // Brief, Impression Gap, cannibalization detection via query overlap) by simply importing data
@@ -8169,48 +8169,58 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     let _liveCount = parseInt(_cntR.rows[0].count) || 0;
     const _maxPages = cr.rows[0].max_pages || 1;
 
-    // Preload existing tracked pages + build a normalized-URL index so a re-import
-    // recognises the SAME pages regardless of http/https, www, or trailing slash.
-    function _normTrackUrl(u){ try{ var x=new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www\./,'') + x.pathname.toLowerCase().replace(/\/+$/,'') + (x.search||''); }catch(e){ return String(u||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,''); } }
-    const _existR = await pool.query("SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)", [clientId]);
-    const _normMap = new Map();
-    _existR.rows.forEach(function(row){ _normMap.set(_normTrackUrl(row.url), row.id); });
-
-    // Defense in depth: dedupe the incoming payload by normalized URL. If the same page arrives twice
-    // in one batch (http/https/www variants, or a query-only fallback pointing at the homepage),
-    // merge instead of letting the LAST row overwrite the correct totals:
-    // sum clicks/impressions, impressions-weighted position, keyword from the row with most impressions.
-    const _seen = new Map();
-    const _deduped = [];
-    for (const p of pages) {
-      const k = _normTrackUrl(p.url);
-      if (!_seen.has(k)) { _seen.set(k, p); _deduped.push(p); continue; }
-      const e = _seen.get(k);
-      const eImpr = e.impressions || 0, pImpr = p.impressions || 0;
-      if (e.position && p.position && (eImpr + pImpr) > 0) e.position = Math.round(((e.position * eImpr + p.position * pImpr) / (eImpr + pImpr)) * 10) / 10;
-      else if (p.position && !e.position) e.position = p.position;
-      if (pImpr > eImpr && p.keyword) e.keyword = p.keyword;
-      else if (!e.keyword && p.keyword) e.keyword = p.keyword;
-      e.clicks = (e.clicks || 0) + (p.clicks || 0);
-      e.impressions = eImpr + pImpr;
-      if (p.add) e.add = true;
+    const { exactUrl } = require('./implementation-report.cjs');
+    function importPageUrl(value) {
+      try { return exactUrl(value); } catch { return null; }
     }
-    const _pagesIn = _deduped;
+    function metric(value) {
+      if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+      const number = Number(value);
+      return Number.isFinite(number) && number >= 0 ? number : null;
+    }
+    const existing = await pool.query("SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY id", [clientId]);
+    const existingPages = new Map();
+    for (const row of existing.rows) {
+      const url = importPageUrl(row.url);
+      if (url && (!existingPages.has(url) || row.url === url)) existingPages.set(url, row.id);
+    }
+
+    // Merge observations only for the exact document. A total with a missing contribution stays unknown.
+    const incomingPages = new Map();
+    const invalidPages = [];
+    for (const raw of pages) {
+      const url = importPageUrl(raw?.url);
+      if (!url || !urlOnClientDomain(cr.rows[0], url)) {
+        invalidPages.push({ url: typeof raw?.url === 'string' ? raw.url : null, status: 'skipped_invalid_page' });
+        continue;
+      }
+      const page = { ...raw, url, clicks: metric(raw.clicks), impressions: metric(raw.impressions), position: metric(raw.position) };
+      const previous = incomingPages.get(url);
+      if (!previous) { incomingPages.set(url, page); continue; }
+      const impressions = previous.impressions == null || page.impressions == null ? null : previous.impressions + page.impressions;
+      previous.position = impressions > 0 && previous.position != null && page.position != null
+        ? Math.round((previous.position * previous.impressions + page.position * page.impressions) * 10 / impressions) / 10
+        : null;
+      if (page.keyword && (!previous.keyword || page.impressions > previous.impressions)) previous.keyword = page.keyword;
+      previous.clicks = previous.clicks == null || page.clicks == null ? null : previous.clicks + page.clicks;
+      previous.impressions = impressions;
+      if (page.add !== false) previous.add = page.add;
+    }
 
     let imported = 0;    // successfully processed (refreshed + new) — kept for compatibility
     let refreshed = 0;   // existing pages recognised + refreshed on their own spot
     let newAdded = 0;    // brand-new pages added
-    let skipped = 0;
+    let skipped = invalidPages.length;
     let caseStudyLocked = 0;
     let failed = 0;      // per-page DB errors — MUST be surfaced, never swallowed
     const touchedPageIds = [];
-    const results = [];
+    const results = [...invalidPages];
     const warnings = [];
     
-    for (const p of _pagesIn) {
+    for (const p of incomingPages.values()) {
       try {
-        // Recognise existing tracked page by normalized URL → refresh on its own spot (never duplicate, never counts against the limit)
-        const _matchId = _normMap.get(_normTrackUrl(p.url));
+        // Recognise existing tracked page by exact URL → refresh on its own spot (never duplicate, never counts against the limit)
+        const _matchId = existingPages.get(p.url);
         if (_matchId) {
           const gate=await _caseStudyGscInputAllowed(clientId,_matchId);
           if(!gate.allowed){
@@ -8223,7 +8233,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
           try {
             await pool.query(
               `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
-              [_matchId, clientId, p.clicks||0, p.impressions||0, p.position||null, p.keyword||null, p.priority||null]
+              [_matchId, clientId, p.clicks, p.impressions, p.position, p.keyword||null, p.priority||null]
             );
             imported++;
             refreshed++;
@@ -8261,17 +8271,16 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
         const _insR = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, intent, gsc_keyword, gsc_clicks, gsc_impressions, gsc_position, priority, created_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-           ON CONFLICT (tracker_client_id, url) WHERE tracker_client_id IS NOT NULL DO UPDATE SET 
-           intent=EXCLUDED.intent, gsc_clicks=EXCLUDED.gsc_clicks, gsc_impressions=EXCLUDED.gsc_impressions, gsc_position=EXCLUDED.gsc_position, priority=EXCLUDED.priority
+           ON CONFLICT (tracker_client_id, url) WHERE tracker_client_id IS NOT NULL DO NOTHING
            RETURNING id`,
-          [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks||0, p.impressions||0, p.position||null, p.priority||'medium']
+          [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks, p.impressions, p.position, p.priority||'medium']
         );
-        if (_insR.rows[0]) _normMap.set(_normTrackUrl(p.url), _insR.rows[0].id); // prevent duplicate inserts within this same batch
-        if (_insR.rows[0]) touchedPageIds.push(_insR.rows[0].id);
+        if (!_insR.rows[0]) { skipped++; results.push({ url: p.url, status: 'skipped_already_tracked' }); continue; }
+        touchedPageIds.push(_insR.rows[0].id);
         _liveCount++;
         imported++;
         newAdded++;
-        results.push({ url: p.url, id: _insR.rows[0] ? _insR.rows[0].id : null, status: 'new' });
+        results.push({ url: p.url, id: _insR.rows[0].id, status: 'new' });
       } catch(e) {
         console.warn('[import-gsc] page', p.url, e.message);
         failed++;
@@ -8281,7 +8290,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
 
     if(touchedPageIds.length){await _ensureMonitoringGateSchema();await pool.query('UPDATE tracker_pages SET monitoring_gsc_pages_at=NOW() WHERE tracker_client_id=$1 AND id=ANY($2::int[]) AND monitoring_waiting_input=TRUE',[clientId,touchedPageIds]).catch(()=>{});}
     res.json({ 
-      success: failed < pages.length, // only "success" if at least something landed
+      success: imported > 0 || (failed === 0 && invalidPages.length < pages.length),
       imported, 
       refreshed,
       new_added: newAdded,
@@ -46151,7 +46160,21 @@ function openCaseStudy(pageId,caseId){
     }).join('');
     var casePicker=caseOptions?'<label>'+_csEscH(historyText[3])+' <select id="trackerProofCase">'+caseOptions+'</select></label>':'';
     var scanProof=(sources.quick_scan||[]).length?'<details><summary>Quick Scan</summary><ul>'+scoreLines(sources.quick_scan)+'</ul></details>':'';
-    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prewriteReports;
+    var researchLabels={en:['CEO Scan','20-page audit','Findings'],nl:['CEO Scan','20-pagina-audit','Bevindingen'],es:['Informe CEO','Auditoría de 20 páginas','Hallazgos']};
+    var researchText=researchLabels[proofLocale]||researchLabels.en;
+    var prospectResearch=(sources.prospect_research||[]).map(function(item){
+      var heading=researchText[item.source==='ceo_scan'?0:1];
+      var pages=(item.pages||[]).map(function(p){
+        return '<li>'+_csEscH(p.url+' · ContentScore '+(p.score==null?'—':p.score))+'</li>';
+      }).join('');
+      var findings=(item.findings||[]).map(function(f){
+        return '<li>'+_csEscH(f.title+' · '+f.url)+'</li>';
+      }).join('');
+      var stamp=item.recorded_at?' · '+utcStamp(item.recorded_at):'';
+      return '<details><summary>'+_csEscH(heading+stamp)+'</summary><ul>'+pages+'</ul>'
+        +(findings?'<h4>'+_csEscH(researchText[2])+'</h4><ul>'+findings+'</ul>':'')+'</details>';
+    }).join('');
+    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prospectResearch+prewriteReports;
     if(!d.case_study){
       var trackerMeasurements=snaps.map(function(row){
         var date=utcStamp(row.checked_at);
@@ -47085,10 +47108,14 @@ function _networkPrewriteEmitState(){
     },window.location.origin);
   }catch(e){}
 }
-function _networkPrewriteApplyEvidence(engine,evidence){
+function _networkPrewriteApplyEvidence(engine,evidence,googleSource){
   var ids={google_aio:'pwbAioText',chatgpt:'pwbChatgptText',perplexity:'pwbPerplexityText',claude:'pwbClaudeText',copilot:'pwbCopilotText'};
   var el=document.getElementById(ids[String(engine||'').toLowerCase()]);
   if(!el)return false;
+  if(engine==='google_aio'&&['ai_overview','gemini'].indexOf(googleSource)>=0){
+    var source=document.getElementById('pwbGoogleSource');
+    if(source)source.value=googleSource;
+  }
   el.value=String(evidence||'');
   try{el.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
   _pwbUpdateAiFiveCount();
@@ -47098,7 +47125,7 @@ function _networkPrewriteApplyEvidence(engine,evidence){
 window.addEventListener('message',function(e){
   if(e.origin!==window.location.origin||!e.data)return;
   if(e.data.type==='network-ai-evidence'&&Number(e.data.placement_id)===_networkPrewritePlacementId()){
-    _networkPrewriteApplyEvidence(e.data.engine,e.data.evidence);
+    _networkPrewriteApplyEvidence(e.data.engine,e.data.evidence,e.data.google_source);
   }
 });
 document.addEventListener('input',function(e){
@@ -48639,11 +48666,9 @@ function hideModal(id) {
 }
 
 async function api(path, method, body) {
-  var base = window.location.origin.indexOf('app.contentscale.site') > -1
-    ? '' : 'https://app.contentscale.site';
   var opts = { method: method||'GET', headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
-  var apiPath = base + '/api/tracker-client/' + TOKEN + path;
+  var apiPath = '/api/tracker-client/' + TOKEN + path;
   try {
     var _nq = new URLSearchParams(window.location.search || '');
     var _np = String(_nq.get('networkPlacement') || '').trim();

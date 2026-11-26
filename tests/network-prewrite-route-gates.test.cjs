@@ -3,6 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const crypto=require('node:crypto');
 const {registerNetwork}=require('../src/register-network.js');
+const {registerNetwork:registerCanonicalNetwork}=require('../src/network/register-network.js');
 const KEYWORD='seo content optimalisatie';
 const ANSWER='SEO content optimalisatie begins by checking what the visitor expects, auditing existing content, using verified sources, and improving relevant paragraphs, internal links and accuracy. Rank and citations are not guaranteed.';
 function brief(valid=true){
@@ -55,4 +56,44 @@ test('Network Google capture requires explicit AI Overview/Gemini provenance bef
  const f=fixture();const r=await f.call('/api/network/admin/publications/:placementId/ai-evidence',{engine:'google_aio',evidence:ANSWER});
  // Missing placement is checked only after source provenance; no DB changes.
  assert.equal(r.statusCode,422);assert.match(r.body.error,/Choose the actual Google source/);assert.equal(f.writes.length,0);
+});
+
+test('Canonical Network saves valid research only and reports the validated five-engine count', async () => {
+ const saved = brief(false);
+ const writes = [];
+ const route = '/api/network/admin/publications/:placementId/ai-evidence';
+ let handle;
+ const app = { post(path, ...handlers) { if (path === route) handle = handlers.at(-1); } };
+ for (const method of ['get', 'patch', 'put', 'delete', 'use']) app[method] = () => {};
+ const pool = {
+  async query() { return { rows: [{ prewrite_brief_id: 9 }] }; },
+  async connect() {
+   return {
+    async query(sql, params) {
+     if (sql.includes('FROM prewrite_briefs')) return {rows: [{id: 9, keyword: KEYWORD, brief_json: structuredClone(saved)}]};
+     if (sql.startsWith('UPDATE')) writes.push(JSON.parse(params[1]));
+     return { rows: [] };
+    },
+    release() {}
+   };
+  }
+ };
+ registerCanonicalNetwork({ app, pool, verifyAdmin() {}, asyncHandler: fn => fn });
+ assert.equal(typeof handle, 'function');
+ async function capture(body) {
+  const res = { statusCode: 200, status(code) { this.statusCode = code; return this; }, json(result) { this.body = result; } };
+  await handle({ params: {placementId: 1}, body }, res);
+  return res;
+ }
+ assert.equal((await capture({engine: 'google_aio', evidence: ANSWER})).statusCode, 422);
+ assert.equal((await capture({engine: 'claude', evidence: '[PASTE ANSWER HERE]'})).statusCode, 422);
+ assert.equal(writes.length, 0);
+ const google = await capture({engine: 'google_aio', google_source: 'gemini', evidence: ANSWER});
+ assert.equal(google.body.checked_count, 4);
+ assert.equal(google.body.complete_5_of_5, false);
+ assert.equal(writes[0].ai_system_evidence.google_aio.google_source, 'gemini');
+ const approved = await capture({engine: 'claude', evidence: ANSWER});
+ assert.equal(approved.statusCode, 200);
+ assert.equal(approved.body.complete_5_of_5, true);
+ assert.equal(writes[1].what_we_checked.ai_systems_checked, 5);
 });
