@@ -50,6 +50,15 @@ globalThis.fetch=async(url, options)=>{
      fixtureHost.test(JSON.parse(options.body).url || '')) {
   return localFetch(url, options);
  }
+ const website=/^https:\/\/(commercial-[a-f0-9]{16}\.example)\/$/.exec(String(url));
+ if(website && /^Mozilla.*ContentScalePublicContactCheck/.test(options?.headers?.['User-Agent']||'')){
+  const html='<html lang="en"><head><title>Roofing contractor</title></head><body><h1>Roof repair services</h1>'+
+    '<p>Our roofing team provides emergency repairs and inspections for local businesses.</p>'.repeat(12)+
+    '<a href="/contact">Contact our roofing team</a></body></html>';
+  const response=new Response(html,{headers:{'Content-Type':'text/html'}});
+  Object.defineProperty(response,'url',{value:String(url)});
+  return response;
+ }
 
  if(process.env.BREVO_API_KEY==='staging-ci-quick-scan-fixture'
    && url==='https://api.brevo.com/v3/smtp/email' && options?.method==='POST'){

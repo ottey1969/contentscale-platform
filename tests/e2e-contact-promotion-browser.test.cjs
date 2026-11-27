@@ -19,7 +19,7 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
   const db = new Client({ connectionString: database });
   await db.connect();
   const key = randomBytes(32).toString('hex');
-  const domain = key.slice(0, 16) + '.example';
+  const domain = 'commercial-' + key.slice(0, 16) + '.example';
   const name = 'Verified contact ' + key.slice(0, 16);
   const browser = await chromium.launch();
   let contact, importJob;
@@ -46,9 +46,25 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
       'SELECT id,status,website_candidate FROM contact_intelligence WHERE import_job_id=$1', [importJob]));
     assert.equal(contact.status, 'qualified');
     assert.equal(contact.website_candidate, website);
-    // The website check alone is supplied as a fixture. Classification and approval use the real UI.
-    await db.query(`UPDATE contact_intelligence SET status='domain_verified',website_url=$2,
-      website_verified_at=NOW(),network_fit_score=74 WHERE id=$1`, [contact.id, website]);
+    await page.locator('.ciSectionToggle').click();
+    await page.locator('#ciFilter').selectOption('qualified');
+    await page.locator('#ciSearch').fill(name);
+    await page.locator('#ciLoad').click();
+    await page.locator('#ciImportStatus').getByText('✓ Filters applied.', { exact: true }).waitFor();
+    const qualified = page.locator('#ciList .ciRow[data-status="qualified"]').filter({ hasText: name });
+    await qualified.getByRole('checkbox').check();
+    const [checked] = await Promise.all([
+      page.waitForResponse(response => new URL(response.url()).pathname === '/api/contact-intelligence/verify'),
+      page.locator('#ciVerify').click()
+    ]);
+    assert.equal(checked.status(), 200, await checked.text());
+    const verification = await checked.json();
+    assert.equal(verification.verified, 1, JSON.stringify(verification));
+    const { rows: [verified] } = await db.query(
+      'SELECT status,website_url,website_verified_at FROM contact_intelligence WHERE id=$1', [contact.id]);
+    assert.equal(verified.status, 'domain_verified');
+    assert.equal(verified.website_url, website);
+    assert.ok(verified.website_verified_at);
 
     async function approve(status) {
       const row = page.locator('#ciList .ciRow[data-status="' + status + '"]').filter({ hasText: name });
