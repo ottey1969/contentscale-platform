@@ -217,6 +217,34 @@ async function revokeNetworkAi(db, placementId) {
     ) AS latest WHERE event_type=$4`, [String(placementId), NETWORK_AI, NETWORK_REVOKE, NETWORK_RELEASE]);
 }
 
+async function linkFreeGrowthProof(pool,{token,url,checkId,ensureCaseSchema}){
+ if(!/^[a-f0-9]{48}$/i.test(token))return null;
+ const findPage=async(db,lock=false)=>{
+   const {rows}=await db.query(`SELECT p.id,p.url,p.tracker_client_id FROM tracker_pages p
+     JOIN tracker_clients c ON c.id=p.tracker_client_id
+     WHERE c.token=$1 AND c.status IS DISTINCT FROM 'deleted' AND p.url=$2
+     LIMIT 2`+(lock?' FOR UPDATE OF p,c':''),[token,url]);
+   return rows.length===1?rows[0]:null;
+ };
+ if(!await findPage(pool))return null;
+ await ensureProofSourceSchema(pool,ensureCaseSchema);
+ const db=await pool.connect();
+ let broken;
+ try{
+  await db.query('BEGIN');
+  const page=await findPage(db,true);
+  if(!page||!await bindProofSource(db,page,'free_growth',checkId,url)){
+   await db.query('ROLLBACK');
+   return null;
+  }
+  await db.query('COMMIT');
+  return '/track/'+encodeURIComponent(token)+'?page='+page.id;
+ }catch(error){
+  try{await db.query('ROLLBACK');}catch(e){broken=e;}
+  throw error;
+ }finally{db.release(broken);}
+}
+
 async function quickScanForRegistration(db, token, domain) {
   const { rows: [scan] } = await db.query(`SELECT id,url,scan_result,scan_completed_at
     FROM prospect_quick_scans WHERE token=$1 AND tracker_interested IS TRUE AND audit20_status='ready'
@@ -312,5 +340,5 @@ function registerProofSourceRoutes(app, pool, { ensureCaseSchema, resolveQuickSc
   });
 }
 
-module.exports = { EVENT, auditPageEvidence, loadProofSources, loadPageProofSources, registerProofSourceRoutes,
+module.exports = { linkFreeGrowthProof, EVENT, auditPageEvidence, loadProofSources, loadPageProofSources, registerProofSourceRoutes,
   ensureProofSourceSchema, quickScanForRegistration, registerQuickScanProof, releaseNetworkAi, revokeNetworkAi };

@@ -29,9 +29,10 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
   const writes = [], mails = [];
+  let publishedText = '';
   const engineDeps = { retryDelayMs: 0, aiGapModel: null, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
     fetchLive: async url => { const html = PAGES[url]; if (!html) throw Object.assign(Error('TEST page not available'), { code: 'PUBLIC_HTML_UNAVAILABLE' });
-      return { html, final_url: url, retrieved_at: new Date().toISOString(), truncated: false, source: 'LIVE_PUBLIC_HTTPS' }; },
+      return { html: url === URL_ && publishedText ? html.replace('</body>', '<p>' + publishedText + '</p></body>') : html, status: 200, redirect_chain: [], final_url: url, retrieved_at: new Date().toISOString(), truncated: false, source: 'LIVE_PUBLIC_HTTPS' }; },
     searchLive: async ({ query }) => ({ status: 'FRESH_GOOGLE_ORGANIC_LEADS', source: 'SERPER_GOOGLE_ORGANIC', query, leads: LEADS, provider_attempts: ['SERPER_GOOGLE_ORGANIC'], checked_at: new Date().toISOString() }),
     // TEST writer stand-in: one section per selected task.
     // TEST stand-in for the AI that rewrites a first-person title/description as the service.
@@ -325,6 +326,23 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     const published = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10), w = windowsOf(published);
     assert.equal(await p.isVisible('#pubDate'), false, 'step 5 waits until the change is live');
     await p.locator('#stepPublish > summary').click();
+    const status = new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base);
+    const trackerUrl = new URL(status);
+    trackerUrl.pathname = trackerUrl.pathname.replace(/report\.json$/, 'tracker');
+    assert.equal((await ctx.request.post(trackerUrl.href, { data: { token: 'a'.repeat(48) } })).status(), 404);
+    const reportUrl = new URL(status);
+    reportUrl.pathname = reportUrl.pathname.replace(/report\.json$/, 'implementation-report');
+    const implementation = { schema: 'contentscale.implementation.v1', url: URL_, status: 'implemented',
+      summary: 'Clarified what is included in a written repair estimate.', change_types: ['content'], evidence: 'Editor supplied summary' };
+    const wrongPage = await ctx.request.post(reportUrl.href, { data: { report: { ...implementation, url: URL_.slice(0, -1) } } });
+    assert.equal(wrongPage.status(), 400);
+    await p.getByText('Implementation Report', { exact: true }).click();
+    await p.locator('#pubReport').fill(JSON.stringify(implementation));
+    await p.locator('#pubImport').click();
+    await p.locator('#pubImportStatus').getByText(/Report saved in history/).waitFor();
+    const duplicate = await ctx.request.post(reportUrl.href, { data: { report: implementation } });
+    assert.equal(duplicate.status(), 200, await duplicate.text());
+    assert.equal((await duplicate.json()).publication.published_on, null, 'receiving a report does not declare publication');
     await p.click('#pubOpen summary');
     await p.fill('#pubDate', published); await p.click('#pubSave');
     await p.waitForFunction(() => /One e-mail on .* to t\*\*\*@acme-roofing\.example/i.test(document.getElementById('pubBox').textContent), null, { timeout: 30000 });
@@ -341,6 +359,33 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       await p.waitForFunction(k => new RegExp(k + ' exports uploaded').test(document.body.textContent), String(n), { timeout: 30000 });
     }
     const latest = await (await fetch(new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base))).json();
+    const proof = p.locator('#freeProofHistory');
+    await proof.getByRole('heading', { name: 'Proof & History', exact: true }).waitFor();
+    assert.equal(await proof.getByRole('button', { name: 'Continue with Tracker' }).count(), 1);
+    assert.equal(latest.proof_history.baseline.url, URL_);
+    assert.equal(latest.proof_history.gsc.latest.status, 'VERIFIED_FOR_PAGE');
+    const changedText = 'Your written estimate includes labour, materials, access equipment and removal of the damaged roofing. When we find hidden deck damage, we take photos and request your written approval before adding any repair to the estimate.';
+    const verificationUrl = new URL(status);
+    verificationUrl.pathname = verificationUrl.pathname.replace(/report\.json$/, 'publication/verify');
+    assert.equal((await ctx.request.post(verificationUrl.href, { data: { excerpt: changedText } })).status(), 422);
+    publishedText = changedText;
+    const form = p.locator('#pubVerify');
+    await form.getByRole('textbox').fill(changedText);
+    await form.getByRole('button').click();
+    await form.getByRole('status').getByText('Live text verified', { exact: true }).waitFor();
+    const reopened = await ctx.newPage();
+    await reopened.goto(p.url());
+    await reopened.locator('#freeProofHistory').getByRole('heading', { name: 'Proof & History' }).waitFor();
+    const savedProof = (await (await ctx.request.get(status.href)).json()).proof_history;
+    assert.equal(savedProof.publication.history.filter(entry => entry.report?.summary === implementation.summary && !entry.published_on).length, 1);
+    const live = savedProof.publication.history.flatMap(entry => entry.live_verification_history || []);
+    assert.equal(live.length, 1);
+    assert.equal(live[0].url, URL_);
+    assert.equal(live[0].source, 'LIVE_PUBLIC_HTTPS');
+    assert.deepEqual(savedProof.baseline, latest.proof_history.baseline);
+    assert.equal(savedProof.publication.published_on, published);
+    await reopened.close();
+
     assert.equal(latest.search_console.latest.status, 'VERIFIED_FOR_PAGE');
     assert.equal(latest.search_console.latest.used_in_research, false, 'a late verified GSC export is not falsely claimed as research evidence');
     const cmp = await p.textContent('#pubBox');
@@ -401,7 +446,30 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM growth_free_ai_answers WHERE check_id=$1', [row.id])).rows[0].n, 5);
     assert.deepEqual((await pool.query('SELECT status FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY id', [row.id])).rows.map(r => r.status), ['VERIFIED_FOR_PAGE', 'NOT_VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE']);
     assert.ok((await pool.query('SELECT reminder_opt_out_at FROM growth_free_checks WHERE id=$1', [row.id])).rows[0].reminder_opt_out_at, 'the stop link stopped the reminder');
+    // A research result that predates publication history still has its original date and note.
+    await pool.query("UPDATE growth_free_checks SET publication_history='[]'::jsonb WHERE id=$1", [row.id]);
+    const legacy = await ctx.request.post(verificationUrl.href, { data: { excerpt: changedText } });
+    assert.equal(legacy.status(), 200, await legacy.text());
+    const oldPublication = (await legacy.json()).publication.history[0];
+    assert.equal(oldPublication.published_on, published);
+    assert.equal(oldPublication.source, 'legacy');
+    assert.equal(oldPublication.live_verification_history[0].url, URL_);
     const after = (await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'tracker\\_%'")).rows.map(r => r.table_name).sort();
     assert.deepEqual(after, before, 'no Tracker table created');
+    for (const [locale, title, cta] of [
+      ['nl', 'Bewijs en historie', 'Verder met Tracker'],
+      ['es', 'Evidencias e historial', 'Continuar con Tracker']
+    ]) {
+      await pool.query('UPDATE growth_free_checks SET ui_lang=$1 WHERE id=$2', [locale, row.id]);
+      const mobile = await ctx.newPage();
+      await mobile.setViewportSize({ width: 390, height: 844 });
+      const link = new URL(p.url());
+      link.searchParams.set('lang', locale);
+      await mobile.goto(link.href);
+      const section = mobile.locator('#freeProofHistory');
+      await section.getByRole('heading', { name: title, exact: true }).waitFor();
+      assert.equal(await section.getByRole('button', { name: cta, exact: true }).isVisible(), true);
+      await mobile.close();
+    }
   } finally { await browser.close(); srv.close(); await pool.end(); }
 });
