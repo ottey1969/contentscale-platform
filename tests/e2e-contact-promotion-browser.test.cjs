@@ -138,7 +138,8 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
     try {
       if (contact) {
         await db.query('DELETE FROM network_directory_businesses WHERE contact_intelligence_id=$1', [contact.id]);
-        if (process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1') {
+        if (process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1' &&
+            (await db.query("SELECT to_regclass('opportunity_reports') AS table_name")).rows[0].table_name) {
           await db.query('DELETE FROM opportunity_reports WHERE token=(SELECT ceo_report_token FROM prospect_quick_scans WHERE contact_intelligence_id=$1)', [contact.id]);
         }
         await db.query('DELETE FROM prospect_quick_scans WHERE contact_intelligence_id=$1', [contact.id]);

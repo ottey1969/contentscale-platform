@@ -159,6 +159,10 @@ test('CEO background preparation persists one working report linked to the origi
     await db.query(`INSERT INTO prospect_quick_scans (token,url,language,source,contact_intelligence_id,outreach_email_status,outreach_sent_at)
       VALUES ($1,$2,'en','lead_crawler',1,'sent',NOW())`, [commercial, page]);
     assert.equal((await first.commercial('invalid')).code, 404);
+    await db.query("UPDATE contact_intelligence SET website_url=$1 WHERE id=1", [page.replace('v=1','v=2')]);
+    assert.equal((await first.commercial(commercial)).code, 404);
+    await db.query("UPDATE contact_intelligence SET website_url=$1 WHERE id=1", [page]);
+
     assert.equal((await first.commercial(commercial, { check_only: true })).code, 202);
     assert.equal(first.job(commercial), undefined);
     const before = scans;
@@ -176,6 +180,17 @@ test('CEO background preparation persists one working report linked to the origi
     await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=1");
     assert.equal((await second.commercial(commercial)).code, 404);
     assert.equal(scans, before + 1);
+
+    const interruptedByApproval = crypto.randomBytes(32).toString('hex');
+    await db.query("INSERT INTO contact_intelligence VALUES (2,'promoted',$1,NOW(),$2)", [interruptedByApproval, page]);
+    await db.query(`INSERT INTO prospect_quick_scans(token,url,source,contact_intelligence_id)
+      VALUES ($1,$2,'lead_crawler',2)`, [interruptedByApproval,page]);
+    duringScan=()=>otherDb.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=2");
+    assert.equal((await first.commercial(interruptedByApproval)).code, 202);
+    assert.equal((await first.job(interruptedByApproval)).status, 'unavailable');
+    assert.equal((await db.query("SELECT count(*)::int AS count FROM opportunity_reports WHERE report_data->>'quick_scan_token'=$1",
+      [interruptedByApproval])).rows[0].count, 0);
+
 
   } finally {
     releaseScan();
