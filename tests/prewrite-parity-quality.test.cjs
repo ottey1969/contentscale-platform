@@ -185,3 +185,8 @@ test('new publication blockers are shared with Network approval and accept histo
   const approval = source.slice(source.indexOf('function _networkBriefApprovalReadiness'), source.indexOf('async function _networkApproveBriefSnapshot'));
   assert.match(approval, /prewritePublicationBlockers\(b\)/);
 });
+
+test('PWB-04 and PWB-06 — a verified price excerpt preserves decimal and thousands separators', () => {
+  const page = quality.websitePage(services, '<h1>SEO advies</h1><p>De prijs voor SEO advies is €1.299,95. Bekijk de voorwaarden.</p>');
+  assert.equal(page.pricing.passage, 'De prijs voor SEO advies is €1.299,95.');
+});

@@ -41,6 +41,7 @@ function serpFormats(rows) {
 function websitePage(url, html) {
   const titles = [];
   const visible = [];
+  const pricePassages = [];
   const schema = new Set();
   let form = false;
   let websiteInput = false;
@@ -81,12 +82,17 @@ function websitePage(url, html) {
     if (inForm && urlInput(node)) websiteInput = true;
     const children = node.childNodes || [];
     if (children.some(urlInput) && children.some(scanButton)) pairedControls = true;
-    for (const child of node.childNodes || []) visit(child, inForm || tag === 'form');
+    const start = visible.length;
+    for (const child of children) visit(child, inForm || tag === 'form');
+    if (['p', 'li', 'dd'].includes(tag)) {
+      const passage = visible.slice(start).join(' ').replace(/\s+/g, ' ').trim();
+      if (passage) pricePassages.push(passage);
+    }
   }
   visit(parse(String(html || '')));
   const body = visible.join(' ').replace(/\s+/g, ' ').trim();
   const heading = titles.join(' ').replace(/\s+/g, ' ').trim();
-  const prices = body.match(/[^.!?]{0,200}(?:[.!?]|$)/g) || [];
+  const prices = (pricePassages.length ? pricePassages : [body]).flatMap(passage => passage.split(/(?<=[.!?])\s+/u));
   let pricePolicy = null;
   for (const passage of prices) {
     if (!pricing.test(passage)) continue;
