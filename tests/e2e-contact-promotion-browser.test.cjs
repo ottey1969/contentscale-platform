@@ -144,10 +144,11 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
       await prospect.locator('#pqs391Url').fill(pageB);
       const [scanned] = await Promise.all([
         prospect.waitForResponse(response => new URL(response.url()).pathname.endsWith('/' + saved.promoted_token + '/run'), { timeout: 20000 }),
+        prospect.waitForEvent('framenavigated', { predicate: frame => frame === prospect.mainFrame(), timeout: 20000 }),
         prospect.locator('#pqs391Scan').click()
       ]);
-      assert.equal(scanned.status(), 200, await scanned.text());
-      await prospect.reload();
+      assert.equal(scanned.status(), 200);
+      await prospect.waitForLoadState('domcontentloaded');
       const { rows: [pair] } = await db.query(`SELECT ceo_report_page_url,url,scan_result,scan_completed_at,audit20_interested_at
         FROM prospect_quick_scans WHERE token=$1`, [saved.promoted_token]);
       assert.equal(pair.ceo_report_page_url, website);
@@ -164,8 +165,10 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
         prospect.waitForResponse(response => response.url().endsWith('/audit20-interest')),
         prospect.locator('#pqs391Audit').click()
       ]);
-      assert.equal(interest.status(), 200, await interest.text());
-      assert.equal((await interest.json()).status, 'audit20_interested');
+      assert.equal(interest.status(), 200);
+      const { rows: [requested] } = await db.query(
+        'SELECT audit20_interested_at FROM prospect_quick_scans WHERE token=$1', [saved.promoted_token]);
+      assert.ok(requested.audit20_interested_at);
     }
     await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=$1", [contact.id]);
     const [rejected] = await Promise.all([
