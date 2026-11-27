@@ -6004,7 +6004,14 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/reject', async (req, res
     res.json({ success: true, status: 'in_progress', reason: reason });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief);
+require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief, {
+  resolveRepair: async (token,id) => {
+    const owner=(await pool.query(`SELECT c.id AS "clientId", b.id AS "briefId" FROM tracker_clients c
+      JOIN prewrite_briefs b ON b.client_id=c.id WHERE c.token=$1 AND b.id=$2
+        AND COALESCE(c.status,'') NOT IN ('deleted','disabled','paused')`,[token,id])).rows[0];
+    return owner||{code:404,error:'Brief not found'};
+  }
+});
 app.post('/api/tracker-client/:token/prewrite-brief/:id/deadline', async (req, res) => {
   try {
     const r = await _resolvePWBrief(req.params.token, req.params.id);
@@ -45888,6 +45895,8 @@ ${_prewriteBriefResearch.scriptTags()}</head>
       <input id="pwbKeyword" type="text" class="cs-input" placeholder="e.g. free ai citation tracker">
       <label for="pwbPricingSource">Public URL for prices or quote policy (optional)</label>
       <input id="pwbPricingSource" type="url" class="cs-input" maxlength="500" placeholder="https://">
+      <button type="button" id="pwbRepairPricing" onclick="_pwbRepairPricing(this)" hidden>Repair draft with pricing evidence</button>
+
 
     </div>
     <div style="margin-bottom:12px;">
@@ -47767,6 +47776,8 @@ function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted,shareUrl){
   _pwbInputsDirty=false;
   _pwbPublisherEditionReady=false;
   _pwbCurrentShareUrl=String(shareUrl||'');
+  var repairPricing=document.getElementById('pwbRepairPricing');
+  if(repairPricing)repairPricing.hidden=!_pwbCurrentBriefId||brief?.missing_information?.state!=='needs_input'||!!_pwbNetworkPlacement();
   _pwbApplyActionState();
   _pwbScrollToNextAction();
 }
@@ -48132,6 +48143,15 @@ function _renderIntentBar(si) {
   }
   head += '</div>';
   return head;
+}
+async function _pwbRepairPricing(button){
+  var source=document.getElementById('pwbPricingSource'),stat=document.getElementById('pwbStatus');
+  if(!source.value||!source.reportValidity()){source.focus();return;}
+  button.disabled=true;
+  try{
+    var revision=await api('/prewrite-brief/'+encodeURIComponent(_pwbCurrentBriefId)+'/repair-pricing','POST',{pricingSource:source.value});
+    await reopenPrewriteBrief(revision.brief_id);
+  }catch(error){stat.textContent=error.message;}finally{button.disabled=false;}
 }
 // Regenerate the brief for a chosen intent without changing the research question.
 async function _pwbRegenWithIntent(intent) {

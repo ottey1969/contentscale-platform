@@ -8,7 +8,7 @@ const { createHash } = require('node:crypto');
 const { fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
 const { renderPublicGrowthPage } = require('./growth-safe-browser-renderer.cjs');
 const { isBotCheck } = require('./gsc-report/site-audit.cjs');
-const { writerBrief } = require('./prewrite-quality.cjs');
+const { writerBrief, pricingEvidenceUrl, websitePage, repairPricingDraft, prewritePublicationBlockers } = require('./prewrite-quality.cjs');
 const { VERSION, exactUrl, parseImplementationReport, ownerReport } = require('./implementation-report.cjs');
 
 function resolveTarget(brief, domain) {
@@ -40,9 +40,8 @@ function readReport(raw, brief, domain, language) {
 }
 
 function publicationReport(raw, brief, domain, language) {
-  if (brief.missing_information?.state === 'needs_input') throw new Error('Confirm pricing evidence before publication');
-  if (brief.metadata_review?.issues?.length) throw new Error('Review the SEO metadata before publication');
-  if (brief.cannibalization_review?.state === 'needs_review') throw new Error('Review the overlapping publication plan first');
+  const [blocker] = prewritePublicationBlockers(brief);
+  if (blocker) throw new Error(blocker.message);
   const result = readReport(raw, brief, domain, language);
   if (result.report.status !== 'published') throw new Error('An explicit publication report is required');
   return result;
@@ -163,7 +162,7 @@ function response(result, trackerPageId, confirmed = Boolean(trackerPageId)) {
   };
 }
 
-function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowthHtml, renderHtml = renderPublicGrowthPage, publicPath } = {}) {
+function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowthHtml, renderHtml = renderPublicGrowthPage, publicPath, resolveRepair = resolveBrief } = {}) {
   const path = publicPath || '/api/tracker-client/:token/prewrite-brief/:id';
   const owner = publicPath ? 'b.public_site AS domain' : 'c.domain';
   const join = publicPath ? '' : 'JOIN tracker_clients c ON c.id=b.client_id';
@@ -247,6 +246,75 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
       }
     }
   }
+  app.post(path + '/repair-pricing', async (req, res) => {
+    let db, transaction = false, rollbackError;
+    try {
+      const scope = await resolveRepair(req.params.token, req.params.id, req);
+      if (scope.error) return res.status(scope.code).json({ success: false, error: scope.error });
+      const ids = [scope.briefId, scope.clientId];
+      const { rows: [base] } = await pool.query(
+        `SELECT b.status,b.brief_json,b.region,b.implementation_reports,${owner}
+          FROM prewrite_briefs b ${join} WHERE b.id=$1 AND ${condition}`, ids);
+      if (!base || base.status !== 'open' || base.implementation_reports?.length) {
+        return res.status(409).json({ success: false, error: 'Only an unpublished draft can be revised' });
+      }
+      let url, revision;
+      let accessHash = null;
+      try {
+        url = pricingEvidenceUrl(base.domain, req.body?.pricingSource);
+        if (!url) throw Error('Provide an exact pricing source');
+        if (publicPath) {
+          const nextKey = req.body?.revisionKey;
+          if (typeof nextKey !== 'string' || !/^[a-f0-9]{64}$/.test(nextKey)) throw Error('Invalid revision key');
+          accessHash = createHash('sha256').update(nextKey).digest('hex');
+        }
+        const capture = await fetchHtml(url, { redirects: 0, limit: 300000, timeout: 5000 });
+        if (capture.status !== 200 || capture.final_url !== url || capture.redirect_chain?.length ||
+            capture.truncated || isBotCheck(capture.html)) throw Error('Could not verify the exact public pricing page');
+        revision = repairPricingDraft(base.brief_json, websitePage(url, capture.html), { region: base.region, sourceId: scope.briefId });
+        resolveTarget(revision, base.domain);
+      } catch (error) {
+        return res.status(422).json({ success: false, error: error.message });
+      }
+
+      db = await pool.connect();
+      await db.query('BEGIN');
+      transaction = true;
+      await db.query('SELECT pg_advisory_xact_lock($1, $2)', [59, scope.briefId]);
+      const { rows: [current] } = await db.query(
+        `SELECT b.id FROM prewrite_briefs b ${join} WHERE b.id=$1 AND ${condition}
+          AND b.status='open' AND b.brief_json=$3::jsonb AND b.implementation_reports='[]'::jsonb FOR UPDATE OF b`,
+        [...ids, JSON.stringify(base.brief_json)]);
+      if (!current) return res.status(409).json({ success: false, error: 'The draft changed while reading the source' });
+      const { rows: [prior] } = await db.query(
+        `SELECT id,public_access_hash,brief_json->'pricing_repair'->>'source_url' AS source_url
+          FROM prewrite_briefs WHERE client_id IS NOT DISTINCT FROM $1
+          AND brief_json->'pricing_repair'->>'source_brief_id'=$2 LIMIT 1`,
+        [scope.clientId, String(scope.briefId)]);
+      if (prior && (prior.public_access_hash !== accessHash || prior.source_url !== url)) {
+        return res.status(409).json({ success: false, error: 'A revised draft already exists' });
+      }
+      let briefId = prior?.id;
+      if (!briefId) {
+        const saved = await db.query(
+          `INSERT INTO prewrite_briefs (client_id,keyword,language,region,brief_json,status,public_site,public_access_hash)
+            SELECT client_id,keyword,language,region,$2::jsonb,'open',$3,$4 FROM prewrite_briefs WHERE id=$1 RETURNING id`,
+          [scope.briefId, JSON.stringify(revision), publicPath ? base.domain : null, accessHash]);
+        briefId = saved.rows[0].id;
+      }
+      await db.query('COMMIT');
+      transaction = false;
+      return res.set('Cache-Control', 'no-store').json({ success: true, ...(publicPath ? {} : { brief_id: briefId }) });
+    } catch (error) {
+      console.warn('[prewrite-pricing-repair]', error.code || error.name);
+      return res.status(error.code === '23505' ? 409 : 503).json({ success: false, error: 'Could not save the revised draft' });
+    } finally {
+      if (db) {
+        try { if (transaction) await db.query('ROLLBACK'); } catch (error) { rollbackError = error; }
+        db.release(rollbackError);
+      }
+    }
+  });
   app.get(path + '/implementation-report', async (req, res) => {
     try {
       const scope = await resolveBrief(req.params.token, req.params.id, req);

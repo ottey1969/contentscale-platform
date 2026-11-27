@@ -152,3 +152,33 @@ test('PWB-02 — recognize a scanner with a website field and scan button outsid
   assert.equal(quality.websitePage(scan, html).type, 'interactive_tool');
   assert.equal(quality.websitePage(scan, html.replace('<button>Scan</button>', '<button>Subscribe</button>')).type, 'content');
 });
+
+test('PWB-06 — repair an unpublished price draft from a captured page and retain its research snapshot', () => {
+  const original = { keyword: topic, missing_information: { state: 'needs_input', field: 'pricing' },
+    search_scope: { query: topic }, ai_observations: { google_aio: { overview: 'unknown' } },
+    content_decision: { recommended_treatment: 'CREATE_NEW_PAGE' }, meta_package: { url_slug: 'seo-prijzen' },
+    opening_passage: { direct_answer: 'Pricing needs to be checked.' }, ai_answer: { direct_answer: 'Unknown.' } };
+  const revised = quality.repairPricingDraft(original, site[1], { region: 'nl', sourceId: 41 });
+  assert.notEqual(revised, original);
+  assert.equal(original.missing_information.state, 'needs_input');
+  assert.deepEqual(revised.search_scope, original.search_scope);
+  assert.deepEqual(revised.ai_observations, original.ai_observations);
+  assert.equal(revised.missing_information.pricing, 'on_request');
+  assert.equal(revised.content_decision.closest_existing_url, services);
+  assert.equal(revised.content_decision.recommended_treatment, 'EXPAND_EXISTING_PAGE');
+  assert.equal(revised.opening_passage.direct_answer, revised.ai_answer.direct_answer);
+  assert.equal(revised.pricing_repair.source_brief_id, 41);
+  assert.throws(() => quality.repairPricingDraft(original, site[0], { region: 'nl', sourceId: 41 }), /price evidence/);
+});
+
+test('new publication blockers are shared with Network approval and accept historical snapshots', () => {
+  const { prewritePublicationBlockers } = require('../src/prewrite-quality.cjs');
+  assert.deepEqual(prewritePublicationBlockers({}), []);
+  assert.deepEqual(prewritePublicationBlockers({
+    missing_information: { state: 'needs_input' }, metadata_review: { issues: ['stale_year'] },
+    cannibalization_review: { state: 'needs_review' }
+  }).map(item => item.code), ['missing_pricing', 'seo_metadata', 'overlapping_plan']);
+  const source = require('node:fs').readFileSync(require.resolve('../src/register-network.js'), 'utf8');
+  const approval = source.slice(source.indexOf('function _networkBriefApprovalReadiness'), source.indexOf('async function _networkApproveBriefSnapshot'));
+  assert.match(approval, /prewritePublicationBlockers\(b\)/);
+});

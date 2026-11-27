@@ -101,6 +101,22 @@
     const adjust = element('intent-adjust');
     adjust.hidden = result.status === 'published';
     adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
+    const repair = element('repair-pricing');
+    repair.hidden = pricing?.state !== 'needs_input' || result.status !== 'open';
+    repair.onclick = async () => {
+      const source = adjust.elements['pricing-source'];
+      if (!source.value || !source.reportValidity()) { source.focus(); return; }
+      repair.disabled = true;
+      const revisionKey = newKey();
+      try {
+        await call('/repair-pricing', { pricingSource: source.value, revisionKey });
+        history.replaceState(null, '', root + '/r?lang=' + lang + '#' + revisionKey);
+        location.reload();
+      } catch {
+        reportError();
+        repair.disabled = false;
+      }
+    };
     adjust.onsubmit = async event => {
       event.preventDefault();
       const previousKey = key;

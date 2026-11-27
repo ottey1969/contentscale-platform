@@ -135,6 +135,47 @@ function missingInformation(topic, pages) {
     : { state: 'needs_input', field: 'pricing', accepted: ['published_price_source', 'on_request_confirmed'] };
 }
 
+function repairPricingDraft(brief, page, { region, sourceId } = {}) {
+  if (brief?.missing_information?.state !== 'needs_input' || brief.missing_information.field !== 'pricing') {
+    throw Error('This draft does not need price evidence');
+  }
+  const evidence = missingInformation(brief.keyword, [page]);
+  if (!evidence.source || !pageInMarket(page, [page], region)) throw Error('The exact page has no relevant price evidence for this market');
+  const revised = structuredClone(brief);
+  revised.missing_information = evidence;
+  revised.opening_passage = { ...revised.opening_passage, direct_answer: evidence.excerpt };
+  revised.ai_answer = { ...revised.ai_answer, direct_answer: evidence.excerpt };
+  for (const field of ['answer', 'short_answer']) {
+    if (Object.hasOwn(revised.ai_answer, field)) revised.ai_answer[field] = evidence.excerpt;
+  }
+  if (Array.isArray(revised.ai_answer.key_takeaways)) {
+    revised.ai_answer.key_takeaways = revised.ai_answer.key_takeaways.filter(value => !pricing.test(String(value)));
+  }
+  if (Array.isArray(revised.quick_facts)) {
+    revised.quick_facts = revised.quick_facts.filter(fact => !pricing.test(String(fact?.label || '') + ' ' + String(fact?.value || '')));
+  }
+  for (const field of ['definitive_outline', 'page_blueprint']) {
+    if (Array.isArray(revised[field])) {
+      revised[field] = revised[field].map(section => section && pricing.test(String(section.citation_hook || ''))
+        ? { ...section, citation_hook: evidence.excerpt } : section);
+    }
+  }
+  if (revised.content_decision?.recommended_treatment === 'CREATE_NEW_PAGE' && contentMatch(brief.keyword, [page], { region })) {
+    revised.content_decision = { ...revised.content_decision,
+      recommended_treatment: 'EXPAND_EXISTING_PAGE', closest_existing_url: page.url, cannibalization_risk: 'high',
+      existing_page_check: { method: 'live_service_and_price_content', url: page.url, excerpt: evidence.excerpt } };
+    const { reason } = revised.content_decision;
+    if (reason) delete revised.content_decision.reason;
+    if (revised.meta_package) revised.meta_package.url_slug = new URL(page.url).pathname;
+    if (revised.cannibalization_review?.reason === 'same_market_create_plan') {
+      revised.cannibalization_review = { state: 'resolved_by_existing_page', url: page.url };
+    }
+    delete revised.hub_spoke_plan;
+  }
+  revised.pricing_repair = { source_brief_id: sourceId, source_url: page.url, method: 'verified_public_page' };
+  return revised;
+}
+
 function alignOpening(brief) {
   const answer = brief.opening_passage?.direct_answer;
   if (typeof answer !== 'string' || !answer.trim() || /^insufficient_data$/i.test(answer)) return;
@@ -146,6 +187,20 @@ function overlappingPlan(topic, region, plans) {
   return plans.some(plan => words(plan.keyword).join(' ') === identity &&
     String(plan.region || '').toLowerCase() === String(region || '').toLowerCase() &&
     plan.brief_json?.content_decision?.recommended_treatment === 'CREATE_NEW_PAGE');
+}
+
+function prewritePublicationBlockers(brief) {
+  const blockers = [];
+  if (brief?.missing_information?.state === 'needs_input') {
+    blockers.push({ code: 'missing_pricing', message: 'Confirm pricing evidence before publication' });
+  }
+  if (brief?.metadata_review?.issues?.length) {
+    blockers.push({ code: 'seo_metadata', message: 'Review the SEO metadata before publication' });
+  }
+  if (brief?.cannibalization_review?.state === 'needs_review') {
+    blockers.push({ code: 'overlapping_plan', message: 'Review the overlapping publication plan first' });
+  }
+  return blockers;
 }
 
 function metadataIssues(meta, topic, year) {
@@ -248,7 +303,7 @@ function geminiUsage(model, response) {
 }
 
 module.exports = {
-  serpFormats, websitePage, firstPartyOffers, contentMatch, pricingEvidenceUrl, missingInformation, alignOpening, overlappingPlan,
-  metadataIssues, schemaAdvice, relevantInternalLinks, verifiedSourceTargets, writerBrief, googleObservation, aiObservations,
+  serpFormats, websitePage, firstPartyOffers, contentMatch, pricingEvidenceUrl, missingInformation, repairPricingDraft, alignOpening, overlappingPlan,
+  prewritePublicationBlockers, metadataIssues, schemaAdvice, relevantInternalLinks, verifiedSourceTargets, writerBrief, googleObservation, aiObservations,
   selectIntent, zeroThinkingModel, geminiUsage
 };
