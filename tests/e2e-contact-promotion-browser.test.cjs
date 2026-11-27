@@ -140,6 +140,32 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
       const quick = await prospect.goto(base + '/quick-scan/' + saved.promoted_token);
       assert.equal(quick.status(), 200);
       assert.equal(await prospect.locator('#start-ceo').count(), 0);
+      const pageB = website + 'services/roof-repair/';
+      await prospect.locator('#pqs391Url').fill(pageB);
+      const [scanned] = await Promise.all([
+        prospect.waitForResponse(response => new URL(response.url()).pathname.endsWith('/' + saved.promoted_token + '/run'), { timeout: 20000 }),
+        prospect.locator('#pqs391Scan').click()
+      ]);
+      assert.equal(scanned.status(), 200, await scanned.text());
+      await prospect.reload();
+      const { rows: [pair] } = await db.query(`SELECT ceo_report_page_url,url,scan_result,scan_completed_at,audit20_interested_at
+        FROM prospect_quick_scans WHERE token=$1`, [saved.promoted_token]);
+      assert.equal(pair.ceo_report_page_url, website);
+      assert.equal(pair.url, pageB);
+      assert.equal(pair.scan_result.fetch_evidence.requested_url, pageB);
+      assert.ok(pair.scan_completed_at);
+      assert.equal(pair.audit20_interested_at, null);
+      const resumed = await prospect.request.post(base + '/api/ceo-report/start', {
+        data: { entry_mode: 'commercial', handoff: saved.promoted_token, check_only: true }
+      });
+      assert.equal(resumed.status(), 200, await resumed.text());
+      prospect.once('dialog', dialog => dialog.accept());
+      const [interest] = await Promise.all([
+        prospect.waitForResponse(response => response.url().endsWith('/audit20-interest')),
+        prospect.locator('#pqs391Audit').click()
+      ]);
+      assert.equal(interest.status(), 200, await interest.text());
+      assert.equal((await interest.json()).status, 'audit20_interested');
     }
     await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=$1", [contact.id]);
     const [rejected] = await Promise.all([

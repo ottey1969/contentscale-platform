@@ -176,6 +176,11 @@ test('CEO background preparation persists one working report linked to the origi
     assert.equal(saved.ceo_report_page_url, page);
     assert.equal(saved.outreach_email_status, 'sent');
     assert.equal(ready.body.ceo_report_url, saved.ceo_report_url);
+    await db.query('UPDATE prospect_quick_scans SET url=$2 WHERE token=$1', [commercial, 'https://commercial.example/another-page/']);
+    const resumed = await second.commercial(commercial, { check_only: true });
+    assert.equal(resumed.body.ceo_report_url, ready.body.ceo_report_url, 'Page B must not invalidate the authorized Page A');
+    assert.equal(scans, before + 1);
+
     assert.equal((await db.query('SELECT count(*)::int AS count FROM prospect_quick_scans')).rows[0].count, 5);
     await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=1");
     assert.equal((await second.commercial(commercial)).code, 404);

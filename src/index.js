@@ -22472,7 +22472,8 @@ async function _pqsCommercialCeoProspect(db,token,lock=false){
       AND c.status='promoted' AND c.website_verified_at IS NOT NULL`+(lock?' FOR UPDATE OF p FOR SHARE OF c':''),[token]);
   if(!row)return null;
   const {exactUrl}=require('./implementation-report.cjs');
-  try{return exactUrl(row.url)===exactUrl(row.approved_url)?row:null;}catch{return null;}
+  const ceoPage=row.ceo_report_token?row.ceo_report_page_url:row.url;
+  try{return exactUrl(ceoPage)===exactUrl(row.approved_url)?row:null;}catch{return null;}
 }
 
 // Limit background preparation to one reserved pool connection per server.

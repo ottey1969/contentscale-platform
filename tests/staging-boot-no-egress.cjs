@@ -12,7 +12,7 @@ net.Socket.prototype.connect=function(...args){
  return rawConnect.apply(this,args);
 };
 const ceoFixture = process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1';
-const fixtureHost = /^https:\/\/(?:commercial-)?[a-f0-9]{16}\.example\/$/;
+const fixtureHost = /^https:\/\/(?:commercial-)?[a-f0-9]{16}\.example\/(?:services\/roof-repair\/)?$/;
 const commercialHtml = '<!doctype html><html lang="en"><head><title>Roofing services</title></head><body>' +
   '<main><h1>Roof repair services</h1><section><h2>Commercial roof inspections</h2>' +
   '<p>Our roofing team inspects flashing, gutters, ventilation and damaged tiles. We explain the repair plan after checking the materials and documenting visible wear.</p>'.repeat(12) +
@@ -51,7 +51,7 @@ globalThis.fetch=async(url, options)=>{
   return localFetch(url, options);
  }
  const website=/^https:\/\/(commercial-[a-f0-9]{16}\.example)\/$/.exec(String(url));
- if(website && /^Mozilla.*ContentScalePublicContactCheck/.test(options?.headers?.['User-Agent']||'')){
+ if((website || (ceoFixture && fixtureHost.test(String(url)))) && /^Mozilla.*ContentScalePublicContactCheck/.test(options?.headers?.['User-Agent']||'')){
   const html='<html lang="en"><head><title>Roofing contractor</title></head><body><h1>Roof repair services</h1>'+
     '<p>Our roofing team provides emergency repairs and inspections for local businesses.</p>'.repeat(12)+
     '<a href="/contact">Contact our roofing team</a></body></html>';
