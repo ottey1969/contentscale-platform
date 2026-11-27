@@ -39,6 +39,16 @@ Op een schone canonieke testdatabase reproduceerde Chromium HTTP 503 bij het ope
 
 De twee schermen bewaarden de status vóór archivering op verschillende plekken. Daardoor ging een kwalificatie verloren bij herstel via het andere scherm. Beide schermen gebruiken nu dezelfde bewerking op dezelfde contactrij. De bewerking herkent ook de oudere JSON-status en behoudt andere onderzoeksvelden. Als beide historische statusvelden aanwezig zijn en elkaar tegenspreken, blijft het contact in het archief voor beoordeling.
 
+### Contactpromotie hervatten vanuit Quick Scan Admin
+
+Chromium reproduceerde een onderbreking in de beheerreis. Na het herladen stond het contact als `promoted` in de lijst, terwijl de selectieknop die status tegenhield vóór de bestaande herstelroute. De bediening accepteert nu dezelfde twee statussen als de server. De browserregressie controleert een echte CSV-upload, classificatie, expliciete promotie, opnieuw aanmelden na herladen, dezelfde prospecttoken, de goedkeuringswachtrij en de CEO-first-regel aan klantzijde. Websiteverificatie is als fixture ingevoerd. De promotie start geen scan of verzending.
+
+De normale lijstroute verloor op een schone database ook de opgeslagen Network-identiteit van dit contact. De relatiequery gebruikte publishertabellen die nog niet bestonden. De relatiequery wacht nu op de bestaande canonieke Network-initialisatie zodra Network actief is. Chromium controleert dat het contact na herladen de opgeslagen Network-identiteit terugkrijgt.
+
+### Oorspronkelijk LinkedPod Boost-schema
+
+De GitHub-inventaris omvatte 626 branches en 8.501 bereikbare commits. De SQL-geschiedenis bevat geen DDL met `boost_sessions`, `boost_users` of `boost_engagements`. De oude commits `a7b27846`, `d7476f9a` en `f18784cf` bevatten de UI en serverqueries die deze tabellen verwachten. De gevonden staging-guard behandelt `boost_settings`. De canonieke boot meldt daarom op een schone fixture nog steeds een ontbrekende `boost_sessions`-tabel. Voor een geldige schedulerregressie is de oorspronkelijke migratie of een schema-only-export van een werkende Boost-database nodig, inclusief sleutels, indexen, relaties en triggers.
+
 ### Gecombineerde hertest na #585–#590
 
 De zes goedgekeurde PR's zijn in opgegeven volgorde gesquasht tegen groene CI. De mergecommits zijn `6b5b912` (#585), `a920e0b` (#586), `fd278c8` (#588), `a78cd80` (#587), `9222b69` (#589) en `46786e5` (#590). De gerichte PostgreSQL-hertests slaagden met respectievelijk 17, 17, 19, 19, 31 en 41 tests. De publieke versie-API bevestigde de laatstgenoemde commit. [Productieversie](https://app.contentscale.site/api/version)

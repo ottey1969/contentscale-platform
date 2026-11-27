@@ -3179,8 +3179,22 @@ function _networkDiscoveryJourneyV542(row={}){
   else if(row.domain){stage='unclaimed_business';next='claim_business';}
   return {stage,next,listed:visibility==='listed',status,roles};
 }
+const networkJourneySchemaByPool=new WeakMap();
+function ensureNetworkJourneySchema(pool){
+  if(!networkJourneySchemaByPool.has(pool)){
+    const ready=(async()=>{
+      if(envEnabled()&&!(await inspectNetworkSchema(pool)).schema_ready)await ensureNetworkTables(pool);
+      await ensureNetworkDirectorySchema(pool);
+    })().catch(error=>{
+      networkJourneySchemaByPool.delete(pool);
+      throw error;
+    });
+    networkJourneySchemaByPool.set(pool,ready);
+  }
+  return networkJourneySchemaByPool.get(pool);
+}
+
 async function resolveCanonicalBusinessJourneysV542(pool,inputs=[]){
-  await ensureNetworkDirectorySchema(pool);
   const list=Array.isArray(inputs)?inputs.slice(0,2000):[];
   const ciIds=Array.from(new Set(list.map(x=>Number(x&&x.contact_intelligence_id||x&&x.id)||0).filter(Boolean)));
   const tokens=Array.from(new Set(list.map(x=>cleanText(x&&x.lead_crawler_token||x&&x.token,128)).filter(Boolean)));
@@ -3188,6 +3202,7 @@ async function resolveCanonicalBusinessJourneysV542(pool,inputs=[]){
   for(const x of list){let d=cleanText(x&&x.domain||x&&x.website_url,255);if(!d)continue;try{d=normalizeSite(d).domain}catch(_e){d=d.toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]}if(d)domains.push(d)}
   const domainList=Array.from(new Set(domains));
   if(!ciIds.length&&!tokens.length&&!domainList.length)return [];
+  await ensureNetworkJourneySchema(pool);
   const params=[],clauses=[];
   if(ciIds.length){params.push(ciIds);clauses.push(`b.contact_intelligence_id=ANY($${params.length}::bigint[])`)}
   if(tokens.length){params.push(tokens);clauses.push(`b.lead_crawler_token=ANY($${params.length}::text[])`)}
