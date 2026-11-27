@@ -71,6 +71,7 @@
   const id = location.pathname.split('/')[3], endpoint = '/api/network/admin/publications/' + encodeURIComponent(id) + '/post-publication-ai';
   const form = byId('observation'), history = byId('history'), message = byId('message');
   let publishedUrl;
+  let edition;
   byId('back').href = '/network/publishing/' + encodeURIComponent(id);
   byId('back').textContent = t[15];
   function showGoogleSource() {
@@ -91,6 +92,7 @@
   async function load() {
     const data = await api();
     publishedUrl = data.published_url;
+    edition = data.edition;
     byId('liveUrl').textContent = publishedUrl || '';
     form.hidden = !data.can_record;
     history.replaceChildren();
@@ -114,7 +116,7 @@
     button.disabled = true;
     try {
       const { citations, ...observation } = data;
-      await api({ method: 'POST', body: JSON.stringify({ ...observation, published_url: publishedUrl,
+      await api({ method: 'POST', body: JSON.stringify({ ...observation, published_url: publishedUrl, edition,
         observed_at: new Date(observation.observed_at).toISOString(),
         citation_urls: citations.split(/\r?\n/).map(url => url.trim()).filter(Boolean) }) });
       form.reset();

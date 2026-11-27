@@ -19,6 +19,8 @@ De broninventarisatie omvatte 307 getrackte bestanden onder `src`, 119 onder `pu
 
 De beheerroute voor het opslaan van AI-antwoorden in Pre-Write kon de bestaande ContentScore-controle en researchstatus van een ingediende of geverifieerde Publisher Edition overschrijven. De route leest de plaatsingsstatus nu onder een PostgreSQL-rijslot en vraagt bij een actieve verificatie of geverifieerde plaatsing om de bestaande expliciete heropeningsstap. Een PostgreSQL-regressie met twee transacties bevestigt dat gelijktijdige publicatieaanmelding de bestaande Brief, editie en kwaliteitsstatus intact laat. Het apart toevoegen en terugvinden van AI-waarnemingen na publicatie vraagt nog een geautoriseerde koppeling tussen de exacte publisher-URL en de juiste Tracker-pagina. De bestaande researchroute is daarvoor geen bewijsbron.
 
+De aparte beheerroute voor waarnemingen registreert de uitgever en de revisie van de geverifieerde editie in het bestaande reviewevent. Een formulier uit een vorige verificatieronde geeft een conflict na herpublicatie op dezelfde URL. De geïsoleerde browser- en PostgreSQL-test controleert dat oude waarnemingen hun oorspronkelijke revisie behouden en als handmatige waarnemingen herkenbaar blijven.
+
 De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches in het bouwproces. De migratie-inventaris staat in [Canonical Architecture Migration](canonical-architecture-migration.md). Volledige consolidatie van route-eigenaarschap, bedrijfsidentiteit, paginastatussen en bewijsprojecties vereist een route- en datamodelaudit. Deze slice heeft de bestaande bronnen, cycli en opslag gebruikt.
 
 ### CEO-rapport in de achtergrond

@@ -63,6 +63,13 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.equal((await post(observation, { 'Content-Type': 'application/json' })).status, 401);
     assert.equal((await post({ ...observation, published_url: 'https://publisher.example/article/?v=1' })).status, 409);
     assert.equal((await post({ ...observation, observed_at: '2020-01-01T00:00:00Z' })).status, 422);
+    const initialEdition = (await pool.query(`SELECT to_char(updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS revision
+      FROM network_publication_versions WHERE id=1`)).rows[0];
+    const prepared = await (await fetch(url, { headers })).json();
+    assert.equal(prepared.can_record, true);
+    assert.equal(prepared.edition.publication_version_id, '1');
+    assert.equal(prepared.edition.publication_revision, initialEdition.revision);
+    assert.equal(prepared.edition.publisher_website_id, '1');
     const written = await Promise.all([post(observation), post(observation)]);
     assert.deepEqual(written.map(response => response.status).sort(), [200, 201]);
     assert.equal((await post({ ...observation, engine: 'claude', citation_urls: [] })).status, 201);
@@ -74,6 +81,7 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.equal(observations.find(item => item.engine === 'chatgpt').exact_page_cited, true);
     assert.equal(observations.find(item => item.engine === 'claude').exact_page_cited, null);
     assert.ok(observations.every(item => item.published_url === publishedUrl));
+    assert.ok(observations.every(item => item.observation_source === 'manual_admin'));
     assert.equal((await fetch(url)).status, 401);
     const publisherPackage = await fetch(new URL('/api/network/publisher/' + publisherToken + '/placements/1/package', url));
     assert.equal(publisherPackage.status, 200);
@@ -107,6 +115,18 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     await pool.query("UPDATE network_placements SET status='accepted',verified_at=NULL WHERE id=1");
     assert.equal((await post(observation)).status, 409);
     assert.equal((await (await fetch(url, { headers })).json()).observations.length, expectedCount);
+    await pool.query(`UPDATE network_publication_versions SET html='<article>Revised edition</article>',updated_at=clock_timestamp() WHERE id=1;
+      UPDATE network_placements SET status='verified',submitted_at=NOW()-INTERVAL '30 seconds',verified_at=NOW()-INTERVAL '20 seconds' WHERE id=1`);
+    const revisedEdition = (await (await fetch(url, { headers })).json()).edition;
+    assert.equal(revisedEdition.publication_version_id, prepared.edition.publication_version_id);
+    assert.notEqual(revisedEdition.publication_revision, prepared.edition.publication_revision);
+    const newObservation = { ...observation, observed_at: new Date().toISOString() };
+    assert.equal((await post({ ...newObservation, edition: prepared.edition })).status, 409);
+    assert.equal((await post({ ...newObservation, edition: revisedEdition })).status, 201);
+    const revisedHistory = (await (await fetch(url, { headers })).json()).observations;
+    assert.equal(revisedHistory.length, expectedCount + 1);
+    assert.equal(revisedHistory[0].publication_revision, revisedEdition.publication_revision);
+    assert.ok(revisedHistory.slice(1).every(item => item.publication_revision === initialEdition.revision));
     const remove = new URL('/api/network/admin/placements/1/delete-from-publishing', url);
     const removal = await fetch(remove, { method: 'POST', headers, body: '{"confirm":true}' });
     assert.equal(removal.status, 409);

@@ -49,6 +49,20 @@ function parseObservation(body) {
   };
 }
 
+const editionColumns = `pv.id AS publication_version_id,pv.publisher_website_id,
+  to_char(pv.updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS publication_revision`;
+
+function verifiedEdition(placement) {
+  if (placement.status !== 'verified' || !placement.verified_at || !placement.published_url ||
+      !placement.publication_version_id || !placement.publication_revision) return null;
+  return {
+    publication_version_id: placement.publication_version_id,
+    publisher_website_id: placement.publisher_website_id,
+    publication_revision: placement.publication_revision,
+    verified_at: placement.verified_at.toISOString()
+  };
+}
+
 function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema }) {
   app.get('/network/publishing/:placementId/post-publication-ai', (_req, res) =>
     res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow')
@@ -66,17 +80,22 @@ function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema 
   app.get(path, verifyAdmin, wrap(async (req, res) => {
     const id = Number(req.params.placementId);
     if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid placement' });
-    const { rows: [placement] } = await pool.query('SELECT status,published_url,verified_at FROM network_placements WHERE id=$1', [id]);
+    const { rows: [placement] } = await pool.query(`SELECT p.status,p.published_url,p.verified_at,${editionColumns}
+      FROM network_placements p LEFT JOIN network_publication_versions pv
+        ON pv.placement_id=p.id AND pv.publisher_website_id=p.publisher_website_id WHERE p.id=$1`, [id]);
     if (!placement) return res.status(404).json({ error: 'Placement not found' });
-    const { rows } = await pool.query(`SELECT id,published_url,metadata,created_at
+    const { rows } = await pool.query(`SELECT id,published_url,metadata,created_at,actor_type
       FROM network_placement_review_events WHERE placement_id=$1 AND event_type='ai_observation'
       ORDER BY created_at DESC,id DESC LIMIT 100`, [id]);
+    const edition = verifiedEdition(placement);
     res.set('Cache-Control','no-store').json({
-      can_record: placement.status === 'verified' && Boolean(placement.published_url && placement.verified_at),
+      can_record: Boolean(edition),
+      edition,
       published_url: placement.published_url,
-      observations: rows.map(({ id: eventId, published_url, created_at, metadata }) => {
+      observations: rows.map(({ id: eventId, published_url, created_at, actor_type, metadata }) => {
         const { observation_key, ...observation } = metadata;
-        return { id: eventId, published_url, created_at, ...observation };
+        return { id: eventId, published_url, created_at, ...observation,
+          observation_source: actor_type === 'admin' ? 'manual_admin' : null };
       })
     });
   }));
@@ -91,18 +110,23 @@ function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const { rows: [placement] } = await client.query(`SELECT p.status,p.published_url,p.submitted_at,p.verified_at,
-        pv.id AS publication_version_id FROM network_placements p
-        LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
-        WHERE p.id=$1 FOR UPDATE OF p`, [id]);
+      const { rows: [placement] } = await client.query(`SELECT p.status,p.published_url,p.submitted_at,p.verified_at,${editionColumns}
+        FROM network_placements p JOIN network_publication_versions pv
+          ON pv.placement_id=p.id AND pv.publisher_website_id=p.publisher_website_id
+        WHERE p.id=$1 FOR UPDATE OF p,pv`, [id]);
       if (!placement) {
+        const { rowCount } = await client.query('SELECT 1 FROM network_placements WHERE id=$1', [id]);
         await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Placement not found' });
+        return rowCount ? res.status(409).json({ error: 'A verified publisher edition is required.' }) :
+          res.status(404).json({ error: 'Placement not found' });
       }
+      const edition = verifiedEdition(placement);
+      const submittedEdition = req.body?.edition;
       let currentUrl;
       try { currentUrl = exactUrl(placement.published_url); } catch {}
-      if (placement.status !== 'verified' || !placement.verified_at || !placement.publication_version_id ||
-          currentUrl !== observation.published_url) {
+      if (!edition || currentUrl !== observation.published_url ||
+          (submittedEdition !== undefined && (!submittedEdition ||
+            Object.keys(edition).some(key => submittedEdition[key] !== edition[key])))) {
         await client.query('ROLLBACK');
         return res.status(409).json({ error: 'This observation requires the exact URL of the currently verified edition.' });
       }
@@ -112,7 +136,9 @@ function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema 
       }
       const { published_url, ...data } = observation;
       const metadata = { ...data, verified_at: placement.verified_at, publication_version_id: placement.publication_version_id };
+      // Compute the key before adding edition context so previously recorded observations stay replay-safe.
       metadata.observation_key = createHash('sha256').update(JSON.stringify([published_url, metadata])).digest('hex');
+      Object.assign(metadata, edition);
       const { rows: [existing] } = await client.query(`SELECT id FROM network_placement_review_events
         WHERE placement_id=$1 AND event_type='ai_observation' AND metadata->>'observation_key'=$2`, [id, metadata.observation_key]);
       const saved = existing || (await client.query(`INSERT INTO network_placement_review_events
