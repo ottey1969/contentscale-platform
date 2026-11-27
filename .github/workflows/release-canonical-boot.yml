@@ -26,6 +26,7 @@ on:
       - 'tests/e2e-network-contact-staging-browser.test.cjs'
       - 'tests/e2e-contact-promotion-postgres.test.cjs'
       - 'tests/e2e-contact-promotion-browser.test.cjs'
+      - 'tests/e2e-prospect-campaign-schema-postgres.test.cjs'
       - 'tests/e2e-tracker-registration-postgres.test.cjs'
       - 'tests/e2e-tracker-gsc-import-postgres.test.cjs'
       - 'tests/e2e-network-test-lab-browser.test.cjs'
@@ -150,6 +151,7 @@ jobs:
           PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-lead-crawler-admin-browser.test.cjs
           node --test tests/e2e-contact-promotion-postgres.test.cjs
           PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-contact-promotion-browser.test.cjs
+          node --test tests/e2e-prospect-campaign-schema-postgres.test.cjs
           node --test tests/e2e-tracker-registration-postgres.test.cjs tests/e2e-tracker-gsc-import-postgres.test.cjs
           NETWORK_E2E_BASE="$APP_URL" node --test tests/e2e-network-test-lab-browser.test.cjs
           node --test tests/e2e-network-precheck-postgres.test.cjs
