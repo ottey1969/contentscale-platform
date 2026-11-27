@@ -6,6 +6,9 @@ const growth = require('./growth-free/store.cjs');
 const { relatedChecks } = require('./growth-free/contentscore.cjs');
 
 const EVENT = 'proof_source_linked';
+const NETWORK_AI = 'network_ai';
+const NETWORK_RELEASE = 'proof_source_released';
+const NETWORK_REVOKE = 'proof_source_revoked';
 const TYPES = new Set(['free_growth', 'gsc_audit', 'quick_scan']);
 const EXPORT_SOURCES = new Set(['EXPORT', 'PAGE_EXPORT', 'PAGE_QUERY_EXPORT']);
 const exact = (value, url) => {
@@ -35,14 +38,45 @@ function auditPageEvidence(report, url) {
   return { observations, contentscore: history(report.contentscores?.[url]) };
 }
 
+async function loadNetworkAi(pool, page, ref) {
+  const { rows } = await pool.query(`
+    WITH latest AS (
+      SELECT event_type,event_data FROM tracker_case_study_events
+      WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND event_type IN ($5,$6)
+        AND source=$7 AND event_data->>'source_id'=$3 AND event_data->>'url'=$4
+      ORDER BY id DESC LIMIT 1
+    )
+    SELECT e.id::text,e.published_url,e.created_at AS recorded_at,
+      e.metadata->>'engine' AS engine,e.metadata->>'observed_at' AS observed_at,
+      e.metadata->>'publication_version_id' AS publication_version_id,
+      e.metadata->>'publication_revision' AS publication_revision,
+      CASE WHEN e.metadata->'exact_page_cited'='true'::jsonb THEN true END AS exact_page_cited,
+      'manual_admin' AS observation_source
+    FROM latest
+    JOIN network_placement_review_events e
+      ON e.placement_id=$3::bigint AND e.published_url=$4 AND e.id<=(latest.event_data->>'last_event_id')::bigint
+    JOIN network_placements p ON p.id=e.placement_id
+    WHERE latest.event_type=$5 AND e.event_type='ai_observation' AND e.actor_type='admin'
+      AND e.metadata->>'publisher_website_id'=p.publisher_website_id::text
+      AND p.publisher_website_id::text=latest.event_data->>'publisher_website_id'
+      AND e.metadata->>'publication_version_id'=latest.event_data->>'publication_version_id'
+      AND e.metadata->>'publication_revision' IS NOT NULL
+    ORDER BY e.created_at DESC,e.id DESC`, [page.clientId, page.pageId, ref.source_id, ref.url,
+    NETWORK_RELEASE, NETWORK_REVOKE, NETWORK_AI]);
+  return rows;
+}
+
 async function loadProofSources(pool, { clientId, pageId, url, events }) {
-  const out = { free_growth: [], gsc_audit: [], quick_scan: [], prospect_research: [] };
+  const out = { free_growth: [], gsc_audit: [], quick_scan: [], prospect_research: [], network_ai: [] };
   const directChecks = new Set();
   const invitedChecks = new Set();
   for (const event of events) {
     const ref = event.event_data;
-    if (event.event_type !== EVENT || !TYPES.has(ref?.type) || ref.url !== url) continue;
-    if (ref.type === 'gsc_audit') {
+    if (event.event_type !== EVENT || ref?.url !== url) continue;
+    if (ref.type === NETWORK_AI) {
+      out.network_ai.push(...await loadNetworkAi(pool, { clientId, pageId }, ref));
+    } else if (!TYPES.has(ref.type)) continue;
+    else if (ref.type === 'gsc_audit') {
       const row = (await pool.query(
         `SELECT r.report,r.created_at,CASE WHEN NOT EXISTS (
            SELECT 1 FROM gsc_reports other WHERE other.id<>r.id AND other.growth_invite=r.growth_invite
@@ -153,6 +187,36 @@ async function bindProofSource(db, page, type, sourceId, url) {
   return true;
 }
 
+// The caller holds the Network placement lock for both grant and revocation.
+async function releaseNetworkAi(db, { placementId, url, edition, trackerToken, trackerPageId }) {
+  const page = await ownedPage(db, trackerToken, trackerPageId, true);
+  if (!page) return 404;
+  if (!exact(page.url, url) || !await bindProofSource(db, page, NETWORK_AI, placementId, url)) return 409;
+  const { rows: [{ last_event_id }] } = await db.query(`SELECT COALESCE(MAX(id),0)::text AS last_event_id
+    FROM network_placement_review_events WHERE placement_id=$1 AND event_type='ai_observation' AND published_url=$2`,
+    [placementId, url]);
+  const ref = { type: NETWORK_AI, source_id: String(placementId), url, ...edition, last_event_id };
+  const { rows: [latest] } = await db.query(`SELECT event_type,event_data=$6::jsonb AS unchanged
+    FROM tracker_case_study_events WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND source=$3
+      AND event_type IN ($4,$5) AND event_data->>'source_id'=$6::jsonb->>'source_id'
+      AND event_data->>'url'=$6::jsonb->>'url'
+    ORDER BY id DESC LIMIT 1`, [page.tracker_client_id, page.id, NETWORK_AI, NETWORK_RELEASE, NETWORK_REVOKE, JSON.stringify(ref)]);
+  if (latest?.event_type !== NETWORK_RELEASE || !latest.unchanged) {
+    await db.query(`INSERT INTO tracker_case_study_events(tracker_client_id,tracker_page_id,event_type,source,event_data)
+      VALUES ($1,$2,$3,$4,$5::jsonb)`, [page.tracker_client_id, page.id, NETWORK_RELEASE, NETWORK_AI, JSON.stringify(ref)]);
+  }
+  return 200;
+}
+
+async function revokeNetworkAi(db, placementId) {
+  await db.query(`INSERT INTO tracker_case_study_events(tracker_client_id,tracker_page_id,event_type,source,event_data)
+    SELECT tracker_client_id,tracker_page_id,$3,$2,event_data FROM (
+      SELECT DISTINCT ON (tracker_client_id,tracker_page_id,event_data->>'url') tracker_client_id,tracker_page_id,event_type,event_data
+      FROM tracker_case_study_events WHERE source=$2 AND event_type IN ($3,$4) AND event_data->>'source_id'=$1
+      ORDER BY tracker_client_id,tracker_page_id,event_data->>'url',id DESC
+    ) AS latest WHERE event_type=$4`, [String(placementId), NETWORK_AI, NETWORK_REVOKE, NETWORK_RELEASE]);
+}
+
 async function quickScanForRegistration(db, token, domain) {
   const { rows: [scan] } = await db.query(`SELECT id,url,scan_result,scan_completed_at
     FROM prospect_quick_scans WHERE token=$1 AND tracker_interested IS TRUE AND audit20_status='ready'
@@ -249,4 +313,4 @@ function registerProofSourceRoutes(app, pool, { ensureCaseSchema, resolveQuickSc
 }
 
 module.exports = { EVENT, auditPageEvidence, loadProofSources, loadPageProofSources, registerProofSourceRoutes,
-  ensureProofSourceSchema, quickScanForRegistration, registerQuickScanProof };
+  ensureProofSourceSchema, quickScanForRegistration, registerQuickScanProof, releaseNetworkAi, revokeNetworkAi };
