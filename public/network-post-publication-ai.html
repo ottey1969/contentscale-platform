@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Network AI Evidence</title>
+<style>
+  :root { color-scheme: dark; font: 16px/1.55 system-ui; background: #0b1322; color: #edf3fc; }
+  main { max-width: 48rem; margin: 2rem auto; padding: 0 1rem; }
+  a { color: #8dd9ff; }
+  form, li { background: #13223a; padding: 1rem; border: 1px solid #385172; border-radius: .55rem; }
+  label { display: grid; gap: .3rem; margin-bottom: .8rem; }
+  input, textarea, select, button { font: inherit; padding: .45rem; border-radius: .3rem; }
+  textarea { resize: vertical; }
+  li { margin-bottom: .8rem; overflow-wrap: anywhere; }
+  ul { padding: 0; list-style: none; }
+  pre { white-space: pre-wrap; }
+  #liveUrl { overflow-wrap: anywhere; }
+  .row { display: flex; flex-wrap: wrap; gap: .8rem; }
+  [hidden] { display: none; }
+</style>
+</head>
+<body><main>
+  <a id="back">Publisher Edition</a>
+  <h1 id="title">Post-publication AI Evidence</h1>
+  <p id="liveUrl"></p>
+  <p id="message" role="status"></p>
+  <form id="observation" hidden>
+    <div class="row">
+      <label><span id="engineLabel">AI system</span><select name="engine">
+        <option value="chatgpt">ChatGPT</option><option value="claude">Claude</option>
+        <option value="perplexity">Perplexity</option><option value="copilot">Copilot</option>
+        <option value="google_aio">Google</option>
+      </select></label>
+      <label id="googleRow" hidden><span id="sourceLabel">Google source</span><select name="google_source" disabled>
+        <option value="ai_overview">AI Overview</option><option value="gemini">Gemini</option>
+      </select></label>
+      <label><span id="timeLabel">Observation time (local)</span><input name="observed_at" type="datetime-local" required></label>
+    </div>
+    <label><span id="queryLabel">Exact query</span><input name="query" maxlength="500" required></label>
+    <label><span id="evidenceLabel">Observed answer or result</span><textarea name="evidence" rows="5" maxlength="12000" required></textarea></label>
+    <label><span id="citationsLabel">Observed citation URLs (one per line)</span><textarea name="citations" rows="3"></textarea></label>
+    <button id="save" type="submit">Save observation</button>
+  </form>
+  <h2 id="historyLabel">Observation history</h2>
+  <ul id="history"></ul>
+</main>
+<script>
+(() => {
+  const copy = {
+    en: ['Post-publication AI Evidence','AI system','Google source','Observation time (local)','Exact query',
+      'Observed answer or result','Observed citation URLs (one per line)','Save observation','Observation history',
+      'Exact page cited','Exact citation unconfirmed','Sign in as a Network admin to review this placement.',
+      'Recording opens after live verification.','Observation saved.','Observed answer','Publisher Edition'],
+    nl: ['AI Evidence na publicatie','AI-systeem','Google-bron','Tijdstip van waarneming (lokaal)','Exacte zoekvraag',
+      'Waargenomen antwoord of resultaat','Waargenomen citatie-URL’s (één per regel)','Waarneming opslaan','Waarnemingen',
+      'Exacte pagina geciteerd','Exacte citatie onbevestigd','Log in als Network-beheerder om deze plaatsing te bekijken.',
+      'Waarnemingen vastleggen is mogelijk na live verificatie.','Waarneming opgeslagen.','Waargenomen antwoord','Publisher Edition'],
+    es: ['Evidencia de IA tras la publicación','Sistema de IA','Fuente de Google','Hora de la observación (local)','Consulta exacta',
+      'Respuesta o resultado observado','URL de citas observadas (una por línea)','Guardar observación','Historial de observaciones',
+      'Página exacta citada','Cita exacta sin confirmar','Inicia sesión como administrador de Network para revisar esta publicación.',
+      'El registro se habilita tras la verificación en vivo.','Observación guardada.','Respuesta observada','Edición del editor']
+  };
+  const lang = navigator.language.split('-')[0], t = copy[lang] || copy.en;
+  document.documentElement.lang = copy[lang] ? lang : 'en';
+  document.title = t[0];
+  const byId = id => document.getElementById(id);
+  ['title','engineLabel','sourceLabel','timeLabel','queryLabel','evidenceLabel','citationsLabel','save','historyLabel']
+    .forEach((id, index) => { byId(id).textContent = t[index]; });
+  const id = location.pathname.split('/')[3], endpoint = '/api/network/admin/publications/' + encodeURIComponent(id) + '/post-publication-ai';
+  const form = byId('observation'), history = byId('history'), message = byId('message');
+  let publishedUrl;
+  byId('back').href = '/network/publishing/' + encodeURIComponent(id);
+  byId('back').textContent = t[15];
+  function showGoogleSource() {
+    const show = form.elements.engine.value === 'google_aio';
+    byId('googleRow').hidden = !show;
+    form.elements.google_source.disabled = !show;
+  }
+  form.elements.engine.addEventListener('change', showGoogleSource);
+  async function api(options) {
+    const response = await fetch(endpoint, { cache: 'no-store', ...options, headers: {
+      'x-admin-key': localStorage.getItem('admin_id') || '', 'Content-Type': 'application/json'
+    } });
+    if ([401, 403].includes(response.status)) throw Error(t[11]);
+    const data = await response.json();
+    if (!response.ok) throw Error(data.error);
+    return data;
+  }
+  async function load() {
+    const data = await api();
+    publishedUrl = data.published_url;
+    byId('liveUrl').textContent = publishedUrl || '';
+    form.hidden = !data.can_record;
+    history.replaceChildren();
+    for (const observation of data.observations) {
+      const item = document.createElement('li'), details = document.createElement('details');
+      const summary = document.createElement('summary'), raw = document.createElement('pre');
+      item.textContent = [observation.engine, observation.google_source, observation.observed_at,
+        observation.published_url, observation.query, t[observation.exact_page_cited ? 9 : 10]].filter(Boolean).join(' · ');
+      summary.textContent = t[14];
+      raw.textContent = [observation.evidence, ...observation.citation_urls].join('\n');
+      details.append(summary, raw);
+      item.append(details);
+      history.append(item);
+    }
+    if (!data.can_record) message.textContent = t[12];
+  }
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(form));
+    const button = byId('save');
+    button.disabled = true;
+    try {
+      const { citations, ...observation } = data;
+      await api({ method: 'POST', body: JSON.stringify({ ...observation, published_url: publishedUrl,
+        observed_at: new Date(observation.observed_at).toISOString(),
+        citation_urls: citations.split(/\r?\n/).map(url => url.trim()).filter(Boolean) }) });
+      form.reset();
+      showGoogleSource();
+      await load();
+      message.textContent = t[13];
+    } catch (error) { message.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+  showGoogleSource();
+  load().catch(error => { message.textContent = error.message; });
+})();
+</script>
+</body>
+</html>

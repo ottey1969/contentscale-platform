@@ -10,6 +10,8 @@ on:
       - 'src/network-contact-staging-admin.cjs'
       - 'public/network-acquisition.html'
       - 'src/network/register-network.js'
+      - 'src/network/post-publication-ai.cjs'
+      - 'public/network-post-publication-ai.html'
       - 'src/network-publication-monitor.cjs'
       - 'src/network-maps-acquisition.cjs'
       - 'src/tracker-growth-execution.cjs'
@@ -27,6 +29,7 @@ on:
       - 'tests/e2e-tracker-gsc-import-postgres.test.cjs'
       - 'tests/e2e-network-test-lab-browser.test.cjs'
       - 'tests/e2e-network-precheck-postgres.test.cjs'
+      - 'tests/e2e-network-post-publication-ai.test.cjs'
       - 'tests/network-prewrite-route-gates.test.cjs'
       - 'tests/fixtures/staging-boot-schema.sql'
       - 'tests/staging-boot-no-egress.cjs'
@@ -148,6 +151,7 @@ jobs:
           node --test tests/e2e-tracker-registration-postgres.test.cjs tests/e2e-tracker-gsc-import-postgres.test.cjs
           NETWORK_E2E_BASE="$APP_URL" node --test tests/e2e-network-test-lab-browser.test.cjs
           node --test tests/e2e-network-precheck-postgres.test.cjs
+          NETWORK_POST_AI_BROWSER=1 node --test tests/e2e-network-post-publication-ai.test.cjs
           node --test tests/network-prewrite-route-gates.test.cjs
       - name: Writable Case Study baseline and replay on disposable PostgreSQL (rollback)
         run: node tests/e2e-case-study-postgres.cjs

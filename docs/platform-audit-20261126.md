@@ -227,3 +227,13 @@ De gerichte regressierun slaagde met 90 van 90. Daarin zijn de bestaande, in de 
 De publieke PRT-pagina en de variant met een hoofdletter in het pad gaven beide HTTP 200. De variant verwees in de canonical-tag naar de oorspronkelijke PRT-URL. Dat signaal geldt voor deze website. De audit heeft alleen de publieke HTML opgevraagd. De private baseline en historische cachekopieën in productie zijn niet ingezien. [Publieke PRT-pagina](https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/)
 
 De integratietests gebruiken een geïsoleerde database met een echte Chromium-browser en afgeschermde externe providers. GitHub CI toont de afzonderlijke browser- en PostgreSQL-runs per commit. [PR #571](https://github.com/ottey1969/contentscale-platform/pull/571/checks)
+
+### Network AI Evidence na publicatie
+
+De canonieke Network-reviewhistorie bevat een apart gebeurtenistype voor handmatige AI-waarnemingen. Alleen een beheerder kan een waarneming vastleggen, aan de huidige geverifieerde editie en de exacte live URL. De aanvraag bewaart de werkelijk geobserveerde zoekvraag, bron, tijd en citatie-URL’s. Een niet-aangetroffen exacte citatie blijft onbevestigd. Gelijktijdige herhaling schrijft één gebeurtenis. De route wijzigt de Brief, Publisher Edition en eerdere review niet. De waarnemingen blijven beschikbaar na heropening en blokkeren verwijdering van de historische plaatsing. De bestaande publisherreview bevat geen ruwe AI-antwoorden.
+
+De PostgreSQL-regressie oefent upgrades van de bestaande reviewtabel, autorisatie, URL-hoofdletters, chronologie, herhaling en historie uit. Chromium legt in de Nederlandstalige mobiele beheerinterface een waarneming vast en leest deze na herladen terug. De geautoriseerde projectie naar Tracker staat open.
+
+### LinkedPod Boost in Neon
+
+De opgegeven inventaris van `neondb` biedt een doel voor een geautoriseerde export. In deze sessie zijn geen Neon-connector, geautoriseerde databaseverbinding of schema-export aangetroffen. Geen tabeldata uitgelezen. De acht tabeldefinities zijn nodig voor de geïsoleerde schedulertest.
