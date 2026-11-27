@@ -26,7 +26,7 @@ test('proof linking requires both capabilities and never updates the protected b
   const express = require('express');
   const request = require('supertest');
   const { randomBytes } = require('node:crypto');
-  const { registerProofSourceRoutes, loadProofSources } = require('../src/tracker-proof-sources.cjs');
+  const { registerProofSourceRoutes, loadProofSources, linkFreeGrowthProof } = require('../src/tracker-proof-sources.cjs');
   const schema = 'proof_sources_' + randomBytes(8).toString('hex');
   const owner = new Pool({ connectionString: dbUrl });
   const pool = new Pool({ connectionString: dbUrl, options: '-c search_path=' + schema, max: 1 });
@@ -78,6 +78,14 @@ test('proof linking requires both capabilities and never updates the protected b
     const proof = await loadProofSources(pool, { clientId: 1, pageId: 5, url, events });
     assert.equal(proof.gsc_audit[0].observations[0].clicks, 0);
     assert.equal(proof.free_growth[0].query, 'query');
+    const firstToken = 'a'.repeat(48), secondToken = 'b'.repeat(48);
+    await pool.query("UPDATE tracker_clients SET token=$1 WHERE id=1", [firstToken]);
+    await pool.query("UPDATE tracker_clients SET token=$1 WHERE id=2", [secondToken]);
+    assert.equal(await linkFreeGrowthProof(pool, { token: firstToken, url: url.replace(/\/$/, '') + '/different', checkId: 1 }), null);
+    assert.equal(await linkFreeGrowthProof(pool, { token: secondToken, url, checkId: 1 }), null);
+    assert.equal(await linkFreeGrowthProof(pool, { token: firstToken, url, checkId: 1 }), '/track/' + firstToken + '?page=5');
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM tracker_case_study_events')).rows[0].n, 2);
+    await pool.query("UPDATE tracker_clients SET token=CASE id WHEN 1 THEN 'first' ELSE 'second' END");
     const second = { period: { start: '2026-01-03', end: '2026-01-04' }, pages: [{ url, clicks: null, impressions: 12 }] };
     const third = { period: { start: '2026-01-05', end: '2026-01-06' }, pages: [{ url, clicks: 1, impressions: 14 }] };
     await auditStore.setAfter(pool, 1, second);

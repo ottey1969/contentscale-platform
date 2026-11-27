@@ -271,6 +271,39 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null,note=nul
 }
 const DUE_REMINDER_SQL = `reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL
    AND reminder_attempts<3 AND reminder_dispatch_state IS NULL AND status='DONE'`;
+async function recordImplementationReport(pool,checkId,report){
+ return (await pool.query(`UPDATE growth_free_checks SET publication_history=
+   COALESCE(publication_history,'[]'::jsonb)
+   || CASE WHEN published_on IS NOT NULL AND jsonb_array_length(COALESCE(publication_history,'[]'::jsonb))=0
+        THEN jsonb_build_array(jsonb_build_object('recorded_at',NULL,'published_on',published_on::text,'summary',published_note,'source','legacy','verified',false,'report',NULL))
+        ELSE '[]'::jsonb END
+   || CASE WHEN EXISTS (
+     SELECT 1 FROM jsonb_array_elements(COALESCE(publication_history,'[]'::jsonb)) h WHERE h->'report'=$2::jsonb
+   ) THEN '[]'::jsonb ELSE jsonb_build_array(jsonb_build_object(
+     'recorded_at',to_char(NOW() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),'published_on',NULL,'summary',$2::jsonb->>'summary','source','external_ai','report',$2::jsonb
+   )) END
+   WHERE id=$1 AND status='DONE' RETURNING publication_history`,[checkId,JSON.stringify(report)])).rows[0]||null;
+}
+
+async function recordPublicationVerification(pool,checkId,index,record,proof){
+ if(index<0){
+  const entry={...record,live_verification_history:[proof]};
+  return (await pool.query(`UPDATE growth_free_checks
+    SET publication_history=COALESCE(publication_history,'[]'::jsonb)||jsonb_build_array($2::jsonb)
+    WHERE id=$1 AND status='DONE' AND published_on::text=$3 AND published_note IS NOT DISTINCT FROM $4::text
+      AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(publication_history) h WHERE h->>'published_on'=$3)
+    RETURNING publication_history`,[checkId,JSON.stringify(entry),record.published_on,record.summary])).rows[0]||null;
+ }
+ const path=[String(index),'live_verification_history'];
+ return (await pool.query(`UPDATE growth_free_checks SET publication_history=jsonb_set(
+   publication_history,$2::text[],COALESCE(publication_history #> $2::text[],'[]'::jsonb)||jsonb_build_array($3::jsonb),true)
+   WHERE id=$1 AND status='DONE' AND published_on::text=$4
+     AND (publication_history -> $5::int)=$6::jsonb
+     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(publication_history) WITH ORDINALITY h(item,n)
+                      WHERE h.n > $5::int+1 AND h.item->>'published_on'=$4)
+   RETURNING publication_history`,[checkId,path,JSON.stringify(proof),record.published_on,index,JSON.stringify(record)])).rows[0]||null;
+}
+
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
  // A stopped worker may have dispatched successfully before it lost its response.
  await pool.query(`UPDATE growth_free_checks SET reminder_dispatch_state='unknown'
@@ -404,4 +437,4 @@ async function appendContentScore(pool,{checkId,result}){
  const row=(await pool.query(`UPDATE growth_free_checks SET contentscore_history=COALESCE(contentscore_history,'[]'::jsonb)||jsonb_build_array($2::jsonb) WHERE id=$1 AND status='DONE' RETURNING contentscore_history`,[checkId,JSON.stringify(result)])).rows[0];
  return row?row.contentscore_history:null;
 }
-module.exports={appendContentScore,treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,claimReminder,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,listAiAnswerObservations,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={recordImplementationReport,recordPublicationVerification,appendContentScore,treatedQuestions,saveImplementation,latestDoneFor,answerUsedForOtherQuery,importAiAnswersFromCheck,writesToday,saveSelection,setPublication,dueReminders,claimReminder,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,listAiAnswerObservations,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

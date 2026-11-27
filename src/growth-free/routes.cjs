@@ -959,23 +959,92 @@ function syncRewrite(){var left=Number(d.writing&&d.writing.remaining||0);
 function fmtD(x){try{return new Date(String(x).slice(0,10)+'T12:00:00Z').toLocaleDateString(PAGE_LANG==='en'?'en-US':PAGE_LANG,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})}catch(e){return String(x)}}
 function sideHtml(label,w,x,undated){if(!x)return '<div><small>'+label+'</small><strong>'+(undated?'Export uploaded, dates unknown':'No export yet')+'</strong><small>'+(undated?'Your export ('+esc(undated.totals&&undated.totals.impressions)+' shown · '+esc(undated.totals&&undated.totals.clicks)+' clicks) does not say which dates it covers, so it is not placed here. Upload the same ZIP again (the dates are now read from its date filter), or export ':'Upload an export for ')+esc(fmtD(w.start))+' – '+esc(fmtD(w.end))+', filtered on exactly this page.</small></div>';
  var T=x.totals||{};return '<div><small>'+label+' · '+esc(x.period.start)+' – '+esc(x.period.end)+(x.source==='GSC_REPORT'?'</small><small>From your GSC report “'+esc(x.report_title||'')+'”':'')+(x.period.inferred?' (dates from “'+esc(x.period.inferred)+'” and the export date)':'')+'</small><strong>'+esc(T.impressions)+' shown · '+esc(T.clicks)+' clicks</strong><small>'+(T.position==null?'':'average position '+esc(T.position)+' · ')+(x.search_term_row?'your search term: '+esc(x.search_term_row.impressions)+' shown, '+esc(x.search_term_row.clicks)+' clicks':'your search term is not in this export')+(x.matches_window?'':' · not exactly the 4 weeks '+(label==='Before'?'before':'after')+' the update')+'</small></div>'}
-function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">Record publication and compare results</h2>';
+var proofLabels={
+ en:{title:'Proof & History',baseline:'Original baseline',gsc:'Search Console',impressions:'Impressions',clicks:'Clicks',position:'Average position',ai:'AI research',actions:'Recommendations',records:'Implementation & publication',reportForm:'Implementation Report',paste:'Paste the external AI JSON report',save:'Save implementation report',pending:'Publication unconfirmed',verified:'Live text verified',verify:'Verify live text',excerpt:'Paste at least 200 consecutive characters of changed text from the published page',failed:'Could not verify that text on this exact page.',report:'Download owner report',continue:'Continue with Tracker',view:'View in Tracker',link:'Private Tracker link for this page',connect:'Link this research',about:'Explore Tracker',denied:'Could not link this research to an authorized Tracker page.',unknown:'No evidence recorded yet'},
+ nl:{title:'Bewijs en historie',baseline:'Oorspronkelijke nulmeting',gsc:'Search Console',impressions:'Vertoningen',clicks:'Klikken',position:'Gemiddelde positie',ai:'AI-onderzoek',actions:'Aanbevelingen',records:'Implementatie en publicatie',reportForm:'Implementatierapport',paste:'Plak het JSON-rapport van de externe AI',save:'Sla het implementatierapport op',pending:'Publicatie niet bevestigd',verified:'Live tekst geverifieerd',verify:'Verifieer live tekst',excerpt:'Plak minimaal 200 aaneengesloten tekens van de gewijzigde tekst op de gepubliceerde pagina',failed:'Deze tekst kon niet worden geverifieerd op deze exacte pagina.',report:'Download het eigenaarrapport',continue:'Verder met Tracker',view:'Bekijk in Tracker',link:'Privélink van Tracker voor deze pagina',connect:'Koppel dit onderzoek',about:'Ontdek Tracker',denied:'Dit onderzoek kon niet worden gekoppeld aan een geautoriseerde Tracker-pagina.',unknown:'Nog geen bewijs vastgelegd'},
+ es:{title:'Evidencias e historial',baseline:'Medición inicial',gsc:'Search Console',impressions:'Impresiones',clicks:'Clics',position:'Posición media',ai:'Investigación con IA',actions:'Recomendaciones',records:'Implementación y publicación',reportForm:'Informe de implementación',paste:'Pega el informe JSON de la IA externa',save:'Guardar el informe de implementación',pending:'Publicación sin confirmar',verified:'Texto publicado verificado',verify:'Verificar el texto publicado',excerpt:'Pega al menos 200 caracteres consecutivos del texto modificado en la página publicada',failed:'No se pudo verificar ese texto en esta página exacta.',report:'Descargar informe para el propietario',continue:'Continuar con Tracker',view:'Ver en Tracker',link:'Enlace privado de Tracker para esta página',connect:'Vincular este análisis',about:'Conoce Tracker',denied:'No se pudo vincular este análisis con una página autorizada de Tracker.',unknown:'Aún no hay evidencias registradas'}
+};
+var proofText=proofLabels[PAGE_LANG]||proofLabels.en;
+function proofOverview(p){
+ if(!p)return '';
+ var l=proofText,b=p.baseline,latest=p.gsc&&p.gsc.latest,answers=(p.ai&&p.ai.answers)||[];
+ var actions=((p.recommendations&&p.recommendations.items)||[]).filter(function(x){return x.title}).slice(0,5);
+ var applied=Object.values(p.implementation||{}).filter(function(x){return x.done&&x.title});
+ var h='<h2 id="proofTitle" data-no-translate>'+esc(l.title)+'</h2><h3 data-no-translate>'+esc(l.baseline)+'</h3><p>'+esc(b.url)+' · '+esc(b.finished_at||l.unknown)+'</p>'+
+  (b.headline?'<p>'+esc(b.headline)+'</p>':'');
+ h+='<h3 data-no-translate><a href="#stepResearch" data-research-tab="gsc">'+esc(l.gsc)+'</a></h3>';
+ if(latest&&latest.status==='VERIFIED_FOR_PAGE'&&latest.totals){
+  var totals=latest.totals;
+  var metrics=[[l.impressions,totals.impressions],[l.clicks,totals.clicks],[l.position,totals.position]];
+  if(totals.impressions>0&&totals.clicks!=null)metrics.push(['CTR',new Intl.NumberFormat(PAGE_LANG,{style:'percent',maximumFractionDigits:2}).format(totals.clicks/totals.impressions)]);
+  if(latest.period)h+='<p>'+esc(latest.period.start)+' – '+esc(latest.period.end)+'</p>';
+  h+='<ul data-no-translate>'+metrics.map(function(x){return '<li>'+esc(x[0])+' · '+esc(x[1]==null?'—':x[1])+'</li>'}).join('')+'</ul>';
+ }else h+='<p class="muted" data-no-translate>'+esc(l.unknown)+'</p>';
+ h+='<h3 data-no-translate><a href="#freeAiResearch">'+esc(l.ai)+'</a></h3>';
+ h+=answers.length?'<ul>'+answers.map(function(x){return '<li>'+esc(x.engine)+' · '+esc(x.recorded_at)+'</li>'}).join('')+'</ul>':'<p class="muted" data-no-translate>'+esc(l.unknown)+'</p>';
+ h+='<h3 data-no-translate><a href="#stepReview">'+esc(l.actions)+'</a></h3>';
+ h+=actions.length?'<ul>'+actions.map(function(x){return '<li>'+esc(x.title)+'</li>'}).join('')+'</ul>':'<p class="muted" data-no-translate>'+esc(l.unknown)+'</p>';
+ if(applied.length)h+='<ul>'+applied.map(function(x){return '<li>✓ '+esc(x.title)+' · '+esc(x.at||'')+'</li>'}).join('')+'</ul>';
+ return h;
+}
+var proofTrackerHref='';
+function trackerProofHtml(){
+ var l=proofText;
+ return '<p data-no-translate><a id="proofTrackerView" class="btn ghost" href="'+esc(proofTrackerHref||'#')+'"'+(proofTrackerHref?'':' hidden')+'>'+esc(l.view)+'</a>'+
+  '<button id="proofTrackerOpen" type="button" class="ghost"'+(proofTrackerHref?' hidden':'')+'>'+esc(l.continue)+'</button></p>'+
+  '<form id="proofTrackerForm" hidden data-no-translate><label>'+esc(l.link)+'<input type="url" name="link" required autocomplete="off"></label>'+
+  '<p><button type="submit" class="ghost">'+esc(l.connect)+'</button> <a href="https://contentscale.site/free-ai-citations-tracker/" target="_blank" rel="noopener noreferrer">'+esc(l.about)+'</a> <small role="status"></small></p></form>';
+}
+function wireTrackerProof(){
+ var open=document.getElementById('proofTrackerOpen'),form=document.getElementById('proofTrackerForm');
+ if(!open||!form)return;
+ open.onclick=function(){form.hidden=false;form.elements.link.focus()};
+ form.onsubmit=async function(e){
+  e.preventDefault();
+  var status=form.querySelector('[role=status]'),submit=form.querySelector('button');
+  submit.disabled=true;status.textContent='';
+  try{
+   var u=new URL(form.elements.link.value);
+   var match=/^[/]track[/]([a-f0-9]{48})[/]?$/.exec(u.pathname);
+   if((u.origin!==location.origin&&u.origin!=='https://app.contentscale.site')||!match)throw Error();
+   var r=await fetch(API+'/tracker'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:match[1]})});
+   var d=await r.json();
+   if(!r.ok||!d.success)throw Error();
+   proofTrackerHref=d.href;
+   var view=document.getElementById('proofTrackerView');
+   view.href=proofTrackerHref;view.hidden=false;open.hidden=true;form.reset();form.hidden=true;
+  }catch(e){status.textContent=proofText.denied}finally{submit.disabled=false}
+ };
+}
+function publicationHistoryHtml(p,g){var h='';
+ if((p.history||[]).length){h+='<details><summary><strong>Implementation history ('+esc(p.history.length)+')</strong></summary><p class="muted">Previous records remain available. Publication declarations are not independent live verification.</p>';(p.history||[]).slice().reverse().forEach(function(item){h+='<div class="card"><strong>'+esc(item.published_on||proofText.pending)+'</strong><p data-no-translate>'+esc(item.summary||'No change summary recorded')+'</p>';if(item.report){h+='<p class="muted">'+esc((item.report.change_types||[]).join(', '))+' · '+esc(item.report.published_at||'')+'</p><p data-no-translate>'+esc(item.report.evidence||'')+'</p><label>Saved implementation report (JSON)<textarea rows="5" readonly data-no-translate>'+esc(JSON.stringify(item.report,null,2))+'</textarea></label>';if(item.owner_report)h+='<label>Website owner change report<textarea rows="8" readonly data-no-translate>'+esc(item.owner_report)+'</textarea></label>'}(item.live_verification_history||[]).forEach(function(v){h+='<p data-no-translate><strong>'+esc(proofText.verified)+'</strong> · '+esc(v.observed_at)+' · '+esc(v.url)+'</p>'});var cmp=item.published_on&&(g&&g.historical_comparisons||[]).find(function(x){return x.published_on===item.published_on});if(cmp){h+='<h3>Google Search performance for this publication date</h3><div class="grid two">'+sideHtml('Before',cmp.windows.before,cmp.before,null)+sideHtml('After',cmp.windows.after,cmp.after,null)+'</div><p class="muted">'+esc(cmp.note)+'</p>';if(cmp.overlapping_publications.length)h+='<p class="note">Other recorded changes fall in this measurement window ('+esc(cmp.overlapping_publications.join(', '))+'). Their effects cannot be isolated.</p>'}h+='</div>'});h+='</details>'}
+ return h}
+function pubHtml(p,g){if(!p)return '';var h='<h3 id="published" data-no-translate>'+esc(proofText.records)+'</h3>';
  var today=new Date().toISOString().slice(0,10);
- if((p.history||[]).length){h+='<details><summary><strong>Implementation history ('+esc(p.history.length)+')</strong></summary><p class="muted">Previous records remain available. Publication declarations are not independent live verification.</p>';(p.history||[]).slice().reverse().forEach(function(item){h+='<div class="card"><strong>'+esc(item.published_on||'Unknown date')+'</strong><p data-no-translate>'+esc(item.summary||'No change summary recorded')+'</p>';if(item.report){h+='<p class="muted">'+esc((item.report.change_types||[]).join(', '))+' · '+esc(item.report.published_at||'')+'</p><p data-no-translate>'+esc(item.report.evidence||'')+'</p><label>Saved implementation report (JSON)<textarea rows="5" readonly data-no-translate>'+esc(JSON.stringify(item.report,null,2))+'</textarea></label>';if(item.owner_report)h+='<label>Website owner change report<textarea rows="8" readonly data-no-translate>'+esc(item.owner_report)+'</textarea></label>'}var cmp=(g&&g.historical_comparisons||[]).find(function(x){return x.published_on===item.published_on});if(cmp){h+='<h3>Google Search performance for this publication date</h3><div class="grid two">'+sideHtml('Before',cmp.windows.before,cmp.before,null)+sideHtml('After',cmp.windows.after,cmp.after,null)+'</div><p class="muted">'+esc(cmp.note)+'</p>';if(cmp.overlapping_publications.length)h+='<p class="note">Other recorded changes fall in this measurement window ('+esc(cmp.overlapping_publications.join(', '))+'). Their effects cannot be isolated.</p>'}h+='</div>'});h+='</details>'}
+ h+='<div id="freePublicationHistory">'+publicationHistoryHtml(p,g)+'</div>';
+ h+='<details><summary data-no-translate>'+esc(proofText.reportForm)+'</summary><label for="pubReport" data-no-translate>'+esc(proofText.paste)+'</label><textarea id="pubReport" rows="7" maxlength="16000"></textarea><p><button type="button" class="ghost" id="pubImport" data-no-translate>'+esc(proofText.save)+'</button> <small id="pubImportStatus" role="status"></small></p><div id="pubOwnerReport" hidden><h3>Website owner change report</h3><label for="pubOwnerLang">Report language</label><select id="pubOwnerLang"><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select><textarea id="pubOwnerText" rows="10" readonly></textarea><p><button type="button" class="ghost" id="pubOwnerCopy">Copy owner report</button> <button type="button" class="ghost" id="pubOwnerDownload">Download owner report</button> <small id="pubOwnerStatus" role="status"></small></p></div><p class="muted">The report is saved in history. Confirm the date separately once changes go live.</p></details>';
  if(p.published_on){h+=(p.note?'<p data-no-translate>'+esc('What was changed: “'+p.note+'”')+'</p>':'');h+='<p class="lead"><strong>Published on '+esc(fmtD(p.published_on))+'.</strong> '+(p.stopped?'The reminder is stopped.':p.reminder_sent_at?'The reminder was sent on '+esc(fmtD(p.reminder_sent_at))+'.':p.reminder_due_at?'One e-mail on '+esc(fmtD(p.reminder_due_at))+' to '+esc(p.email_hint)+': which two periods to export from Search Console.':'No e-mail reminder.')+'</p>';
   if(!p.email_configured&&p.reminder_due_at&&!p.reminder_sent_at)h+='<p class="note">E-mail is not set up on this server, so no e-mail will arrive. Come back to this page after '+esc(fmtD(p.reminder_due_at))+'; the steps below work without it.</p>';
   var c=g&&g.comparison;if(c){h+='<h3>Before and after in Google (Search Console)</h3><div class="grid two">'+sideHtml('Before',c.windows.before,c.before,c.undated)+sideHtml('After',c.windows.after,c.after,null)+'</div><p class="muted">'+esc(c.note)+'</p>';
    if(!c.ready)h+='<p>Export from Search Console: Performance → filter Page → “Exact URL” → this page → Date → Custom → '+(c.before?'':'<strong>'+esc(fmtD(c.windows.before.start))+' – '+esc(fmtD(c.windows.before.end))+'</strong> (before)')+(!c.before&&!c.after?' and ':'')+(c.after?'':'<strong>'+esc(fmtD(c.windows.after.start))+' – '+esc(fmtD(c.windows.after.end))+'</strong> (after, once these 4 weeks have passed)')+' → Export → Download CSV. Upload it under Search Console above.</p>'}
+  h+='<form id="pubVerify" data-no-translate><label>'+esc(proofText.excerpt)+'<textarea name="excerpt" rows="3" minlength="200" maxlength="12000" required></textarea></label><p><button type="submit" class="ghost">'+esc(proofText.verify)+'</button> <small role="status"></small></p></form>';
   h+='<p><button type="button" class="ghost" id="pubChange">Change the date</button> <button type="button" class="ghost" id="pubClear">Remove the date</button> <small role="status" id="pubStatus"></small></p>';
   h+='<div id="pubForm" hidden>'}else{h+='<p>Your editor puts the package on your website; nothing is published by this check. Once the change is live, enter the date here. About four weeks later you get one e-mail with the two periods to compare in Search Console, and this page shows them side by side.</p><details id="pubOpen"><summary><strong>The change is live: enter the date</strong></summary><div id="pubForm">'}
  h+='<label for="pubDate">Date the page changes went live (UTC)</label><input id="pubDate" type="date" max="'+today+'" value="'+esc(p.published_on||'')+'">';
  h+='<label for="pubNote">What changes were implemented on this page?</label><p class="muted">Record actual page changes. Search Console and AI visibility measurements help assess their impact; these are not changes to Search Console itself.</p><textarea id="pubNote" rows="3" maxlength="500">'+esc(p.note||p.note_suggestion||'')+'</textarea>';
- h+='<details><summary>Import Implementation Report</summary><label for="pubReport">Paste the external AI JSON report</label><textarea id="pubReport" rows="7" maxlength="16000"></textarea><p><button type="button" class="ghost" id="pubImport">Import report into fields</button> <small id="pubImportStatus" role="status"></small></p><div id="pubOwnerReport" hidden><h3>Website owner change report</h3><label for="pubOwnerLang">Report language</label><select id="pubOwnerLang"><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select><textarea id="pubOwnerText" rows="10" readonly></textarea><p><button type="button" class="ghost" id="pubOwnerCopy">Copy owner report</button> <button type="button" class="ghost" id="pubOwnerDownload">Download owner report</button> <small id="pubOwnerStatus" role="status"></small></p></div><p class="muted">Import prepares the fields only. Review them before saving; an external AI report does not verify the live page.</p></details>';
+
  h+='<label class="check"><input type="checkbox" id="pubRemind" checked><span>E-mail me ('+esc(p.email_hint)+') once, about four weeks later. You can stop it with the link in the e-mail.</span></label>';
  h+='<p><button type="button" id="pubSave">Save the date</button> <small role="status" id="pubSaveStatus"></small></p></div>'+(p.published_on?'':'</details>');
  return h}
-function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
- var reload=async function(){var d=await (await fetch(API+Q,{cache:'no-store'})).json();var box=document.getElementById('pubBox');if(box&&d.success){box.innerHTML=pubHtml(d.publication,d.gsc);wirePub()}var el=document.getElementById('published');if(el)el.scrollIntoView()};
+function wirePub(gsc){var save=document.getElementById('pubSave');if(!save)return;
+ var reload=async function(){var d=await (await fetch(API+Q,{cache:'no-store'})).json();var box=document.getElementById('pubBox');if(box&&d.success){box.innerHTML=pubHtml(d.publication,d.gsc);wirePub(d.gsc)}var el=document.getElementById('published');if(el)el.scrollIntoView()};
+ var verify=document.getElementById('pubVerify');
+ if(verify)verify.onsubmit=async function(e){e.preventDefault();var button=verify.querySelector('button'),st=verify.querySelector('[role=status]');
+  button.disabled=true;st.textContent='';
+  try{var r=await fetch(API+'/publication/verify'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({excerpt:verify.elements.excerpt.value})});
+   if(!r.ok)throw Error();await reload();document.querySelector('#pubVerify [role=status]').textContent=proofText.verified;
+  }catch(e){st.textContent=proofText.failed}finally{button.disabled=false}
+ };
  var imp=document.getElementById('pubImport'),ownerCopies=null,importedReport=null;
  var ownerLang=document.getElementById('pubOwnerLang'),ownerText=document.getElementById('pubOwnerText');
  if(ownerLang){ownerLang.value=['en','nl','es'].includes(PAGE_LANG)?PAGE_LANG:'en';ownerLang.onchange=function(){if(ownerCopies)ownerText.value=ownerCopies[ownerLang.value]||ownerCopies.en};
@@ -986,15 +1055,17 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
   var st=document.getElementById('pubImportStatus'),raw=document.getElementById('pubReport').value;
   imp.disabled=true;importedReport=null;ownerCopies=null;document.getElementById('pubOwnerReport').hidden=true;ownerText.value='';st.textContent='Validating report…';
   try{
-   var res=await fetch(API+'/implementation-report/preview'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({report:raw})});
+   var res=await fetch(API+'/implementation-report'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({report:raw})});
    var data=await res.json();if(!res.ok||!data.success)throw Error(data.error||'Invalid report');
    var report=data.report;
+   var history=document.getElementById('freePublicationHistory');if(history&&data.publication)history.innerHTML=publicationHistoryHtml(data.publication,gsc);
    ownerCopies=data.owner_reports;ownerText.value=ownerCopies[ownerLang.value]||ownerCopies.en;document.getElementById('pubOwnerReport').hidden=false;
-   if(report.status!=='published'){st.textContent='Owner report ready. Publication not confirmed; no publication date was filled.';return}
+   if(report.status!=='published'){st.textContent='Report saved in history. Publication unconfirmed.';return}
    var date=document.getElementById('pubDate'),note=document.getElementById('pubNote');
-   if((date.value||note.value)&&!confirm('Replace the current unsaved date and summary with this report?')){st.textContent='Import cancelled.';return}
+   if((date.value||note.value)&&!confirm('Replace the current unsaved date and summary with this report?')){st.textContent='Report saved in history. Publication fields unchanged.';return}
    date.value=report.published_on;note.value=report.summary;importedReport=report;
-   st.textContent='Report imported into fields. Review and save only if the page is live. Not independently verified.';
+   document.getElementById('pubForm').hidden=false;var publicationDetails=document.getElementById('pubOpen');if(publicationDetails)publicationDetails.open=true;
+   st.textContent='Report saved in history. Review and confirm the date once the page is live.';
   }catch(e){st.textContent=e.message||'Could not import report'}finally{imp.disabled=false}
  };
  var ch=document.getElementById('pubChange');if(ch)ch.onclick=function(){document.getElementById('pubForm').hidden=false};
@@ -1171,7 +1242,7 @@ function wireGraaf(d){
 }
 function researchNavHtml(){
  var l=({en:['Saved research & actions','Google research','AI research','Search Console','Recommendations','Write with AI','Editor brief','Publish & measure','GRAAF ContentScore'],nl:['Opgeslagen onderzoek en acties','Google-onderzoek','AI-onderzoek','Search Console','Aanbevelingen','Schrijven met AI','Editorbrief','Publiceren en meten','GRAAF ContentScore'],es:['Investigación guardada y acciones','Investigación de Google','Investigación de IA','Search Console','Recomendaciones','Redactar con IA','Informe editorial','Publicar y medir','GRAAF ContentScore']})[PAGE_LANG]||[];
- return '<nav id="growthResearchNav" aria-label="'+esc(l[0])+'" style="padding:12px;margin:12px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)"><strong>'+esc(l[0])+'</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"><a class="btn ghost" href="#google">'+esc(l[1])+'</a><a class="btn ghost" href="#freeAiResearch">'+esc(l[2])+'</a><a class="btn ghost" href="#stepResearch" data-research-tab="gsc">'+esc(l[3])+'</a><a class="btn ghost" href="#stepReview">'+esc(l[4])+'</a><a class="btn ghost" href="#stepPrepare">'+esc(l[5])+'</a><a class="btn ghost" href="#briefExport">'+esc(l[6])+'</a><a class="btn ghost" href="#stepPublish">'+esc(l[7])+'</a><a class="btn ghost" href="#graafGrowth">'+esc(l[8])+'</a></div></nav>';
+ return '<nav id="growthResearchNav" aria-label="'+esc(l[0])+'" style="padding:12px;margin:12px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)"><strong>'+esc(l[0])+'</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"><a class="btn ghost" href="#google">'+esc(l[1])+'</a><a class="btn ghost" href="#freeAiResearch">'+esc(l[2])+'</a><a class="btn ghost" href="#stepResearch" data-research-tab="gsc">'+esc(l[3])+'</a><a class="btn ghost" href="#stepReview">'+esc(l[4])+'</a><a class="btn ghost" href="#stepPrepare">'+esc(l[5])+'</a><a class="btn ghost" href="#briefExport">'+esc(l[6])+'</a><a class="btn ghost" href="#freeProofHistory">'+esc(proofText.title)+'</a><a class="btn ghost" href="#graafGrowth">'+esc(l[8])+'</a></div></nav>';
 }
 function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{};var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||'';AUTHOR_NAME=d.offer.author_name||'';AUTHOR_IMG=d.offer.author_image||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
@@ -1219,10 +1290,11 @@ function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{}
  h+='<section class="journey-section journey-static" id="briefExport"><div class="journey-head"><span class="journey-num">3</span><span><strong>Write it yourself: your brief for an editor or another AI tool</strong><small>Everything on this page in one text: the list, the sources and the saved AI answers.</small></span></div><div class="journey-body">'+
   '<p><small>'+(fc&&fc.enabled?'Pages read with Firecrawl: '+esc(fc.used)+' of '+esc(fc.attempted)+' · ':'')+'AI answers: '+esc(aiN)+' of 5</small></p>'+
   '<p><button type="button" class="ghost" id="briefCopyAll">Copy full editor / external AI brief</button> <button type="button" id="briefDownloadAll" class="btn">Download complete brief</button> <small id="briefExportStatus" role="status"></small></p></div></section>';
+ h+='<section class="card" id="freeProofHistory" aria-labelledby="proofTitle">'+proofOverview(d.proof_history);
  h+='<details id="stepPublish" class="journey-section"'+(published?' open':'')+'>'+stepSum(4,'Publish & measure',published?'Published on '+String(d.publication.published_on).slice(0,10)+' — compare before and after here':'After you put the text on your site: record the date',published)+'<div class="journey-body" id="pubBox">'+pubHtml(d.publication,d.gsc)+'</div></details>';
+ h+=graafHtml(d)+'<p data-no-translate><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>'+esc(proofText.report)+'</a></p>'+trackerProofHtml()+'</section>';
  h+='<div class="card hire-prominent" id="hire"><div class="hire-who">'+(AUTHOR_IMG?'<img src="'+esc(AUTHOR_IMG)+'" alt="'+esc(AUTHOR_NAME||BRAND)+'" width="64" height="64" loading="lazy" referrerpolicy="no-referrer">':'')+'<div><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Rather not do it yourself?</h2>'+(AUTHOR_NAME?'<p class="hire-name">'+esc(AUTHOR_NAME)+' · '+esc(BRAND)+'</p>':'')+'</div></div>'+String(SERVICE).split('\\n').map(function(l){return '<p>'+esc(l)+'</p>'}).join('')+'<p><button type="button" class="btn" id="hireOpen">Yes, do it for me</button>'+(CONTACT?' <a class="btn ghost" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a>':'')+'</p>'+
  '<form id="hf" hidden><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit" class="btn">Send my request</button> <small role="status" id="hs"></small></p></form></div>';
- h+=graafHtml(d);
  LAST_SELF=selfItems(s.gaps,d);h+=selfHtml(LAST_SELF);
  // The evidence: one tab per source, closed until opened (also by every "evidence" link).
  h+='<details id="stepResearch" class="card"><summary>What was checked — evidence (Google · Search Console)</summary><div class="rtabs" role="tablist"><button type="button" data-tab="google" aria-selected="true">Google</button><button type="button" data-tab="gsc" aria-selected="false">Search Console</button></div>';
@@ -1235,7 +1307,7 @@ function render(d){if(langRedirect(d))return;IMPLEMENTATION=d.implementation||{}
  h+='<details class="research-details" id="limits"><summary>Research scope and limitations</summary><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p></details>';
  h+=briefSourcesHtml(s,d);h+=ev;
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();wireGraaf(d);importLegacyDone();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':null;document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireCompleteBrief(s.gaps,s,d);wireSideBySide(d.competitors);wirePub(d.gsc);wireTrackerProof();wireSelf();wireGraaf(d);importLegacyDone();
  var ho=document.getElementById('hireOpen');if(ho)ho.onclick=function(){var f=document.getElementById('hf');f.hidden=false;ho.hidden=true;var n=f.querySelector('input[name=name]');if(n)n.focus()};
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
@@ -1560,7 +1632,7 @@ function competitorsOf(report,gaps){
  return {pages,side_by_side:pairs,missing:pages.reduce((n,p)=>n+p.headings.filter(h=>h.status==='MISSING').length,0),your_headings:ownHeadings.slice(0,20),coverage};
 }
 
-function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store,sendEmail=null,rankHandoff=null}={}){
+function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store,sendEmail=null,rankHandoff=null,ensureTrackerCaseSchema}={}){
  // Every message to a visitor in the visitor's language (owner 2026-11-12: "Spanish is Spanish"): the check's language,
  // else the language the request names, else the browser's.
  const uiLangOf=req=>formLang({query:(req.body&&req.body.lang)||(req.query&&req.query.lang),acceptLanguage:req.get&&req.get('accept-language')});
@@ -1986,6 +2058,19 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const writingInfo=(row,req)=>({allowed:writingAllowed(row,req),owner_unlocked:!!config.adminKey&&sessionValid(req),
   owner_login_available:!!config.adminKey&&config.writing!=='off',
   remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:withStyle(viewOf(row.written))});
+ async function proofHistoryOf(row,gsc,aiPart,measurements){
+  const {checked,headline,explanation}=row.summary||{};
+  let answers=aiPart?.answers||[];
+  if(typeof storage.listAiAnswerObservations==='function'){
+   try{answers=await storage.listAiAnswerObservations(pool,row.id)}catch{}
+  }
+  return {
+   baseline:{url:row.url,finished_at:row.finished_at,checked:checked||null,headline:headline||null,explanation:explanation||null},
+   gsc,ai:{summary:aiPart?.summary||null,gap:aiPart?.gap||null,answers:answers.map(({engine,parsed,created_at})=>({engine,parsed,recorded_at:created_at})),
+    automatic:row.report?.automatic_ai_answers?.gemini?{gemini:{status:row.report.automatic_ai_answers.gemini.status,source:row.report.automatic_ai_answers.gemini.source}}:null},
+   recommendations:row.summary?.gaps||null,implementation:row.implementation||{},publication:publicationOf(row),contentscore_history:measurements
+  };
+ }
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(req.query.identity==='page')return res.set('Cache-Control','no-store').json({success:true,url:row.url});
@@ -2004,7 +2089,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // One list, most to least important, from the observed research signals (owner 2026-11-19). Never a publish instruction.
    content_priorities:row.status==='DONE'?buildContentPriorities({summary:shown.summary,aiGap:shown.aiGap,report:row.report,bestOwnPage:bestOwn}):null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   contentscore_history:csHistory,contentscore_comparison:cs.compare(csHistory),implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
+   proof_history:row.status==='DONE'?await proofHistoryOf(row,gscPart,aiPart,csHistory):null,contentscore_history:csHistory,contentscore_comparison:cs.compare(csHistory),implementation:row.implementation||{},selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -2053,10 +2138,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   const [aiPart,gscPart,bestOwn]=await Promise.all([aiFor(row),gscFor(row),bestOwnFor(row)]);
   const report=row.report?.gsc_audit_evidence?{...row.report,gsc_audit_evidence:{...row.report.gsc_audit_evidence,report_id:undefined}}:row.report;
+  const cs=require('./contentscore.cjs');
+  const proof=await proofHistoryOf(row,gscPart,aiPart,cs.mergeHistory(row.url,row.contentscore_history,await cs.sharedHistory(pool,row)));
   res.set('Cache-Control','no-store').set('Content-Disposition',`attachment; filename="growth-check-${row.public_id}.json"`)
    .json({generated_by:config.brand+' free Growth check',url:row.url,search_term:row.query||null,checked_at:row.finished_at,
     disclaimer:'Research data only. No ranking or traffic increase is promised. '+(gscPart.latest?(gscPart.latest.used_in_research?'A Search Console export verified for this exact page was used.':gscPart.latest.status==='VERIFIED_FOR_PAGE'?'The latest page-verified Search Console export was not used in the original research.':'A Search Console export was uploaded but is not verified for this exact page; it was not used as evidence.'):'Google Search Console data was not used.'),
-    search_console:gscPart,
+    search_console:gscPart,proof_history:proof,
     selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart),
     content_priorities:buildContentPriorities({summary:row.summary,aiGap:aiPart&&aiPart.gap,report:row.report,bestOwnPage:bestOwn}),
     ai_answers:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,summary:aiPart.summary,
@@ -2185,6 +2272,50 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(!implementation)return res.status(409).json({success:false,error:'Confirmation not saved'});
    res.set('Cache-Control','no-store').json({success:true,implementation,note_suggestion:require('./publication-note.cjs').noteSuggestion({...row,implementation},row.ui_lang||'nl')});
   }catch(e){res.status(503).json({success:false,error:'Could not save the confirmation'})}
+ });
+ app.post(apiPath+'/checks/:id/implementation-report',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  const {parseImplementationReport,ownerReport}=require('../implementation-report.cjs');
+  let report;
+  try{report=parseImplementationReport(req.body?.report,row.url)}
+  catch(e){return res.status(400).json({success:false,error:e.message})}
+  try{
+   const saved=await storage.recordImplementationReport(pool,row.id,report);
+   if(!saved)return res.status(409).json({success:false,error:'Report not saved'});
+   const publication=publicationOf({...row,...saved});
+   res.set('Cache-Control','no-store').json({success:true,report,publication,owner_reports:Object.fromEntries(['en','nl','es'].map(lang=>[lang,ownerReport(report,lang)]))});
+  }catch(e){res.status(503).json({success:false,error:'Could not save the report'})}
+ });
+ app.post(apiPath+'/checks/:id/publication/verify',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  const history=row.publication_history||[];
+  const index=row.published_on?history.findLastIndex(entry=>entry.published_on===row.published_on):-1;
+  if(row.status!=='DONE'||!row.published_on)return res.status(409).json({success:false,error:'Record publication first'});
+  const record=index>=0?history[index]:{recorded_at:null,published_on:row.published_on,summary:row.published_note,source:'legacy',verified:false,report:null};
+  const excerpt=req.body?.excerpt;
+  if(typeof excerpt!=='string'||excerpt.trim().length<200||excerpt.length>12000)return res.status(400).json({success:false,error:'Enter 200–12000 characters of changed text'});
+  const escaped=excerpt.replace(/[&<>]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[char]));
+  try{
+   const {verifyApprovedContent}=require('../prewrite-implementation.cjs');
+   const {renderPublicGrowthPage}=require('../growth-safe-browser-renderer.cjs');
+   const proof=await verifyApprovedContent(row.url,'<p>'+escaped+'</p>',engineDeps.fetchLive||fetchPublicGrowthHtml,engineDeps.renderLive||renderPublicGrowthPage);
+   if(!proof?.content_check)return res.status(422).json({success:false,error:'Changed text could not be verified on this exact URL'});
+   const saved=await storage.recordPublicationVerification(pool,row.id,index,record,proof);
+   if(!saved)return res.status(409).json({success:false,error:'Publication changed during verification'});
+   res.set('Cache-Control','no-store').json({success:true,publication:publicationOf({...row,...saved})});
+  }catch(e){res.status(503).json({success:false,error:'Live verification is currently unavailable'})}
+ });
+ app.post(apiPath+'/checks/:id/tracker',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false});
+  const token=req.body?.token;
+  if(typeof token!=='string'||!/^[a-f0-9]{48}$/.test(token))return res.status(400).json({success:false});
+  try{
+   const linked=await require('../tracker-proof-sources.cjs').linkFreeGrowthProof(pool,{token,url:row.url,checkId:row.id,ensureCaseSchema:ensureTrackerCaseSchema});
+   if(!linked)return res.status(404).json({success:false});
+   res.set('Cache-Control','no-store').json({success:true,href:linked});
+  }catch(e){res.status(e.code==='42P01'?404:503).json({success:false})}
  });
  app.post(apiPath+'/checks/:id/implementation-report/preview',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
