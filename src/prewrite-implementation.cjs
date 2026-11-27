@@ -8,6 +8,7 @@ const { createHash } = require('node:crypto');
 const { fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
 const { renderPublicGrowthPage } = require('./growth-safe-browser-renderer.cjs');
 const { isBotCheck } = require('./gsc-report/site-audit.cjs');
+const { writerBrief } = require('./prewrite-quality.cjs');
 const { VERSION, exactUrl, parseImplementationReport, ownerReport } = require('./implementation-report.cjs');
 
 function resolveTarget(brief, domain) {
@@ -39,6 +40,9 @@ function readReport(raw, brief, domain, language) {
 }
 
 function publicationReport(raw, brief, domain, language) {
+  if (brief.missing_information?.state === 'needs_input') throw new Error('Confirm pricing evidence before publication');
+  if (brief.metadata_review?.issues?.length) throw new Error('Review the SEO metadata before publication');
+  if (brief.cannibalization_review?.state === 'needs_review') throw new Error('Review the overlapping publication plan first');
   const result = readReport(raw, brief, domain, language);
   if (result.report.status !== 'published') throw new Error('An explicit publication report is required');
   return result;
@@ -46,7 +50,8 @@ function publicationReport(raw, brief, domain, language) {
 
 function editorInstructions(brief, domain) {
   const { mode, url } = resolveTarget(brief, domain);
-  const actions = (Array.isArray(brief.surgical_changes) ? brief.surgical_changes : [])
+  const writer = writerBrief(brief);
+  const actions = (Array.isArray(writer.surgical_changes) ? writer.surgical_changes : [])
     .filter(item => typeof item?.change === 'string')
     .map(item => '- ' + [item.where, item.change].filter(value => typeof value === 'string').join(': '));
   return [
@@ -253,10 +258,9 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
       if (!row) return res.status(404).json({ success: false, error: 'Brief not found' });
       let instructions = null;
       try { instructions = editorInstructions(row.brief_json, row.domain); } catch {}
-      const { keyword, content_decision, search_intent, meta_package, ai_answer, opening_passage, page_blueprint, fact_safety } = row.brief_json;
       res.set('Cache-Control', 'no-store').json({
         success: true, instructions,
-        editor_brief: { keyword, content_decision, search_intent, meta_package, ai_answer, opening_passage, page_blueprint, fact_safety },
+        editor_brief: writerBrief(row.brief_json),
         history: row.implementation_reports.map(item => ({
           ...item, owner_report: ownerReport(item.report, row.language)
         }))

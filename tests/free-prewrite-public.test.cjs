@@ -49,11 +49,11 @@ test('private public briefs in Chromium use the canonical publication history fo
     app.use(express.static(require('node:path').join(__dirname, '../public')));
     registerFreePrewrite(app, pool, {
       discover: async () => ({ site, urls: [existingUrl] }),
-      generate: async ({ id, keyword }) => {
+      generate: async ({ id, keyword, intentOverride }) => {
         const decision = keyword === 'Existing' ? { recommended_treatment: 'EXPAND_EXISTING_PAGE', closest_existing_url: existingUrl }
           : { recommended_treatment: 'CREATE_NEW_PAGE' };
         await pool.query("UPDATE prewrite_briefs SET status='open',brief_json=$2 WHERE id=$1", [
-          id, { keyword, content_decision: decision, meta_package: { url_slug: 'planning-guide' }, generation_usage: { tokens: 123 } }
+          id, { keyword, search_intent: { primary: intentOverride || 'transactional', user_override: intentOverride }, content_decision: decision, meta_package: { url_slug: 'planning-guide' }, generation_usage: { tokens: 123 } }
         ]);
       },
       verification: { fetchHtml: async url => ({
@@ -88,6 +88,14 @@ test('private public briefs in Chromium use the canonical publication history fo
     for (const [lang, heading] of [['en', 'Proof & History'], ['nl', 'Bewijs en historie'], ['es', 'Evidencias e historial']]) {
       const page = await start(lang, 'Planning');
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+      if (lang === 'en') {
+        const original = page.url();
+        await page.locator('#intent-adjust select').selectOption('informational');
+        await page.locator('#intent-adjust button').click();
+        await page.waitForURL(url => url.href !== original);
+        await page.locator('#intent-adjust select').waitFor();
+        assert.equal(await page.locator('#intent-adjust select').inputValue(), 'informational');
+      }
       const privateUrl = page.url();
       assert.match(privateUrl, /#[a-f0-9]{64}$/);
       const auth = 'Bearer ' + new URL(privateUrl).hash.slice(1);
@@ -140,7 +148,7 @@ test('private public briefs in Chromium use the canonical publication history fo
     assert.deepEqual(report.body.proof_history.prewrite, result.body.proof_history.prewrite);
 
     const { rows } = await pool.query('SELECT client_id, tracker_page_id FROM prewrite_briefs');
-    assert.equal(rows.length, 4);
+    assert.equal(rows.length, 5);
     assert.ok(rows.every(row => row.client_id === null && row.tracker_page_id === null));
   } finally {
     await browser?.close();

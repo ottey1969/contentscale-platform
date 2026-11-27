@@ -14,12 +14,20 @@ const texts = {
   nl: ['Gratis Pre-Write Brief', 'Website', 'Onderwerp of klantvraag', 'Land voor zoekonderzoek', 'Maak een brief', 'Bewaar deze privélink om je rapport opnieuw te openen.', 'Onderzoek loopt…', 'Het onderzoek kon niet worden afgerond.', 'Open in Free Growth', 'Kopieer of download deze brief voor externe AI', 'Bewijs en historie', 'Plak minstens 200 tekens goedgekeurde paginatekst', 'Keur tekst goed', 'Implementatierapport (JSON)', 'Sla rapport op', 'Bevestig publicatie', 'Verifieer de livepagina', 'Opgeslagen', 'Verificatie in afwachting', 'Open een eerder rapport', 'Privélink naar rapport', 'Open'],
   es: ['Brief gratuito de Pre-Write', 'Sitio web', 'Tema o pregunta del cliente', 'País de búsqueda', 'Generar brief', 'Guarda este enlace privado para volver a abrir el informe.', 'Investigación en curso…', 'No se pudo completar la investigación.', 'Abrir en Free Growth', 'Copia o descarga este brief para la IA externa', 'Evidencias e historial', 'Pega al menos 200 caracteres de texto aprobado', 'Aprobar texto', 'Informe de implementación (JSON)', 'Guardar informe', 'Confirmar publicación', 'Verificar página publicada', 'Guardado', 'Verificación pendiente', 'Abrir un informe anterior', 'Enlace privado del informe', 'Abrir']
 };
+const intentLabels = {
+  en: ['Adjust search intent', 'Automatic', 'Learn or understand', 'Compare options', 'Use a tool or take action', 'Find a website'],
+  nl: ['Pas zoekintentie aan', 'Automatisch', 'Leren of begrijpen', 'Opties vergelijken', 'Tool gebruiken of actie ondernemen', 'Website vinden'],
+  es: ['Ajustar la intención de búsqueda', 'Automática', 'Aprender o entender', 'Comparar opciones', 'Usar una herramienta o actuar', 'Encontrar un sitio web']
+};
+const intents = ['', 'informational', 'commercial', 'transactional', 'navigational'];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const credentials = req => /^Bearer ([a-f0-9]{64})$/.exec(req.get('authorization') || '')?.[1];
 
 function page(lang, result) {
   const t = texts[lang];
-  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p><section id="decision" hidden></section>
+  const labels = intentLabels[lang];
+  const intent = `<label>${labels[0]}<select name="intent">${intents.map((value, index) => `<option value="${value}">${labels[index + 1]}</option>`).join('')}</select></label>`;
+  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p><section id="decision" hidden></section><form id="intent-adjust" hidden>${intent}<button>${labels[0]}</button></form>
     <section id="implementation" hidden><h2>${t[9]}</h2><textarea id="editor" rows="15" readonly></textarea><p><a id="download" download="pre-write-brief.txt">${t[9]}</a></p>
     <label>${t[11]}<textarea id="copy" rows="5" minlength="200" maxlength="12000"></textarea></label><button id="approve" type="button">${t[12]}</button>
     <label>${t[13]}<textarea id="report" rows="7" maxlength="16000"></textarea></label><button id="save" type="button">${t[14]}</button>
@@ -28,7 +36,7 @@ function page(lang, result) {
     `<form id="intake"><label>${t[1]}<input name="website" type="url" placeholder="https://" maxlength="500" required></label>
     <label>${t[2]}<input name="keyword" maxlength="300" required></label>
     <label>${t[3]}<input name="country" value="${{en:'US',nl:'NL',es:'ES'}[lang]}" pattern="[A-Za-z]{2}" maxlength="2" required></label>
-    <button>${t[4]}</button></form><p id="status" role="status"></p>
+    ${intent}<button>${t[4]}</button></form><p id="status" role="status"></p>
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
     <style>body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}input,textarea{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
@@ -46,7 +54,7 @@ function view(row, strip) {
       market: String(row.region || '').toUpperCase().replace(/^UK$/, 'GB')
     });
   }
-  return { status: row.status, language: row.language, target, instructions, growth_url, brief };
+  return { status: row.status, language: row.language, target, instructions, growth_url, brief, website: row.public_site, keyword: row.keyword, region: row.region };
 }
 
 async function discoverSite(site) {
@@ -117,14 +125,14 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
 
   app.post(API, async (req, res) => {
     let site;
-    const { keyword, region, language } = req.body || {};
+    const { keyword, region, language, intentOverride = '' } = req.body || {};
     try {
       const url = validateUrl(req.body?.website);
       site = url.origin + '/';
     } catch { return res.status(400).json({ success: false }); }
     const key = credentials(req);
     if (!key || typeof keyword !== 'string' || !keyword.trim() || keyword.length > 300 ||
-        typeof region !== 'string' || !/^[a-z]{2}$/i.test(region) || typeof language !== 'string' || !Object.hasOwn(texts, language)) {
+        typeof region !== 'string' || !/^[a-z]{2}$/i.test(region) || typeof language !== 'string' || !Object.hasOwn(texts, language) || !intents.includes(intentOverride)) {
       return res.status(400).json({ success: false });
     }
     if (!generate || dailyLimit < 1) return res.status(503).json({ success: false });
@@ -161,7 +169,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       if (discovered.site !== site) {
         await pool.query("UPDATE prewrite_briefs SET public_site=$2 WHERE id=$1 AND status='generating'", [row.id, discovered.site]);
       }
-      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, keyword: keyword.trim(), language, region: region.toLowerCase() });
+      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride });
     } catch (error) {
       console.warn('[free-prewrite] generation failed', error.code || error.name);
     } finally {
