@@ -19,11 +19,15 @@ De broninventarisatie omvatte 307 getrackte bestanden onder `src`, 119 onder `pu
 
 De beheerroute voor het opslaan van AI-antwoorden in Pre-Write kon de bestaande ContentScore-controle en researchstatus van een ingediende of geverifieerde Publisher Edition overschrijven. De route leest de plaatsingsstatus nu onder een PostgreSQL-rijslot en vraagt bij een actieve verificatie of geverifieerde plaatsing om de bestaande expliciete heropeningsstap. Een PostgreSQL-regressie met twee transacties bevestigt dat gelijktijdige publicatieaanmelding de bestaande Brief, editie en kwaliteitsstatus intact laat. Het apart toevoegen en terugvinden van AI-waarnemingen na publicatie vraagt nog een geautoriseerde koppeling tussen de exacte publisher-URL en de juiste Tracker-pagina. De bestaande researchroute is daarvoor geen bewijsbron.
 
+De aparte beheerroute voor waarnemingen registreert de uitgever en de revisie van de geverifieerde editie in het bestaande reviewevent. Een formulier uit een vorige verificatieronde geeft een conflict na herpublicatie op dezelfde URL. De geïsoleerde browser- en PostgreSQL-test controleert dat oude waarnemingen hun oorspronkelijke revisie behouden en als handmatige waarnemingen herkenbaar blijven.
+
 De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches in het bouwproces. De migratie-inventaris staat in [Canonical Architecture Migration](canonical-architecture-migration.md). Volledige consolidatie van route-eigenaarschap, bedrijfsidentiteit, paginastatussen en bewijsprojecties vereist een route- en datamodelaudit. Deze slice heeft de bestaande bronnen, cycli en opslag gebruikt.
 
 ### CEO-rapport in de achtergrond
 
 De Lead Crawler-voorbereidingsroute slaagde in opslag van het CEO-rapport, waarna de linkgenerator faalde omdat er geen actief HTTP-request was. De canonical generator maakt in achtergrondwerk de bestaande relatieve privélink vóór opslag en bewaart dezelfde prospecttoken, gekozen pagina en taal. De PostgreSQL-regressie gebruikt een auditfixture en toont dat herhaling naar hetzelfde rapport leidt, zonder tweede scan of e-mail.
+
+Twee Railway-workers konden voor dezelfde prospect tegelijk providerwerk starten omdat het bestaande jobregister per proces leeft. De voorbereidingsroute reserveert nu de prospect via PostgreSQL en bewaart het rapport en de koppeling in dezelfde transactie. De regressie met twee onafhankelijke databasepools controleert één scan bij gelijktijdige aanroepen, behoud van de exacte pagina, intrekking tijdens de scan en een nieuwe poging na een afgebroken scan of een beëindigde PostgreSQL-sessie. De oorspronkelijke worker kan na het sessieverlies geen tweede rapport opslaan. Een door de provider mogelijk al geaccepteerde aanvraag met onbekende uitkomst valt buiten deze verificatie.
 
 ### Runtime en productie na merge #570
 
