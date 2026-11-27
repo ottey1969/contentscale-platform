@@ -100,9 +100,22 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
 
     const prospect = await context.newPage();
     assert.equal((await prospect.goto(base + '/quick-scan/' + saved.promoted_token)).status(), 200);
-    const next = new URL(prospect.url());
-    assert.equal(next.pathname, '/quick-scan/start');
-    assert.equal(next.searchParams.get('reason'), 'ceo-first');
+    assert.equal(new URL(prospect.url()).pathname, '/quick-scan/' + saved.promoted_token);
+    const startCeo = prospect.locator('#start-ceo');
+    await startCeo.waitFor();
+    await prospect.reload();
+    await startCeo.waitFor();
+    const { rows: [approval] } = await db.query(
+      'SELECT ceo_report_url,scan_started_at,outreach_sent_at FROM prospect_quick_scans WHERE token=$1', [saved.promoted_token]);
+    assert.deepEqual(approval, { ceo_report_url: null, scan_started_at: null, outreach_sent_at: null });
+    await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=$1", [contact.id]);
+    const [rejected] = await Promise.all([
+      prospect.waitForResponse(response => new URL(response.url()).pathname === '/api/ceo-report/start'),
+      startCeo.click()
+    ]);
+    assert.equal(rejected.status(), 404);
+    assert.equal((await prospect.reload()).status(), 404);
+    assert.equal(await prospect.locator('#start-ceo').count(), 0);
   } finally {
     await browser.close();
     try {

@@ -26,7 +26,9 @@ test('CEO background preparation persists one working report linked to the origi
     await db.query(`CREATE TABLE prospect_quick_scans (
       token text PRIMARY KEY, url text, business_name text, language text, ceo_report_url text, ceo_report_token text,
       ceo_report_created_at timestamptz, ceo_report_page_url text, outreach_email_status text,
-      outreach_error text, updated_at timestamptz, revoked_at timestamptz, outreach_sent_at timestamptz);
+      outreach_error text, updated_at timestamptz, revoked_at timestamptz, outreach_sent_at timestamptz,
+      source text,contact_intelligence_id bigint);
+      CREATE TABLE contact_intelligence(id bigint PRIMARY KEY,status text,promoted_token text,website_verified_at timestamptz,website_url text);
       CREATE TABLE opportunity_reports (
       token text PRIMARY KEY, domain text, source_url text, report_mode text, report_data jsonb, revoked_at timestamptz)`);
     await db.query("INSERT INTO prospect_quick_scans (token,url,business_name,language) VALUES ('original',$1,'Commercial fixture','es')", [page]);
@@ -37,14 +39,19 @@ test('CEO background preparation persists one working report linked to the origi
     const preparation = source.indexOf('const _pqsCeoBuilds = new Map();');
     const prepareEnd = source.indexOf('// v222', preparation);
     assert.ok(generation >= 0 && generateEnd > generation && preparation >= 0 && prepareEnd > preparation);
+    const ceoRoute = source.indexOf("app.post('/api/ceo-report/start',");
+    const ceoRouteEnd = source.indexOf("app.post('/api/prospect-quick-scan/:token/quickscan-interest',", ceoRoute);
     let scans = 0, duringScan=async()=>{};
     function worker(pool) {
-      let prepare;
+      let prepare, start;
       const context = vm.createContext({
-      pool, crypto, require: specifier => require('../src/' + specifier.replace(/^\.\//, '')), requireAdmin() {}, console: { warn() {} },
+      pool, crypto, require: specifier => require('../src/' + specifier.replace(/^\.\//, '')), requireAdmin() {}, console: { warn() {}, log() {}, error() {} },
       app: { post(path, _auth, handler) {
-        assert.equal(path, '/api/prospect-quick-scan/admin/:token/email-prepare');
-        prepare = handler;
+        if (path === '/api/ceo-report/start') start = _auth;
+        else {
+          assert.equal(path, '/api/prospect-quick-scan/admin/:token/email-prepare');
+          prepare = handler;
+        }
       } },
       _ensureOpportunityReportTable: async () => true, _ensureProspectQuickScanTable: async () => true,
       _INTERNAL_CEO_AUDIT: Symbol(),
@@ -66,11 +73,21 @@ test('CEO background preparation persists one working report linked to the origi
       _pqsResolveLanguage: value => value,
       _pqsShortPrivatePath: (_type, token) => '/r/' + token
       });
-      vm.runInContext(source.slice(generation, generateEnd) + source.slice(preparation, prepareEnd), context);
+      context._ensureContactIntelligenceTables = async () => true;
+      context._ceoMainWebsiteUrl = () => ({ url: page, domain: 'commercial.example' });
+      context._pqsValidEmail = () => true;
+      context._pqsNotifyOwner = async () => { throw new Error('Commercial continuation must not send mail'); };
+      vm.runInContext(source.slice(generation, generateEnd) + source.slice(preparation, prepareEnd) +
+        source.slice(ceoRoute, ceoRouteEnd), context);
       return {
         async call(token='original') {
           const res = { code: 200, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
           await prepare({ params: { token } }, res);
+          return res;
+        },
+        async commercial(token, options = {}) {
+          const res = { code: 200, set() { return this; }, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
+          await start({ body: { entry_mode: 'commercial', handoff: token, url: 'https://unrelated.example/', ...options } }, res);
           return res;
         },
         job: (token='original') => vm.runInContext('_pqsCeoBuilds.get('+JSON.stringify(token)+')', context)
@@ -137,6 +154,29 @@ test('CEO background preparation persists one working report linked to the origi
     }
     assert.equal((await oldJob).status, 'unavailable');
     assert.equal((await db.query("SELECT count(*)::int AS count FROM opportunity_reports WHERE report_data->>'quick_scan_token'='disconnected'")).rows[0].count, 1);
+    const commercial = crypto.randomBytes(32).toString('hex');
+    await db.query(`INSERT INTO contact_intelligence VALUES (1,'promoted',$1,NOW(),$2)`, [commercial,page]);
+    await db.query(`INSERT INTO prospect_quick_scans (token,url,language,source,contact_intelligence_id,outreach_email_status,outreach_sent_at)
+      VALUES ($1,$2,'en','lead_crawler',1,'sent',NOW())`, [commercial, page]);
+    assert.equal((await first.commercial('invalid')).code, 404);
+    assert.equal((await first.commercial(commercial, { check_only: true })).code, 202);
+    assert.equal(first.job(commercial), undefined);
+    const before = scans;
+    const handedOff = await first.commercial(commercial);
+    assert.equal(handedOff.code, 202);
+    await first.job(commercial);
+    const ready = await second.commercial(commercial);
+    assert.equal(ready.body.status, 'ready');
+    assert.equal(scans, before + 1);
+    const { rows: [saved] } = await db.query('SELECT * FROM prospect_quick_scans WHERE token=$1', [commercial]);
+    assert.equal(saved.ceo_report_page_url, page);
+    assert.equal(saved.outreach_email_status, 'sent');
+    assert.equal(ready.body.ceo_report_url, saved.ceo_report_url);
+    assert.equal((await db.query('SELECT count(*)::int AS count FROM prospect_quick_scans')).rows[0].count, 5);
+    await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=1");
+    assert.equal((await second.commercial(commercial)).code, 404);
+    assert.equal(scans, before + 1);
+
   } finally {
     releaseScan();
     await Promise.all([db.end(), otherDb.end()]);
