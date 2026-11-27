@@ -125,8 +125,8 @@ function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema 
       let currentUrl;
       try { currentUrl = exactUrl(placement.published_url); } catch {}
       if (!edition || currentUrl !== observation.published_url ||
-          (submittedEdition !== undefined && (!submittedEdition ||
-            Object.keys(edition).some(key => submittedEdition[key] !== edition[key])))) {
+          !submittedEdition || typeof submittedEdition !== 'object' || Array.isArray(submittedEdition) ||
+          Object.keys(edition).some(key => submittedEdition[key] !== edition[key])) {
         await client.query('ROLLBACK');
         return res.status(409).json({ error: 'This observation requires the exact URL of the currently verified edition.' });
       }

@@ -61,8 +61,6 @@ test('post-publication AI observations are private, exact, replay-safe and appen
       citation_urls: [publishedUrl] };
     const post = (body, options = headers) => fetch(url, { method: 'POST', headers: options, body: JSON.stringify(body) });
     assert.equal((await post(observation, { 'Content-Type': 'application/json' })).status, 401);
-    assert.equal((await post({ ...observation, published_url: 'https://publisher.example/article/?v=1' })).status, 409);
-    assert.equal((await post({ ...observation, observed_at: '2020-01-01T00:00:00Z' })).status, 422);
     const initialEdition = (await pool.query(`SELECT to_char(updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS revision
       FROM network_publication_versions WHERE id=1`)).rows[0];
     const prepared = await (await fetch(url, { headers })).json();
@@ -70,9 +68,12 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.equal(prepared.edition.publication_version_id, '1');
     assert.equal(prepared.edition.publication_revision, initialEdition.revision);
     assert.equal(prepared.edition.publisher_website_id, '1');
-    const written = await Promise.all([post(observation), post(observation)]);
+    const preparedObservation = { ...observation, edition: prepared.edition };
+    assert.equal((await post({ ...preparedObservation, published_url: 'https://publisher.example/article/?v=1' })).status, 409);
+    assert.equal((await post({ ...preparedObservation, observed_at: '2020-01-01T00:00:00Z' })).status, 422);
+    const written = await Promise.all([post(preparedObservation), post(preparedObservation)]);
     assert.deepEqual(written.map(response => response.status).sort(), [200, 201]);
-    assert.equal((await post({ ...observation, engine: 'claude', citation_urls: [] })).status, 201);
+    assert.equal((await post({ ...preparedObservation, engine: 'claude', citation_urls: [] })).status, 201);
 
     const listed = await fetch(url, { headers });
     assert.equal(listed.status, 200);
@@ -123,7 +124,7 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.equal((await pool.query('SELECT html FROM network_publication_versions')).rows[0].html, '<article>Original edition</article>');
     assert.equal((await pool.query("SELECT note FROM network_placement_review_events WHERE event_type='verified'")).rows[0].note, 'Original review');
     await pool.query("UPDATE network_placements SET status='accepted',verified_at=NULL WHERE id=1");
-    assert.equal((await post(observation)).status, 409);
+    assert.equal((await post(preparedObservation)).status, 409);
     assert.equal((await (await fetch(url, { headers })).json()).observations.length, expectedCount);
     await pool.query(`UPDATE network_publication_versions SET html='<article>Revised edition</article>',updated_at=clock_timestamp() WHERE id=1;
       UPDATE network_placements SET status='verified',submitted_at=NOW()-INTERVAL '30 seconds',verified_at=NOW()-INTERVAL '20 seconds' WHERE id=1`);
@@ -132,6 +133,11 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.notEqual(revisedEdition.publication_revision, prepared.edition.publication_revision);
     const newObservation = { ...observation, observed_at: new Date().toISOString() };
     assert.equal((await post({ ...newObservation, edition: prepared.edition })).status, 409);
+    assert.equal((await post(newObservation)).status, 409, 'omitting the edition must not bypass revision checking');
+    for (const edition of [null, {}, [], { ...revisedEdition, publisher_website_id: '2' }]) {
+      assert.equal((await post({ ...newObservation, edition })).status, 409);
+    }
+    assert.equal((await (await fetch(url, { headers })).json()).observations.length, expectedCount);
     assert.equal((await post({ ...newObservation, edition: revisedEdition })).status, 201);
     const revisedHistory = (await (await fetch(url, { headers })).json()).observations;
     assert.equal(revisedHistory.length, expectedCount + 1);
