@@ -1571,6 +1571,8 @@ function _networkBriefHash(briefJson){  return crypto.createHash('sha256').updat
 }
 function _networkBriefApprovalReadiness(briefJson,opts={}){
   const b=safeJsonObject(briefJson),q=safeJsonObject(b.ai_quality_check),contract=buildApprovedBriefContract(b),missing=[],aiState=_networkAiEvidenceStateV500(b,opts.keyword||''),internalState=_networkInternalDestinationStateV500(b,opts.publisher_domain||'');
+  const { prewritePublicationBlockers } = require('./prewrite-quality.cjs');
+  missing.push(...prewritePublicationBlockers(b).map(item => item.code));
   if(q.ready_for_generation!==true)missing.push('ai_quality_check.ready_for_generation');
   if(Number(q.readiness_score||0)<90)missing.push('readiness_score_below_90');
   if(!contract||!Array.isArray(contract.planned_h2s)||contract.planned_h2s.length<3)missing.push('canonical_outline');

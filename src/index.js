@@ -6004,7 +6004,14 @@ app.post('/api/tracker-client/:token/prewrite-brief/:id/reject', async (req, res
     res.json({ success: true, status: 'in_progress', reason: reason });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief);
+require('./prewrite-implementation.cjs').registerRoutes(app, pool, _resolvePWBrief, {
+  resolveRepair: async (token,id) => {
+    const owner=(await pool.query(`SELECT c.id AS "clientId", b.id AS "briefId" FROM tracker_clients c
+      JOIN prewrite_briefs b ON b.client_id=c.id WHERE c.token=$1 AND b.id=$2
+        AND COALESCE(c.status,'') NOT IN ('deleted','disabled','paused')`,[token,id])).rows[0];
+    return owner||{code:404,error:'Brief not found'};
+  }
+});
 app.post('/api/tracker-client/:token/prewrite-brief/:id/deadline', async (req, res) => {
   try {
     const r = await _resolvePWBrief(req.params.token, req.params.id);
@@ -45886,6 +45893,11 @@ ${_prewriteBriefResearch.scriptTags()}</head>
     <div style="margin-bottom:12px;">
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Keyword <span style="color:#f87171;">*</span></label>
       <input id="pwbKeyword" type="text" class="cs-input" placeholder="e.g. free ai citation tracker">
+      <label for="pwbPricingSource">Public URL for prices or quote policy (optional)</label>
+      <input id="pwbPricingSource" type="url" class="cs-input" maxlength="500" placeholder="https://">
+      <button type="button" id="pwbRepairPricing" onclick="_pwbRepairPricing(this)" hidden>Repair draft with pricing evidence</button>
+
+
     </div>
     <div style="margin-bottom:12px;">
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Working title / H1 <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
@@ -47764,6 +47776,8 @@ function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted,shareUrl){
   _pwbInputsDirty=false;
   _pwbPublisherEditionReady=false;
   _pwbCurrentShareUrl=String(shareUrl||'');
+  var repairPricing=document.getElementById('pwbRepairPricing');
+  if(repairPricing)repairPricing.hidden=!_pwbCurrentBriefId||brief?.missing_information?.state!=='needs_input'||!!_pwbNetworkPlacement();
   _pwbApplyActionState();
   _pwbScrollToNextAction();
 }
@@ -47888,6 +47902,7 @@ async function generatePrewriteBrief() {
       manualAiEvidence:{ai_question:String((document.getElementById('cs-ai-question')||{}).value||'').trim().slice(0,300),ai_question_source:String(((document.getElementById('cs-ai-question')||{}).dataset||{}).source||''),google_source:String((document.getElementById('pwbGoogleSource')||{}).value||''),google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
       aiEvidenceExpectedCount:_NETWORK_PREWRITE_AUTHORIZED?5:0 };
     if(_pwbCompletionMode){_pwbBody.completionFromJobId=_pwbCompletionSource;_pwbBody.completionMode='missing_only';}
+    _pwbBody.pricingSource=String((document.getElementById('pwbPricingSource')||{}).value||'').trim();
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
     // v456 — Network embed runs as a persisted async job so the external gateway never
@@ -48108,22 +48123,37 @@ function _renderIntentBar(si) {
     + '</div>';
   if (si.strategy) head += '<div style="margin-top:7px;color:#bae6fd;font-size:11.5px;"><strong>Strategy:</strong> ' + esc(si.strategy) + (si.intent_bridge ? ' \u2014 ' + esc(si.intent_bridge) : '') + '</div>';
   if (si.conflict) head += '<div style="margin-top:6px;color:#fbbf24;font-size:11.5px;">\u26a0 ' + esc(si.conflict) + '</div>';
-  // Only when the SERP was genuinely ambiguous do we ask the human to decide.
-  if (si.needs_confirmation) {
+  // The query evidence remains visible; the author can choose a different brief intent.
+  {
+    var intentLang = String(si.language||'en').slice(0,2);
+    var intentMessage = ({
+      en: 'Change search intent. A new analysis uses your available Brief allowance. Earlier evidence stays with its original question.',
+      nl: 'Pas zoekintentie aan. Een nieuwe analyse gebruikt je beschikbare brieflimiet. Eerder bewijs blijft bij de oorspronkelijke vraag.',
+      es: 'Ajusta la intención de búsqueda. Un nuevo análisis usa el cupo disponible. La evidencia anterior conserva su pregunta original.'
+    })[intentLang] || 'Change search intent';
     var opts = ['informational','commercial','transactional','navigational'];
     var pills = opts.map(function(o){
       var on = (o === si.primary);
       return '<button data-intent="'+o+'" onclick="_pwbRegenWithIntent(this.getAttribute(&quot;data-intent&quot;))" style="cursor:pointer;border:1px solid '+(on?'#3b82f6':'#334155')+';background:'+(on?'#1d4ed8':'#0b1220')+';color:#e2e8f0;border-radius:6px;padding:5px 11px;font-size:11.5px;font-weight:600;">'+cap(o)+'</button>';
     }).join(' ');
     head += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e293b;">'
-      + '<div style="color:#cbd5e1;margin-bottom:7px;font-size:11.5px;">The SERP for this keyword is mixed, so the intent is uncertain. This brief was written for <strong>'+esc(cap(si.primary))+'</strong>. If you know the audience wants something else, pick it and the brief regenerates:</div>'
+      + '<div style="color:#cbd5e1;margin-bottom:7px;font-size:11.5px;">'+esc(intentMessage)+'</div>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + pills + '</div>'
       + '</div>';
   }
   head += '</div>';
   return head;
 }
-// Regenerate the brief for a chosen intent (only reachable from the low-confidence bar).
+async function _pwbRepairPricing(button){
+  var source=document.getElementById('pwbPricingSource'),stat=document.getElementById('pwbStatus');
+  if(!source.value||!source.reportValidity()){source.focus();return;}
+  button.disabled=true;
+  try{
+    var revision=await api('/prewrite-brief/'+encodeURIComponent(_pwbCurrentBriefId)+'/repair-pricing','POST',{pricingSource:source.value});
+    await reopenPrewriteBrief(revision.brief_id);
+  }catch(error){stat.textContent=error.message;}finally{button.disabled=false;}
+}
+// Regenerate the brief for a chosen intent without changing the research question.
 async function _pwbRegenWithIntent(intent) {
   // The same flow as "Analyse & create": the persisted job is followed to the end and a NOT PASSED result is shown as a
   // diagnostic preview with "Complete missing only", instead of only an error line (owner 2026-11-12).
@@ -48786,6 +48816,13 @@ async function copyPrewriteForExternalAi(btn){
   var implementation=null;
   if(!_pwbNetworkPlacement()&&_pwbCurrentBriefId){
     try{implementation=await api('/prewrite-brief/'+encodeURIComponent(_pwbCurrentBriefId)+'/implementation-report');}catch(_e){}
+  }
+  if(implementation&&implementation.editor_brief){
+    if(implementation.editor_brief.missing_information?.state==='needs_input'||implementation.editor_brief.metadata_review?.issues?.length){
+      if(btn)btn.textContent='Resolve the Brief quality findings first';
+      return;
+    }
+    brief=JSON.stringify(implementation.editor_brief,null,2);
   }
   var prompt=[
     'Write the complete Publisher Edition from the APPROVED ContentScale Pre-Write Brief below.',
@@ -60991,7 +61028,8 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     // cannot stack multiple 10–30s retries and die as a gateway 502 before our JSON error arrives.
     _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
-    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId } = req.body || {};
+    const _pwbQuality=require('./prewrite-quality.cjs');
+    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId, pricingSource } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -61131,8 +61169,47 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     // the model (the sample holds 100 URLs) and checked again after generation.
     const _pwbSameIntent=_prewriteExistingPage.findSameIntentPages(keyword,clientSitemapUrls,{region});
     const _sitemapSample = Array.from(new Set(_pwbSameIntent.map(x=>x.url).concat(clientSitemapUrls))).slice(0,100);
+    const _pwbOwnDomain=_pwbNetworkPublisherDomain||client.domain;
+    const _publicReader=require('./growth-public-html-reader.cjs').fetchPublicGrowthHtml;
+    const _pwbOwnOrigin=(()=>{try{return new URL(/^https?:\/\//i.test(_pwbOwnDomain)?_pwbOwnDomain:'https://'+_pwbOwnDomain).origin}catch{return ''}})();
+    let _pwbPricingUrl;
+    try{_pwbPricingUrl=_pwbQuality.pricingEvidenceUrl(_pwbOwnOrigin,pricingSource);}
+    catch(error){return res.status(400).json({success:false,stage:'pricing_source',error:error.message});}
+    let _pwbAuthorizedPageMatches=[];
+    if(client.id!=null){
+      try{
+        _pwbAuthorizedPageMatches=(await pool.query(`SELECT url FROM tracker_pages
+          WHERE tracker_client_id=$1 AND lower(trim(gsc_keyword))=lower(trim($2)) LIMIT 8`,[client.id,keyword])).rows.map(row=>row.url);
+      }catch{}
+    }
+    const _pwbOwnCandidates=[...new Set([_pwbPricingUrl,..._pwbAuthorizedPageMatches,..._pwbSameIntent.map(x=>x.url),
+      ...clientSitemapUrls.filter(url=>{try{return /\/(?:[^/]*(?:seo|scan|checker|diensten|services|servicios)[^/]*)/i.test(new URL(url).pathname)}catch{return false}}),
+      ...clientSitemapUrls])].filter(url=>{
+        try{return new URL(url).hostname.replace(/^www\./i,'')===new URL(_pwbOwnOrigin).hostname.replace(/^www\./i,'')}catch{return false}
+      }).slice(0,8);
+    const _pwbOwnPages=(await Promise.all(_pwbOwnCandidates.map(async url=>{
+      try{
+        const page=await _publicReader(url,{timeout:4500,redirects:0,limit:300000});
+        if(page.status!==200||page.final_url!==url||page.truncated||require('./gsc-report/site-audit.cjs').isBotCheck(page.html))return null;
+        return _pwbQuality.websitePage(url,page.html);
+      }catch{return null}
+    }))).filter(Boolean);
+    const _pwbOwnOffers=_pwbQuality.firstPartyOffers(keyword,_pwbOwnPages);
+    const _pwbSameContent=_pwbQuality.contentMatch(keyword,_pwbOwnPages,{region:_pwbSerpMarket.gl});
+    const _pwbMissingInfo=_pwbQuality.missingInformation(keyword,_pwbOwnPages);
+    let _pwbPriorPlans=[];
+    if(client.id!=null){
+      try{
+        _pwbPriorPlans=(await pool.query(`SELECT keyword,region,brief_json FROM prewrite_briefs
+          WHERE client_id=$1 AND lower(region)=lower($2)
+            AND status NOT IN ('failed','rejected','published') ORDER BY id DESC LIMIT 50`,
+          [client.id,_pwbSerpMarket.gl])).rows;
+      }catch{}
+    }
+    const _pwbOverlappingPlan=_pwbQuality.overlappingPlan(keyword,_pwbSerpMarket.gl,_pwbPriorPlans);
+
     const sitemapBlock = (_pwbSameIntent.some(x=>x.full)?'SAME-INTENT PAGE ALREADY ON THIS SITE (its address contains every word of the keyword): '+_pwbSameIntent.filter(x=>x.full).map(x=>x.url).join(', ')+'\nRecommend EXPAND_EXISTING_PAGE or OPTIMIZE_EXISTING_PAGE for it; a new URL for the same keyword would compete with it.\n\n':'')+(_sitemapSample.length
-      ? 'AUTO INTERNAL LINK RESEARCH — VERIFIED CLIENT SITEMAP (' + clientSitemapUrls.length + ' URLs found; showing ' + _sitemapSample.length + '):\n' + _sitemapSample.join('\n') + '\nChoose 3-8 contextually relevant internal_link_targets ONLY from these exact URLs. Copy each link_to verbatim. Never invent, reconstruct or guess an internal URL.'
+      ? 'AUTO INTERNAL LINK RESEARCH — VERIFIED CLIENT SITEMAP (' + clientSitemapUrls.length + ' URLs found; showing ' + _sitemapSample.length + '):\n' + _sitemapSample.join('\n') + '\nChoose contextually relevant internal_link_targets ONLY from these exact URLs. Copy each link_to verbatim. Never invent, reconstruct or guess an internal URL.'
       : 'AUTO INTERNAL LINK RESEARCH: no usable sitemap could be discovered. Return internal_link_targets as [] and never invent internal URLs.');
 
     // ── Owner-provided brand & author facts (CLAUDE-FIX-0808C) ──────────────
@@ -61347,12 +61424,25 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
 
     // ── Search intent: detect from the real SERP, allow an owner override (CLAUDE-FIX-2608-intentEngine) ──
     const _aioForIntent = aioManualText ? { answer: aioManualText } : null;
+    const _observedFormats=_pwbQuality.serpFormats(serpUrls);
     const _autoIntent = detectSearchIntent(keyword, serpUrls, peopleAlsoAsk, _aioForIntent, top10);
-    const _validIntents = ['informational','commercial','transactional','navigational'];
-    const _chosenIntent = (intentOverride && _validIntents.includes(String(intentOverride).toLowerCase()))
-      ? String(intentOverride).toLowerCase() : _autoIntent.primary;
-    const _intentWasOverridden = _chosenIntent !== _autoIntent.primary;
+    if(_observedFormats.primary==='interactive_tool'&&_observedFormats.evidence.filter(row=>row.format==='interactive_tool').length>=2){
+      _autoIntent.primary='transactional';
+      _autoIntent.query_format='interactive_tool';
+      _autoIntent.secondary=_observedFormats.secondary==='editorial_help'?'informational':_autoIntent.secondary;
+      _autoIntent.secondary_intents=[...new Set([_autoIntent.secondary,...(_autoIntent.secondary_intents||[])].filter(x=>x&&x!==_autoIntent.primary))];
+      _autoIntent.evidence.push('Interactive tool pages observed in the live SERP');
+      _autoIntent.conflict=null;
+    }
+    const _intentSelection=_pwbQuality.selectIntent(_autoIntent.primary,intentOverride);
+    const _chosenIntent = _intentSelection.primary;
+    const _intentWasOverridden = _intentSelection.overridden;
     const _intentDir = intentStrategy(_autoIntent, _chosenIntent);
+    if(_autoIntent.query_format==='interactive_tool'&&_chosenIntent==='transactional'){
+      _intentDir.contentType='interactive tool or scan landing page';
+      _intentDir.structure='Explain how to run the verified first-party tool, what it checks, and how to interpret the results.';
+      _intentDir.cta='Use only a verified first-party tool URL when inviting readers to act.';
+    }
     const _intentMom = intentMoment(_chosenIntent);
     console.log(`[prewrite-brief] intent: auto=${_autoIntent.primary} (conf ${_autoIntent.confidence})${_intentWasOverridden ? ' | OVERRIDDEN to '+_chosenIntent : ''}${_autoIntent.conflict ? ' | '+_autoIntent.conflict : ''}`);
 
@@ -61517,7 +61607,11 @@ PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident
 Return ONLY valid JSON, no markdown, no preamble.
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, 140-160 chars, aim for 150-159, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<exact URL copied verbatim from AUTO INTERNAL LINK RESEARCH; [] if none>","why":"<topical-authority or user-journey purpose>"}],"external_link_targets":[{"anchor_text":"<natural descriptive anchor>","source_name":"<real source/page name>","exact_url":"<exact https:// URL copied verbatim from AUTO EXTERNAL SOURCE RESEARCH>","why":"<why this source is useful/authoritative>","supports_claim":"<the specific fact, definition, statistic or section this source can support>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
+    const _pwbDecisionEvidence={serp_formats:_observedFormats,first_party_offers:_pwbOwnOffers,
+      existing_page:_pwbSameContent?.url||null,missing_information:_pwbMissingInfo,overlapping_create:_pwbOverlappingPlan};
     const finalPrompt = prompt + '\n\nPRE-PUBLICATION AI WRITING RESEARCH:\n' + _pwbAiWritingPrompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.' + '\n\nACTUAL GOOGLE SERP REQUEST SCOPE: '+JSON.stringify({country:_pwbSerpMarket.gl,language:_pwbSerpMarket.hl,requested_location:_pwbSerpLocation||null,location_applied:!!_pwbSerpLocation})+'; observed SERP URLs are from this request, not verified rankings for every city. Do not claim a different locale was searched.'
+      + '\n\nWEBSITE AND DECISION EVIDENCE: ' + JSON.stringify(_pwbDecisionEvidence)
+      + '\nUse relevant first-party functionality in the blueprint. Competitor names and URLs are research only. If a verified existing page answers the same intent, expand it. Flag overlapping CREATE plans for review. Ask for missing business facts. Preserve quoted-only pricing when verified. No minimum link count.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
       + '\n- Every supplied competitor must be represented in competitor_table.'
       + '\n- Every competitor exact_url must be the exact https:// URL copied from the supplied SERP data, or "insufficient_data".'
@@ -61553,11 +61647,14 @@ Return ONLY valid JSON, no markdown, no preamble.
     const _pwbUsageSnapshot=function(){return {provider:'gemini',calls:_pwbUsage.calls.slice(),input_tokens:_pwbUsage.input_tokens,output_tokens:_pwbUsage.output_tokens,thinking_tokens:_pwbUsage.thinking_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens,total_tokens:_pwbUsage.total_tokens,cached_input_tokens:_pwbUsage.cached_input_tokens,attempted_calls:_pwbUsage.attempted_calls,cost_guard:{max_calls:_pwbBudget.max_calls,max_input_tokens:_pwbBudget.max_input_tokens,max_billable_output_tokens:_pwbBudget.max_billable_output_tokens,skipped_calls:_pwbBudget.skipped_calls.slice()},note:'Partial provider usage captured before this Prewrite stopped.'};};
     const _pwbRecordUsage=function(label,model,data,meta){
       try{
-        const u=data&&data.usageMetadata||{},m=meta&&typeof meta==='object'?meta:{};
-        const input=Number(u.promptTokenCount||0),output=Number(u.candidatesTokenCount||0),thinking=Number(u.thoughtsTokenCount||0),cached=Number(u.cachedContentTokenCount||0);
-        const total=Number(u.totalTokenCount||0)||(input+output+thinking);
-        const row={label:String(label||'call'),model:String(model||'unknown'),input_tokens:input,output_tokens:output,thinking_tokens:thinking,billable_output_tokens:output+thinking,total_tokens:total,cached_input_tokens:cached,prompt_chars:Number(m.prompt_chars||0),max_output_tokens:Number(m.max_output_tokens||0),elapsed_ms:Number(m.elapsed_ms||0)};
-        _pwbUsage.calls.push(row);_pwbUsage.input_tokens+=input;_pwbUsage.output_tokens+=output;_pwbUsage.thinking_tokens+=thinking;_pwbUsage.billable_output_tokens+=(output+thinking);_pwbUsage.total_tokens+=total;_pwbUsage.cached_input_tokens+=cached;
+        const m=meta&&typeof meta==='object'?meta:{};
+        const usage=_pwbQuality.geminiUsage(model,data);
+        const row={label:String(label||'call'),...usage,prompt_chars:Number(m.prompt_chars||0),
+          max_output_tokens:Number(m.max_output_tokens||0),elapsed_ms:Number(m.elapsed_ms||0)};
+        _pwbUsage.calls.push(row);
+        for(const key of ['input_tokens','output_tokens','thinking_tokens','billable_output_tokens','total_tokens','cached_input_tokens']){
+          _pwbUsage[key]+=usage[key];
+        }
       }catch(_usageErr){}
     };
     const _pwbOptionalGeminiCall=function(label){return /(?:_json_repair$|^quality_|^evidence_quality_expert_pass2$)/.test(String(label||''));};
@@ -61584,10 +61681,10 @@ Return ONLY valid JSON, no markdown, no preamble.
     const _pwbAllowModelUpgrade=process.env.PREWRITE_ALLOW_MODEL_UPGRADE==='1';
     // Cheap-model lock: old Railway GEMINI_MODEL/GEMINI_MODEL_BRIEF values cannot silently make
     // Prewrite expensive. A stronger model is used only when PREWRITE_ALLOW_MODEL_UPGRADE=1.
-    const _pwbBriefPrimary=_pwbAllowModelUpgrade?(GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite'):'gemini-2.5-flash-lite';
-    const _pwbBriefFallback=_pwbAllowModelUpgrade?(GEMINI_MODEL_BRIEF_FALLBACK||_pwbBriefPrimary):'gemini-2.5-flash-lite';
+    const _pwbBriefPrimary=_pwbQuality.zeroThinkingModel(_pwbAllowModelUpgrade?GEMINI_MODEL_BRIEF:null);
+    const _pwbBriefFallback=_pwbQuality.zeroThinkingModel(_pwbAllowModelUpgrade?(GEMINI_MODEL_BRIEF_FALLBACK||_pwbBriefPrimary):null);
     if (_pwbNetworkFastLane) {
-      const _compactModels = Array.from(new Set([_pwbBriefPrimary,_pwbBriefFallback].concat(_pwbAllowModelUpgrade?['gemini-3.5-flash-lite','gemini-2.5-flash']:[]).filter(Boolean))).slice(0,3);
+      const _compactModels = [...new Set([_pwbBriefPrimary,_pwbBriefFallback])];
       const _extractCompactJson = function(raw) {
         raw=String(raw||'').trim(); if(!raw)return null;
         const candidates=[raw];
@@ -61599,9 +61696,10 @@ Return ONLY valid JSON, no markdown, no preamble.
       const _compactCall = async function(label, compactPrompt, maxTokens, requiredKeys) {
         const _budgetSkip=_pwbSkipForBudget(label);
         if(_budgetSkip)return {ok:false,error:'optional call skipped by Prewrite cost guard ('+_budgetSkip+')',status:0,attempts:0,model:'',timed_out:false,budget_skipped:true};
-        const primary=_compactModels[0]||GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite';
+        const primary=_compactModels[0];
         const fallback=_compactModels[1]||primary;
-        const _fullPrompt=_langPrefix(language)+compactPrompt;
+        const _fullPrompt=_langPrefix(language)+compactPrompt+'\n\nWEBSITE AND DECISION EVIDENCE: '+JSON.stringify(_pwbDecisionEvidence)
+          +'\nUse only verified first-party capabilities. Competitors are research only. Preserve observed pricing policy and require review when evidence is missing.';
         const body={contents:[{parts:[{text:_fullPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
         const started=Date.now();
         let attempts=2;_pwbUsage.attempted_calls+=1;
@@ -61623,7 +61721,7 @@ ${raw.slice(0,16000)}`;
           const repairBody={contents:[{parts:[{text:repairPrompt}]}],generationConfig:{temperature:0,maxOutputTokens:Math.min(maxTokens,4200),responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
           const _repairLabel=label+'_json_repair',_repairSkip=_pwbSkipForBudget(_repairLabel);
           const _repairStarted=Date.now();
-          const repair=_repairSkip?null:await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',GEMINI_MODEL_BRIEF_FALLBACK||fallback,1,false);
+          const repair=_repairSkip?null:await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',fallback,1,false);
           if(!_repairSkip)_pwbUsage.attempted_calls+=1;
           attempts+=_repairSkip?0:1;
           if(repair&&repair.ok){_pwbRecordUsage(_repairLabel,repair.modelUsed||'gemini-2.5-flash-lite',repair.data,{prompt_chars:repairPrompt.length,max_output_tokens:Math.min(maxTokens,4200),elapsed_ms:Date.now()-_repairStarted});
@@ -62466,6 +62564,12 @@ ${sourceText}`;
       brief.external_link_targets=_pwbNonCompetitorCandidates.slice(0,3).map(src=>({anchor_text:src.title||src.domain,source_name:src.title||src.domain,exact_url:_pwbNormExactUrl(src.exact_url),why:'Verified exact source page discovered automatically during Prewrite research.',supports_claim:'Use only where the source actually supports the statement being cited.',source_type:src.source_type})).filter(x=>x.exact_url);
     }
 
+    const _unverifiedExternal=brief.external_link_targets;
+    brief.external_link_targets=_pwbQuality.verifiedSourceTargets(_unverifiedExternal,_pwbCorpusMap);
+    brief.source_review={state:_unverifiedExternal.length===brief.external_link_targets.length?'checked':'missing_evidence',
+      unverified_count:_unverifiedExternal.length-brief.external_link_targets.length};
+    brief.internal_link_targets=_pwbQuality.relevantInternalLinks(brief.internal_link_targets,_pwbOwnPages,keyword,
+      _pwbSameContent?.url||brief.content_decision?.closest_existing_url);
     brief.link_research = {
       external_other_meaning:_pwbSenseDropped.slice(0,10),
       internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),publisher_domain:(_pwbNetworkPublisherDomain||''),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are reader-facing same-domain pages. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only.'},
@@ -62589,6 +62693,22 @@ ${sourceText}`;
       const _fallbackMode=_recSafe&&_recSafe.decision==='OPTIMIZE'?'OPTIMIZE_EXISTING_PAGE':_recSafe&&_recSafe.decision==='EXPAND_EXISTING'?'EXPAND_EXISTING_PAGE':'CREATE_NEW_PAGE';
       brief.content_decision = { recommended_treatment:_fallbackMode, cannibalization_risk:'insufficient_data', closest_existing_url:(_recSafe&&_recSafe.target)||'none', reason:'The saved Tracker recommendation is retained, but strategist review is required because the model returned no valid treatment.' };
     }
+    if(_pwbSameContent&&(brief.content_decision.recommended_treatment!=='OPTIMIZE_EXISTING_PAGE'||brief.content_decision.closest_existing_url!==_pwbSameContent.url)){
+      brief.content_decision={...brief.content_decision,recommended_treatment:'EXPAND_EXISTING_PAGE',
+        closest_existing_url:_pwbSameContent.url,cannibalization_risk:'high',
+        existing_page_check:{method:'live_service_and_price_content',url:_pwbSameContent.url,excerpt:_pwbSameContent.pricing.passage},
+        reason:'The exact same-market service page already addresses this price question.'};
+      if(brief.meta_package)brief.meta_package.url_slug=new URL(_pwbSameContent.url).pathname;
+    }
+    brief.first_party_offers=_pwbOwnOffers;
+    brief.website_evidence={origin:_pwbOwnOrigin||null,pages_read:_pwbOwnPages.map(page=>page.url)};
+    brief.missing_information=_pwbMissingInfo;
+    brief.cannibalization_review=_pwbOverlappingPlan&&brief.content_decision.recommended_treatment==='CREATE_NEW_PAGE'
+      ?{state:'needs_review',reason:'same_market_create_plan'}:{state:'no_authorized_conflict_observed'};
+    const _schemaTarget=_pwbOwnPages.find(page=>page.url===brief.content_decision.closest_existing_url);
+    brief.schema_advice=_pwbQuality.schemaAdvice(brief.recommended_structure?.recommended_schema||[],_schemaTarget,_observedFormats);
+    if(brief.recommended_structure)brief.recommended_structure.recommended_schema=brief.schema_advice.add;
+
     _prewriteExistingPage.applyExistingPageDecision(brief,_pwbSameIntent);
     const _finalTreatment=String(brief.content_decision.recommended_treatment||'').toUpperCase();
     if(_finalTreatment==='CREATE_NEW_PAGE'){
@@ -62624,7 +62744,7 @@ ${sourceText}`;
     const _pwbCostSuggestions=[];
     if(_pwbLargestInput&&_pwbUsage.input_tokens>0&&Number(_pwbLargestInput.input_tokens||0)/_pwbUsage.input_tokens>=0.35)_pwbCostSuggestions.push('Largest input consumer is '+_pwbLargestInput.label+' ('+Math.round(Number(_pwbLargestInput.input_tokens||0)*100/_pwbUsage.input_tokens)+'% of all Gemini input). Optimize that context first; do not weaken every stage.');
     if(_pwbRepairCalls.length>=2)_pwbCostSuggestions.push(_pwbRepairCalls.length+' repair/completion calls were needed. Improving first-pass JSON/schema compliance can remove these calls without reducing research depth.');
-    if(_pwbUsage.thinking_tokens>0)_pwbCostSuggestions.push('Thinking tokens were billed even though Prewrite requests are configured with thinkingBudget=0; inspect the exact model/call before increasing usage.');
+    if(_pwbUsage.thinking_tokens>0)_pwbCostSuggestions.push('The provider reported reasoning tokens with a requested thinking budget of zero. Compare the recorded model version and usage metadata with the provider invoice.');
     if(_pwbModels.some(function(m){return !/2\.5-flash-lite/i.test(String(m));}))_pwbCostSuggestions.push('A model other than gemini-2.5-flash-lite was used. Prewrite is locked to Flash-Lite by default; check explicit Railway overrides before accepting the higher-cost model.');
     if(_pwbUsage.calls.length>7)_pwbCostSuggestions.push('This Brief needed more than 7 successful Gemini calls. Review the per-call list before changing providers; repeated repair/evidence passes are the first optimization target.');
     if(!_pwbCostSuggestions.length)_pwbCostSuggestions.push('Usage stayed inside the low-cost path. Keep Gemini and compare future Briefs against this per-call baseline before making model changes.');
@@ -62677,6 +62797,9 @@ ${sourceText}`;
       moment_label: _intentMom.label,
       moment_mindset: _intentMom.mindset,
       // UI shows the change-intent control ONLY when confidence is low and no override yet.
+      observed_formats: _observedFormats,
+      user_override: _intentSelection.user_override,
+      language: brief.language,
       needs_confirmation: (_autoIntent.confidence === 'low' && !_intentWasOverridden)
     };
 
@@ -62694,6 +62817,11 @@ ${sourceText}`;
     brief.ai_system_evidence.checked_count=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>brief.ai_system_evidence[k]&&brief.ai_system_evidence[k].checked).length;
     if(_pwbNetworkAuthorized)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain});
     _pwbCanonicalizeAiAnalysisV506(brief);
+    brief.google_observation=_pwbQuality.googleObservation(brief.ai_system_evidence.google_aio,aioDetected&&!aioManualText);
+    brief.ai_observations=_pwbQuality.aiObservations(brief.ai_system_evidence,brief.google_observation);
+    brief.ai_overview_status=brief.google_observation.overview;
+    brief.what_we_checked.google_direct_answer=brief.google_observation.overview;
+
 
     // Numbers verified on their source page, or taken out (owner 2026-11-12: "NOT PASSED but still a brief"). Amounts in the
     // opening, AI answer and quick facts without verified evidence are looked up, as written, on the pages this Brief already
@@ -62752,6 +62880,9 @@ ${sourceText}`;
       _pwbFinalPublicationPass(brief);
       brief.ai_quality_check=_pwbReadiness(brief);
     }
+    _pwbQuality.alignOpening(brief);
+    brief.metadata_review={issues:_pwbQuality.metadataIssues(brief.meta_package,keyword,new Date().getUTCFullYear())};
+    Object.assign(brief.generation_usage,_pwbUsageSnapshot());
     if(!brief.ai_quality_check.ready_for_generation){
       const _missingFinal=Array.isArray(brief.ai_quality_check.missing)?brief.ai_quality_check.missing:[];
       const _outlineWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.definitive_outline;
@@ -62832,8 +62963,8 @@ ${sourceText}`;
 app.post('/api/tracker-client/:token/prewrite-brief', _handlePrewriteBriefGeneration);
 require('./free-prewrite.cjs').registerFreePrewrite(app, pool, {
   generate: async context => {
-    const { keyword, language, region, manualAiEvidence } = context;
-    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence } }, {
+    const { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } = context;
+    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } }, {
       status() { return this; },
       json() {}
     }, context);

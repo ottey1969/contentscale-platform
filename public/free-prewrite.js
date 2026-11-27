@@ -10,6 +10,7 @@
   const validKey = value => /^[a-f0-9]{64}$/.test(value);
   let key = location.hash.slice(1);
   let downloadUrl;
+  const newKey = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
   const element = id => document.getElementById(id);
   async function call(path, body) {
     const headers = { Authorization: 'Bearer ' + key };
@@ -31,12 +32,12 @@
       submit.disabled = true;
       status.textContent = labels[6];
       if (!validKey(key)) {
-        key = Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
+        key = newKey();
       }
       const form = new FormData(intake);
       const resultPath = root + '/r?lang=' + lang + '#' + key;
       try {
-        await call('', { website: form.get('website'), keyword: form.get('keyword'), region: form.get('country'), language: lang });
+        await call('', { website: form.get('website'), keyword: form.get('keyword'), region: form.get('country'), language: lang, intentOverride: form.get('intent'), pricingSource: form.get('pricing-source') });
         location.assign(resultPath);
       } catch {
         status.textContent = labels[7];
@@ -95,6 +96,43 @@
     addText(card, 'h2', result.target.mode + ' · ' + result.target.url);
     const reason = result.brief.content_decision?.reason;
     if (reason) addText(card, 'p', reason);
+    const pricing = result.brief.missing_information;
+    if (pricing?.state === 'needs_input') addText(card, 'p', window.prewritePricingHelp);
+    const adjust = element('intent-adjust');
+    adjust.hidden = result.status === 'published';
+    adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
+    const repair = element('repair-pricing');
+    repair.hidden = pricing?.state !== 'needs_input' || result.status !== 'open';
+    repair.onclick = async () => {
+      const source = adjust.elements['pricing-source'];
+      if (!source.value || !source.reportValidity()) { source.focus(); return; }
+      repair.disabled = true;
+      const revisionKey = newKey();
+      try {
+        await call('/repair-pricing', { pricingSource: source.value, revisionKey });
+        history.replaceState(null, '', root + '/r?lang=' + lang + '#' + revisionKey);
+        location.reload();
+      } catch {
+        reportError();
+        repair.disabled = false;
+      }
+    };
+    adjust.onsubmit = async event => {
+      event.preventDefault();
+      const previousKey = key;
+      key = newKey();
+      adjust.querySelector('button[type=submit]').disabled = true;
+      try {
+        await call('', { website: result.website, keyword: result.keyword, region: result.region, language: result.language,
+          intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value });
+        history.replaceState(null, '', root + '/r?lang=' + lang + '#' + key);
+        location.reload();
+      } catch {
+        key = previousKey;
+        reportError();
+        adjust.querySelector('button[type=submit]').disabled = false;
+      }
+    };
     const research = JSON.stringify(result.brief, null, 2);
     element('research').textContent = research;
     element('history').hidden = false;
@@ -106,13 +144,13 @@
     const display = await call('/implementation-report');
     renderHistory(display.history);
     element('implementation').hidden = false;
-    const editorText = result.instructions + '\n\n' + research;
+    const editorText = result.instructions + '\n\n' + JSON.stringify(display.editor_brief, null, 2);
     element('editor').value = editorText;
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     downloadUrl = URL.createObjectURL(new Blob([editorText], { type: 'text/plain;charset=utf-8' }));
     element('download').href = downloadUrl;
     element('verify').disabled = result.status !== 'published';
-    element('publish').disabled = result.status !== 'approved';
+    element('publish').disabled = result.status !== 'approved' || pricing?.state === 'needs_input';
     element('save').disabled = result.status !== 'approved';
     element('approve').disabled = result.status === 'published';
   }

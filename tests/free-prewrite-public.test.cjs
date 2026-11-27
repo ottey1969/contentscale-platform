@@ -47,17 +47,23 @@ test('private public briefs in Chromium use the canonical publication history fo
     const app = express();
     app.use(express.json());
     app.use(express.static(require('node:path').join(__dirname, '../public')));
+    let generationCalls = 0;
+    const priceTopic = 'Wat kost SEO advies?';
+    const pricePage = '<h1>SEO advies en diensten</h1><p>Prijzen voor SEO advies op aanvraag.</p>';
     registerFreePrewrite(app, pool, {
+      dailyLimit: 8,
       discover: async () => ({ site, urls: [existingUrl] }),
-      generate: async ({ id, keyword }) => {
+      generate: async ({ id, keyword, intentOverride, pricingSource }) => {
+        generationCalls++;
         const decision = keyword === 'Existing' ? { recommended_treatment: 'EXPAND_EXISTING_PAGE', closest_existing_url: existingUrl }
           : { recommended_treatment: 'CREATE_NEW_PAGE' };
         await pool.query("UPDATE prewrite_briefs SET status='open',brief_json=$2 WHERE id=$1", [
-          id, { keyword, content_decision: decision, meta_package: { url_slug: 'planning-guide' }, generation_usage: { tokens: 123 } }
+          id, { keyword, search_intent: { primary: intentOverride || 'transactional', user_override: intentOverride }, pricing_fixture: pricingSource, search_scope: { query: keyword },
+            ...(keyword === priceTopic ? { missing_information: { state: 'needs_input', field: 'pricing' } } : {}), content_decision: decision, meta_package: { url_slug: 'planning-guide' }, generation_usage: { tokens: 123 } }
         ]);
       },
       verification: { fetchHtml: async url => ({
-        status: 200, final_url: url, retrieved_at: new Date().toISOString(), html: '<main>' + article + '</main>'
+        status: 200, final_url: url, retrieved_at: new Date().toISOString(), html: url === existingUrl ? pricePage : '<main>' + article + '</main>'
       }) }
     });
     const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
@@ -88,6 +94,18 @@ test('private public briefs in Chromium use the canonical publication history fo
     for (const [lang, heading] of [['en', 'Proof & History'], ['nl', 'Bewijs en historie'], ['es', 'Evidencias e historial']]) {
       const page = await start(lang, 'Planning');
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+      if (lang === 'en') {
+        const original = page.url();
+        await page.locator('#intent-adjust select').selectOption('informational');
+        await page.locator('#intent-adjust [name=pricing-source]').fill(existingUrl);
+        await page.locator('#intent-adjust button[type=submit]').click();
+        await page.waitForURL(url => url.href !== original);
+        await page.locator('#intent-adjust select').waitFor();
+        assert.equal(await page.locator('#intent-adjust select').inputValue(), 'informational');
+        const key = new URL(page.url()).hash.slice(1);
+        const updated = await api.get(endpoint + '/result').set('Authorization', 'Bearer ' + key).expect(200);
+        assert.equal(updated.body.brief.pricing_fixture, existingUrl);
+      }
       const privateUrl = page.url();
       assert.match(privateUrl, /#[a-f0-9]{64}$/);
       const auth = 'Bearer ' + new URL(privateUrl).hash.slice(1);
@@ -140,7 +158,27 @@ test('private public briefs in Chromium use the canonical publication history fo
     assert.deepEqual(report.body.proof_history.prewrite, result.body.proof_history.prewrite);
 
     const { rows } = await pool.query('SELECT client_id, tracker_page_id FROM prewrite_briefs');
-    assert.equal(rows.length, 4);
+    assert.equal(rows.length, 5);
+    const draft = await start('nl', priceTopic);
+    const original = draft.url();
+    await draft.locator('#intent-adjust [name=pricing-source]').fill(existingUrl);
+    const beforeRepair = generationCalls;
+    await draft.locator('#repair-pricing').click();
+    await draft.waitForURL(url => url.href !== original);
+    await draft.getByRole('heading', { name: /EXPAND/ }).waitFor();
+    assert.equal(generationCalls, beforeRepair);
+    const oldKey = new URL(original).hash.slice(1), revisedKey = new URL(draft.url()).hash.slice(1);
+    const oldAuth = 'Bearer ' + oldKey, revisedAuth = 'Bearer ' + revisedKey;
+    const savedOld = await api.get(endpoint + '/result').set('Authorization', oldAuth).expect(200);
+    const savedNew = await api.get(endpoint + '/result').set('Authorization', revisedAuth).expect(200);
+    assert.equal(savedOld.body.brief.missing_information.state, 'needs_input');
+    assert.deepEqual(savedNew.body.brief.search_scope, savedOld.body.brief.search_scope);
+    assert.equal(savedNew.body.brief.missing_information.pricing, 'on_request');
+    assert.equal(savedNew.body.target.url, existingUrl);
+    await api.post(endpoint + '/repair-pricing').set('Authorization', oldAuth)
+      .send({ pricingSource: existingUrl, revisionKey: revisedKey }).expect(200);
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM prewrite_briefs')).rows[0].n, 7);
+
     assert.ok(rows.every(row => row.client_id === null && row.tracker_page_id === null));
   } finally {
     await browser?.close();
