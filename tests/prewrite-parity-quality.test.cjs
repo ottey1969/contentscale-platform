@@ -154,7 +154,7 @@ test('PWB-02 — recognize a scanner with a website field and scan button outsid
 });
 
 test('PWB-06 — repair an unpublished price draft from a captured page and retain its research snapshot', () => {
-  const original = { keyword: topic, missing_information: { state: 'needs_input', field: 'pricing' },
+  const original = { keyword: topic, generation_usage: { input_tokens: 75 }, what_we_checked: { generation_usage: { input_tokens: 75 } }, missing_information: { state: 'needs_input', field: 'pricing' },
     search_scope: { query: topic }, ai_observations: { google_aio: { overview: 'unknown' } },
     content_decision: { recommended_treatment: 'CREATE_NEW_PAGE' }, meta_package: { url_slug: 'seo-prijzen' },
     opening_passage: { direct_answer: 'Pricing needs to be checked.' }, ai_answer: { direct_answer: 'Unknown.' } };
@@ -168,6 +168,9 @@ test('PWB-06 — repair an unpublished price draft from a captured page and reta
   assert.equal(revised.content_decision.recommended_treatment, 'EXPAND_EXISTING_PAGE');
   assert.equal(revised.opening_passage.direct_answer, revised.ai_answer.direct_answer);
   assert.equal(revised.pricing_repair.source_brief_id, 41);
+  assert.equal(revised.generation_usage, undefined);
+  assert.equal(revised.what_we_checked.generation_usage, undefined);
+  assert.equal(original.generation_usage.input_tokens, 75);
   assert.throws(() => quality.repairPricingDraft(original, site[0], { region: 'nl', sourceId: 41 }), /price evidence/);
 });
 

@@ -142,6 +142,8 @@ function repairPricingDraft(brief, page, { region, sourceId } = {}) {
   const evidence = missingInformation(brief.keyword, [page]);
   if (!evidence.source || !pageInMarket(page, [page], region)) throw Error('The exact page has no relevant price evidence for this market');
   const revised = structuredClone(brief);
+  delete revised.generation_usage;
+  if (revised.what_we_checked) delete revised.what_we_checked.generation_usage;
   revised.missing_information = evidence;
   revised.opening_passage = { ...revised.opening_passage, direct_answer: evidence.excerpt };
   revised.ai_answer = { ...revised.ai_answer, direct_answer: evidence.excerpt };
