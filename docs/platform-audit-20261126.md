@@ -252,3 +252,31 @@ De PostgreSQL-regressie oefent upgrades van de bestaande reviewtabel, autorisati
 ### LinkedPod Boost in Neon
 
 De opgegeven inventaris van `neondb` biedt een doel voor een geautoriseerde export. In deze sessie zijn geen Neon-connector, geautoriseerde databaseverbinding of schema-export aangetroffen. Geen tabeldata uitgelezen. De acht tabeldefinities zijn nodig voor de geïsoleerde schedulertest.
+
+#### Geautoriseerde overdracht van het schema
+
+De database-eigenaar controleert in het Neon-dashboard de juiste projectbranch, database `neondb` en het schema waarin de acht tabellen staan. Gebruik een door de eigenaar geautoriseerde account met toegang tot de catalogusdefinities en de schema-export. Gebruik een lokaal PostgreSQL-serviceprofiel en houd het verbindingsprofiel en de uitvoer buiten het repository. In het voorbeeld heet het profiel `linkedpod-schema-export` en staan de tabellen in `public`.
+
+```bash
+umask 077
+PGSERVICE=linkedpod-schema-export pg_dump \
+  --schema-only --no-owner --no-privileges --no-comments --no-security-labels \
+  --strict-names \
+  --table=public.boost_sessions \
+  --table=public.boost_users \
+  --table=public.boost_engagements \
+  --table=public.boost_credits_log \
+  --table=public.boost_registrations \
+  --table=public.boost_session_views \
+  --table=public.boost_settings \
+  --table=public.linkedpod_licenses \
+  --file=linkedpod-table-schema.sql
+```
+
+De tabelselectie bevat kolomdefinities, sleutels, constraints, indexen en triggerdefinities voor de geselecteerde tabellen. PostgreSQL neemt met een tabelselectie niet automatisch alle externe afhankelijkheden mee. Controleer in de catalogus:
+
+- `pg_trigger.tgfoid` en `pg_get_functiondef` voor de functies van alle niet-interne triggers.
+- `pg_constraint.confrelid` voor foreign keys naar tabellen buiten de selectie.
+- `pg_depend`, `pg_attrdef` en `pg_get_serial_sequence` voor gebruikte sequences, kolomdefaults, custom datatypes en functies buiten de selectie. Neem alleen de nodige definities op, zonder sequencewaarden.
+
+De database-eigenaar controleert de DDL en functiecode lokaal op credentials, persoonsgegevens en configuratie met gevoelige waarden. Deel alleen de beoordeelde definities via het afgesproken veilige kanaal. Controleer de volledigheid met een restore in een lege geïsoleerde PostgreSQL-database en de bestaande LinkedPod-scheduler. De cataloguscontrole, export en restore wachten op het oorspronkelijke schema of geautoriseerde toegang tot de betreffende Neon-branch.
