@@ -19,6 +19,7 @@ on:
       - 'src/tracker-registration-identity.cjs'
       - 'src/tracker-proof-sources.cjs'
       - 'tests/e2e-prospect-quick-scan-browser.test.cjs'
+      - 'tests/e2e-ceo-background-report-postgres.test.cjs'
       - 'tests/e2e-lead-crawler-admin-browser.test.cjs'
       - 'tests/e2e-network-contact-staging-browser.test.cjs'
       - 'tests/e2e-contact-promotion-postgres.test.cjs'
@@ -142,6 +143,7 @@ jobs:
           echo 'PASS: isolated canonical full-app boot and Tracker schema'
           NETWORK_E2E_BASE="$APP_URL" node --test tests/e2e-network-contact-staging-browser.test.cjs
           PROSPECT_E2E_BASE="$APP_URL" PROSPECT_E2E_MAIL_FIXTURE=1 node --test tests/e2e-prospect-quick-scan-browser.test.cjs
+          node --test tests/e2e-ceo-background-report-postgres.test.cjs
           PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-lead-crawler-admin-browser.test.cjs
           node --test tests/e2e-contact-promotion-postgres.test.cjs
           PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-contact-promotion-browser.test.cjs
