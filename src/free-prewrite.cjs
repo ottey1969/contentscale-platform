@@ -1,6 +1,7 @@
 'use strict';
 
 const { createHash } = require('node:crypto');
+const { pricingEvidenceUrl } = require('./prewrite-quality.cjs');
 const { parse } = require('parse5');
 const { validateUrl, fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
 const { isBotCheck } = require('./gsc-report/site-audit.cjs');
@@ -27,7 +28,13 @@ function page(lang, result) {
   const t = texts[lang];
   const labels = intentLabels[lang];
   const intent = `<label>${labels[0]}<select name="intent">${intents.map((value, index) => `<option value="${value}">${labels[index + 1]}</option>`).join('')}</select></label>`;
-  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p><section id="decision" hidden></section><form id="intent-adjust" hidden>${intent}<button>${labels[0]}</button></form>
+  const price = {
+    en: ['Public URL for prices or quote policy (optional)', 'Add a public page showing your prices or that you quote on request.'],
+    nl: ['Openbare URL voor prijzen of offertebeleid (optioneel)', 'Voeg een openbare pagina toe met je prijzen of de vermelding ‘op aanvraag’.'],
+    es: ['URL pública de precios o presupuestos (opcional)', 'Añade una página pública con tus precios o con la indicación de que se ofrecen bajo consulta.']
+  }[lang];
+  const priceInput = `<label>${price[0]}<input name="pricing-source" type="url" maxlength="500"></label>`;
+  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p><section id="decision" hidden></section><form id="intent-adjust" hidden>${intent}${priceInput}<button>${labels[0]}</button></form>
     <section id="implementation" hidden><h2>${t[9]}</h2><textarea id="editor" rows="15" readonly></textarea><p><a id="download" download="pre-write-brief.txt">${t[9]}</a></p>
     <label>${t[11]}<textarea id="copy" rows="5" minlength="200" maxlength="12000"></textarea></label><button id="approve" type="button">${t[12]}</button>
     <label>${t[13]}<textarea id="report" rows="7" maxlength="16000"></textarea></label><button id="save" type="button">${t[14]}</button>
@@ -36,11 +43,11 @@ function page(lang, result) {
     `<form id="intake"><label>${t[1]}<input name="website" type="url" placeholder="https://" maxlength="500" required></label>
     <label>${t[2]}<input name="keyword" maxlength="300" required></label>
     <label>${t[3]}<input name="country" value="${{en:'US',nl:'NL',es:'ES'}[lang]}" pattern="[A-Za-z]{2}" maxlength="2" required></label>
-    ${intent}<button>${t[4]}</button></form><p id="status" role="status"></p>
+    ${intent}${priceInput}<button>${t[4]}</button></form><p id="status" role="status"></p>
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
     <style>body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}input,textarea{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
-    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};</script><script src="/free-prewrite.js" defer></script></body></html>`;
+    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};</script><script src="/free-prewrite.js" defer></script></body></html>`;
 }
 
 function view(row, strip) {
@@ -124,11 +131,12 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
   }
 
   app.post(API, async (req, res) => {
-    let site;
-    const { keyword, region, language, intentOverride = '' } = req.body || {};
+    let site, priceSource;
+    const { keyword, region, language, intentOverride = '', pricingSource } = req.body || {};
     try {
       const url = validateUrl(req.body?.website);
       site = url.origin + '/';
+      priceSource = pricingEvidenceUrl(site, pricingSource);
     } catch { return res.status(400).json({ success: false }); }
     const key = credentials(req);
     if (!key || typeof keyword !== 'string' || !keyword.trim() || keyword.length > 300 ||
@@ -169,7 +177,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       if (discovered.site !== site) {
         await pool.query("UPDATE prewrite_briefs SET public_site=$2 WHERE id=$1 AND status='generating'", [row.id, discovered.site]);
       }
-      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride });
+      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride, pricingSource: priceSource });
     } catch (error) {
       console.warn('[free-prewrite] generation failed', error.code || error.name);
     } finally {

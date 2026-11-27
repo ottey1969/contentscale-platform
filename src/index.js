@@ -45886,6 +45886,9 @@ ${_prewriteBriefResearch.scriptTags()}</head>
     <div style="margin-bottom:12px;">
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Keyword <span style="color:#f87171;">*</span></label>
       <input id="pwbKeyword" type="text" class="cs-input" placeholder="e.g. free ai citation tracker">
+      <label for="pwbPricingSource">Public URL for prices or quote policy (optional)</label>
+      <input id="pwbPricingSource" type="url" class="cs-input" maxlength="500" placeholder="https://">
+
     </div>
     <div style="margin-bottom:12px;">
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Working title / H1 <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
@@ -47888,6 +47891,7 @@ async function generatePrewriteBrief() {
       manualAiEvidence:{ai_question:String((document.getElementById('cs-ai-question')||{}).value||'').trim().slice(0,300),ai_question_source:String(((document.getElementById('cs-ai-question')||{}).dataset||{}).source||''),google_source:String((document.getElementById('pwbGoogleSource')||{}).value||''),google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
       aiEvidenceExpectedCount:_NETWORK_PREWRITE_AUTHORIZED?5:0 };
     if(_pwbCompletionMode){_pwbBody.completionFromJobId=_pwbCompletionSource;_pwbBody.completionMode='missing_only';}
+    _pwbBody.pricingSource=String((document.getElementById('pwbPricingSource')||{}).value||'').trim();
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
     // v456 — Network embed runs as a persisted async job so the external gateway never
@@ -61005,7 +61009,7 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
     const _pwbQuality=require('./prewrite-quality.cjs');
-    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId } = req.body || {};
+    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId, pricingSource } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -61148,6 +61152,9 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     const _pwbOwnDomain=_pwbNetworkPublisherDomain||client.domain;
     const _publicReader=require('./growth-public-html-reader.cjs').fetchPublicGrowthHtml;
     const _pwbOwnOrigin=(()=>{try{return new URL(/^https?:\/\//i.test(_pwbOwnDomain)?_pwbOwnDomain:'https://'+_pwbOwnDomain).origin}catch{return ''}})();
+    let _pwbPricingUrl;
+    try{_pwbPricingUrl=_pwbQuality.pricingEvidenceUrl(_pwbOwnOrigin,pricingSource);}
+    catch(error){return res.status(400).json({success:false,stage:'pricing_source',error:error.message});}
     let _pwbAuthorizedPageMatches=[];
     if(client.id!=null){
       try{
@@ -61155,7 +61162,7 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
           WHERE tracker_client_id=$1 AND lower(trim(gsc_keyword))=lower(trim($2)) LIMIT 8`,[client.id,keyword])).rows.map(row=>row.url);
       }catch{}
     }
-    const _pwbOwnCandidates=[...new Set([..._pwbAuthorizedPageMatches,..._pwbSameIntent.map(x=>x.url),
+    const _pwbOwnCandidates=[...new Set([_pwbPricingUrl,..._pwbAuthorizedPageMatches,..._pwbSameIntent.map(x=>x.url),
       ...clientSitemapUrls.filter(url=>{try{return /\/(?:[^/]*(?:seo|scan|checker|diensten|services|servicios)[^/]*)/i.test(new URL(url).pathname)}catch{return false}}),
       ...clientSitemapUrls])].filter(url=>{
         try{return new URL(url).hostname.replace(/^www\./i,'')===new URL(_pwbOwnOrigin).hostname.replace(/^www\./i,'')}catch{return false}
@@ -62936,8 +62943,8 @@ ${sourceText}`;
 app.post('/api/tracker-client/:token/prewrite-brief', _handlePrewriteBriefGeneration);
 require('./free-prewrite.cjs').registerFreePrewrite(app, pool, {
   generate: async context => {
-    const { keyword, language, region, manualAiEvidence, intentOverride } = context;
-    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence, intentOverride } }, {
+    const { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } = context;
+    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } }, {
       status() { return this; },
       json() {}
     }, context);

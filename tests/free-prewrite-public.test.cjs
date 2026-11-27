@@ -49,11 +49,11 @@ test('private public briefs in Chromium use the canonical publication history fo
     app.use(express.static(require('node:path').join(__dirname, '../public')));
     registerFreePrewrite(app, pool, {
       discover: async () => ({ site, urls: [existingUrl] }),
-      generate: async ({ id, keyword, intentOverride }) => {
+      generate: async ({ id, keyword, intentOverride, pricingSource }) => {
         const decision = keyword === 'Existing' ? { recommended_treatment: 'EXPAND_EXISTING_PAGE', closest_existing_url: existingUrl }
           : { recommended_treatment: 'CREATE_NEW_PAGE' };
         await pool.query("UPDATE prewrite_briefs SET status='open',brief_json=$2 WHERE id=$1", [
-          id, { keyword, search_intent: { primary: intentOverride || 'transactional', user_override: intentOverride }, content_decision: decision, meta_package: { url_slug: 'planning-guide' }, generation_usage: { tokens: 123 } }
+          id, { keyword, search_intent: { primary: intentOverride || 'transactional', user_override: intentOverride }, pricing_fixture: pricingSource, content_decision: decision, meta_package: { url_slug: 'planning-guide' }, generation_usage: { tokens: 123 } }
         ]);
       },
       verification: { fetchHtml: async url => ({
@@ -91,10 +91,14 @@ test('private public briefs in Chromium use the canonical publication history fo
       if (lang === 'en') {
         const original = page.url();
         await page.locator('#intent-adjust select').selectOption('informational');
+        await page.locator('#intent-adjust [name=pricing-source]').fill(existingUrl);
         await page.locator('#intent-adjust button').click();
         await page.waitForURL(url => url.href !== original);
         await page.locator('#intent-adjust select').waitFor();
         assert.equal(await page.locator('#intent-adjust select').inputValue(), 'informational');
+        const key = new URL(page.url()).hash.slice(1);
+        const updated = await api.get(endpoint + '/result').set('Authorization', 'Bearer ' + key).expect(200);
+        assert.equal(updated.body.brief.pricing_fixture, existingUrl);
       }
       const privateUrl = page.url();
       assert.match(privateUrl, /#[a-f0-9]{64}$/);

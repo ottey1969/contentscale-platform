@@ -44,8 +44,17 @@ function websitePage(url, html) {
   const schema = new Set();
   let form = false;
   let websiteInput = false;
+  let pairedControls = false;
   const attrs = node => Object.fromEntries((node.attrs || []).map(a => [a.name, a.value]));
   const text = node => node.value || (node.childNodes || []).map(text).join(' ');
+  function urlInput(node) {
+    const a = attrs(node);
+    return node.tagName === 'input' && (a.type === 'url' || /^(?:domain|url|website)$/.test(a.name || '') ||
+      /\b(?:website|page|pagina|sitio web)\b.{0,20}\burl\b|\burl\b.{0,30}\b(?:website|pagina|scan)\b/i.test(a['aria-label'] || ''));
+  }
+  function scanButton(node) {
+    return node.tagName === 'button' && /\b(?:scan|check|analyse|analyze|controleren|comprobar|analizar)\b/i.test(text(node));
+  }
   function collectType(value) {
     for (const type of [].concat(value || [])) if (typeof type === 'string') schema.add(type.split(/[\/#]/).pop());
   }
@@ -69,7 +78,9 @@ function websitePage(url, html) {
     if (['title','h1','h2'].includes(tag)) titles.push(text(node).trim());
     if (node.nodeName === '#text') visible.push(node.value);
     if (tag === 'form') form = true;
-    if (inForm && tag === 'input' && (a.type === 'url' || /^(?:domain|url|website)$/.test(a.name || ''))) websiteInput = true;
+    if (inForm && urlInput(node)) websiteInput = true;
+    const children = node.childNodes || [];
+    if (children.some(urlInput) && children.some(scanButton)) pairedControls = true;
     for (const child of node.childNodes || []) visit(child, inForm || tag === 'form');
   }
   visit(parse(String(html || '')));
@@ -82,7 +93,7 @@ function websitePage(url, html) {
     if (explicitAmount.test(passage)) pricePolicy = { status: 'published_amount', passage: passage.trim() };
     else if (!pricePolicy && quote.test(passage)) pricePolicy = { status: 'on_request', passage: passage.trim() };
   }
-  return { url, heading, type: tool.test(heading) && form && websiteInput ? 'interactive_tool' : service.test(heading) ? 'service' : 'content',
+  return { url, heading, type: tool.test(heading) && ((form && websiteInput) || pairedControls) ? 'interactive_tool' : service.test(heading) ? 'service' : 'content',
     schema: [...schema], pricing: pricePolicy, text: body.slice(0, 3200) };
 }
 
@@ -102,6 +113,19 @@ function contentMatch(topic, pages, { region } = {}) {
   if (!pricing.test(topic)) return null;
   return pages.find(page => page.type === 'service' && page.pricing && pageInMarket(page, pages, region) &&
     hasTopic(topic, page.heading) && hasTopic(topic, page.pricing.passage)) || null;
+}
+
+function pricingEvidenceUrl(site, value) {
+  if (value == null || value === '') return null;
+  const { validateUrl } = require('./growth-public-html-reader.cjs');
+  const { hostOf } = require('./tracker-domain-guard.cjs');
+  const host = hostOf(site);
+  const message = 'Use an exact public HTTPS pricing page on the same website';
+  if (typeof value !== 'string' || value.length > 500) throw Error(message);
+  let url;
+  try { url = validateUrl(value.trim()); } catch { throw Error(message); }
+  if (!host || hostOf(url.href) !== host || url.search || value.includes('#')) throw Error(message);
+  return url.href;
 }
 
 function missingInformation(topic, pages) {
@@ -224,7 +248,7 @@ function geminiUsage(model, response) {
 }
 
 module.exports = {
-  serpFormats, websitePage, firstPartyOffers, contentMatch, missingInformation, alignOpening, overlappingPlan,
+  serpFormats, websitePage, firstPartyOffers, contentMatch, pricingEvidenceUrl, missingInformation, alignOpening, overlappingPlan,
   metadataIssues, schemaAdvice, relevantInternalLinks, verifiedSourceTargets, writerBrief, googleObservation, aiObservations,
   selectIntent, zeroThinkingModel, geminiUsage
 };

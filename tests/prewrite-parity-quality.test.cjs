@@ -136,3 +136,19 @@ test('PWB-12 — Network compact repair does not bypass the bounded fallback mod
   assert.match(compact, /repairBody,'gemini-2\.5-flash-lite',fallback,1,false/);
   assert.doesNotMatch(compact, /gemini-3|GEMINI_MODEL_BRIEF_FALLBACK\|\|fallback/);
 });
+
+test('PWB-06 — a pricing correction accepts an exact public page on the verified website', () => {
+  assert.equal(quality.pricingEvidenceUrl(homepage, services), services);
+  assert.equal(quality.pricingEvidenceUrl(homepage, ''), null);
+  assert.throws(() => quality.pricingEvidenceUrl(homepage, 'https://rival.example/nl/diensten/'), /same website/);
+  assert.throws(() => quality.pricingEvidenceUrl(homepage, services + '?preview=1'), /same website/);
+  assert.throws(() => quality.pricingEvidenceUrl(homepage, services + '#prices'), /same website/);
+});
+
+test('PWB-02 — recognize a scanner with a website field and scan button outside a form', () => {
+  const html = '<title>GRAAF ContentScore Scanner</title><h1>SEO content check</h1>' +
+    '<div><input type="text" aria-label="Enter website URL to scan" placeholder="https://your-website.example">' +
+    '<button>Scan</button></div>';
+  assert.equal(quality.websitePage(scan, html).type, 'interactive_tool');
+  assert.equal(quality.websitePage(scan, html.replace('<button>Scan</button>', '<button>Subscribe</button>')).type, 'content');
+});

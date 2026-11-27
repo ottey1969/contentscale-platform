@@ -37,7 +37,7 @@
       const form = new FormData(intake);
       const resultPath = root + '/r?lang=' + lang + '#' + key;
       try {
-        await call('', { website: form.get('website'), keyword: form.get('keyword'), region: form.get('country'), language: lang, intentOverride: form.get('intent') });
+        await call('', { website: form.get('website'), keyword: form.get('keyword'), region: form.get('country'), language: lang, intentOverride: form.get('intent'), pricingSource: form.get('pricing-source') });
         location.assign(resultPath);
       } catch {
         status.textContent = labels[7];
@@ -96,6 +96,8 @@
     addText(card, 'h2', result.target.mode + ' · ' + result.target.url);
     const reason = result.brief.content_decision?.reason;
     if (reason) addText(card, 'p', reason);
+    const pricing = result.brief.missing_information;
+    if (pricing?.state === 'needs_input') addText(card, 'p', window.prewritePricingHelp);
     const adjust = element('intent-adjust');
     adjust.hidden = result.status === 'published';
     adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
@@ -106,7 +108,7 @@
       adjust.querySelector('button').disabled = true;
       try {
         await call('', { website: result.website, keyword: result.keyword, region: result.region, language: result.language,
-          intentOverride: adjust.elements.intent.value });
+          intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value });
         history.replaceState(null, '', root + '/r?lang=' + lang + '#' + key);
         location.reload();
       } catch {
@@ -132,7 +134,7 @@
     downloadUrl = URL.createObjectURL(new Blob([editorText], { type: 'text/plain;charset=utf-8' }));
     element('download').href = downloadUrl;
     element('verify').disabled = result.status !== 'published';
-    element('publish').disabled = result.status !== 'approved';
+    element('publish').disabled = result.status !== 'approved' || pricing?.state === 'needs_input';
     element('save').disabled = result.status !== 'approved';
     element('approve').disabled = result.status === 'published';
   }
