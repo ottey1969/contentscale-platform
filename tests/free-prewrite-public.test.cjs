@@ -98,7 +98,7 @@ test('private public briefs in Chromium use the canonical publication history fo
         const original = page.url();
         await page.locator('#intent-adjust select').selectOption('informational');
         await page.locator('#intent-adjust [name=pricing-source]').fill(existingUrl);
-        await page.locator('#intent-adjust button').click();
+        await page.locator('#intent-adjust button[type=submit]').click();
         await page.waitForURL(url => url.href !== original);
         await page.locator('#intent-adjust select').waitFor();
         assert.equal(await page.locator('#intent-adjust select').inputValue(), 'informational');

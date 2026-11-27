@@ -34,7 +34,7 @@ function page(lang, result) {
     es: ['URL pública de precios o presupuestos (opcional)', 'Añade una página pública con tus precios o con la indicación de que se ofrecen bajo consulta.', 'Reparar borrador con evidencia de precios']
   }[lang];
   const priceInput = `<label>${price[0]}<input name="pricing-source" type="url" maxlength="500"></label>`;
-  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p><section id="decision" hidden></section><form id="intent-adjust" hidden>${intent}${priceInput}<button>${labels[0]}</button> <button type="button" id="repair-pricing" hidden>${price[2]}</button></form>
+  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p><section id="decision" hidden></section><form id="intent-adjust" hidden>${intent}${priceInput}<button type="submit">${labels[0]}</button> <button type="button" id="repair-pricing" hidden>${price[2]}</button></form>
     <section id="implementation" hidden><h2>${t[9]}</h2><textarea id="editor" rows="15" readonly></textarea><p><a id="download" download="pre-write-brief.txt">${t[9]}</a></p>
     <label>${t[11]}<textarea id="copy" rows="5" minlength="200" maxlength="12000"></textarea></label><button id="approve" type="button">${t[12]}</button>
     <label>${t[13]}<textarea id="report" rows="7" maxlength="16000"></textarea></label><button id="save" type="button">${t[14]}</button>

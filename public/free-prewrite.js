@@ -121,7 +121,7 @@
       event.preventDefault();
       const previousKey = key;
       key = newKey();
-      adjust.querySelector('button').disabled = true;
+      adjust.querySelector('button[type=submit]').disabled = true;
       try {
         await call('', { website: result.website, keyword: result.keyword, region: result.region, language: result.language,
           intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value });
@@ -130,7 +130,7 @@
       } catch {
         key = previousKey;
         reportError();
-        adjust.querySelector('button').disabled = false;
+        adjust.querySelector('button[type=submit]').disabled = false;
       }
     };
     const research = JSON.stringify(result.brief, null, 2);
