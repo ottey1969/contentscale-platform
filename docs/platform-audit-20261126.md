@@ -49,6 +49,10 @@ De normale lijstroute verloor op een schone database ook de opgeslagen Network-i
 
 De GitHub-inventaris omvatte 626 branches en 8.501 bereikbare commits. De SQL-geschiedenis bevat geen DDL met `boost_sessions`, `boost_users` of `boost_engagements`. De oude commits `a7b27846`, `d7476f9a` en `f18784cf` bevatten de UI en serverqueries die deze tabellen verwachten. De gevonden staging-guard behandelt `boost_settings`. De canonieke boot meldt daarom op een schone fixture nog steeds een ontbrekende `boost_sessions`-tabel. Voor een geldige schedulerregressie is de oorspronkelijke migratie of een schema-only-export van een werkende Boost-database nodig, inclusief sleutels, indexen, relaties en triggers.
 
+### Eerste gelijktijdige aanvragen voor CEO-campagnelinks
+
+De geïsoleerde console en een PostgreSQL-regressie reproduceerden een catalogusconflict bij gelijktijdige eerste aanvragen. De bestaande initializer voert de migratie en het toevoegen van de historische contactformulierlink in één transactie uit onder een gedeeld PostgreSQL-slot. Vier onafhankelijke pools openen tegelijk het schema en lezen één standaardlink. De promotiebrowser wacht ook op de geverifieerde rij voor selectie nadat de UI een filter heeft toegepast.
+
 ### Gecombineerde hertest na #585–#590
 
 De zes goedgekeurde PR's zijn in opgegeven volgorde gesquasht tegen groene CI. De mergecommits zijn `6b5b912` (#585), `a920e0b` (#586), `fd278c8` (#588), `a78cd80` (#587), `9222b69` (#589) en `46786e5` (#590). De gerichte PostgreSQL-hertests slaagden met respectievelijk 17, 17, 19, 19, 31 en 41 tests. De publieke versie-API bevestigde de laatstgenoemde commit. [Productieversie](https://app.contentscale.site/api/version)

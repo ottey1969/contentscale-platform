@@ -25949,19 +25949,36 @@ async function deleteSelectedReports(){var tokens=selectedReportTokens(),btn=doc
 function addButtons(){document.querySelectorAll('#list article.card').forEach(function(card){if(card.querySelector('[data-prospect-report]'))return;var del=card.querySelector('[data-delete-scan]'),txt=card.textContent||'';if(/Not scanned yet/i.test(txt))return;var token='';var sel=card.querySelector('[data-token]');if(sel)token=sel.dataset.token||'';if(!token){var ai=card.querySelector('button[onclick*="saveAI"]');var oc=ai&&String(ai.getAttribute('onclick')||'');if(oc){var q1=oc.indexOf("'"),q2=q1>=0?oc.indexOf("'",q1+1):-1;if(q1>=0&&q2>q1)token=oc.slice(q1+1,q2)}}if(!token)return;var row=card.querySelector('.row')||card,b=document.createElement('button');b.className='btn pqsReportBtn';b.dataset.prospectReport='1';b.textContent='Create Prospect Report';b.title='Interest shown: run the broader site report now. 5/5 AI is optional.';b.onclick=function(){generateFromQuick(token,b)};row.appendChild(b)})}
 var mo=new MutationObserver(function(){ensurePanel();addButtons()});mo.observe(document.documentElement,{childList:true,subtree:true});setInterval(function(){ensurePanel();addButtons()},1200);document.addEventListener('click',function(e){if(e.target&&e.target.id==='pqsReportRefresh')loadHistory()});ensurePanel();addButtons();
 })();<\/script>`}
-async function _pqsEnsureCampaignLinks(){
-  await pool.query(`CREATE TABLE IF NOT EXISTS prospect_public_campaign_links (
-    id BIGSERIAL PRIMARY KEY, source TEXT NOT NULL, language TEXT NOT NULL,
-    campaign TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    open_count BIGINT NOT NULL DEFAULT 0, last_opened_at TIMESTAMPTZ,
-    hidden_at TIMESTAMPTZ,
-    UNIQUE(source,language,campaign)
-  )`);
-  await pool.query('ALTER TABLE prospect_public_campaign_links ADD COLUMN IF NOT EXISTS open_count BIGINT NOT NULL DEFAULT 0');
-  await pool.query('ALTER TABLE prospect_public_campaign_links ADD COLUMN IF NOT EXISTS last_opened_at TIMESTAMPTZ');
-  await pool.query('ALTER TABLE prospect_public_campaign_links ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ');
-  // Restore the known contact-form link created before campaign links were stored.
-  await pool.query("INSERT INTO prospect_public_campaign_links(source,language,campaign) VALUES('contact_form','en','') ON CONFLICT DO NOTHING");
+// Prospect campaign links use a canonical initializer.
+let _pqsCampaignLinksReady;
+function _pqsEnsureCampaignLinks(){
+  if(!_pqsCampaignLinksReady){
+    _pqsCampaignLinksReady=(async()=>{
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',['prospect_public_campaign_links']);
+        await client.query(`CREATE TABLE IF NOT EXISTS prospect_public_campaign_links (
+          id BIGSERIAL PRIMARY KEY, source TEXT NOT NULL, language TEXT NOT NULL,
+          campaign TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          open_count BIGINT NOT NULL DEFAULT 0, last_opened_at TIMESTAMPTZ,
+          hidden_at TIMESTAMPTZ,
+          UNIQUE(source,language,campaign)
+        )`);
+        await client.query(`ALTER TABLE prospect_public_campaign_links
+          ADD COLUMN IF NOT EXISTS open_count BIGINT NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS last_opened_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ`);
+        // Restore the known contact-form link created before campaign links were stored.
+        await client.query("INSERT INTO prospect_public_campaign_links(source,language,campaign) VALUES('contact_form','en','') ON CONFLICT DO NOTHING");
+        await client.query('COMMIT');
+      }catch(error){
+        await client.query('ROLLBACK').catch(()=>{});
+        throw error;
+      }finally{client.release();}
+    })().catch(error=>{_pqsCampaignLinksReady=undefined;throw error;});
+  }
+  return _pqsCampaignLinksReady;
 }
 app.get('/api/prospect-quick-scan/admin/campaign-links',requireAdmin,async(req,res)=>{
   try{

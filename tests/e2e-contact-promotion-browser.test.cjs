@@ -50,8 +50,8 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
     await db.query(`UPDATE contact_intelligence SET status='domain_verified',website_url=$2,
       website_verified_at=NOW(),network_fit_score=74 WHERE id=$1`, [contact.id, website]);
 
-    async function approve() {
-      const row = page.locator('#ciList .ciRow').filter({ hasText: name });
+    async function approve(status) {
+      const row = page.locator('#ciList .ciRow[data-status="' + status + '"]').filter({ hasText: name });
       await row.getByRole('checkbox').check();
       page.once('dialog', dialog => dialog.accept());
       const promoted = page.waitForResponse(response => new URL(response.url()).pathname === '/api/contact-intelligence/promote');
@@ -62,7 +62,7 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
     }
 
     await page.locator('#ciShowVerified').click();
-    const first = await approve();
+    const first = await approve('domain_verified');
     assert.equal(first.created, 1);
     assert.equal(first.network_entity_sync.failed, 0);
     const { rows: [saved] } = await db.query('SELECT status,promoted_token FROM contact_intelligence WHERE id=$1', [contact.id]);
@@ -79,7 +79,7 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
     await page.locator('#ciLoad').click();
     const review = (await (await loaded).json()).items.find(item => String(item.id) === String(contact.id));
     assert.ok(review?.network?.business_id, 'the stored Network identity must appear on the contact after a clean boot');
-    const repeated = await approve();
+    const repeated = await approve('promoted');
     assert.equal(repeated.created, 0);
     assert.equal(repeated.existing, 1);
     assert.equal(repeated.network_entity_sync.failed, 0);
