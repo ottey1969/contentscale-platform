@@ -15,7 +15,7 @@ test('CEO background preparation persists one working report linked to the origi
   const { Pool } = require('pg');
   const schema = 'ceo_background_' + crypto.randomBytes(8).toString('hex');
   const control = new Pool({ connectionString: database });
-  const db = new Pool({ connectionString: database, options: '-c search_path=' + schema });
+  const db = new Pool({ connectionString: database, options: '-c search_path=' + schema, application_name: schema });
   const otherDb = new Pool({ connectionString: database, options: '-c search_path=' + schema });
   const page = 'https://commercial.example/Services/?v=1';
   let releaseScan, enterScan;
@@ -112,6 +112,31 @@ test('CEO background preparation persists one working report linked to the origi
     assert.equal((await second.call('interrupted')).code, 202);
     assert.equal((await second.job('interrupted')).status, 'ready');
     assert.equal((await db.query('SELECT count(*)::int AS count FROM opportunity_reports')).rows[0].count, 2);
+
+    await db.query("INSERT INTO prospect_quick_scans (token,url,language) VALUES ('disconnected',$1,'en')", [page]);
+    let reportStarted, resumeOldWorker;
+    const started = new Promise(resolve => { reportStarted = resolve; });
+    const paused = new Promise(resolve => { resumeOldWorker = resolve; });
+    duringScan = () => { reportStarted(); return paused; };
+    let oldJob;
+    try {
+      assert.equal((await first.call('disconnected')).code, 202);
+      oldJob = first.job('disconnected');
+      await started;
+      const { rows: [session] } = await control.query(`SELECT activity.pid FROM pg_stat_activity activity
+        JOIN pg_locks locks ON locks.pid=activity.pid AND locks.locktype='advisory' AND locks.granted
+        WHERE activity.application_name=$1`, [schema]);
+      assert.ok(session, 'the first worker owns the reservation on its dedicated session');
+      assert.equal((await control.query('SELECT pg_terminate_backend($1,5000) AS terminated', [session.pid])).rows[0].terminated, true);
+      duringScan = async () => {};
+      assert.equal((await second.call('disconnected')).code, 202);
+      assert.equal((await second.job('disconnected')).status, 'ready');
+    } finally {
+      resumeOldWorker();
+      await oldJob;
+    }
+    assert.equal((await oldJob).status, 'unavailable');
+    assert.equal((await db.query("SELECT count(*)::int AS count FROM opportunity_reports WHERE report_data->>'quick_scan_token'='disconnected'")).rows[0].count, 1);
   } finally {
     releaseScan();
     await Promise.all([db.end(), otherDb.end()]);
