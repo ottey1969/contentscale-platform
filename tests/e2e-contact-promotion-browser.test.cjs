@@ -52,7 +52,11 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
 
     async function approve(status) {
       const row = page.locator('#ciList .ciRow[data-status="' + status + '"]').filter({ hasText: name });
-      await row.getByRole('checkbox').check();
+      const checkbox = row.getByRole('checkbox');
+      await checkbox.check();
+      await page.locator('#ciLoad').click();
+      await page.locator('#ciImportStatus').getByText('✓ Filters applied.', { exact: true }).waitFor();
+      assert.equal(await checkbox.isChecked(), true, 'refreshing the same list must retain the selected contact');
       page.once('dialog', dialog => dialog.accept());
       const promoted = page.waitForResponse(response => new URL(response.url()).pathname === '/api/contact-intelligence/promote');
       await page.locator('#ciPromote').click();

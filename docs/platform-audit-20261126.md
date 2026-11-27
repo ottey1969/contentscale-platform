@@ -51,7 +51,7 @@ De GitHub-inventaris omvatte 626 branches en 8.501 bereikbare commits. De SQL-ge
 
 ### Eerste gelijktijdige aanvragen voor CEO-campagnelinks
 
-De geïsoleerde console en een PostgreSQL-regressie reproduceerden een catalogusconflict bij gelijktijdige eerste aanvragen. De bestaande initializer voert de migratie en het toevoegen van de historische contactformulierlink in één transactie uit onder een gedeeld PostgreSQL-slot. Vier onafhankelijke pools openen tegelijk het schema en lezen één standaardlink. De promotiebrowser wacht ook op de geverifieerde rij voor selectie nadat de UI een filter heeft toegepast.
+De geïsoleerde console en een PostgreSQL-regressie reproduceerden een catalogusconflict bij gelijktijdige eerste aanvragen. De bestaande initializer voert de migratie en het toevoegen van de historische contactformulierlink in één transactie uit onder een gedeeld PostgreSQL-slot. Vier onafhankelijke pools openen tegelijk het schema en lezen één standaardlink. Chromium reproduceerde daarnaast verlies van een geselecteerd contact wanneer dezelfde lijst opnieuw laadde. De weergave negeert oudere antwoorden en behoudt de selectie bij dezelfde lijst. Een andere filter of pagina behoudt geen verborgen selectie. De browser test vervolgens de echte promotie en herhaling.
 
 ### Gecombineerde hertest na #585–#590
 
