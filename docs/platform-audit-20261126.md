@@ -45,6 +45,11 @@ Chromium reproduceerde een onderbreking in de beheerreis. Na het herladen stond 
 
 De normale lijstroute verloor op een schone database ook de opgeslagen Network-identiteit van dit contact. De relatiequery gebruikte publishertabellen die nog niet bestonden. De relatiequery wacht nu op de bestaande canonieke Network-initialisatie zodra Network actief is. Chromium controleert dat het contact na herladen de opgeslagen Network-identiteit terugkrijgt.
 
+
+### Privé-CEO-generatie en prospectstatus
+
+De privé-ingang voor CEO-generatie controleert de bestaande beheerrol vóór een prospectrecord of providerwerk ontstaat. De regressie met gecontroleerde providerfixtures weigert onbekende en klantrollen zonder opslag of scan, terwijl het publieke pad en de privéstart door een beheerder dezelfde gecontroleerde paginaselectie doorlopen. De canonieke server op PostgreSQL bevestigt ook dat een geweigerde aanvraag geen prospectrecord achterlaat. De Chromium-reis vanaf bestaand CEO-resultaat tot Quick Scan, Audit20 en Tracker blijft groen. Eén ononderbroken browserreis vanaf succesvolle providergeneratie staat open.
+
 ### Oorspronkelijk LinkedPod Boost-schema
 
 De GitHub-inventaris omvatte 626 branches en 8.501 bereikbare commits. De SQL-geschiedenis bevat geen DDL met `boost_sessions`, `boost_users` of `boost_engagements`. De oude commits `a7b27846`, `d7476f9a` en `f18784cf` bevatten de UI en serverqueries die deze tabellen verwachten. De gevonden staging-guard behandelt `boost_settings`. De canonieke boot meldt daarom op een schone fixture nog steeds een ontbrekende `boost_sessions`-tabel. Voor een geldige schedulerregressie is de oorspronkelijke migratie of een schema-only-export van een werkende Boost-database nodig, inclusief sleutels, indexen, relaties en triggers.
@@ -227,7 +232,3 @@ De gerichte regressierun slaagde met 90 van 90. Daarin zijn de bestaande, in de 
 De publieke PRT-pagina en de variant met een hoofdletter in het pad gaven beide HTTP 200. De variant verwees in de canonical-tag naar de oorspronkelijke PRT-URL. Dat signaal geldt voor deze website. De audit heeft alleen de publieke HTML opgevraagd. De private baseline en historische cachekopieën in productie zijn niet ingezien. [Publieke PRT-pagina](https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/)
 
 De integratietests gebruiken een geïsoleerde database met een echte Chromium-browser en afgeschermde externe providers. GitHub CI toont de afzonderlijke browser- en PostgreSQL-runs per commit. [PR #571](https://github.com/ottey1969/contentscale-platform/pull/571/checks)
-
-### Privé-CEO-generatie en prospectstatus
-
-De privé-ingang voor CEO-generatie controleert de bestaande beheerrol vóór een prospectrecord of providerwerk ontstaat. De regressie met gecontroleerde providerfixtures weigert onbekende en klantrollen zonder opslag of scan, terwijl het publieke pad en de privéstart door een beheerder dezelfde gecontroleerde paginaselectie doorlopen. De canonieke server op PostgreSQL bevestigt ook dat een geweigerde aanvraag geen prospectrecord achterlaat. De Chromium-reis vanaf bestaand CEO-resultaat tot Quick Scan, Audit20 en Tracker blijft groen. Eén ononderbroken browserreis vanaf succesvolle providergeneratie staat open.
