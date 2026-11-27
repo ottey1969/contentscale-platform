@@ -16291,6 +16291,11 @@ return result;
                      return {title,h1:h1s[0]||'',h1Count:h1s.length,description,canonical:canonical?_auditNormUrl(canonical):'',indexable:!/(noindex)/i.test(robots),robots,pageType,internalTargets:internal,externalTargets:external,topicTerms:_auditTopicTerms([title,h1s.join(' '),path].join(' '))};
                    };
 
+                   const { exactUrl } = require('./implementation-report.cjs');
+                   const checkpointUrl = value => {
+                     if (typeof value !== 'string') return null;
+                     try { return exactUrl(value.split('#',1)[0]); } catch { return null; }
+                   };
                    const pages = [];
                    const scanFailures = [];
                    // Load durable checkpoints before scanning. This survives refreshes, failed jobs,
@@ -16299,9 +16304,9 @@ return result;
                      try{
                        const ready=await _ensureAuditCheckpointTable();
                        if(ready){
-                         const keys=picked.map(x=>_auditNormUrl(x).toLowerCase());
+                         const keys=picked.map(checkpointUrl).filter(Boolean);
                          const cr=await pool.query("SELECT url,page_data,scanned_at,build_id FROM audit_page_checkpoints WHERE url=ANY($1::text[]) AND scanned_at > NOW() - INTERVAL '24 hours' AND build_id=$2",[keys,CONTENTSCALE_BUILD_ID]);
-                         cr.rows.forEach(row=>{if(row&&row.url&&row.page_data&&row.build_id===CONTENTSCALE_BUILD_ID)_auditPageCheckpoints.set(String(row.url).toLowerCase(),{savedAt:new Date(row.scanned_at).getTime(),page:row.page_data,buildId:row.build_id});});
+                         cr.rows.forEach(row=>{if(row&&row.url&&row.page_data&&row.build_id===CONTENTSCALE_BUILD_ID)_auditPageCheckpoints.set(row.url,{savedAt:new Date(row.scanned_at).getTime(),page:row.page_data,buildId:row.build_id});});
                        }
                      }catch(e){console.warn('[audit-checkpoints] load skipped:',e.message);}
                    }
@@ -16309,18 +16314,21 @@ return result;
                      const u=picked[_pageIndex];
                      if(_auditCancelled())return res.status(409).json({success:false,error:'Audit stopped by user',stopped:true,pages_scanned:pages.length});
                      if(_jobRef){_jobRef.progress='Pagina '+(_pageIndex+1)+' van '+picked.length+' wordt onderzocht…';_jobRef.pagesCompleted=pages.length;_jobRef.pageLimit=picked.length;}
-                     const _checkpointKey=_auditNormUrl(u).toLowerCase();
+                     const _checkpointKey=checkpointUrl(u);
                      const _manualSource=mode==='test'&&_pageIndex===0&&typeof sourceHtml==='string'&&sourceHtml.trim().length>=100;
-                     const _checkpoint=(forceFresh||_manualSource)?null:_auditPageCheckpoints.get(_checkpointKey);
+                     const _checkpoint=(forceFresh||_manualSource||!_checkpointKey)?null:_auditPageCheckpoints.get(_checkpointKey);
                      const _cpPage=_checkpoint&&_checkpoint.page;
                      const _cpEvidence=_cpPage&&_cpPage.fetchEvidence||{};
+                     const _sameLiveRequest=_cpEvidence.valid_page_content===true &&
+                       _cpEvidence.evidence_source!=='user_supplied_view_source' &&
+                       checkpointUrl(_cpEvidence.requested_url)===_checkpointKey;
                      const _cpTitle=String((_cpEvidence&&_cpEvidence.document_title)||(_cpPage&&_cpPage.title)||'');
                      const _cpLooksInvalid=!!(_cpPage && (/robot challenge|captcha|403\s*[-–—:]?\s*forbidden|\baccess denied\b|\brequest blocked\b|verify you are human|just a moment/i.test(_cpTitle) || (Number(_cpPage.wordCount||0)<40 && Number(_cpEvidence.http_status||0)===202 && _cpPage.indexable===false)));
                      if(_cpLooksInvalid){
                        _auditPageCheckpoints.delete(_checkpointKey);
                        if(pool){try{await pool.query('DELETE FROM audit_page_checkpoints WHERE url=$1',[_checkpointKey]);}catch(e){}}
                      }
-                     if(_checkpoint && !_cpLooksInvalid && (Date.now()-_checkpoint.savedAt)<_AUDIT_CHECKPOINT_TTL_MS && _checkpoint.page){
+                     if(_checkpoint && _sameLiveRequest && !_cpLooksInvalid && (Date.now()-_checkpoint.savedAt)<_AUDIT_CHECKPOINT_TTL_MS && _checkpoint.page){
                        pages.push(JSON.parse(JSON.stringify(_checkpoint.page)));
                        if(_jobRef){_jobRef.pagesCompleted=pages.length;_jobRef.pagesReused=(_jobRef.pagesReused||0)+1;_jobRef.progress='Eerder voltooide pagina hergebruikt; volgende pagina wordt onderzocht…';}
                        continue;
@@ -16394,13 +16402,16 @@ return result;
                            topicTerms:_pageFacts.topicTerms,
                            recommendations: (r.recommendations && Array.isArray(r.recommendations.all)) ? r.recommendations.all : (Array.isArray(r.recommendations) ? r.recommendations : []),
                          });
-                         // Save immediately, before cross-page analysis. If a later URL fails or the
-                         // user stops the job, completed pages can be resumed without rescanning.
-                         _auditPageCheckpoints.set(_checkpointKey,{savedAt:Date.now(),page:JSON.parse(JSON.stringify(pages[pages.length-1]))});
-                         if(pool){
-                           try{
-                             if(await _ensureAuditCheckpointTable())await pool.query(`INSERT INTO audit_page_checkpoints (url,page_data,scanned_at,build_id) VALUES ($1,$2::jsonb,NOW(),$3) ON CONFLICT (url) DO UPDATE SET page_data=EXCLUDED.page_data,scanned_at=NOW(),build_id=EXCLUDED.build_id`,[_checkpointKey,JSON.stringify(pages[pages.length-1]),CONTENTSCALE_BUILD_ID]);
-                           }catch(e){console.warn('[audit-checkpoints] save skipped for',_checkpointKey,e.message);}
+                         // Resume only URL scans with evidence for the exact requested page.
+                         if(!_manualSource && _checkpointKey && _fetchEvidence.valid_page_content===true &&
+                            checkpointUrl(_fetchEvidence.requested_url)===_checkpointKey){
+                           const page=JSON.parse(JSON.stringify(pages[pages.length-1]));
+                           _auditPageCheckpoints.set(_checkpointKey,{savedAt:Date.now(),page});
+                           if(pool){
+                             try{
+                               if(await _ensureAuditCheckpointTable())await pool.query(`INSERT INTO audit_page_checkpoints (url,page_data,scanned_at,build_id) VALUES ($1,$2::jsonb,NOW(),$3) ON CONFLICT (url) DO UPDATE SET page_data=EXCLUDED.page_data,scanned_at=NOW(),build_id=EXCLUDED.build_id`,[_checkpointKey,JSON.stringify(page),CONTENTSCALE_BUILD_ID]);
+                             }catch(e){console.warn('[audit-checkpoints] save skipped:',e.message);}
+                           }
                          }
                          if(_jobRef){_jobRef.pagesCompleted=pages.length;_jobRef.pagesNewlyScanned=(_jobRef.pagesNewlyScanned||0)+1;}
                        } else {
