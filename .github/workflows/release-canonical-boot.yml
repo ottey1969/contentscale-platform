@@ -106,7 +106,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check src/index.js
-          NETWORK_ENABLED=1 BREVO_API_KEY=staging-ci-quick-scan-fixture node --require ./tests/staging-boot-no-egress.cjs index.cjs >/tmp/canonical-boot.log 2>&1 &
+          COMMERCIAL_CEO_BROWSER_FIXTURE=1 NETWORK_ENABLED=1 BREVO_API_KEY=staging-ci-quick-scan-fixture node --require ./tests/staging-boot-no-egress.cjs index.cjs >/tmp/canonical-boot.log 2>&1 &
           app_pid=$!
           trap 'kill $app_pid 2>/dev/null || true' EXIT
           reached=0
@@ -150,7 +150,7 @@ jobs:
           node --test tests/e2e-ceo-background-report-postgres.test.cjs
           PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-lead-crawler-admin-browser.test.cjs
           node --test tests/e2e-contact-promotion-postgres.test.cjs
-          PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-contact-promotion-browser.test.cjs
+          COMMERCIAL_CEO_BROWSER_FIXTURE=1 PROSPECT_E2E_BASE="$APP_URL" node --test tests/e2e-contact-promotion-browser.test.cjs
           node --test tests/e2e-prospect-campaign-schema-postgres.test.cjs
           node --test tests/e2e-tracker-registration-postgres.test.cjs tests/e2e-tracker-gsc-import-postgres.test.cjs
           NETWORK_E2E_BASE="$APP_URL" node --test tests/e2e-network-test-lab-browser.test.cjs

@@ -11,8 +11,46 @@ net.Socket.prototype.connect=function(...args){
  if(!local(host))throw Error('STAGING-CI-EGRESS-DENIED: '+String(host).slice(0,70));
  return rawConnect.apply(this,args);
 };
+const ceoFixture = process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1';
+const fixtureHost = /^https:\/\/(?:commercial-)?[a-f0-9]{16}\.example\/$/;
+const commercialHtml = '<!doctype html><html lang="en"><head><title>Roofing services</title></head><body>' +
+  '<main><h1>Roof repair services</h1><section><h2>Commercial roof inspections</h2>' +
+  '<p>Our roofing team inspects flashing, gutters, ventilation and damaged tiles. We explain the repair plan after checking the materials and documenting visible wear.</p>'.repeat(12) +
+  '</section><a href="/contact">Contact the team</a></main></body></html>';
+const localFetch = globalThis.fetch.bind(globalThis);
+if (ceoFixture) {
+ const puppeteer = require('puppeteer');
+ const launch = puppeteer.launch.bind(puppeteer);
+ puppeteer.launch = async options => {
+  const browser = await launch(options);
+  const newPage = browser.newPage.bind(browser);
+  browser.newPage = async () => {
+   const page = await newPage();
+   const navigate = page.goto.bind(page);
+   page.goto = async (url, navigateOptions) => {
+    if (!fixtureHost.test(url)) return navigate(url, navigateOptions);
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+     const reply = request.url() === url
+      ? request.respond({ status: 200, contentType: 'text/html', body: commercialHtml })
+      : request.abort();
+     reply.catch(() => {});
+    });
+    return navigate(url, navigateOptions);
+   };
+   return page;
+  };
+  return browser;
+ };
+}
 const confirmationAttempts=new Map();
 globalThis.fetch=async(url, options)=>{
+ if (ceoFixture && options?.method === 'POST' &&
+     String(url) === 'http://127.0.0.1:' + process.env.PORT + '/api/scan' &&
+     fixtureHost.test(JSON.parse(options.body).url || '')) {
+  return localFetch(url, options);
+ }
+
  if(process.env.BREVO_API_KEY==='staging-ci-quick-scan-fixture'
    && url==='https://api.brevo.com/v3/smtp/email' && options?.method==='POST'){
   const email=JSON.parse(options.body).to?.[0]?.email||'';

@@ -108,19 +108,39 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
     const { rows: [approval] } = await db.query(
       'SELECT ceo_report_url,scan_started_at,outreach_sent_at FROM prospect_quick_scans WHERE token=$1', [saved.promoted_token]);
     assert.deepEqual(approval, { ceo_report_url: null, scan_started_at: null, outreach_sent_at: null });
+    const revokedTab = await context.newPage();
+    await revokedTab.goto(base + '/quick-scan/' + saved.promoted_token);
+    if (process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1') {
+      const reportPage = prospect.waitForURL(url => url.pathname.startsWith('/opportunity-report/'), { timeout: 25000 });
+      await startCeo.click();
+      await reportPage;
+      const { rows: [report] } = await db.query(`SELECT p.token,p.ceo_report_page_url,o.source_url,o.report_data
+        FROM prospect_quick_scans p JOIN opportunity_reports o ON o.token=p.ceo_report_token
+        WHERE p.contact_intelligence_id=$1`, [contact.id]);
+      assert.equal(report.token, saved.promoted_token);
+      assert.equal(report.ceo_report_page_url, website);
+      assert.equal(report.source_url, website);
+      assert.equal(report.report_data.quick_scan_token, saved.promoted_token);
+      const quick = await prospect.goto(base + '/quick-scan/' + saved.promoted_token);
+      assert.equal(quick.status(), 200);
+      assert.equal(await prospect.locator('#start-ceo').count(), 0);
+    }
     await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=$1", [contact.id]);
     const [rejected] = await Promise.all([
-      prospect.waitForResponse(response => new URL(response.url()).pathname === '/api/ceo-report/start'),
-      startCeo.click()
+      revokedTab.waitForResponse(response => new URL(response.url()).pathname === '/api/ceo-report/start'),
+      revokedTab.locator('#start-ceo').click()
     ]);
     assert.equal(rejected.status(), 404);
-    assert.equal((await prospect.reload()).status(), 404);
-    assert.equal(await prospect.locator('#start-ceo').count(), 0);
+    await revokedTab.reload();
+    assert.equal(await revokedTab.locator('#start-ceo').count(), 0);
   } finally {
     await browser.close();
     try {
       if (contact) {
         await db.query('DELETE FROM network_directory_businesses WHERE contact_intelligence_id=$1', [contact.id]);
+        if (process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1') {
+          await db.query('DELETE FROM opportunity_reports WHERE token=(SELECT ceo_report_token FROM prospect_quick_scans WHERE contact_intelligence_id=$1)', [contact.id]);
+        }
         await db.query('DELETE FROM prospect_quick_scans WHERE contact_intelligence_id=$1', [contact.id]);
         await db.query('DELETE FROM contact_intelligence WHERE id=$1', [contact.id]);
       }
