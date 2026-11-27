@@ -9,6 +9,27 @@ const database = process.env.DATABASE_URL || '';
 const localApp = /^http:\/\/127\.0\.0\.1:\d+$/.test(base);
 const localDb = /^postgres(?:ql)?:\/\/[^@]+@(?:127\.0\.0\.1|localhost):\d+\/(?:test\w*|\w+_e2e)$/.test(database);
 
+test('the canonical private CEO entry requires administration before creating a prospect', {
+  skip: !(localApp && localDb) && 'requires the canonical local app and a disposable PostgreSQL database',
+  timeout: 15000
+}, async () => {
+  const { Client } = require('pg');
+  const db = new Client({ connectionString: database });
+  const domain = randomBytes(8).toString('hex') + '.example';
+  await db.connect();
+  try {
+    // Initialize the canonical prospect table through its existing read entry point.
+    assert.equal((await fetch(base + '/api/prospect-quick-scan/test-missing-' + domain)).status, 404);
+    const outcome = await fetch(base + '/api/ceo-report/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entry_mode: 'private', url: 'https://' + domain + '/' })
+    });
+    assert.equal(outcome.status, 401);
+    const { rows: [prospects] } = await db.query('SELECT count(*)::int AS count FROM prospect_quick_scans WHERE domain=$1', [domain]);
+    assert.equal(prospects.count, 0);
+  } finally { await db.end(); }
+});
+
 test('Prospect reopens exact CEO evidence and records explicit interest without changing owner follow-up', {
   skip: !(localApp && localDb) && 'requires the canonical local app and a disposable PostgreSQL database',
   timeout: 60000

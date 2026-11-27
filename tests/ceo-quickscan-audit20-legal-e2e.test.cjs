@@ -94,7 +94,7 @@ function response(){
  return {statusCode:200,body:null,headersSent:false,status(n){this.statusCode=n;return this},json(x){this.body=JSON.parse(JSON.stringify(x));return this}};
 }
 const ceoRoute=segment("app.post('/api/ceo-report/start',async(req,res)=>{","app.post('/api/prospect-quick-scan/:token/quickscan-interest',",13500);
-async function runCeo(entry,available){
+async function runCeo(entry,available,role='admin'){
  const f=fixture(available),row={token:'fake',domain:'client.example',email:'client@example.org'},pool={
   async query(sql,args=[]){
    if(/^SELECT \* FROM prospect_quick_scans/.test(String(sql)))return {rows:[row]};
@@ -103,6 +103,7 @@ async function runCeo(entry,available){
   }
  };
  const handler=registerRoute(ceoRoute,{...f.ctx,pool,crypto:require('node:crypto'),
+  resolveRole:async()=>({role}),
   _ceoMainWebsiteUrl:()=>({domain:'client.example',url:home}),
   _ensureProspectQuickScanTable:async()=>true,
   _pqsValidEmail:()=>true,
@@ -116,6 +117,14 @@ async function runCeo(entry,available){
  const r=response();await handler({body:{entry_mode:entry,url:home,email:'client@example.org',business_name:'RoofCo'},get:()=> 'app.contentscale.site'},r);
  return {f,r};
 }
+test('private CEO generation requires an admin before writing or running the selector',async()=>{
+ for(const role of [null,'client']){
+  const {f,r}=await runCeo('private',pages,role);
+  assert.equal(r.statusCode,401);
+  assert.equal(f.io.dbWrites.length,0);
+  assert.equal(f.io.scans.length,0);
+ }
+});
 test('PUBLIC CEO runs exactly one canonical CEO scanner on verified service URL',async()=>{
  const {f,r}=await runCeo('public',pages);
  assert.equal(r.statusCode,200,JSON.stringify(r.body));

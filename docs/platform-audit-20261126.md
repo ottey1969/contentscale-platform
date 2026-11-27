@@ -21,6 +21,10 @@ De beheerroute voor het opslaan van AI-antwoorden in Pre-Write kon de bestaande 
 
 De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches in het bouwproces. De migratie-inventaris staat in [Canonical Architecture Migration](canonical-architecture-migration.md). Volledige consolidatie van route-eigenaarschap, bedrijfsidentiteit, paginastatussen en bewijsprojecties vereist een route- en datamodelaudit. Deze slice heeft de bestaande bronnen, cycli en opslag gebruikt.
 
+### CEO-rapport in de achtergrond
+
+De Lead Crawler-voorbereidingsroute slaagde in opslag van het CEO-rapport, waarna de linkgenerator faalde omdat er geen actief HTTP-request was. De canonical generator maakt in achtergrondwerk de bestaande relatieve privélink vóór opslag en bewaart dezelfde prospecttoken, gekozen pagina en taal. De PostgreSQL-regressie gebruikt een auditfixture en toont dat herhaling naar hetzelfde rapport leidt, zonder tweede scan of e-mail.
+
 ### Runtime en productie na merge #570
 
 - De alleen-lezen productie-API `/api/version` rapporteerde `main` op `4bc10c0f6aabb4138fece39b65de1517e7613d94`. De openbare Network-health rapporteerde module `v552` en schema `24`. De build-API verwachtte nog `v550`, waardoor de match op productie `false` was. De reparatie is op de ontwikkelbranch en is hier nog geen waarneming van productie. [Versie](https://app.contentscale.site/api/version) · [Network-health](https://app.contentscale.site/api/network/public/v1/health)
@@ -44,6 +48,11 @@ De twee schermen bewaarden de status vóór archivering op verschillende plekken
 Chromium reproduceerde een onderbreking in de beheerreis. Na het herladen stond het contact als `promoted` in de lijst, terwijl de selectieknop die status tegenhield vóór de bestaande herstelroute. De bediening accepteert nu dezelfde twee statussen als de server. De browserregressie controleert een echte CSV-upload, classificatie, expliciete promotie, opnieuw aanmelden na herladen, dezelfde prospecttoken, de goedkeuringswachtrij en de CEO-first-regel aan klantzijde. Websiteverificatie is als fixture ingevoerd. De promotie start geen scan of verzending.
 
 De normale lijstroute verloor op een schone database ook de opgeslagen Network-identiteit van dit contact. De relatiequery gebruikte publishertabellen die nog niet bestonden. De relatiequery wacht nu op de bestaande canonieke Network-initialisatie zodra Network actief is. Chromium controleert dat het contact na herladen de opgeslagen Network-identiteit terugkrijgt.
+
+
+### Privé-CEO-generatie en prospectstatus
+
+De privé-ingang voor CEO-generatie controleert de bestaande beheerrol vóór een prospectrecord of providerwerk ontstaat. De regressie met gecontroleerde providerfixtures weigert onbekende en klantrollen zonder opslag of scan, terwijl het publieke pad en de privéstart door een beheerder dezelfde gecontroleerde paginaselectie doorlopen. De canonieke server op PostgreSQL bevestigt ook dat een geweigerde aanvraag geen prospectrecord achterlaat. De Chromium-reis vanaf bestaand CEO-resultaat tot Quick Scan, Audit20 en Tracker blijft groen. Eén ononderbroken browserreis vanaf succesvolle providergeneratie staat open.
 
 ### Oorspronkelijk LinkedPod Boost-schema
 
