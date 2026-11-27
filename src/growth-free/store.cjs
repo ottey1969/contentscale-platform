@@ -53,6 +53,7 @@ function ensureTables(pool){
   await addColumn('published_note','TEXT');
   await addColumn('publication_history',"JSONB NOT NULL DEFAULT '[]'::jsonb");
   await addColumn('implementation',"JSONB NOT NULL DEFAULT '{}'::jsonb");
+  await addColumn('prewrite_brief_id','INTEGER');
   await addColumn('contentscore_history',"JSONB NOT NULL DEFAULT '[]'::jsonb");
   await addColumn('reminder_due_at','TIMESTAMPTZ');
   await addColumn('reminder_sent_at','TIMESTAMPTZ');
@@ -164,13 +165,13 @@ async function recentResult(pool,{url,query,market=null,engineVersion=null,acces
      AND invite_id IS NOT DISTINCT FROM $6::bigint AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion,accessLabel,inviteId])).rows[0]||null;
 }
 
-async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,cacheEligible=false,accessLabel=null,inviteId=null,market=null,uiLang=null,gscDeclined=false}){
+async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,cacheEligible=false,accessLabel=null,inviteId=null,market=null,uiLang=null,gscDeclined=false,prewriteBriefId=null}){
  const row=(await pool.query(`INSERT INTO growth_free_checks
-   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market,emails,cache_eligible)
-   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb,$19)
+   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market,emails,cache_eligible,prewrite_brief_id)
+   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb,$19,$20)
    RETURNING id,public_id,access_key,status`,
   [token(9),token(18),email,ipHash,url,host,query,cached?'DONE':'QUEUED',cached?cached.decision:null,
-   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null),JSON.stringify(emails&&emails.length>1?emails:null),cacheEligible===true])).rows[0];
+   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null),JSON.stringify(emails&&emails.length>1?emails:null),cacheEligible===true,prewriteBriefId])).rows[0];
  if(row&&uiLang)await pool.query('UPDATE growth_free_checks SET ui_lang=$2 WHERE id=$1',[row.id,uiLang]);
  if(row&&uiLang)row.ui_lang=uiLang;
  if(row&&gscDeclined){await pool.query('UPDATE growth_free_checks SET gsc_declined=TRUE WHERE id=$1',[row.id]);row.gsc_declined=true}
@@ -186,7 +187,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,publication_history,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation,contentscore_history FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,published_note,publication_history,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts,implementation,contentscore_history,prewrite_brief_id FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  if(!await require('./gsc-audit-handoff.cjs').auditResearchAvailable(pool,row))return null;
  // A check interrupted by a restart never stays "running" forever.

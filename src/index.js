@@ -12284,6 +12284,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     competitors_scraped INTEGER,
     created_at TIMESTAMP DEFAULT NOW()
   )`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs
+    ADD COLUMN IF NOT EXISTS public_access_hash TEXT,
+    ADD COLUMN IF NOT EXISTS public_site TEXT`);
+  await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_prewrite_briefs_public_access
+    ON prewrite_briefs(public_access_hash) WHERE public_access_hash IS NOT NULL`);
   await client.query(`CREATE INDEX IF NOT EXISTS idx_prewrite_briefs_client ON prewrite_briefs(client_id, created_at DESC)`).catch(()=>{});
   // Workflow columns so Pre-Write Briefs can be assigned/claimed/reviewed like scanned-page briefs
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'open'`).catch(()=>{});
@@ -59888,22 +59893,31 @@ Return ONLY a JSON array, no markdown:
 });
 
 // ── scrapeBodyText ──────────────────────────────────────────────────────────
-async function scrapeBodyText(url, maxChars) {
+async function scrapeBodyText(url, maxChars, publicReader) {
   maxChars = maxChars || 6000;
   try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(url.startsWith('http') ? url : 'https://' + url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/2.0)', 'Accept': 'text/html' },
-      signal: ctrl.signal
-    });
-    if (!r.ok) return { text: '', status: r.status, error: 'HTTP ' + r.status };
-    const html = await r.text();
+    let html, status;
+    if (publicReader) {
+      const page = await publicReader(url, { redirects: 0, limit: 600000, timeout: 8000 });
+      if (page.status !== 200 || page.truncated || page.final_url !== url) return { text: '', status: page.status };
+      html = page.html;
+      status = page.status;
+    } else {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(url.startsWith('http') ? url : 'https://' + url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/2.0)', 'Accept': 'text/html' },
+        signal: ctrl.signal
+      });
+      if (!r.ok) return { text: '', status: r.status, error: 'HTTP ' + r.status };
+      html = await r.text();
+      status = r.status;
+    }
     const stripped = html.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'')
       .replace(/<nav[\s\S]*?<\/nav>/gi,'').replace(/<header[\s\S]*?<\/header>/gi,'')
       .replace(/<footer[\s\S]*?<\/footer>/gi,'').replace(/<[^>]+>/g,' ')
       .replace(/&nbsp;/g,' ').replace(/\s{2,}/g,' ').trim();
-    return { text: stripped.slice(0, maxChars), status: r.status, wordCount: stripped.split(/\s+/).length, fullHtml: html };
+    return { text: stripped.slice(0, maxChars), status, wordCount: stripped.split(/\s+/).length, fullHtml: html };
   } catch(e) { return { text: '', status: 0, error: e.message }; }
 }
 
@@ -60906,7 +60920,8 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   return res.json({success:true,brief:brief,brief_id:savedBriefId,competitors_scraped:competitors,region:saveRegion,briefs_used:committedBriefsUsed,briefs_allowed:briefsAllowed,search_intent:brief.search_intent||null,completion_mode:'missing_only',research_reused:true,research_rerun:false,source_job_id:jobId});
 }
 
-async function _handlePrewriteBriefGeneration(req, res) {
+async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
+  publicBrief = publicBrief?.site ? publicBrief : null;
   let _pwbStage='start';
   const _pwbStartedAt=Date.now();
   let _pwbPreNormalizationMissing=[];
@@ -60919,10 +60934,18 @@ async function _handlePrewriteBriefGeneration(req, res) {
   let _pwbNetworkPublisherCheckedUrl = '';
   let _pwbNetworkFastLane = false;
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
-    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
-    if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
-    const client = cr.rows[0];
+    let client;
+    if (publicBrief) {
+      client = { id: null, domain: new URL(publicBrief.site).hostname, sitemap_urls: publicBrief.urls };
+    } else {
+      const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+      if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
+      if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
+      client = cr.rows[0];
+    }
+    const readResearchPage = publicBrief
+      ? (url, maxChars) => scrapeBodyText(url, maxChars, require('./growth-public-html-reader.cjs').fetchPublicGrowthHtml)
+      : scrapeBodyText;
 
     // v450 — Network Prewrite POST parity with the already-protected GET/embed path.
     // A synthetic Network tracker is not a real public website. Trying robots.txt + four
@@ -60933,7 +60956,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     try {
       _pwbNetworkPlacementId = Number(req.query && req.query.networkPlacement || 0);
       const _pwbWantsNetworkEmbed = String(req.query && req.query.networkEmbed || '') === '1';
-      if (_pwbWantsNetworkEmbed && Number.isSafeInteger(_pwbNetworkPlacementId) && _pwbNetworkPlacementId > 0) {
+      if (!publicBrief && _pwbWantsNetworkEmbed && Number.isSafeInteger(_pwbNetworkPlacementId) && _pwbNetworkPlacementId > 0) {
         const _pwbNq = await pool.query(`
           SELECT p.id,
                  c.prewrite_brief_id,
@@ -60988,7 +61011,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // v497 — a NOT PASSED Brief already paid for SERP/evidence research. Completion must not
     // silently rerun that work. Reuse the exact diagnostic snapshot and make at most ONE targeted
     // Gemini call for fields that are still missing after deterministic completion.
-    if(String(completionFromJobId||'').trim()){
+    if(!publicBrief&&String(completionFromJobId||'').trim()){
       _pwbStage='completion';
       return await _pwbCompleteMissingFromDiagnostic({client:client,jobId:String(completionFromJobId).trim(),placementId:_pwbNetworkPlacementId,keyword:keyword,workingTitle:workingTitle,language:language,region:region,briefsUsed:briefsUsed,briefsAllowed:briefsAllowed,manualAiEvidence:manualAiEvidence,publisherDomain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain,publisherCheckedUrl:_pwbNetworkPublisherCheckedUrl},res);
     }
@@ -61013,7 +61036,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
       if (Array.isArray(_arr)) clientSitemapUrls = _arr.filter(u => typeof u === 'string' && /^https?:\/\//.test(u));
       if (clientSitemapUrls.length) {
         _pwbSitemapStatus = 'stored';
-        _pwbSitemapDiscoveredBy = 'tracker_clients.sitemap_urls';
+        _pwbSitemapDiscoveredBy = publicBrief ? 'public_site_discovery' : 'tracker_clients.sitemap_urls';
       }
     } catch (e) { clientSitemapUrls = []; }
 
@@ -61046,7 +61069,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
         }
       }
       console.log('[prewrite-brief] Network publisher discovery | placement='+_pwbNetworkPlacementId+' publisher='+(_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain||'none')+' urls='+clientSitemapUrls.length+' via='+_pwbSitemapDiscoveredBy);
-    } else if (!clientSitemapUrls.length && client.domain) {
+    } else if (!publicBrief && !clientSitemapUrls.length && client.domain) {
       try {
         const _root = String(client.domain).replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\/+$/, '').trim();
         if (_root) {
@@ -61089,7 +61112,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // If a site has no usable sitemap, still perform real site research instead of
     // treating internal links as unknowable. A bounded homepage-link crawl gives us
     // verified same-domain candidates without inventing URLs.
-    if(!clientSitemapUrls.length){
+    if(!publicBrief&&!clientSitemapUrls.length){
       try{
         const _fallbackHost=String(_pwbSkipSyntheticSitemap?(_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain):(client.domain||'')).replace(/^https?:\/\//i,'').replace(/^www\./i,'').split('/')[0].trim();
         if(_fallbackHost){
@@ -61313,7 +61336,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     const top10 = serpUrls
       .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
       .slice(0, _pwbNetworkFastLane ? 5 : 10);
-    const compScrapes = await Promise.all(top10.map(e => scrapeBodyText(e.url, 6000)));
+    const compScrapes = await Promise.all(top10.map(e => readResearchPage(e.url, 6000)));
     const _detectSchema = h => Array.from(new Set(((h || '').match(/"@type"\s*:\s*"([^"]+)"/g) || []).map(x => x.replace(/.*"([^"]+)"$/, '$1')))).slice(0, 6);
     const compSummary = top10.map((e, i) => {
       const sc = compScrapes[i] || {};
@@ -62208,7 +62231,7 @@ ${claimsBlock.slice(0,2400)}`;
       return {authority_class,authority_score,reason,host,competitor,research_signals:researchSignals,interview_signals:interviewSignals};
     };
     const _pwbFetchEvidencePage=async function(u,meta){
-      let sc=null;try{sc=await scrapeBodyText(u,12500)}catch(_e){}
+      let sc=null;try{sc=await readResearchPage(u,12500)}catch(_e){}
       const text=String(sc&&sc.text||'').trim();if(text.length<220)return null;
       const title=_pwbActualTitle(sc,meta&&meta.title||'');
       const grade=_pwbAuthorityGrade(u,title,text,meta&&meta.source_type||'research');
@@ -62682,7 +62705,7 @@ ${sourceText}`;
       const _rel=require('./prewrite-evidence-relevance.cjs').topicRelevance;
       const _urls=Array.from(new Set([].concat((brief.ai_source_leads||[]).map(x=>x&&x.url),(_pwbExternalCandidates||[]).map(x=>x&&x.exact_url)).filter(Boolean)))
        .filter(u=>/^https:\/\//i.test(u)&&!/linkedin\.|facebook\.|youtube\.|instagram\.|tiktok\.|x\.com|twitter\./i.test(u)).slice(0,10);
-      const _pages=(await Promise.all(_urls.map(async u=>{let sc=null;try{sc=await scrapeBodyText(u,12500)}catch(_e){}const text=String(sc&&sc.text||'').trim();
+      const _pages=(await Promise.all(_urls.map(async u=>{let sc=null;try{sc=await readResearchPage(u,12500)}catch(_e){}const text=String(sc&&sc.text||'').trim();
        const _t=((String(sc&&sc.fullHtml||'').match(/<title[^>]*>([^<]{1,200})<\/title>/i)||[])[1]||((_pwbExternalCandidates||[]).find(x=>x&&x.exact_url===u)||{}).title||'').trim();
        return text.length<220?null:{url:u,title:_t,text:text};}))).filter(Boolean);
       const _res=_nc.verifyOnPages(_un0,_pages,{onTopic:p=>_rel({keyword:keyword,title:p.title||'',text:p.text||'',excerpt:''}).relevant});
@@ -62736,6 +62759,12 @@ ${sourceText}`;
       const _aiWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.ai_evidence||{},_intWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.internal_destination||{};
       const _integrityText=(_missingFinal.includes('ai_evidence_5of5')?' AI research incomplete: '+Number(_aiWhy.checked||0)+'/5 checked; missing '+(Array.isArray(_aiWhy.missing)?_aiWhy.missing.join(', '):'AI evidence')+'.':'')+(_missingFinal.includes('internal_destination')?' Internal destination required for publisher domain '+String(_intWhy.target_domain||'')+'.':'');
       const _pwbNotPassedPayload={success:false,stage:_missingFinal.includes('ai_evidence_5of5')?'ai_evidence_gate':'quality_gate',quality_status:'not_passed',retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research completed. The Brief is shown as NOT PASSED because it did not meet the publication-quality gate. It was not saved as an approved Prewrite Brief and was not counted. A diagnostic preview is retained in this job.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_integrityText+_outlineIssueText,brief:brief,generation_usage:brief.generation_usage||null,search_intent:brief.search_intent||null,region:region||'us',competitors_scraped:(compScrapes||[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim().length>=250;}).length,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,ai_evidence:_aiWhy,internal_destination:_intWhy,outline:_outlineWhy||null,generation_usage:brief.generation_usage||null}};
+      if (publicBrief) {
+        await pool.query(`UPDATE prewrite_briefs SET brief_json=$2,status='failed'
+          WHERE id=$1 AND client_id IS NULL AND status='generating' AND public_access_hash IS NOT NULL`,
+          [publicBrief.id, JSON.stringify(brief)]);
+        return res.status(422).json({ success: false, stage: 'quality_gate' });
+      }
       const _pwbDiagJob=await _pwbRetainSyncDiagnostic(req,client,_pwbNotPassedPayload);
       if(_pwbDiagJob){_pwbNotPassedPayload.job_id=_pwbDiagJob;_pwbNotPassedPayload.diagnostic_job_id=_pwbDiagJob;}
       return res.status(422).json(_pwbNotPassedPayload);
@@ -62750,6 +62779,19 @@ ${sourceText}`;
      location_parameter_sent:!!_pwbSerpLocation,serp_http_status:_pwbSerperStatus||null,serp_organic_results:serpUrls.length,
      status:serpUrls.length?'SERP_RESULTS_RECEIVED':'NO_READABLE_SERP_RESULTS',
      note:'This is the location requested from Serper, not independent proof of rankings across an entire state.'};
+    if (publicBrief) {
+      const { resolveTarget } = require('./prewrite-implementation.cjs');
+      const target = resolveTarget(brief, publicBrief.site);
+      if (target.mode !== 'CREATE' && !publicBrief.urls.includes(target.url)) {
+        return res.status(422).json({ success: false, stage: 'unverified_existing_page' });
+      }
+      const saved = await pool.query(`UPDATE prewrite_briefs SET brief_json=$2, working_title=$3,
+        competitors_scraped=$4,status='open' WHERE id=$1 AND client_id IS NULL
+        AND status='generating' AND public_access_hash IS NOT NULL RETURNING id`,
+        [publicBrief.id, JSON.stringify(brief), workingTitle || '', top10.length]);
+      return res.status(saved.rowCount ? 200 : 409).json({ success: Boolean(saved.rowCount) });
+    }
+
     _pwbStage='persistence';
     const _saveConn=await pool.connect();
     try {
@@ -62788,6 +62830,16 @@ ${sourceText}`;
 }
 
 app.post('/api/tracker-client/:token/prewrite-brief', _handlePrewriteBriefGeneration);
+require('./free-prewrite.cjs').registerFreePrewrite(app, pool, {
+  generate: async context => {
+    const { keyword, language, region, manualAiEvidence } = context;
+    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence } }, {
+      status() { return this; },
+      json() {}
+    }, context);
+  },
+  dailyLimit: /^\d+$/.test(process.env.FREE_PREWRITE_DAILY_LIMIT || '') ? Number(process.env.FREE_PREWRITE_DAILY_LIMIT) : 5
+});
 
 // ── GET /api/tracker-client/:token/prewrite-briefs — list past briefs ───────
 // Lightweight list (no full brief_json) for the "Recent Briefs" recall UI.

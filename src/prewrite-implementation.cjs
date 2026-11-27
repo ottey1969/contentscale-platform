@@ -151,28 +151,32 @@ async function verifyApprovedContent(url, approvedHtml, fetchHtml, renderHtml) {
 
 module.exports = { resolveTarget, readReport, publicationReport, editorInstructions, verifyApprovedContent };
 
-function response(result, trackerPageId) {
+function response(result, trackerPageId, confirmed = Boolean(trackerPageId)) {
   return {
     success: true, ...result, status: result.report.status, tracker_page_id: trackerPageId,
-    published_url: trackerPageId ? result.report.url : null, tracker_entered: Boolean(trackerPageId)
+    published_url: confirmed ? result.report.url : null, tracker_entered: Boolean(trackerPageId)
   };
 }
 
-function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowthHtml, renderHtml = renderPublicGrowthPage } = {}) {
-  const path = '/api/tracker-client/:token/prewrite-brief/:id';
+function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowthHtml, renderHtml = renderPublicGrowthPage, publicPath } = {}) {
+  const path = publicPath || '/api/tracker-client/:token/prewrite-brief/:id';
+  const owner = publicPath ? 'b.public_site AS domain' : 'c.domain';
+  const join = publicPath ? '' : 'JOIN tracker_clients c ON c.id=b.client_id';
+  const condition = publicPath ? 'b.client_id IS NOT DISTINCT FROM $2 AND b.public_access_hash IS NOT NULL' : 'b.client_id=$2';
+  const updateScope = publicPath ? 'client_id IS NOT DISTINCT FROM $2 AND public_access_hash IS NOT NULL' : 'client_id=$2';
   async function save(req, res, publishing) {
     let db;
     let committed = false;
     try {
-      const scope = await resolveBrief(req.params.token, req.params.id);
+      const scope = await resolveBrief(req.params.token, req.params.id, req);
       if (scope.error) return res.status(scope.code).json({ success: false, error: scope.error });
       db = await pool.connect();
       await db.query('BEGIN');
       const { rows: [row] } = await db.query(
         `SELECT b.status, b.keyword, b.brief_json, b.language, b.tracker_page_id,
-                b.implementation_reports, c.domain
-           FROM prewrite_briefs b JOIN tracker_clients c ON c.id=b.client_id
-          WHERE b.id=$1 AND b.client_id=$2 FOR UPDATE OF b`, [scope.briefId, scope.clientId]);
+                b.implementation_reports, ${owner}
+           FROM prewrite_briefs b ${join}
+          WHERE b.id=$1 AND ${condition} FOR UPDATE OF b`, [scope.briefId, scope.clientId]);
       if (!row || !['approved', 'published'].includes(row.status)) {
         return res.status(409).json({ success: false, error: 'The Brief requires lead approval' });
       }
@@ -192,14 +196,14 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
       if (seen) {
         await db.query('COMMIT');
         committed = true;
-        return res.json(response(result, publishing ? row.tracker_page_id : null));
+        return res.json(response(result, publishing ? row.tracker_page_id : null, publishing));
       }
       if (row.status === 'published' || (!publishing && report.status === 'published')) {
         return res.status(409).json({ success: false, error: 'Confirm a publication through the publication action for an approved Brief' });
       }
 
       let trackerPageId = null;
-      if (publishing) {
+      if (publishing && !publicPath) {
         const intent = row.brief_json.search_intent?.primary || row.brief_json.search_intent;
         const values = [scope.clientId, target.url, row.keyword, typeof intent === 'string' ? intent : null, scope.briefId];
         const inserted = await db.query(
@@ -215,14 +219,18 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
           "UPDATE prewrite_briefs SET status='published', published_at=$3, published_url=$4, tracker_page_id=$5 WHERE id=$1 AND client_id=$2",
           [scope.briefId, scope.clientId, report.published_at, report.url, trackerPageId]);
       }
+      if (publishing && publicPath) {
+        await db.query(`UPDATE prewrite_briefs SET status='published', published_at=$3, published_url=$4
+          WHERE id=$1 AND ${updateScope}`, [scope.briefId, scope.clientId, report.published_at, report.url]);
+      }
       await db.query(
         `UPDATE prewrite_briefs SET implementation_reports=implementation_reports ||
             jsonb_build_array(jsonb_build_object('recorded_at',to_char(NOW() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
                                                  'report',$3::jsonb))
-          WHERE id=$1 AND client_id=$2`, [scope.briefId, scope.clientId, serializedReport]);
+          WHERE id=$1 AND ${updateScope}`, [scope.briefId, scope.clientId, serializedReport]);
       await db.query('COMMIT');
       committed = true;
-      return res.json(response(result, trackerPageId));
+      return res.json(response(result, trackerPageId, publishing));
     } catch (error) {
       console.error('[prewrite-implementation]', error.message);
       return res.status(500).json({ success: false, error: 'Could not save the implementation report' });
@@ -236,12 +244,12 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
   }
   app.get(path + '/implementation-report', async (req, res) => {
     try {
-      const scope = await resolveBrief(req.params.token, req.params.id);
+      const scope = await resolveBrief(req.params.token, req.params.id, req);
       if (scope.error) return res.status(scope.code).json({ success: false, error: scope.error });
       const { rows: [row] } = await pool.query(
-        `SELECT b.brief_json, b.language, b.implementation_reports, c.domain
-           FROM prewrite_briefs b JOIN tracker_clients c ON c.id=b.client_id
-          WHERE b.id=$1 AND b.client_id=$2`, [scope.briefId, scope.clientId]);
+        `SELECT b.brief_json, b.language, b.implementation_reports, ${owner}
+           FROM prewrite_briefs b ${join}
+          WHERE b.id=$1 AND ${condition}`, [scope.briefId, scope.clientId]);
       if (!row) return res.status(404).json({ success: false, error: 'Brief not found' });
       let instructions = null;
       try { instructions = editorInstructions(row.brief_json, row.domain); } catch {}
@@ -258,16 +266,17 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
       res.status(500).json({ success: false, error: 'Could not load the implementation reports' });
     }
   });
+  const trackerPageJoin = publicPath ? '' : `JOIN tracker_pages p
+             ON p.id=b.tracker_page_id AND p.tracker_client_id=b.client_id AND p.url=b.published_url`;
   app.post(path + '/verify-live', async (req, res) => {
     try {
-      const scope = await resolveBrief(req.params.token, req.params.id);
+      const scope = await resolveBrief(req.params.token, req.params.id, req);
       if (scope.error) return res.status(scope.code).json({ success: false, error: scope.error });
       const ids = [scope.briefId, scope.clientId];
       const { rows: [row] } = await pool.query(
         `SELECT b.specialist_html, b.published_at, b.published_url, b.implementation_reports
-           FROM prewrite_briefs b JOIN tracker_pages p
-             ON p.id=b.tracker_page_id AND p.tracker_client_id=b.client_id AND p.url=b.published_url
-          WHERE b.id=$1 AND b.client_id=$2 AND b.status='published'`, ids);
+           FROM prewrite_briefs b ${trackerPageJoin}
+          WHERE b.id=$1 AND ${condition} AND b.status='published'`, ids);
       const index = row?.implementation_reports.findIndex(item => item.report.status === 'published') ?? -1;
       if (index < 0 || !row.specialist_html) {
         return res.status(409).json({ success: false, status: 'verification_pending' });
@@ -298,7 +307,7 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
                 jsonb_set(implementation_reports,ARRAY[$7::text,'live_verification_history'],
                   COALESCE(implementation_reports->$7::int->'live_verification_history','[]'::jsonb)||jsonb_build_array($9::jsonb))
               END,$3::text[],$4::jsonb)
-            WHERE id=$1 AND client_id=$2 AND status='published' AND published_url=$5 AND specialist_html=$6
+            WHERE id=$1 AND ${updateScope} AND status='published' AND published_url=$5 AND specialist_html=$6
               AND implementation_reports->$7::int->'report'=$8::jsonb
               AND implementation_reports->$7::int->'live_verification' IS NOT DISTINCT FROM $9::jsonb
             RETURNING implementation_reports #> $3::text[] AS verification`,
@@ -307,7 +316,7 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
         if (!saved.rowCount) {
           const current = await pool.query(
             `SELECT implementation_reports #> $3::text[] AS verification FROM prewrite_briefs
-              WHERE id=$1 AND client_id=$2 AND status='published' AND published_url=$4`, [...ids, key, row.published_url]);
+              WHERE id=$1 AND ${updateScope} AND status='published' AND published_url=$4`, [...ids, key, row.published_url]);
           verification = current.rows[0]?.verification;
         }
       }

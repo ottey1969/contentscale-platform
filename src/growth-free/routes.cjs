@@ -424,7 +424,7 @@ try{
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_audit:auditMatches()?AUDIT_TOKEN:null,gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({prewrite_ref:new URLSearchParams(location.hash.slice(1)).get('prewrite'),gsc_audit:auditMatches()?AUDIT_TOKEN:null,gsc_file:gf,no_gsc:!gf&&!!(document.getElementById('noGsc')||{}).checked,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,search_location:f.search_location.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);try{var M=JSON.parse(localStorage.getItem('growthFreeResults')||'{}');var savedPage=normPage(document.getElementById('url').value);delete M[savedPage];M[savedPage]=d.result_url;localStorage.setItem('growthFreeResults',JSON.stringify(M))}catch(e){}location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,{...cfg,metaDescription:cfg.indexable===true?t.simpleIntro:null});
@@ -985,6 +985,7 @@ function proofOverview(p){
  h+='<h3 data-no-translate><a href="#stepReview">'+esc(l.actions)+'</a></h3>';
  h+=actions.length?'<ul>'+actions.map(function(x){return '<li>'+esc(x.title)+'</li>'}).join('')+'</ul>':'<p class="muted" data-no-translate>'+esc(l.unknown)+'</p>';
  if(applied.length)h+='<ul>'+applied.map(function(x){return '<li>✓ '+esc(x.title)+' · '+esc(x.at||'')+'</li>'}).join('')+'</ul>';
+ if(p.prewrite)h+='<details><summary>Pre-Write Brief</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(JSON.stringify(p.prewrite.brief,null,2))+'</pre></details>';
  return h;
 }
 var proofTrackerHref='';
@@ -1833,7 +1834,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
-   const cacheEligible=!gsc&&!sitemap&&!topic&&!aiAnswers.length;
+   let prewriteBriefId=null;
+   if(b.prewrite_ref){
+    prewriteBriefId=await require('../free-prewrite.cjs').resolveGrowthSource(pool,b.prewrite_ref,v.url,query);
+    if(!prewriteBriefId)return res.status(409).json({success:false,error:'The Pre-Write Brief does not match this exact page and question.'});
+   }
+   const cacheEligible=!gsc&&!sitemap&&!topic&&!aiAnswers.length&&!prewriteBriefId;
    const cached=cacheEligible?await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion(),accessLabel:entry.label}):null;
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
@@ -1841,7 +1847,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,cacheEligible,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,cacheEligible,accessLabel:entry.label,market,prewriteBriefId,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
@@ -2064,7 +2070,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(typeof storage.listAiAnswerObservations==='function'){
    try{answers=await storage.listAiAnswerObservations(pool,row.id)}catch{}
   }
+  const prewrite=row.prewrite_brief_id?await require('../free-prewrite.cjs').sourceForGrowth(pool,row.prewrite_brief_id,row.url,row.query):null;
   return {
+   prewrite,
    baseline:{url:row.url,finished_at:row.finished_at,checked:checked||null,headline:headline||null,explanation:explanation||null},
    gsc,ai:{summary:aiPart?.summary||null,gap:aiPart?.gap||null,answers:answers.map(({engine,parsed,created_at})=>({engine,parsed,recorded_at:created_at})),
     automatic:row.report?.automatic_ai_answers?.gemini?{gemini:{status:row.report.automatic_ai_answers.gemini.status,source:row.report.automatic_ai_answers.gemini.source}}:null},
