@@ -25825,7 +25825,23 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   async function toggleQueue(){if(!latestVerify)return;var btn=this,action=latestVerify.status==='paused'?'resume':'pause',old=beginButton(btn,action==='resume'?'Resuming…':'Pausing…');try{var d=await api('/api/contact-intelligence/verification-jobs/'+latestVerify.id+'/state',{method:'POST',body:JSON.stringify({action:action})});statusText(d.message);endButton(btn,old,true,action==='resume'?'✓ Resumed':'✓ Paused');setTimeout(stats,1500)}catch(e){statusText(e.message);endButton(btn,old,false)}}
   async function cancelQueue(){if(!latestVerify||!confirm('Cancel this website verification queue? Already completed checks remain saved. No email or scan is sent.'))return;var btn=this,old=beginButton(btn,'Cancelling…');try{var d=await api('/api/contact-intelligence/verification-jobs/'+latestVerify.id+'/state',{method:'POST',body:JSON.stringify({action:'cancel'})});statusText(d.message);endButton(btn,old,true,'✓ Queue cancelled');setTimeout(stats,1500)}catch(e){statusText(e.message);endButton(btn,old,false)}}
   function render(items){document.getElementById('ciList').innerHTML=items.map(function(x){var site=x.website_url||x.website_candidate||'',place=[x.city,x.country||x.location].filter(Boolean).join(', '),src=x.linkedin_url?'<a class="link" target="_blank" rel="noopener" href="'+esc(x.linkedin_url)+'">LinkedIn</a>':esc(x.source||'unknown'),name=esc(x.company_name||x.contact_name||x.username||'Unnamed'),net=x.network||{},netLabel='Not in Network',netClass='ciNetGrey',netDetail='Verify the website first.';if(net.business_id){if(net.public_visibility==='suppressed'){netLabel='Marketplace suppressed';netClass='ciNetGrey';netDetail='Public visibility is off.'}else if(net.status==='verified'){netLabel='Verified Business ✓';netClass='ciNetGreen';netDetail=(net.roles&&net.roles.publisher?'Publisher ✓ · ':'')+(net.roles&&net.roles.open_to_collaboration?'Open to collaborations':'Marketplace ready')}else if(net.status==='claim_pending'){netLabel='Claim pending';netClass='ciNetYellow';netDetail='Admin verification is the next step.'}else{netLabel='Unclaimed Business';netClass='ciNetGrey';netDetail='Owner can claim and verify this same company.'}}else if(x.status==='domain_verified'){netLabel='Network sync unavailable';netClass='ciNetYellow';netDetail='Refresh after Network is available.'}var netHtml='<div class="ciNetwork"><span class="ciBadge '+netClass+'">'+esc(netLabel)+'</span><div class="ciBio">'+esc(netDetail)+'</div>'+(net.profile_url&&net.public_visibility!=='suppressed'?'<a class="ciNetLink" target="_blank" rel="noopener" href="'+esc(net.profile_url)+'">Open company →</a>':'')+'</div>';return'<article class="ciRow" data-status="'+esc(x.status)+'"><input type="checkbox" data-ci-id="'+x.id+'"><div class="ciIdentity"><b class="ciCompanyName">'+name+'</b><span class="meta ciSummaryMeta">'+src+' · @'+esc(x.username||'—')+' · '+n(x.follower_count)+' followers</span><div class="ciBio ciDetail">'+esc(String(x.bio||x.job_title||'').slice(0,180))+'</div></div><div class="ciContact"><b>'+esc(x.email||'No email')+'</b><span class="meta ciDetail">'+esc(x.email_type||'')+' · '+esc(x.niche||'other')+(place?' · '+esc(place):'')+' · '+esc(x.language||'unknown')+'</span></div><div class="ciScore">'+n(x.business_score)+'</div><div class="ciStatusCol"><span class="ciBadge">'+esc(x.status)+'</span><div class="ciBio ciDetail">'+esc(x.reason||'')+'</div></div><div class="ciSite ciDetail" data-site="'+esc(site)+'">'+esc(site||'No website candidate')+'</div>'+netHtml+'</article>'}).join('')||'<p class="meta">No contacts match these filters.</p>';document.getElementById('ciPageMeta').textContent='Page '+pageNo+' · '+items.length+' shown';document.getElementById('ciPrev').disabled=!history.length;document.getElementById('ciNext').disabled=!nextAfter;var sl=document.getElementById('ciSectionLabel');if(sl)sl.textContent=(panel.classList.contains('ciCompaniesClosed')?'Show':'Hide')+' companies ('+items.length+')';updateSelection()}
-  async function list(reset){if(reset){after=0;history=[];pageNo=1}var f=filters(),p=new URLSearchParams(f);p.set('after',after);p.set('limit','50');var d=await api('/api/contact-intelligence/list?'+p.toString());nextAfter=d.next_after;render(d.items||[])}
+  var listRequest=0,lastListQuery='';
+  async function list(reset){
+    if(reset){after=0;history=[];pageNo=1}
+    var params=new URLSearchParams(filters());
+    params.set('after',after);params.set('limit','50');
+    var query=params.toString(),request=++listRequest;
+    var data=await api('/api/contact-intelligence/list?'+query);
+    if(request!==listRequest)return;
+    var retained=query===lastListQuery?new Set(selected()):new Set();
+    nextAfter=data.next_after;
+    render(data.items||[]);
+    lastListQuery=query;
+    panel.querySelectorAll('[data-ci-id]').forEach(function(checkbox){
+      if(retained.has(Number(checkbox.dataset.ciId)))checkbox.checked=true;
+    });
+    updateSelection();
+  }
   async function poll(job){clearInterval(jobTimer);var run=async function(){try{var d=await api('/api/contact-intelligence/jobs/'+job),j=d.job;statusText('Import '+j.status+' · '+n(j.processed_rows)+' processed · '+n(j.inserted_rows)+' new · '+n(j.duplicate_rows)+' duplicates · '+n(j.skipped_rows)+' skipped');if(j.status==='completed'||j.status==='failed'){clearInterval(jobTimer);jobTimer=null;await stats();await list(true)}}catch(e){statusText(e.message)}};jobTimer=setInterval(run,2500);await run()}
   document.getElementById('ciUploadBtn').onclick=async function(){var f=document.getElementById('ciFile').files[0],b=this;if(!f)return statusText('Choose the CSV first.');if(!/\.(csv|txt)$/i.test(f.name))return statusText('Use a CSV or TXT file.');var fd=new FormData();fd.append('file',f);b.disabled=true;b.textContent='Uploading…';statusText('Uploading '+f.name+'. Keep this tab open until upload completes.');try{var r=await fetch('/api/contact-intelligence/import',{method:'POST',headers:{'x-admin-code':KEY},body:fd}),d=await r.json();if(!r.ok)throw Error(d.error||'Upload failed');poll(d.job_id)}catch(e){statusText(e.message)}b.disabled=false;b.textContent='Upload & classify CSV'};
   document.getElementById('ciResume').onclick=async function(){if(!latestImport)return;try{var d=await api('/api/contact-intelligence/jobs/'+latestImport.id+'/resume',{method:'POST',body:'{}'});statusText(d.message);poll(d.job_id)}catch(e){statusText(e.message)}};
@@ -25962,19 +25978,36 @@ async function deleteSelectedReports(){var tokens=selectedReportTokens(),btn=doc
 function addButtons(){document.querySelectorAll('#list article.card').forEach(function(card){if(card.querySelector('[data-prospect-report]'))return;var del=card.querySelector('[data-delete-scan]'),txt=card.textContent||'';if(/Not scanned yet/i.test(txt))return;var token='';var sel=card.querySelector('[data-token]');if(sel)token=sel.dataset.token||'';if(!token){var ai=card.querySelector('button[onclick*="saveAI"]');var oc=ai&&String(ai.getAttribute('onclick')||'');if(oc){var q1=oc.indexOf("'"),q2=q1>=0?oc.indexOf("'",q1+1):-1;if(q1>=0&&q2>q1)token=oc.slice(q1+1,q2)}}if(!token)return;var row=card.querySelector('.row')||card,b=document.createElement('button');b.className='btn pqsReportBtn';b.dataset.prospectReport='1';b.textContent='Create Prospect Report';b.title='Interest shown: run the broader site report now. 5/5 AI is optional.';b.onclick=function(){generateFromQuick(token,b)};row.appendChild(b)})}
 var mo=new MutationObserver(function(){ensurePanel();addButtons()});mo.observe(document.documentElement,{childList:true,subtree:true});setInterval(function(){ensurePanel();addButtons()},1200);document.addEventListener('click',function(e){if(e.target&&e.target.id==='pqsReportRefresh')loadHistory()});ensurePanel();addButtons();
 })();<\/script>`}
-async function _pqsEnsureCampaignLinks(){
-  await pool.query(`CREATE TABLE IF NOT EXISTS prospect_public_campaign_links (
-    id BIGSERIAL PRIMARY KEY, source TEXT NOT NULL, language TEXT NOT NULL,
-    campaign TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    open_count BIGINT NOT NULL DEFAULT 0, last_opened_at TIMESTAMPTZ,
-    hidden_at TIMESTAMPTZ,
-    UNIQUE(source,language,campaign)
-  )`);
-  await pool.query('ALTER TABLE prospect_public_campaign_links ADD COLUMN IF NOT EXISTS open_count BIGINT NOT NULL DEFAULT 0');
-  await pool.query('ALTER TABLE prospect_public_campaign_links ADD COLUMN IF NOT EXISTS last_opened_at TIMESTAMPTZ');
-  await pool.query('ALTER TABLE prospect_public_campaign_links ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ');
-  // Restore the known contact-form link created before campaign links were stored.
-  await pool.query("INSERT INTO prospect_public_campaign_links(source,language,campaign) VALUES('contact_form','en','') ON CONFLICT DO NOTHING");
+// Prospect campaign links use a canonical initializer.
+let _pqsCampaignLinksReady;
+function _pqsEnsureCampaignLinks(){
+  if(!_pqsCampaignLinksReady){
+    _pqsCampaignLinksReady=(async()=>{
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',['prospect_public_campaign_links']);
+        await client.query(`CREATE TABLE IF NOT EXISTS prospect_public_campaign_links (
+          id BIGSERIAL PRIMARY KEY, source TEXT NOT NULL, language TEXT NOT NULL,
+          campaign TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          open_count BIGINT NOT NULL DEFAULT 0, last_opened_at TIMESTAMPTZ,
+          hidden_at TIMESTAMPTZ,
+          UNIQUE(source,language,campaign)
+        )`);
+        await client.query(`ALTER TABLE prospect_public_campaign_links
+          ADD COLUMN IF NOT EXISTS open_count BIGINT NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS last_opened_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ`);
+        // Restore the known contact-form link created before campaign links were stored.
+        await client.query("INSERT INTO prospect_public_campaign_links(source,language,campaign) VALUES('contact_form','en','') ON CONFLICT DO NOTHING");
+        await client.query('COMMIT');
+      }catch(error){
+        await client.query('ROLLBACK').catch(()=>{});
+        throw error;
+      }finally{client.release();}
+    })().catch(error=>{_pqsCampaignLinksReady=undefined;throw error;});
+  }
+  return _pqsCampaignLinksReady;
 }
 app.get('/api/prospect-quick-scan/admin/campaign-links',requireAdmin,async(req,res)=>{
   try{
