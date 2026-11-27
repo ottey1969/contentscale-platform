@@ -254,3 +254,7 @@ De PostgreSQL-regressie oefent upgrades van de bestaande reviewtabel, autorisati
 ### LinkedPod Boost in Neon
 
 De opgegeven inventaris van `neondb` biedt een doel voor een geautoriseerde export. In deze sessie zijn geen Neon-connector, geautoriseerde databaseverbinding of schema-export aangetroffen. Geen tabeldata uitgelezen. De acht tabeldefinities zijn nodig voor de geïsoleerde schedulertest.
+
+### Audit20- en CEO-scan hervatten
+
+De gedeelde scanroute kon opslag hergebruiken voor URL's die verschilden in padhoofdletters, queryparameters of een afsluitende slash. Een audit op aangeleverde HTML kon bovendien de hervatting van een live scan beïnvloeden. De route hergebruikt voortaan alleen checkpointbewijs voor dezelfde exact opgevraagde live URL en bewaart handmatige HTML buiten de gedeelde hervattingscache. Een regressie met geïsoleerd PostgreSQL controleert ook een oude handmatige checkpoint en hervatting vanuit een tweede worker. De opgeslagen rapporten en baselines zijn niet gemigreerd.
