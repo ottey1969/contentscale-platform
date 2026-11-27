@@ -227,3 +227,7 @@ De gerichte regressierun slaagde met 90 van 90. Daarin zijn de bestaande, in de 
 De publieke PRT-pagina en de variant met een hoofdletter in het pad gaven beide HTTP 200. De variant verwees in de canonical-tag naar de oorspronkelijke PRT-URL. Dat signaal geldt voor deze website. De audit heeft alleen de publieke HTML opgevraagd. De private baseline en historische cachekopieën in productie zijn niet ingezien. [Publieke PRT-pagina](https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/)
 
 De integratietests gebruiken een geïsoleerde database met een echte Chromium-browser en afgeschermde externe providers. GitHub CI toont de afzonderlijke browser- en PostgreSQL-runs per commit. [PR #571](https://github.com/ottey1969/contentscale-platform/pull/571/checks)
+
+### Privé-CEO-generatie en prospectstatus
+
+De privé-ingang voor CEO-generatie controleert de bestaande beheerrol vóór een prospectrecord of providerwerk ontstaat. De regressie met gecontroleerde providerfixtures weigert onbekende en klantrollen zonder opslag of scan, terwijl het publieke pad en de privéstart door een beheerder dezelfde gecontroleerde paginaselectie doorlopen. De canonieke server op PostgreSQL bevestigt ook dat een geweigerde aanvraag geen prospectrecord achterlaat. De Chromium-reis vanaf bestaand CEO-resultaat tot Quick Scan, Audit20 en Tracker blijft groen. Eén ononderbroken browserreis vanaf succesvolle providergeneratie staat open.

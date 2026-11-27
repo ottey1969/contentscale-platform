@@ -24590,15 +24590,19 @@ app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
   console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v380');
   try{
+    const body=req.body||{};
+    const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
+    ceoEntry=entry;
+    if(entry==='private'){
+      const {role}=await resolveRole(req.headers?.['x-admin-code']||req.headers?.['x-admin-key']||'');
+      if(role!=='admin')return res.status(401).json({success:false,error:'Unauthorized — admin code required'});
+    }
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
     const tableReady=await _ensureProspectQuickScanTable();
     if(!tableReady)throw new Error('Prospect Quick Scan database table is unavailable');
     lastStage='REQUEST';
     console.log('[ceo-report] stage=REQUEST');
-    const body=req.body||{};
-    const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
-    ceoEntry=entry;
     const urlInput=String(body.url||body.website||'').trim();
     if(!urlInput)return res.status(400).json({success:false,error:'Website domain is required'});
     const normalizedWebsite=_ceoMainWebsiteUrl(urlInput);
