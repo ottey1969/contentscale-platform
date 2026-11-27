@@ -37,6 +37,9 @@ test('PWB-03 — keep competitor research outside the writer handoff', () => {
   assert.doesNotMatch(JSON.stringify(writer), /rival\.example/i);
   assert.equal(brief.competitor_table.length, 1);
   assert.equal(writer.definitive_outline[0].h2, 'How to use the scan');
+  assert.deepEqual(quality.writerBrief({ website_evidence: { origin: homepage }, first_party_offers: [{ url: scan }],
+    competitor_table: [{ exact_url: scan, domain: 'publisher.example' }] }).first_party_offers, [{ url: scan }]);
+
 });
 
 test('PWB-04 — a discovered URL is not a verified source for the claimed statement', () => {

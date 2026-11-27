@@ -164,7 +164,8 @@ const writerFields = new Set(['keyword','language','search_intent','content_deci
   'definitive_outline','page_blueprint','fact_safety','internal_link_targets','external_link_targets','surgical_changes',
   'preserve_sections','action_plan','quick_facts','paa_questions','conclusion','first_party_offers','schema_advice','missing_information','metadata_review','cannibalization_review']);
 function writerBrief(brief) {
-  const sites = competitorSites({ competitorTable: brief.competitor_table, ownUrl: brief.content_decision?.closest_existing_url });
+  const ownUrl = brief.website_evidence?.origin || brief.first_party_offers?.[0]?.url || brief.content_decision?.closest_existing_url;
+  const sites = competitorSites({ competitorTable: brief.competitor_table, ownUrl });
   const domains = [...sites].filter(domain => isCompetitorLink('https://' + domain, sites));
   const names = (brief.competitor_table || []).filter(entry => domains.some(domain => fold(entry.domain).endsWith(domain)))
     .map(entry => fold(entry.company_or_publisher)).filter(name => name.length >= 5);

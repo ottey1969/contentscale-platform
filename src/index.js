@@ -48110,13 +48110,19 @@ function _renderIntentBar(si) {
   if (si.conflict) head += '<div style="margin-top:6px;color:#fbbf24;font-size:11.5px;">\u26a0 ' + esc(si.conflict) + '</div>';
   // The query evidence remains visible; the author can choose a different brief intent.
   {
+    var intentLang = String(si.language||'en').slice(0,2);
+    var intentMessage = ({
+      en: 'Change search intent. A new analysis uses your available Brief allowance. Earlier evidence stays with its original question.',
+      nl: 'Pas zoekintentie aan. Een nieuwe analyse gebruikt je beschikbare brieflimiet. Eerder bewijs blijft bij de oorspronkelijke vraag.',
+      es: 'Ajusta la intención de búsqueda. Un nuevo análisis usa el cupo disponible. La evidencia anterior conserva su pregunta original.'
+    })[intentLang] || 'Change search intent';
     var opts = ['informational','commercial','transactional','navigational'];
     var pills = opts.map(function(o){
       var on = (o === si.primary);
       return '<button data-intent="'+o+'" onclick="_pwbRegenWithIntent(this.getAttribute(&quot;data-intent&quot;))" style="cursor:pointer;border:1px solid '+(on?'#3b82f6':'#334155')+';background:'+(on?'#1d4ed8':'#0b1220')+';color:#e2e8f0;border-radius:6px;padding:5px 11px;font-size:11.5px;font-weight:600;">'+cap(o)+'</button>';
     }).join(' ');
     head += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e293b;">'
-      + '<div style="color:#cbd5e1;margin-bottom:7px;font-size:11.5px;">Change search intent · This Brief uses <strong>'+esc(cap(si.primary))+'</strong>. If you know the audience wants something else, pick it and the brief regenerates:</div>'
+      + '<div style="color:#cbd5e1;margin-bottom:7px;font-size:11.5px;">'+esc(intentMessage)+'</div>'
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + pills + '</div>'
       + '</div>';
   }
@@ -61576,9 +61582,9 @@ Return ONLY valid JSON, no markdown, no preamble.
 
     const _pwbDecisionEvidence={serp_formats:_observedFormats,first_party_offers:_pwbOwnOffers,
       existing_page:_pwbSameContent?.url||null,missing_information:_pwbMissingInfo,overlapping_create:_pwbOverlappingPlan};
-    const finalPrompt = prompt + '\n\nWEBSITE AND DECISION EVIDENCE: ' + JSON.stringify(_pwbDecisionEvidence)
+    const finalPrompt = prompt + '\n\nPRE-PUBLICATION AI WRITING RESEARCH:\n' + _pwbAiWritingPrompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.' + '\n\nACTUAL GOOGLE SERP REQUEST SCOPE: '+JSON.stringify({country:_pwbSerpMarket.gl,language:_pwbSerpMarket.hl,requested_location:_pwbSerpLocation||null,location_applied:!!_pwbSerpLocation})+'; observed SERP URLs are from this request, not verified rankings for every city. Do not claim a different locale was searched.'
+      + '\n\nWEBSITE AND DECISION EVIDENCE: ' + JSON.stringify(_pwbDecisionEvidence)
       + '\nUse relevant first-party functionality in the blueprint. Competitor names and URLs are research only. If a verified existing page answers the same intent, expand it. Flag overlapping CREATE plans for review. Ask for missing business facts. Preserve quoted-only pricing when verified. No minimum link count.'
-      + '\n\nPRE-PUBLICATION AI WRITING RESEARCH:\n' + _pwbAiWritingPrompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.' + '\n\nACTUAL GOOGLE SERP REQUEST SCOPE: '+JSON.stringify({country:_pwbSerpMarket.gl,language:_pwbSerpMarket.hl,requested_location:_pwbSerpLocation||null,location_applied:!!_pwbSerpLocation})+'; observed SERP URLs are from this request, not verified rankings for every city. Do not claim a different locale was searched.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
       + '\n- Every supplied competitor must be represented in competitor_table.'
       + '\n- Every competitor exact_url must be the exact https:// URL copied from the supplied SERP data, or "insufficient_data".'
@@ -62667,6 +62673,7 @@ ${sourceText}`;
       if(brief.meta_package)brief.meta_package.url_slug=new URL(_pwbSameContent.url).pathname;
     }
     brief.first_party_offers=_pwbOwnOffers;
+    brief.website_evidence={origin:_pwbOwnOrigin||null,pages_read:_pwbOwnPages.map(page=>page.url)};
     brief.missing_information=_pwbMissingInfo;
     brief.cannibalization_review=_pwbOverlappingPlan&&brief.content_decision.recommended_treatment==='CREATE_NEW_PAGE'
       ?{state:'needs_review',reason:'same_market_create_plan'}:{state:'no_authorized_conflict_observed'};
@@ -62764,6 +62771,7 @@ ${sourceText}`;
       // UI shows the change-intent control ONLY when confidence is low and no override yet.
       observed_formats: _observedFormats,
       user_override: _intentSelection.user_override,
+      language: brief.language,
       needs_confirmation: (_autoIntent.confidence === 'low' && !_intentWasOverridden)
     };
 
