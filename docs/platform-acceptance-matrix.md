@@ -1,6 +1,6 @@
 # ContentScale acceptatiematrix
 
-Deze matrix volgt gebruikersreizen van instroom tot zichtbaar resultaat. Een geïsoleerde test gebruikt de canonieke productiebuild en een wegwerpdatabase wanneer de rij dat expliciet vermeldt. De openbare versie-API bevestigde rollout naar `46786e5`. Deze controle las buildinformatie. Alleen een uitgevoerde productiecontrole van de genoemde reis telt als **Verified in production**.
+Deze matrix volgt gebruikersreizen van instroom tot zichtbaar resultaat. Een geïsoleerde test gebruikt de canonieke productiebuild en een wegwerpdatabase wanneer de rij dat expliciet vermeldt. De openbare versie-API bevestigde de uitrol van `a41c96b`, `dbf9258`, `bbfe555`, `546015a` en `318a6a7`. De laatste openbare Network-health meldde module `v552` en schema `24`. Deze controles lazen build- en healthinformatie. Alleen een uitgevoerde productiecontrole van de genoemde reis telt als **Verified in production**.
 
 - **Implemented** geeft aan welke route, bediening en opslag bestaan. Deel betekent dat een stap of koppeling ontbreekt of nog niet is vastgesteld.
 - **Tested end-to-end** vraagt uitvoering van de volledige acceptatietest. Deel vermeldt het bewezen bereik.
