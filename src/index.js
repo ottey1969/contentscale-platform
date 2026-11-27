@@ -17336,6 +17336,10 @@ return result;
 
                async function _generateProspectOpportunityReport(req, input){
                  const body=Object.assign({},input||{});
+                 const shareLink=token=>{
+                   const path=_pqsShortPrivatePath('report',token);
+                   return {token,url:req?req.protocol+'://'+req.get('host')+path:path};
+                 };
                  const reportMode=String(body.report_mode||'prospect').toLowerCase()==='verified'?'verified':'prospect';
                  // CEO first-touch must analyse ONE smart-selected commercial page only.
                  // Keep the same canonical Audit/scoring engine; only constrain its scope.
@@ -17394,8 +17398,9 @@ return result;
                          await _ensureOpportunityReportTable();
                          const token=crypto.randomBytes(32).toString('hex');
                          const domain=String(report.company&&report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
+                         const link=shareLink(token);
                          await pool.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',[token,domain,report.company&&report.company.url||body.url||'',reportMode,JSON.stringify(report)]);
-                         share={token,url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('report',token)};
+                         share=link;
                        }catch(saveErr){
                          save_warning='Report generated but share-link persistence failed: '+String(saveErr&&saveErr.message||saveErr);
                          console.error('[opportunity-report] v178 fallback save failed (report preserved):',saveErr&&saveErr.stack||saveErr);
@@ -17418,8 +17423,9 @@ return result;
                    await _ensureOpportunityReportTable();
                    const token=crypto.randomBytes(32).toString('hex');
                    const domain=String(report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
+                   const link=shareLink(token);
                    await pool.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',[token,domain,report.company.url,reportMode,JSON.stringify(report)]);
-                   share={token,url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('report',token)};
+                   share=link;
                  }
                  return {success:true,report,share};
                }
@@ -22459,7 +22465,10 @@ async function _pqsPrepareCeoOutreachReport(token){
       row=q.rows[0];
       if(String(row.ceo_report_url||'').trim())return {success:true,status:'ready',ceo_report_url:String(row.ceo_report_url).trim()};
       await pool.query(`UPDATE prospect_quick_scans SET outreach_email_status='building_report',outreach_error=NULL,updated_at=NOW() WHERE token=$1`,[token]);
-      const out=await _generateProspectOpportunityReport(null,{url:row.url,business_name:row.business_name,report_mode:'prospect',origin:'lead_crawler_ceo_report',ceo_single_page:true});
+      const out=await _generateProspectOpportunityReport(null,{
+        url:row.url,business_name:row.business_name,language:row.language,quick_scan_token:token,
+        report_mode:'prospect',origin:'lead_crawler_ceo_report',ceo_single_page:true
+      });
       if(!out||!out.share||!out.share.url)throw new Error('CEO Prospect Report could not be created');
       const ceoUrl=out.share.url,ceoToken=out.share.token||'';
       const ceoPageUrl=String((out.report&&out.report.page_analysis&&out.report.page_analysis[0]&&out.report.page_analysis[0].url)||row.url||'').trim();
@@ -24590,15 +24599,19 @@ app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
   console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v380');
   try{
+    const body=req.body||{};
+    const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
+    ceoEntry=entry;
+    if(entry==='private'){
+      const {role}=await resolveRole(req.headers?.['x-admin-code']||req.headers?.['x-admin-key']||'');
+      if(role!=='admin')return res.status(401).json({success:false,error:'Unauthorized — admin code required'});
+    }
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
     const tableReady=await _ensureProspectQuickScanTable();
     if(!tableReady)throw new Error('Prospect Quick Scan database table is unavailable');
     lastStage='REQUEST';
     console.log('[ceo-report] stage=REQUEST');
-    const body=req.body||{};
-    const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
-    ceoEntry=entry;
     const urlInput=String(body.url||body.website||'').trim();
     if(!urlInput)return res.status(400).json({success:false,error:'Website domain is required'});
     const normalizedWebsite=_ceoMainWebsiteUrl(urlInput);
