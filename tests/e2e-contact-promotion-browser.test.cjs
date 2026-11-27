@@ -24,7 +24,7 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
   const browser = await chromium.launch();
   let contact, importJob;
   try {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ locale: 'en-US' });
     await context.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
     const page = await context.newPage();
     page.setDefaultTimeout(7000);
@@ -116,14 +116,110 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
 
     const prospect = await context.newPage();
     assert.equal((await prospect.goto(base + '/quick-scan/' + saved.promoted_token)).status(), 200);
-    const next = new URL(prospect.url());
-    assert.equal(next.pathname, '/quick-scan/start');
-    assert.equal(next.searchParams.get('reason'), 'ceo-first');
+    assert.equal(new URL(prospect.url()).pathname, '/quick-scan/' + saved.promoted_token);
+    const startCeo = prospect.locator('#start-ceo');
+    await startCeo.waitFor();
+    await prospect.reload();
+    await startCeo.waitFor();
+    const { rows: [approval] } = await db.query(
+      'SELECT ceo_report_url,scan_started_at,outreach_sent_at FROM prospect_quick_scans WHERE token=$1', [saved.promoted_token]);
+    assert.deepEqual(approval, { ceo_report_url: null, scan_started_at: null, outreach_sent_at: null });
+    const revokedTab = await context.newPage();
+    await revokedTab.goto(base + '/quick-scan/' + saved.promoted_token);
+    if (process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1') {
+      const reportPage = prospect.waitForURL(url => url.pathname.startsWith('/opportunity-report/'), { timeout: 25000 });
+      await startCeo.click();
+      await reportPage;
+      const { rows: [report] } = await db.query(`SELECT p.token,p.ceo_report_page_url,o.source_url,o.report_data
+        FROM prospect_quick_scans p JOIN opportunity_reports o ON o.token=p.ceo_report_token
+        WHERE p.contact_intelligence_id=$1`, [contact.id]);
+      assert.equal(report.token, saved.promoted_token);
+      assert.equal(report.ceo_report_page_url, website);
+      assert.equal(report.source_url, website);
+      assert.equal(report.report_data.quick_scan_token, saved.promoted_token);
+      const quick = await prospect.goto(base + '/quick-scan/' + saved.promoted_token);
+      assert.equal(quick.status(), 200);
+      assert.equal(await prospect.locator('#start-ceo').count(), 0);
+      const pageB = website + 'services/roof-repair/';
+      await prospect.locator('#pqs391Url').fill(pageB);
+      const [scanned] = await Promise.all([
+        prospect.waitForResponse(response => new URL(response.url()).pathname.endsWith('/' + saved.promoted_token + '/run'), { timeout: 20000 }),
+        prospect.waitForEvent('framenavigated', { predicate: frame => frame === prospect.mainFrame(), timeout: 20000 }),
+        prospect.locator('#pqs391Scan').click()
+      ]);
+      assert.equal(scanned.status(), 200);
+      await prospect.waitForLoadState('domcontentloaded');
+      const { rows: [pair] } = await db.query(`SELECT ceo_report_page_url,url,scan_result,scan_completed_at,audit20_interested_at
+        FROM prospect_quick_scans WHERE token=$1`, [saved.promoted_token]);
+      assert.equal(pair.ceo_report_page_url, website);
+      assert.equal(pair.url, pageB);
+      assert.equal(pair.scan_result.fetch_evidence.requested_url, pageB);
+      assert.ok(pair.scan_completed_at);
+      assert.equal(pair.audit20_interested_at, null);
+      const resumed = await prospect.request.post(base + '/api/ceo-report/start', {
+        data: { entry_mode: 'commercial', handoff: saved.promoted_token, check_only: true }
+      });
+      assert.equal(resumed.status(), 200, await resumed.text());
+      prospect.once('dialog', dialog => dialog.accept());
+      const [interest] = await Promise.all([
+        prospect.waitForResponse(response => response.url().endsWith('/audit20-interest')),
+        prospect.locator('#pqs391Audit').click()
+      ]);
+      assert.equal(interest.status(), 200);
+      const { rows: [requested] } = await db.query(
+        'SELECT audit20_interested_at FROM prospect_quick_scans WHERE token=$1', [saved.promoted_token]);
+      assert.ok(requested.audit20_interested_at);
+      await page.locator('[data-workspace="operations"]').click();
+      await page.getByRole('button', { name: 'Refresh interests' }).click();
+      const interested = page.locator('#pqsInterestInbox article').filter({ hasText: name });
+      const reviewedReport = 'https://reports.example.com/audit?share=reviewed#findings';
+      await interested.getByLabel('Audit20 report URL').fill(reviewedReport);
+      const [released] = await Promise.all([
+        page.waitForResponse(response => response.url().endsWith('/audit20-ready')),
+        interested.getByRole('button', { name: 'Release Audit20 report' }).click()
+      ]);
+      assert.equal(released.status(), 200, await released.text());
+      assert.equal((await released.json()).email_sent, false);
+      await prospect.reload();
+      const registration = prospect.locator('#pqsTrackerRegistration');
+      const [registered] = await Promise.all([
+        prospect.waitForResponse(response => response.url().endsWith('/api/tracker-client/register')),
+        registration.getByRole('button', { name: 'Create my Tracker' }).click()
+      ]);
+      assert.equal(registered.status(), 200, await registered.text());
+      const account = await registered.json();
+      await context.addInitScript(() => localStorage.setItem('cs_welcome_seen', '1'));
+      await registration.getByRole('link', { name: 'Open my Tracker' }).click();
+      await prospect.getByRole('button', { name: 'Proof & History', exact: true }).click();
+      const proof = prospect.locator('#caseStudyBox');
+      await proof.locator('summary').filter({ hasText: '20-page audit' }).click();
+      assert.equal(await proof.getByRole('link', { name: 'Open external audit report' }).getAttribute('href'), reviewedReport);
+      const stats = await db.query('SELECT count(*)::int AS count FROM tracker_pages WHERE tracker_client_id=(SELECT id FROM tracker_clients WHERE token=$1)', [account.token]);
+      assert.equal(stats.rows[0].count, 1);
+    }
+    await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=$1", [contact.id]);
+    const [rejected] = await Promise.all([
+      revokedTab.waitForResponse(response => new URL(response.url()).pathname === '/api/ceo-report/start'),
+      revokedTab.locator('#start-ceo').click()
+    ]);
+    assert.equal(rejected.status(), 404);
+    await revokedTab.reload();
+    assert.equal(await revokedTab.locator('#start-ceo').count(), 0);
   } finally {
     await browser.close();
     try {
+      const client = (await db.query('SELECT id FROM tracker_clients WHERE domain=$1', [domain])).rows[0];
+      if (client) {
+        await db.query('DELETE FROM tracker_case_study_events WHERE tracker_client_id=$1', [client.id]);
+        await db.query('DELETE FROM tracker_pages WHERE tracker_client_id=$1', [client.id]);
+        await db.query('DELETE FROM tracker_clients WHERE id=$1', [client.id]);
+      }
       if (contact) {
         await db.query('DELETE FROM network_directory_businesses WHERE contact_intelligence_id=$1', [contact.id]);
+        if (process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1' &&
+            (await db.query("SELECT to_regclass('opportunity_reports') AS table_name")).rows[0].table_name) {
+          await db.query('DELETE FROM opportunity_reports WHERE token=(SELECT ceo_report_token FROM prospect_quick_scans WHERE contact_intelligence_id=$1)', [contact.id]);
+        }
         await db.query('DELETE FROM prospect_quick_scans WHERE contact_intelligence_id=$1', [contact.id]);
         await db.query('DELETE FROM contact_intelligence WHERE id=$1', [contact.id]);
       }

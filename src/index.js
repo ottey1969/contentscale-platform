@@ -21039,7 +21039,35 @@ app.post('/api/prospect-quick-scan/:token/tracker-interest', async (req, res) =>
     return res.status(500).json({ success:false, error:e.message });
   }
 });
-app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{try{const token=String(req.params.token||''),url=String((req.body||{}).report_url||'').trim();if(!/^https:\/\//i.test(url))return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});const q=await pool.query(`UPDATE prospect_quick_scans SET audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW() WHERE token=$2 AND revoked_at IS NULL AND audit20_interested=TRUE AND audit20_ready_at IS NULL RETURNING *`,[url,token]);if(!q.rows.length){const existing=await pool.query(`SELECT audit20_interested,audit20_ready_at,audit20_report_url FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);if(!existing.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});const x=existing.rows[0];if(!x.audit20_interested)return res.status(409).json({success:false,error:'Audit 20 requires recorded prospect interest'});if(x.audit20_ready_at)return res.json({success:true,already_ready:true,email_sent:false,report_url:x.audit20_report_url});return res.status(409).json({success:false,error:'Audit 20 not ready for this transition'});}const mail=await _pqsSendLocalized(q.rows[0],'audit_ready',url);if(mail.sent)await pool.query(`UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1`,[token]);return res.json({success:true,email_sent:mail.sent,report_url:url});}catch(e){return res.status(500).json({success:false,error:e.message})}});
+app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{
+  const token=String(req.params.token||'');
+  const url=String(req.body?.report_url||'').trim();
+  try {
+    const parsed=new URL(url);
+    if(!/^https:\/\//i.test(url)||parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error();
+  } catch {
+    return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});
+  }
+  try {
+    const {rows:[row]}=await pool.query(`UPDATE prospect_quick_scans SET
+      audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW()
+      WHERE token=$2 AND revoked_at IS NULL AND audit20_interested=TRUE AND audit20_ready_at IS NULL
+      RETURNING *`,[url,token]);
+    if(!row){
+      const {rows:[existing]}=await pool.query(`SELECT audit20_interested,audit20_ready_at,audit20_report_url
+        FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);
+      if(!existing)return res.status(404).json({success:false,error:'Prospect not found'});
+      if(!existing.audit20_interested)return res.status(409).json({success:false,error:'Audit 20 requires recorded prospect interest'});
+      if(existing.audit20_ready_at)return res.json({success:true,already_ready:true,email_sent:false,report_url:existing.audit20_report_url});
+      return res.status(409).json({success:false,error:'Audit 20 not ready for this transition'});
+    }
+    const mail=req.body?.notify===false?{sent:false}:await _pqsSendLocalized(row,'audit_ready',url);
+    if(mail.sent)await pool.query('UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1',[token]);
+    return res.json({success:true,email_sent:mail.sent,report_url:url});
+  } catch(error) {
+    return res.status(500).json({success:false,error:error.message});
+  }
+});
 
 // PROSPECT CTA — explicit interest in the 20-Page Audit.
 // This records interest only. It NEVER starts the audit automatically.
@@ -22464,9 +22492,21 @@ function _pqsUpgradeOutreachEmail(text,locale,shareUrl){
 // The browser gets an immediate response while the CEO report is built in the background.
 // This prevents a long crawl/report request from being misreported as a Brevo/email 502.
 const _pqsCeoBuilds = new Map();
+async function _pqsCommercialCeoProspect(db,token,lock=false){
+  if(!/^[a-f0-9]{64}$/.test(token))return null;
+  const {rows:[row]}=await db.query(`SELECT p.*,c.website_url AS approved_url FROM prospect_quick_scans p
+    JOIN contact_intelligence c ON c.id=p.contact_intelligence_id AND c.promoted_token=p.token
+    WHERE p.token=$1 AND p.source='lead_crawler' AND p.revoked_at IS NULL
+      AND c.status='promoted' AND c.website_verified_at IS NOT NULL`+(lock?' FOR UPDATE OF p FOR SHARE OF c':''),[token]);
+  if(!row)return null;
+  const {exactUrl}=require('./implementation-report.cjs');
+  const ceoPage=row.ceo_report_token?row.ceo_report_page_url:row.url;
+  try{return exactUrl(ceoPage)===exactUrl(row.approved_url)?row:null;}catch{return null;}
+}
+
 // Limit background preparation to one reserved pool connection per server.
 let _pqsCeoWorker=Promise.resolve();
-async function _pqsPrepareCeoOutreachReport(token){
+async function _pqsPrepareCeoOutreachReport(token,commercial=false){
   if(_pqsCeoBuilds.has(token))return _pqsCeoBuilds.get(token);
   const job=_pqsCeoWorker.then(async()=>{
     let client,locked=false,discard=false,transaction=false,requestedUrl;
@@ -22478,11 +22518,15 @@ async function _pqsPrepareCeoOutreachReport(token){
       const lock=await client.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS acquired',[lockId]);
       locked=lock.rows[0].acquired;
       if(!locked)return {success:true,status:'building_report'};
-      const {rows:[row]}=await client.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[token]);
+      const row=commercial?await _pqsCommercialCeoProspect(client,token):
+        (await client.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[token])).rows[0];
       if(!row)return {success:false,status:'unavailable'};
       requestedUrl=row.url;
       if(String(row.ceo_report_url||'').trim())return {success:true,status:'ready',ceo_report_url:String(row.ceo_report_url).trim()};
-      const started=await client.query(`UPDATE prospect_quick_scans SET outreach_email_status='building_report',outreach_error=NULL,updated_at=NOW()
+      const started=await client.query(`UPDATE prospect_quick_scans SET
+        outreach_email_status=CASE WHEN outreach_sent_at IS NULL AND outreach_email_status IS DISTINCT FROM 'sending' THEN 'building_report' ELSE outreach_email_status END,
+        outreach_error=CASE WHEN outreach_sent_at IS NULL AND outreach_email_status IS DISTINCT FROM 'sending' THEN NULL ELSE outreach_error END,
+        updated_at=NOW()
         WHERE token=$1 AND revoked_at IS NULL AND url=$2 RETURNING token`,[token,row.url]);
       if(!started.rowCount)return {success:false,status:'unavailable'};
       const out=await _generateProspectOpportunityReport(null,{
@@ -22499,7 +22543,8 @@ async function _pqsPrepareCeoOutreachReport(token){
       await _ensureOpportunityReportTable();
       await client.query('BEGIN');
       transaction=true;
-      const {rows:[current]}=await client.query(`SELECT url,revoked_at,ceo_report_url FROM prospect_quick_scans WHERE token=$1 FOR UPDATE`,[token]);
+      const current=commercial?await _pqsCommercialCeoProspect(client,token,true):
+        (await client.query(`SELECT url,revoked_at,ceo_report_url FROM prospect_quick_scans WHERE token=$1 FOR UPDATE`,[token])).rows[0];
       if(!current||current.revoked_at||current.url!==row.url){
         await client.query('ROLLBACK');transaction=false;
         return {success:false,status:'unavailable'};
@@ -22509,7 +22554,10 @@ async function _pqsPrepareCeoOutreachReport(token){
         return {success:true,status:'ready',ceo_report_url:current.ceo_report_url};
       }
       const share=await _storeProspectOpportunityReport(client,null,out.report,'prospect',row.url);
-      await client.query(`UPDATE prospect_quick_scans SET ceo_report_url=$1,ceo_report_token=$2,ceo_report_created_at=NOW(),ceo_report_page_url=$3,outreach_email_status='draft',outreach_error=NULL,updated_at=NOW() WHERE token=$4`,[share.url,share.token,ceoPageUrl,token]);
+      await client.query(`UPDATE prospect_quick_scans SET ceo_report_url=$1,ceo_report_token=$2,ceo_report_created_at=NOW(),ceo_report_page_url=$3,
+        outreach_email_status=CASE WHEN outreach_email_status='building_report' THEN 'draft' ELSE outreach_email_status END,
+        outreach_error=CASE WHEN outreach_email_status='building_report' THEN NULL ELSE outreach_error END,
+        updated_at=NOW() WHERE token=$4`,[share.url,share.token,ceoPageUrl,token]);
       await client.query('COMMIT');
       transaction=false;
       return {success:true,status:'ready',ceo_report_url:share.url};
@@ -22541,6 +22589,25 @@ app.post('/api/prospect-quick-scan/admin/:token/email-prepare',requireAdmin,asyn
   if(!_pqsCeoBuilds.has(token))_pqsPrepareCeoOutreachReport(token).catch(()=>{});
   res.status(202).json({success:true,status:'building_report',message:'CEO Prospect Report is being built. Email has not been sent yet.'});
 });
+async function _pqsStartCommercialCeo(body,res){
+  const token=typeof body.handoff==='string'?body.handoff:'';
+  res.set('Cache-Control','no-store');
+  if(!/^[a-f0-9]{64}$/.test(token))return res.status(404).json({success:false});
+  await _ensureContactIntelligenceTables();
+  const row=await _pqsCommercialCeoProspect(pool,token);
+  if(!row)return res.status(404).json({success:false});
+  if(row.ceo_report_token){
+    await _ensureOpportunityReportTable();
+    const {rowCount}=await pool.query('SELECT 1 FROM opportunity_reports WHERE token=$1 AND revoked_at IS NULL',[row.ceo_report_token]);
+    if(!rowCount)return res.status(404).json({success:false});
+    return res.json({success:true,status:'ready',ceo_report_url:_pqsShortPrivatePath('report',row.ceo_report_token)});
+  }
+  if(row.ceo_report_url)return res.status(409).json({success:false});
+  if(body.check_only!==true)_pqsPrepareCeoOutreachReport(token,true).catch(()=>{});
+  else if(row.outreach_email_status==='failed')return res.status(409).json({success:false});
+  return res.status(202).json({success:true,status:'building_report'});
+}
+
 // v222 — Lead Crawler first contact uses one public CEO Report entry URL.
 // No per-lead CEO report is generated before outreach. This keeps first contact fast,
 // honest and lightweight; the prospect chooses to run the report after clicking.
@@ -24650,6 +24717,9 @@ app.post('/api/ceo-report/start',async(req,res)=>{
   console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v380');
   try{
     const body=req.body||{};
+    if(String(body.entry_mode||'').toLowerCase()==='commercial'||Object.hasOwn(body,'handoff')){
+      return await _pqsStartCommercialCeo(body,res);
+    }
     const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
     ceoEntry=entry;
     if(entry==='private'){
@@ -26207,6 +26277,12 @@ function primaryEmail(x){
   if(contact)return{email:contact,label:'Contact email · '+originLabel(x)};
   return{email:'',label:'No email saved'};
 }
+var auditReleaseLabels={
+  en:['Audit20 report URL','Release Audit20 report','Audit20 report released','Release failed. Check the link and try again.'],
+  nl:['Audit20-rapportlink','Geef Audit20-rapport vrij','Audit20-rapport vrijgegeven','Vrijgeven mislukt. Controleer de link en probeer opnieuw.'],
+  es:['URL del informe Audit20','Publicar informe Audit20','Informe Audit20 disponible','No se pudo publicar. Comprueba el enlace e inténtalo de nuevo.']
+};
+var auditRelease=auditReleaseLabels[(navigator.language||'en').split('-')[0]]||auditReleaseLabels.en;
 function render(items){
   var box=ensure(),body=box.querySelector('.pqsIntBody'),rows=(items||[]).filter(function(x){return interests(x).length});
   rows.sort(function(a,b){
@@ -26224,7 +26300,11 @@ function render(items){
     var note=x.audit20_interested&&String(x.audit20_interest_note||'').trim()?'<div class="pqsIntNote"><b>20-Page Audit note:</b><br>'+esc(x.audit20_interest_note)+'</div>':'';
     var source=[x.source||'—',x.campaign||''].filter(Boolean).join(' · ');
     var mailHtml=em.email?'<a href="mailto:'+encodeURIComponent(em.email)+'">'+esc(em.email)+'</a> <span class="meta">('+esc(em.label)+')</span>':'<span class="warn">No email saved</span>';
-    var actions='<div class="pqsIntActions>'+
+    var release=x.audit20_status==='ready'?'<p>'+esc(auditRelease[2])+'</p>':
+      x.audit20_interested&&x.scan_completed_at?'<form data-audit20-release="'+esc(x.token)+'">'+
+      '<label>'+esc(auditRelease[0])+' <input type="url" name="report" required></label> '+
+      '<button class="btn" type="submit">'+esc(auditRelease[1])+'</button><span role="status"></span></form>':'';
+    var actions='<div class="pqsIntActions">'+
       (em.email?'<a class="btn" href="mailto:'+encodeURIComponent(em.email)+'">Email prospect</a><button class="btn" type="button" data-copy-email="'+esc(em.email)+'">Copy email</button>':'')+
       (x.ceo_report_url?'<a class="btn" target="_blank" rel="noopener" href="'+esc(x.ceo_report_url)+'">Open CEO Report</a>':'')+
       (x.share_url?'<a class="btn" target="_blank" rel="noopener" href="'+esc(x.share_url)+'">Open Quick Scan</a>':'')+
@@ -26239,8 +26319,26 @@ function render(items){
       '<dt>Source</dt><dd>'+esc(source)+'</dd>'+
       '<dt>Last activity</dt><dd>'+esc(date(x.updated_at||x.last_opened_at||x.created_at))+'</dd>'+
       '<dt>GSC</dt><dd>'+esc(String(x.gsc_status||'not_connected').replace(/_/g,' '))+'</dd>'+
-      '</dl>'+note+actions+'</article>';
+      '</dl>'+note+actions+release+'</article>';
   }).join('')+'</div>';
+  body.querySelectorAll('[data-audit20-release]').forEach(function(form){
+    form.addEventListener('submit',async function(event){
+      event.preventDefault();
+      var button=form.querySelector('button'),status=form.querySelector('[role="status"]');
+      button.disabled=true;
+      status.textContent='';
+      try{
+        await api('/api/prospect-quick-scan/admin/'+encodeURIComponent(form.dataset.audit20Release)+'/audit20-ready',{
+          method:'POST',body:JSON.stringify({report_url:form.elements.report.value,notify:false})
+        });
+        status.textContent=auditRelease[2];
+        await load();
+      }catch(error){
+        status.textContent=auditRelease[3];
+        button.disabled=false;
+      }
+    });
+  });
   body.querySelectorAll('[data-copy-email]').forEach(function(b){b.onclick=function(){var val=b.getAttribute('data-copy-email')||'';navigator.clipboard.writeText(val).then(function(){var old=b.textContent;b.textContent='Copied ✓';setTimeout(function(){b.textContent=old},1300)})}});
 }
 async function load(){
@@ -27314,6 +27412,42 @@ function _pqsTrackerRegistration(row, language){
     })();</script>`;
 }
 
+function _pqsCommercialCeoPage(token,language){
+  const copy={
+    en:['Your CEO Scan','Start CEO Scan','Preparing your report…','The report is unavailable. Try again.'],
+    nl:['Je CEO Scan','Start CEO Scan','Je rapport wordt voorbereid…','Het rapport is niet beschikbaar. Probeer opnieuw.'],
+    es:['Tu informe CEO','Iniciar informe CEO','Preparando tu informe…','El informe no está disponible. Inténtalo de nuevo.']
+  };
+  const lang=Object.hasOwn(copy,language)?language:'en';
+  const [title,start,working,error]=copy[lang];
+  return `<!doctype html><html lang="${lang}"><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+    <main><h1>${title}</h1><button type="button" id="start-ceo" data-handoff="${token}"
+      data-working="${working}" data-error="${error}">${start}</button><p id="ceo-status" role="status"></p></main>
+    <script>
+      const button=document.getElementById('start-ceo');
+      const status=document.getElementById('ceo-status');
+      button.addEventListener('click',async()=>{
+        button.disabled=true;status.textContent=button.dataset.working;
+        try{
+          const deadline=Date.now()+180000;
+          let checkOnly=false;
+          while(Date.now()<deadline){
+            const response=await fetch('/api/ceo-report/start',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({entry_mode:'commercial',handoff:button.dataset.handoff,check_only:checkOnly}),
+              signal:AbortSignal.timeout(15000)});
+            if(!response.ok)throw Error();
+            const data=await response.json();
+            if(data.status==='ready'){window.location.assign(data.ceo_report_url);return;}
+            checkOnly=true;
+            await new Promise(resolve=>setTimeout(resolve,2000));
+          }
+          throw Error();
+        }catch{status.textContent=button.dataset.error;button.disabled=false;}
+      });
+    </script></html>`;
+}
+
 app.get('/quick-scan/:token',async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');
   try{
@@ -27324,6 +27458,11 @@ app.get('/quick-scan/:token',async(req,res)=>{
     const hasCeo=!!String(seed.ceo_report_url||seed.ceo_report_token||'').trim();
     if(!ownerPreview&&!hasCeo){
       const language=_pqsResolveLanguage(seed.language||'auto',seed.domain||'');
+      if(seed.source==='lead_crawler'&&seed.contact_intelligence_id){
+        if(!await _pqsCommercialCeoProspect(pool,seed.token))return res.status(404).send('Quick Scan link not found');
+        return res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer')
+          .set('X-Robots-Tag','noindex, nofollow').type('html').send(_pqsCommercialCeoPage(seed.token,language));
+      }
       const qs=new URLSearchParams();if(language&&language!=='auto')qs.set('language',language);qs.set('from','legacy-quick-scan');qs.set('reason','ceo-first');
       return res.redirect(302,'/quick-scan/start?'+qs.toString());
     }

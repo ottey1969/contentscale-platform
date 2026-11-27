@@ -11,14 +11,50 @@ net.Socket.prototype.connect=function(...args){
  if(!local(host))throw Error('STAGING-CI-EGRESS-DENIED: '+String(host).slice(0,70));
  return rawConnect.apply(this,args);
 };
+const ceoFixture = process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1';
+const fixtureHost = /^https:\/\/(?:commercial-)?[a-f0-9]{16}\.example\/(?:services\/roof-repair\/)?$/;
+const commercialHtml = `<!doctype html><html lang="en"><head><title>Roof repair services</title></head><body>
+<main><h1>Roof repair services</h1>
+<section><h2>Investigating leaks</h2><p>The first visit starts with a review of the areas where water appeared indoors. Once we know which rooms are affected, we trace the route to the exterior and check joints, flashing, roof penetrations and damaged tiles. We record visible defects and explain which ones can plausibly account for the leak.</p></section>
+<section><h2>Planning a repair</h2><p>A flat roof and a tiled roof use different materials. We identify the existing membrane, fasteners and drainage before recommending replacement parts. Access requirements and weather affect the order of work. Customers receive a description of the proposed repair and any areas that need closer inspection.</p></section>
+<section><h2>Checking the repaired area</h2><p>After work, we compare the repaired areas with the original observations and confirm that gutters and outlets are clear. The handover covers maintenance, signs of recurring moisture and how to report a concern. Photographs can help the building manager record what was changed.</p></section>
+<a href="/contact">Contact the team</a></main></body></html>`;
+const localFetch = globalThis.fetch.bind(globalThis);
+if (ceoFixture) {
+ const puppeteer = require('puppeteer');
+ const launch = puppeteer.launch.bind(puppeteer);
+ puppeteer.launch = async options => {
+  const browser = await launch(options);
+  const newPage = browser.newPage.bind(browser);
+  browser.newPage = async () => {
+   const page = await newPage();
+   const navigate = page.goto.bind(page);
+   page.goto = async (url, navigateOptions) => {
+    if (!fixtureHost.test(url)) return navigate(url, navigateOptions);
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+     const reply = request.url() === url
+      ? request.respond({ status: 200, contentType: 'text/html', body: commercialHtml })
+      : request.abort();
+     reply.catch(() => {});
+    });
+    return navigate(url, navigateOptions);
+   };
+   return page;
+  };
+  return browser;
+ };
+}
 const confirmationAttempts=new Map();
 globalThis.fetch=async(url, options)=>{
+ if (ceoFixture && options?.method === 'POST' &&
+     String(url) === 'http://127.0.0.1:' + process.env.PORT + '/api/scan' &&
+     fixtureHost.test(JSON.parse(options.body).url || '')) {
+  return localFetch(url, options);
+ }
  const website=/^https:\/\/(commercial-[a-f0-9]{16}\.example)\/$/.exec(String(url));
- if(website && /^Mozilla.*ContentScalePublicContactCheck/.test(options?.headers?.['User-Agent']||'')){
-  const html='<html lang="en"><head><title>Roofing contractor</title></head><body><h1>Roof repair services</h1>'+
-    '<p>Our roofing team provides emergency repairs and inspections for local businesses.</p>'.repeat(12)+
-    '<a href="/contact">Contact our roofing team</a></body></html>';
-  const response=new Response(html,{headers:{'Content-Type':'text/html'}});
+ if((website || (ceoFixture && fixtureHost.test(String(url)))) && /^Mozilla.*ContentScalePublicContactCheck/.test(options?.headers?.['User-Agent']||'')){
+  const response=new Response(commercialHtml,{headers:{'Content-Type':'text/html'}});
   Object.defineProperty(response,'url',{value:String(url)});
   return response;
  }
