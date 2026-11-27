@@ -21,6 +21,10 @@ De beheerroute voor het opslaan van AI-antwoorden in Pre-Write kon de bestaande 
 
 De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches in het bouwproces. De migratie-inventaris staat in [Canonical Architecture Migration](canonical-architecture-migration.md). Volledige consolidatie van route-eigenaarschap, bedrijfsidentiteit, paginastatussen en bewijsprojecties vereist een route- en datamodelaudit. Deze slice heeft de bestaande bronnen, cycli en opslag gebruikt.
 
+### CEO-rapport in de achtergrond
+
+De Lead Crawler-voorbereidingsroute slaagde in opslag van het CEO-rapport, waarna de linkgenerator faalde omdat er geen actief HTTP-request was. De canonical generator maakt in achtergrondwerk de bestaande relatieve privélink vóór opslag en bewaart dezelfde prospecttoken, gekozen pagina en taal. De PostgreSQL-regressie gebruikt een auditfixture en toont dat herhaling naar hetzelfde rapport leidt, zonder tweede scan of e-mail.
+
 ### Runtime en productie na merge #570
 
 - De alleen-lezen productie-API `/api/version` rapporteerde `main` op `4bc10c0f6aabb4138fece39b65de1517e7613d94`. De openbare Network-health rapporteerde module `v552` en schema `24`. De build-API verwachtte nog `v550`, waardoor de match op productie `false` was. De reparatie is op de ontwikkelbranch en is hier nog geen waarneming van productie. [Versie](https://app.contentscale.site/api/version) · [Network-health](https://app.contentscale.site/api/network/public/v1/health)
