@@ -40,14 +40,14 @@ async function run(){
   const handlers={};let auditEmails=0;const ownerEvents=[];
   const salesContext={
     app:{post(route,...args){handlers[route]=args[args.length-1]}},
-    pool:client,Date,String,Number,JSON,console,process:{env:{}},
+    pool:client,URL,Date,String,Number,JSON,console,process:{env:{}},
     requireAdmin:()=>{},_ensureProspectQuickScanTable:async()=>true,
     _pqsLang3:()=> 'en',_pqsValidEmail:()=>false,
     _pqsNotifyOwner:async(_r,kind)=>{ownerEvents.push(kind)},
     _pqsSendLocalized:async()=>{auditEmails++;return {sent:true}},
   };
   vm.runInNewContext(source.slice(prospectA,prospectB),salesContext,{timeout:4000});
-  vm.runInNewContext(source.slice(auditReadyA,source.indexOf('\n',auditReadyA)),salesContext,{timeout:4000});
+  vm.runInNewContext(source.slice(auditReadyA,source.indexOf('\n\n// PROSPECT CTA',auditReadyA)),salesContext,{timeout:4000});
   vm.runInNewContext(source.slice(trackerInterestA,auditReadyA),salesContext,{timeout:4000});
   async function sales(route,body={}){
     const res={statusCode:200,status(n){this.statusCode=n;return this},json(x){this.body=JSON.parse(JSON.stringify(x));return x}};

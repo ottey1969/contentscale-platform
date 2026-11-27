@@ -21039,7 +21039,35 @@ app.post('/api/prospect-quick-scan/:token/tracker-interest', async (req, res) =>
     return res.status(500).json({ success:false, error:e.message });
   }
 });
-app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{try{const token=String(req.params.token||''),url=String((req.body||{}).report_url||'').trim();if(!/^https:\/\//i.test(url))return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});const q=await pool.query(`UPDATE prospect_quick_scans SET audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW() WHERE token=$2 AND revoked_at IS NULL AND audit20_interested=TRUE AND audit20_ready_at IS NULL RETURNING *`,[url,token]);if(!q.rows.length){const existing=await pool.query(`SELECT audit20_interested,audit20_ready_at,audit20_report_url FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);if(!existing.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});const x=existing.rows[0];if(!x.audit20_interested)return res.status(409).json({success:false,error:'Audit 20 requires recorded prospect interest'});if(x.audit20_ready_at)return res.json({success:true,already_ready:true,email_sent:false,report_url:x.audit20_report_url});return res.status(409).json({success:false,error:'Audit 20 not ready for this transition'});}const mail=await _pqsSendLocalized(q.rows[0],'audit_ready',url);if(mail.sent)await pool.query(`UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1`,[token]);return res.json({success:true,email_sent:mail.sent,report_url:url});}catch(e){return res.status(500).json({success:false,error:e.message})}});
+app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{
+  const token=String(req.params.token||'');
+  const url=String(req.body?.report_url||'').trim();
+  try {
+    const parsed=new URL(url);
+    if(!/^https:\/\//i.test(url)||parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error();
+  } catch {
+    return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});
+  }
+  try {
+    const {rows:[row]}=await pool.query(`UPDATE prospect_quick_scans SET
+      audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW()
+      WHERE token=$2 AND revoked_at IS NULL AND audit20_interested=TRUE AND audit20_ready_at IS NULL
+      RETURNING *`,[url,token]);
+    if(!row){
+      const {rows:[existing]}=await pool.query(`SELECT audit20_interested,audit20_ready_at,audit20_report_url
+        FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);
+      if(!existing)return res.status(404).json({success:false,error:'Prospect not found'});
+      if(!existing.audit20_interested)return res.status(409).json({success:false,error:'Audit 20 requires recorded prospect interest'});
+      if(existing.audit20_ready_at)return res.json({success:true,already_ready:true,email_sent:false,report_url:existing.audit20_report_url});
+      return res.status(409).json({success:false,error:'Audit 20 not ready for this transition'});
+    }
+    const mail=req.body?.notify===false?{sent:false}:await _pqsSendLocalized(row,'audit_ready',url);
+    if(mail.sent)await pool.query('UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1',[token]);
+    return res.json({success:true,email_sent:mail.sent,report_url:url});
+  } catch(error) {
+    return res.status(500).json({success:false,error:error.message});
+  }
+});
 
 // PROSPECT CTA — explicit interest in the 20-Page Audit.
 // This records interest only. It NEVER starts the audit automatically.
@@ -26249,6 +26277,12 @@ function primaryEmail(x){
   if(contact)return{email:contact,label:'Contact email · '+originLabel(x)};
   return{email:'',label:'No email saved'};
 }
+var auditReleaseLabels={
+  en:['Audit20 report URL','Release Audit20 report','Audit20 report released','Release failed. Check the link and try again.'],
+  nl:['Audit20-rapportlink','Geef Audit20-rapport vrij','Audit20-rapport vrijgegeven','Vrijgeven mislukt. Controleer de link en probeer opnieuw.'],
+  es:['URL del informe Audit20','Publicar informe Audit20','Informe Audit20 disponible','No se pudo publicar. Comprueba el enlace e inténtalo de nuevo.']
+};
+var auditRelease=auditReleaseLabels[(navigator.language||'en').split('-')[0]]||auditReleaseLabels.en;
 function render(items){
   var box=ensure(),body=box.querySelector('.pqsIntBody'),rows=(items||[]).filter(function(x){return interests(x).length});
   rows.sort(function(a,b){
@@ -26266,7 +26300,11 @@ function render(items){
     var note=x.audit20_interested&&String(x.audit20_interest_note||'').trim()?'<div class="pqsIntNote"><b>20-Page Audit note:</b><br>'+esc(x.audit20_interest_note)+'</div>':'';
     var source=[x.source||'—',x.campaign||''].filter(Boolean).join(' · ');
     var mailHtml=em.email?'<a href="mailto:'+encodeURIComponent(em.email)+'">'+esc(em.email)+'</a> <span class="meta">('+esc(em.label)+')</span>':'<span class="warn">No email saved</span>';
-    var actions='<div class="pqsIntActions>'+
+    var release=x.audit20_status==='ready'?'<p>'+esc(auditRelease[2])+'</p>':
+      x.audit20_interested&&x.scan_completed_at?'<form data-audit20-release="'+esc(x.token)+'">'+
+      '<label>'+esc(auditRelease[0])+' <input type="url" name="report" required></label> '+
+      '<button class="btn" type="submit">'+esc(auditRelease[1])+'</button><span role="status"></span></form>':'';
+    var actions='<div class="pqsIntActions">'+
       (em.email?'<a class="btn" href="mailto:'+encodeURIComponent(em.email)+'">Email prospect</a><button class="btn" type="button" data-copy-email="'+esc(em.email)+'">Copy email</button>':'')+
       (x.ceo_report_url?'<a class="btn" target="_blank" rel="noopener" href="'+esc(x.ceo_report_url)+'">Open CEO Report</a>':'')+
       (x.share_url?'<a class="btn" target="_blank" rel="noopener" href="'+esc(x.share_url)+'">Open Quick Scan</a>':'')+
@@ -26281,8 +26319,26 @@ function render(items){
       '<dt>Source</dt><dd>'+esc(source)+'</dd>'+
       '<dt>Last activity</dt><dd>'+esc(date(x.updated_at||x.last_opened_at||x.created_at))+'</dd>'+
       '<dt>GSC</dt><dd>'+esc(String(x.gsc_status||'not_connected').replace(/_/g,' '))+'</dd>'+
-      '</dl>'+note+actions+'</article>';
+      '</dl>'+note+actions+release+'</article>';
   }).join('')+'</div>';
+  body.querySelectorAll('[data-audit20-release]').forEach(function(form){
+    form.addEventListener('submit',async function(event){
+      event.preventDefault();
+      var button=form.querySelector('button'),status=form.querySelector('[role="status"]');
+      button.disabled=true;
+      status.textContent='';
+      try{
+        await api('/api/prospect-quick-scan/admin/'+encodeURIComponent(form.dataset.audit20Release)+'/audit20-ready',{
+          method:'POST',body:JSON.stringify({report_url:form.elements.report.value,notify:false})
+        });
+        status.textContent=auditRelease[2];
+        await load();
+      }catch(error){
+        status.textContent=auditRelease[3];
+        button.disabled=false;
+      }
+    });
+  });
   body.querySelectorAll('[data-copy-email]').forEach(function(b){b.onclick=function(){var val=b.getAttribute('data-copy-email')||'';navigator.clipboard.writeText(val).then(function(){var old=b.textContent;b.textContent='Copied ✓';setTimeout(function(){b.textContent=old},1300)})}});
 }
 async function load(){

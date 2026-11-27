@@ -24,7 +24,7 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
   const browser = await chromium.launch();
   let contact, importJob;
   try {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ locale: 'en-US' });
     await context.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
     const page = await context.newPage();
     page.setDefaultTimeout(7000);
@@ -169,6 +169,33 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
       const { rows: [requested] } = await db.query(
         'SELECT audit20_interested_at FROM prospect_quick_scans WHERE token=$1', [saved.promoted_token]);
       assert.ok(requested.audit20_interested_at);
+      await page.locator('[data-workspace="operations"]').click();
+      await page.getByRole('button', { name: 'Refresh interests' }).click();
+      const interested = page.locator('#pqsInterestInbox article').filter({ hasText: name });
+      const reviewedReport = 'https://reports.example.com/audit?share=reviewed#findings';
+      await interested.getByLabel('Audit20 report URL').fill(reviewedReport);
+      const [released] = await Promise.all([
+        page.waitForResponse(response => response.url().endsWith('/audit20-ready')),
+        interested.getByRole('button', { name: 'Release Audit20 report' }).click()
+      ]);
+      assert.equal(released.status(), 200, await released.text());
+      assert.equal((await released.json()).email_sent, false);
+      await prospect.reload();
+      const registration = prospect.locator('#pqsTrackerRegistration');
+      const [registered] = await Promise.all([
+        prospect.waitForResponse(response => response.url().endsWith('/api/tracker-client/register')),
+        registration.getByRole('button', { name: 'Create my Tracker' }).click()
+      ]);
+      assert.equal(registered.status(), 200, await registered.text());
+      const account = await registered.json();
+      await context.addInitScript(() => localStorage.setItem('cs_welcome_seen', '1'));
+      await registration.getByRole('link', { name: 'Open my Tracker' }).click();
+      await prospect.getByRole('button', { name: 'Proof & History', exact: true }).click();
+      const proof = prospect.locator('#caseStudyBox');
+      await proof.locator('summary').filter({ hasText: '20-page audit' }).click();
+      assert.equal(await proof.getByRole('link', { name: 'Open external audit report' }).getAttribute('href'), reviewedReport);
+      const stats = await db.query('SELECT count(*)::int AS count FROM tracker_pages WHERE tracker_client_id=(SELECT id FROM tracker_clients WHERE token=$1)', [account.token]);
+      assert.equal(stats.rows[0].count, 1);
     }
     await db.query("UPDATE contact_intelligence SET status='suppressed' WHERE id=$1", [contact.id]);
     const [rejected] = await Promise.all([
@@ -181,6 +208,12 @@ test('Quick Scan Admin can replay a Lead Crawler promotion after a browser reloa
   } finally {
     await browser.close();
     try {
+      const client = (await db.query('SELECT id FROM tracker_clients WHERE domain=$1', [domain])).rows[0];
+      if (client) {
+        await db.query('DELETE FROM tracker_case_study_events WHERE tracker_client_id=$1', [client.id]);
+        await db.query('DELETE FROM tracker_pages WHERE tracker_client_id=$1', [client.id]);
+        await db.query('DELETE FROM tracker_clients WHERE id=$1', [client.id]);
+      }
       if (contact) {
         await db.query('DELETE FROM network_directory_businesses WHERE contact_intelligence_id=$1', [contact.id]);
         if (process.env.COMMERCIAL_CEO_BROWSER_FIXTURE === '1' &&
