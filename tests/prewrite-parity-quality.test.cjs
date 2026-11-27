@@ -128,3 +128,11 @@ test('PWB-06 and PWB-08 — incomplete new briefs cannot confirm publication; hi
   assert.throws(() => publicationReport(entry, { ...brief, missing_information: { state: 'needs_input' } }, homepage, 'nl'), /pricing/);
   assert.throws(() => publicationReport(entry, { ...brief, metadata_review: { issues: ['stale_year'] } }, homepage, 'nl'), /metadata/);
 });
+
+test('PWB-12 — Network compact repair does not bypass the bounded fallback model', () => {
+  const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/index.js'), 'utf8');
+  const start = source.indexOf('const _pwbBriefPrimary=_pwbQuality');
+  const compact = source.slice(start, source.indexOf('const _decisionPrompt', start));
+  assert.match(compact, /repairBody,'gemini-2\.5-flash-lite',fallback,1,false/);
+  assert.doesNotMatch(compact, /gemini-3|GEMINI_MODEL_BRIEF_FALLBACK\|\|fallback/);
+});

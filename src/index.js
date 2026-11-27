@@ -61657,7 +61657,7 @@ Return ONLY valid JSON, no markdown, no preamble.
     const _pwbBriefPrimary=_pwbQuality.zeroThinkingModel(_pwbAllowModelUpgrade?GEMINI_MODEL_BRIEF:null);
     const _pwbBriefFallback=_pwbQuality.zeroThinkingModel(_pwbAllowModelUpgrade?(GEMINI_MODEL_BRIEF_FALLBACK||_pwbBriefPrimary):null);
     if (_pwbNetworkFastLane) {
-      const _compactModels = Array.from(new Set([_pwbBriefPrimary,_pwbBriefFallback].concat(_pwbAllowModelUpgrade?['gemini-3.5-flash-lite','gemini-2.5-flash']:[]).filter(Boolean))).slice(0,3);
+      const _compactModels = [...new Set([_pwbBriefPrimary,_pwbBriefFallback])];
       const _extractCompactJson = function(raw) {
         raw=String(raw||'').trim(); if(!raw)return null;
         const candidates=[raw];
@@ -61669,9 +61669,10 @@ Return ONLY valid JSON, no markdown, no preamble.
       const _compactCall = async function(label, compactPrompt, maxTokens, requiredKeys) {
         const _budgetSkip=_pwbSkipForBudget(label);
         if(_budgetSkip)return {ok:false,error:'optional call skipped by Prewrite cost guard ('+_budgetSkip+')',status:0,attempts:0,model:'',timed_out:false,budget_skipped:true};
-        const primary=_compactModels[0]||GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite';
+        const primary=_compactModels[0];
         const fallback=_compactModels[1]||primary;
-        const _fullPrompt=_langPrefix(language)+compactPrompt;
+        const _fullPrompt=_langPrefix(language)+compactPrompt+'\n\nWEBSITE AND DECISION EVIDENCE: '+JSON.stringify(_pwbDecisionEvidence)
+          +'\nUse only verified first-party capabilities. Competitors are research only. Preserve observed pricing policy and require review when evidence is missing.';
         const body={contents:[{parts:[{text:_fullPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
         const started=Date.now();
         let attempts=2;_pwbUsage.attempted_calls+=1;
@@ -61693,7 +61694,7 @@ ${raw.slice(0,16000)}`;
           const repairBody={contents:[{parts:[{text:repairPrompt}]}],generationConfig:{temperature:0,maxOutputTokens:Math.min(maxTokens,4200),responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
           const _repairLabel=label+'_json_repair',_repairSkip=_pwbSkipForBudget(_repairLabel);
           const _repairStarted=Date.now();
-          const repair=_repairSkip?null:await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',GEMINI_MODEL_BRIEF_FALLBACK||fallback,1,false);
+          const repair=_repairSkip?null:await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',fallback,1,false);
           if(!_repairSkip)_pwbUsage.attempted_calls+=1;
           attempts+=_repairSkip?0:1;
           if(repair&&repair.ok){_pwbRecordUsage(_repairLabel,repair.modelUsed||'gemini-2.5-flash-lite',repair.data,{prompt_chars:repairPrompt.length,max_output_tokens:Math.min(maxTokens,4200),elapsed_ms:Date.now()-_repairStarted});
