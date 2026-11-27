@@ -26,8 +26,9 @@ test('post-publication AI observations are private, exact, replay-safe and appen
       DROP CONSTRAINT network_placement_review_events_event_type_check,
       ADD CONSTRAINT network_placement_review_events_event_type_check
       CHECK (event_type IN ('submitted','resubmitted','precheck_passed','precheck_needs_review','needs_changes','rejected','verified'))`);
-    await pool.query(`CREATE TABLE prewrite_briefs (id bigint PRIMARY KEY, brief_json jsonb);
-      INSERT INTO prewrite_briefs VALUES (1,'{"approved":"original"}');
+    const publisherToken = crypto.randomBytes(32).toString('hex');
+    await pool.query(`CREATE TABLE prewrite_briefs (id bigint PRIMARY KEY, brief_json jsonb, keyword text, working_title text);
+      INSERT INTO prewrite_briefs (id,brief_json) VALUES (1,'{"approved":"original"}');
       INSERT INTO network_websites (id,domain,status) VALUES (1,'publisher.example','approved');
       INSERT INTO network_content (id,title,primary_niche,prewrite_brief_id) VALUES (1,'Edition','marketing',1);
       INSERT INTO network_placements (id,content_id,publisher_website_id,status,published_url,verified_at)
@@ -37,6 +38,8 @@ test('post-publication AI observations are private, exact, replay-safe and appen
       INSERT INTO network_placement_review_events (placement_id,event_type,published_url,note)
       VALUES (1,'verified','https://publisher.example/Article/?v=1','Original review')`);
     await ensureNetworkTables(pool);
+    await pool.query(`INSERT INTO network_publisher_accounts (website_id,email,access_token,status)
+      VALUES (1,'fixture@publisher.example',$1,'active')`, [publisherToken]);
 
     const app = express();
     app.use(express.json());
@@ -72,6 +75,10 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.equal(observations.find(item => item.engine === 'claude').exact_page_cited, null);
     assert.ok(observations.every(item => item.published_url === publishedUrl));
     assert.equal((await fetch(url)).status, 401);
+    const publisherPackage = await fetch(new URL('/api/network/publisher/' + publisherToken + '/placements/1/package', url));
+    assert.equal(publisherPackage.status, 200);
+    const publisherHistory = (await publisherPackage.json()).review_history;
+    assert.deepEqual(publisherHistory.map(item => item.event_type), ['verified']);
 
     let expectedCount = 2;
     if (process.env.NETWORK_POST_AI_BROWSER === '1') {
