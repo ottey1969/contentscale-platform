@@ -163,6 +163,27 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     assert.ok(!((gp.brief.ai_quality_check || {}).missing || []).includes('paa_answers'), 'paa_answers is filled');
     const sent3 = fs.readFileSync(capture, 'utf8').trim().split('\n').slice(before3).map(l => JSON.parse(JSON.parse(l).body).contents[0].parts[0].text);
     assert.equal(sent3.filter(t => /Answer each People Also Ask question/.test(t)).length, 1, 'one small call for the answers');
+    // Public ingress exercises the same generator with the provider and website fixtures above.
+    const publicKey = crypto.randomBytes(32).toString('hex');
+    const headers = { authorization: 'Bearer ' + publicKey, 'content-type': 'application/json' };
+    const publicKeyword = 'TEST editorial planning for public briefs';
+    const beforePublic = Number((await db.query('SELECT COUNT(*) FROM tracker_clients')).rows[0].count);
+    const accepted = await fetch(base + '/api/free-pre-write', { method: 'POST', headers, body: JSON.stringify({
+      website: 'https://test-free-prewrite.example/', keyword: publicKeyword, language: 'en', region: 'US'
+    }) });
+    assert.equal(accepted.status, 202, await accepted.text());
+    let standalone;
+    for (let i = 0; i < 60; i++) {
+      standalone = await (await fetch(base + '/api/free-pre-write/result', { headers })).json();
+      if (standalone.status !== 'generating') break;
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    assert.ok(['open', 'failed'].includes(standalone.status), JSON.stringify(standalone).slice(0, 300));
+    assert.ok(fs.readFileSync(capture, 'utf8').includes(publicKeyword), 'the standalone route reaches the same model pipeline');
+    assert.doesNotMatch(JSON.stringify(standalone), /generation_usage|promptTokenCount/);
+    const standaloneRow = (await db.query('SELECT client_id, tracker_page_id, published_at FROM prewrite_briefs WHERE keyword=$1', [publicKeyword])).rows[0];
+    assert.deepEqual(standaloneRow, { client_id: null, tracker_page_id: null, published_at: null });
+    assert.equal(Number((await db.query('SELECT COUNT(*) FROM tracker_clients')).rows[0].count), beforePublic);
   } finally {
     app.kill(); try { await db.end(); } catch (e) {} fs.rmSync(built, { force: true }); fs.rmSync(capture, { force: true });
   }

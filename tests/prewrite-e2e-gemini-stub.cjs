@@ -16,6 +16,16 @@ const TEST_BRIEF = { test_stub: 'TEST reply from the e2e Gemini stub; not a real
   evidence: { trust_signals: ['TEST t1', 'TEST t2'], experience_to_include: 'TEST x', official_sources: ['https://example.org/a', 'https://example.org/b', 'TEST AI-only lead — https://example.com/ai-only-lead?utm_source=chatgpt.com'] },
   balance: { limitations: ['TEST limitation'] }, use_cases: [1, 2].map(i => ({ audience: 'TEST audience ' + i, scenario: 'TEST scenario', benefit: 'TEST benefit' })),
   conclusion: { recap: 'TEST recap', recommendation: 'TEST recommendation' }, action_plan: [1, 2, 3].map(i => ({ step: i, action: 'TEST action ' + i })) };
+const livePage = require('../src/growth-public-html-reader.cjs');
+const fetchPublic = livePage.fetchPublicGrowthHtml;
+livePage.fetchPublicGrowthHtml = async (url, options) => {
+  if (url === 'https://test-free-prewrite.example/' || url === 'https://test-free-prewrite.example/sitemap.xml') {
+    const html = url.endsWith('.xml') ? '<urlset><url><loc>https://test-free-prewrite.example/previous-topic/</loc></url></urlset>'
+      : '<main><h1>TEST publication website</h1><a href="/previous-topic/">Previous topic</a></main>';
+    return { html, status: 200, final_url: url, retrieved_at: new Date().toISOString(), redirect_chain: [] };
+  }
+  return fetchPublic(url, options);
+};
 globalThis.fetch = async function (url, init) {
   const u = String(url && url.url || url || '');
   if (/generativelanguage\.googleapis\.com\/v1beta\/models\/[^/]+:generateContent/.test(u)) {

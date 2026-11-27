@@ -3,6 +3,7 @@
 const { createHash } = require('node:crypto');
 const { parse } = require('parse5');
 const { validateUrl, fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
+const { isBotCheck } = require('./gsc-report/site-audit.cjs');
 const { resolveTarget, editorInstructions, registerRoutes } = require('./prewrite-implementation.cjs');
 
 const ROOT = '/free-pre-write';
@@ -51,7 +52,7 @@ function view(row, strip) {
 async function discoverSite(site) {
   const home = await fetchPublicGrowthHtml(site, { redirects: 2, limit: 300000 });
   const canonical = validateUrl(home.final_url);
-  if (home.status !== 200 || canonical.hostname.replace(/^www\./, '') !== new URL(site).hostname.replace(/^www\./, '')) {
+  if (home.status !== 200 || isBotCheck(home.html) || canonical.hostname.replace(/^www\./, '') !== new URL(site).hostname.replace(/^www\./, '')) {
     throw Error('Website unavailable');
   }
   site = canonical.origin + '/';
@@ -59,10 +60,11 @@ async function discoverSite(site) {
   const pending = [parse(home.html)];
   while (pending.length && urls.size < 500) {
     const node = pending.pop();
-    if (node.tagName === 'a') {
+    const href = node.tagName === 'a' && node.attrs.find(attr => attr.name === 'href')?.value;
+    if (href && !href.startsWith('#')) {
       try {
-        const url = validateUrl(new URL(node.attrs.find(attr => attr.name === 'href')?.value, site).href);
-        if (url.origin === new URL(site).origin && !url.search) urls.add(url.href);
+        const url = validateUrl(new URL(href, home.final_url).href);
+        if (url.origin === canonical.origin && !url.search) urls.add(url.href);
       } catch {}
     }
     pending.push(...(node.childNodes || []));
@@ -122,7 +124,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
     } catch { return res.status(400).json({ success: false }); }
     const key = credentials(req);
     if (!key || typeof keyword !== 'string' || !keyword.trim() || keyword.length > 300 ||
-        typeof region !== 'string' || !/^[a-z]{2}$/i.test(region) || !Object.hasOwn(texts, language)) {
+        typeof region !== 'string' || !/^[a-z]{2}$/i.test(region) || typeof language !== 'string' || !Object.hasOwn(texts, language)) {
       return res.status(400).json({ success: false });
     }
     if (!generate || dailyLimit < 1) return res.status(503).json({ success: false });

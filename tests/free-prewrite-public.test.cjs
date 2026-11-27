@@ -60,6 +60,16 @@ test('private public briefs in Chromium use the canonical publication history fo
         status: 200, final_url: url, retrieved_at: new Date().toISOString(), html: '<main>' + article + '</main>'
       }) }
     });
+    const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
+    const growth = registerFreeGrowth(app, pool, {
+      config: freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: JSON.stringify([
+        { key: 'public-test-key', label: 'public test', hosts: ['test.example'] }
+      ]) }),
+      engine: async () => ({ statusCode: 200, report: {
+        success: true, editorial_decision_gate: { decision: 'NO_CHANGE' }
+      } }),
+      engineDeps: { questionFetch: async () => new Response('{}', { status: 200 }), aiGapModel: null }
+    });
     server = app.listen(0, '127.0.0.1');
     await new Promise(resolve => server.once('listening', resolve));
     const origin = 'http://127.0.0.1:' + server.address().port;
@@ -115,6 +125,20 @@ test('private public briefs in Chromium use the canonical publication history fo
     assert.equal(await resolveGrowthSource(pool, key, existingUrl.slice(0, -1), 'Existing'), null);
     assert.equal(await resolveGrowthSource(pool, key, existingUrl, 'Other question'), null);
     assert.equal((await sourceForGrowth(pool, id, existingUrl, 'Existing')).brief.keyword, 'Existing');
+    const input = { url: existingUrl, query: 'Existing', consent: true, no_gsc: true, prewrite_ref: key,
+      email: 'standalone-grower@new-prewrite.example', key: 'public-test-key', lang: 'nl' };
+    await api.post('/api/free-growth/checks').send({ ...input, url: existingUrl + 'other/' }).expect(409);
+    const accepted = await api.post('/api/free-growth/checks').send(input).expect(202);
+    await growth.idle();
+    const growthPath = '/api/free-growth/checks/' + accepted.body.id;
+    await api.get(growthPath).expect(404);
+    const result = await api.get(growthPath + '?k=' + accepted.body.key).expect(200);
+    assert.equal(result.body.status, 'DONE');
+    assert.equal(result.body.proof_history.prewrite.target.url, existingUrl);
+    assert.equal(result.body.proof_history.prewrite.brief.keyword, 'Existing');
+    const report = await api.get(growthPath + '/report.json?k=' + accepted.body.key).expect(200);
+    assert.deepEqual(report.body.proof_history.prewrite, result.body.proof_history.prewrite);
+
     const { rows } = await pool.query('SELECT client_id, tracker_page_id FROM prewrite_briefs');
     assert.equal(rows.length, 4);
     assert.ok(rows.every(row => row.client_id === null && row.tracker_page_id === null));

@@ -62759,7 +62759,13 @@ ${sourceText}`;
       const _aiWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.ai_evidence||{},_intWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.internal_destination||{};
       const _integrityText=(_missingFinal.includes('ai_evidence_5of5')?' AI research incomplete: '+Number(_aiWhy.checked||0)+'/5 checked; missing '+(Array.isArray(_aiWhy.missing)?_aiWhy.missing.join(', '):'AI evidence')+'.':'')+(_missingFinal.includes('internal_destination')?' Internal destination required for publisher domain '+String(_intWhy.target_domain||'')+'.':'');
       const _pwbNotPassedPayload={success:false,stage:_missingFinal.includes('ai_evidence_5of5')?'ai_evidence_gate':'quality_gate',quality_status:'not_passed',retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research completed. The Brief is shown as NOT PASSED because it did not meet the publication-quality gate. It was not saved as an approved Prewrite Brief and was not counted. A diagnostic preview is retained in this job.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_integrityText+_outlineIssueText,brief:brief,generation_usage:brief.generation_usage||null,search_intent:brief.search_intent||null,region:region||'us',competitors_scraped:(compScrapes||[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim().length>=250;}).length,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,ai_evidence:_aiWhy,internal_destination:_intWhy,outline:_outlineWhy||null,generation_usage:brief.generation_usage||null}};
-      const _pwbDiagJob=publicBrief ? null : await _pwbRetainSyncDiagnostic(req,client,_pwbNotPassedPayload);
+      if (publicBrief) {
+        await pool.query(`UPDATE prewrite_briefs SET brief_json=$2,status='failed'
+          WHERE id=$1 AND client_id IS NULL AND status='generating' AND public_access_hash IS NOT NULL`,
+          [publicBrief.id, JSON.stringify(brief)]);
+        return res.status(422).json({ success: false, stage: 'quality_gate' });
+      }
+      const _pwbDiagJob=await _pwbRetainSyncDiagnostic(req,client,_pwbNotPassedPayload);
       if(_pwbDiagJob){_pwbNotPassedPayload.job_id=_pwbDiagJob;_pwbNotPassedPayload.diagnostic_job_id=_pwbDiagJob;}
       return res.status(422).json(_pwbNotPassedPayload);
     }

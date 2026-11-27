@@ -151,10 +151,10 @@ async function verifyApprovedContent(url, approvedHtml, fetchHtml, renderHtml) {
 
 module.exports = { resolveTarget, readReport, publicationReport, editorInstructions, verifyApprovedContent };
 
-function response(result, trackerPageId) {
+function response(result, trackerPageId, confirmed = Boolean(trackerPageId)) {
   return {
     success: true, ...result, status: result.report.status, tracker_page_id: trackerPageId,
-    published_url: trackerPageId ? result.report.url : null, tracker_entered: Boolean(trackerPageId)
+    published_url: confirmed ? result.report.url : null, tracker_entered: Boolean(trackerPageId)
   };
 }
 
@@ -196,7 +196,7 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
       if (seen) {
         await db.query('COMMIT');
         committed = true;
-        return res.json(response(result, publishing ? row.tracker_page_id : null));
+        return res.json(response(result, publishing ? row.tracker_page_id : null, publishing));
       }
       if (row.status === 'published' || (!publishing && report.status === 'published')) {
         return res.status(409).json({ success: false, error: 'Confirm a publication through the publication action for an approved Brief' });
@@ -230,7 +230,7 @@ function registerRoutes(app, pool, resolveBrief, { fetchHtml = fetchPublicGrowth
           WHERE id=$1 AND ${updateScope}`, [scope.briefId, scope.clientId, serializedReport]);
       await db.query('COMMIT');
       committed = true;
-      return res.json(response(result, trackerPageId));
+      return res.json(response(result, trackerPageId, publishing));
     } catch (error) {
       console.error('[prewrite-implementation]', error.message);
       return res.status(500).json({ success: false, error: 'Could not save the implementation report' });

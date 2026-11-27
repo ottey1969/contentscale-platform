@@ -82,11 +82,19 @@
       setTimeout(() => render().catch(reportError), 2500);
       return;
     }
-    if (!result.target) throw Error('Brief unavailable');
+    if (!result.target) {
+      if (Object.keys(result.brief || {}).length) {
+        element('research').textContent = JSON.stringify(result.brief, null, 2);
+        element('history').hidden = false;
+      }
+      throw Error('Brief unavailable');
+    }
     element('decision').hidden = false;
     const card = element('decision');
     card.replaceChildren();
     addText(card, 'h2', result.target.mode + ' · ' + result.target.url);
+    const reason = result.brief.content_decision?.reason;
+    if (reason) addText(card, 'p', reason);
     const research = JSON.stringify(result.brief, null, 2);
     element('research').textContent = research;
     element('history').hidden = false;
