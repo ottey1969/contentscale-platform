@@ -43,6 +43,16 @@
     <label><span id="citationsLabel">Observed citation URLs (one per line)</span><textarea name="citations" rows="3"></textarea></label>
     <button id="save" type="submit">Save observation</button>
   </form>
+  <section id="trackerRelease" hidden>
+    <h2 id="trackerTitle">Tracker Proof &amp; History</h2>
+    <form id="trackerGrant" hidden>
+      <label><span id="trackerLinkLabel">Private Tracker link</span><input name="link" type="url" required autocomplete="off"></label>
+      <label><span id="trackerPageLabel">Tracker page ID</span><input name="page" type="number" min="1" step="1" required></label>
+      <button id="trackerShare" type="submit">Share evidence</button>
+    </form>
+    <button id="trackerRevoke" type="button">Revoke Tracker access</button>
+    <p id="trackerStatus" role="status"></p>
+  </section>
   <h2 id="historyLabel">Observation history</h2>
   <ul id="history"></ul>
 </main>
@@ -65,9 +75,18 @@
   const lang = navigator.language.split('-')[0], t = copy[lang] || copy.en;
   document.documentElement.lang = copy[lang] ? lang : 'en';
   document.title = t[0];
+  const trackerLabels = {
+    en: ['Tracker Proof & History','Private Tracker link','Tracker page ID','Share evidence','Revoke Tracker access','Evidence shared.','Tracker access revoked.','Check the Tracker link, exact page and current edition.'],
+    nl: ['Tracker Bewijs en historie','Privélink van Tracker','Tracker-pagina-ID','Bewijs delen','Tracker-toegang intrekken','Bewijs gedeeld.','Tracker-toegang ingetrokken.','Controleer de Tracker-link, exacte pagina en huidige editie.'],
+    es: ['Evidencias e historial de Tracker','Enlace privado de Tracker','ID de página de Tracker','Compartir evidencias','Revocar acceso de Tracker','Evidencias compartidas.','Acceso de Tracker revocado.','Comprueba el enlace de Tracker, la página exacta y la edición actual.']
+  };
+  const trackerCopy = trackerLabels[lang] || trackerLabels.en;
   const byId = id => document.getElementById(id);
   ['title','engineLabel','sourceLabel','timeLabel','queryLabel','evidenceLabel','citationsLabel','save','historyLabel']
     .forEach((id, index) => { byId(id).textContent = t[index]; });
+  ['trackerTitle','trackerLinkLabel','trackerPageLabel','trackerShare','trackerRevoke']
+    .forEach((id, index) => { byId(id).textContent = trackerCopy[index]; });
+  const trackerForm = byId('trackerGrant'), trackerStatus = byId('trackerStatus');
   const id = location.pathname.split('/')[3], endpoint = '/api/network/admin/publications/' + encodeURIComponent(id) + '/post-publication-ai';
   const form = byId('observation'), history = byId('history'), message = byId('message');
   let publishedUrl;
@@ -80,8 +99,8 @@
     form.elements.google_source.disabled = !show;
   }
   form.elements.engine.addEventListener('change', showGoogleSource);
-  async function api(options) {
-    const response = await fetch(endpoint, { cache: 'no-store', ...options, headers: {
+  async function api(options, suffix = '') {
+    const response = await fetch(endpoint + suffix, { cache: 'no-store', ...options, headers: {
       'x-admin-key': localStorage.getItem('admin_id') || '', 'Content-Type': 'application/json'
     } });
     if ([401, 403].includes(response.status)) throw Error(t[11]);
@@ -95,6 +114,8 @@
     edition = data.edition;
     byId('liveUrl').textContent = publishedUrl || '';
     form.hidden = !data.can_record;
+    byId('trackerRelease').hidden = false;
+    trackerForm.hidden = !data.can_record;
     history.replaceChildren();
     for (const observation of data.observations) {
       const item = document.createElement('li'), details = document.createElement('details');
@@ -129,6 +150,30 @@
       await load();
       message.textContent = t[13];
     } catch (error) { message.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+  trackerForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = byId('trackerShare');
+    button.disabled = true;
+    try {
+      const link = new URL(trackerForm.elements.link.value);
+      const token = /^\/track\/([A-Za-z0-9_-]{1,128})\/?$/.exec(link.pathname)?.[1];
+      if (link.origin !== location.origin || !token) throw Error(trackerCopy[7]);
+      await api({ method: 'POST', body: JSON.stringify({ tracker_token: token,
+        tracker_page_id: Number(trackerForm.elements.page.value), edition }) }, '/tracker-proof');
+      trackerForm.reset();
+      trackerStatus.textContent = trackerCopy[5];
+    } catch { trackerStatus.textContent = trackerCopy[7]; }
+    finally { button.disabled = false; }
+  });
+  byId('trackerRevoke').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await api({ method: 'DELETE' }, '/tracker-proof');
+      trackerStatus.textContent = trackerCopy[6];
+    } catch { trackerStatus.textContent = trackerCopy[7]; }
     finally { button.disabled = false; }
   });
   showGoogleSource();
