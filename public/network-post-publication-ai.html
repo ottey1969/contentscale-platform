@@ -52,15 +52,15 @@
     en: ['Post-publication AI Evidence','AI system','Google source','Observation time (local)','Exact query',
       'Observed answer or result','Observed citation URLs (one per line)','Save observation','Observation history',
       'Exact page cited','Exact citation unconfirmed','Sign in as a Network admin to review this placement.',
-      'Recording opens after live verification.','Observation saved.','Observed answer','Publisher Edition'],
+      'Recording opens after live verification.','Observation saved.','Observed answer','Publisher Edition','Manual observation'],
     nl: ['AI Evidence na publicatie','AI-systeem','Google-bron','Tijdstip van waarneming (lokaal)','Exacte zoekvraag',
       'Waargenomen antwoord of resultaat','Waargenomen citatie-URL’s (één per regel)','Waarneming opslaan','Waarnemingen',
       'Exacte pagina geciteerd','Exacte citatie onbevestigd','Log in als Network-beheerder om deze plaatsing te bekijken.',
-      'Waarnemingen vastleggen is mogelijk na live verificatie.','Waarneming opgeslagen.','Waargenomen antwoord','Publisher Edition'],
+      'Waarnemingen vastleggen is mogelijk na live verificatie.','Waarneming opgeslagen.','Waargenomen antwoord','Publisher Edition','Handmatige waarneming'],
     es: ['Evidencia de IA tras la publicación','Sistema de IA','Fuente de Google','Hora de la observación (local)','Consulta exacta',
       'Respuesta o resultado observado','URL de citas observadas (una por línea)','Guardar observación','Historial de observaciones',
       'Página exacta citada','Cita exacta sin confirmar','Inicia sesión como administrador de Network para revisar esta publicación.',
-      'El registro se habilita tras la verificación en vivo.','Observación guardada.','Respuesta observada','Edición del editor']
+      'El registro se habilita tras la verificación en vivo.','Observación guardada.','Respuesta observada','Edición del editor','Observación manual']
   };
   const lang = navigator.language.split('-')[0], t = copy[lang] || copy.en;
   document.documentElement.lang = copy[lang] ? lang : 'en';
@@ -101,6 +101,11 @@
       const summary = document.createElement('summary'), raw = document.createElement('pre');
       item.textContent = [observation.engine, observation.google_source, observation.observed_at,
         observation.published_url, observation.query, t[observation.exact_page_cited ? 9 : 10]].filter(Boolean).join(' · ');
+      if (observation.observation_source === 'manual_admin') {
+        const provenance = document.createElement('span');
+        provenance.textContent = ' · ' + t[16];
+        item.append(provenance);
+      }
       summary.textContent = t[14];
       raw.textContent = [observation.evidence, ...observation.citation_urls].join('\n');
       details.append(summary, raw);

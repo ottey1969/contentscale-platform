@@ -93,20 +93,30 @@ test('post-publication AI observations are private, exact, replay-safe and appen
       const { chromium } = require('playwright');
       const browser = await chromium.launch();
       try {
-        const context = await browser.newContext({ locale: 'nl-NL', timezoneId: 'UTC', viewport: { width: 390, height: 840 } });
-        await context.addInitScript(() => localStorage.setItem('admin_id', 'local-fixture'));
-        const page = await context.newPage();
-        const ui = new URL('/network/publishing/1/post-publication-ai', url).href;
-        assert.equal((await page.goto(ui)).status(), 200);
-        await page.getByLabel('AI-systeem').selectOption('copilot');
-        await page.getByLabel('Tijdstip van waarneming (lokaal)').fill(observedAt.slice(0, 16));
-        await page.getByLabel('Exacte zoekvraag').fill('Browserfixture voor Copilot');
-        await page.getByLabel('Waargenomen antwoord of resultaat').fill('Een antwoord uit de geïsoleerde test.');
-        await page.getByRole('button', { name: 'Waarneming opslaan' }).click();
-        await page.getByText('Waarneming opgeslagen.', { exact: true }).waitFor();
-        await page.reload();
-        await page.locator('#history li').filter({ hasText: 'Browserfixture voor Copilot' }).waitFor();
-        expectedCount++;
+        for (const [locale, width, labels] of [
+          ['en-US', 1280, ['AI system', 'Observation time (local)', 'Exact query', 'Observed answer or result', 'Save observation', 'Observation saved.', 'Manual observation']],
+          ['nl-NL', 390, ['AI-systeem', 'Tijdstip van waarneming (lokaal)', 'Exacte zoekvraag', 'Waargenomen antwoord of resultaat', 'Waarneming opslaan', 'Waarneming opgeslagen.', 'Handmatige waarneming']],
+          ['es-ES', 390, ['Sistema de IA', 'Hora de la observación (local)', 'Consulta exacta', 'Respuesta o resultado observado', 'Guardar observación', 'Observación guardada.', 'Observación manual']]
+        ]) {
+          const [engineLabel, timeLabel, queryLabel, answerLabel, saveLabel, savedLabel, manualLabel] = labels;
+          const context = await browser.newContext({ locale, timezoneId: 'UTC', viewport: { width, height: 840 } });
+          try {
+            await context.addInitScript(() => localStorage.setItem('admin_id', 'local-fixture'));
+            const page = await context.newPage();
+            const ui = new URL('/network/publishing/1/post-publication-ai', url).href;
+            const query = 'Copilot fixture ' + locale;
+            assert.equal((await page.goto(ui)).status(), 200);
+            await page.getByLabel(engineLabel).selectOption('copilot');
+            await page.getByLabel(timeLabel).fill(observedAt.slice(0, 16));
+            await page.getByLabel(queryLabel).fill(query);
+            await page.getByLabel(answerLabel).fill('Observed answer from the isolated fixture.');
+            await page.getByRole('button', { name: saveLabel }).click();
+            await page.getByText(savedLabel, { exact: true }).waitFor();
+            await page.reload();
+            await page.locator('#history li').filter({ hasText: query }).getByText(manualLabel, { exact: false }).waitFor({ timeout: 2500 });
+            expectedCount++;
+          } finally { await context.close(); }
+        }
       } finally { await browser.close(); }
     }
     assert.deepEqual((await pool.query('SELECT brief_json FROM prewrite_briefs')).rows[0].brief_json, { approved: 'original' });
