@@ -25,6 +25,8 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 De Lead Crawler-voorbereidingsroute slaagde in opslag van het CEO-rapport, waarna de linkgenerator faalde omdat er geen actief HTTP-request was. De canonical generator maakt in achtergrondwerk de bestaande relatieve privélink vóór opslag en bewaart dezelfde prospecttoken, gekozen pagina en taal. De PostgreSQL-regressie gebruikt een auditfixture en toont dat herhaling naar hetzelfde rapport leidt, zonder tweede scan of e-mail.
 
+Twee Railway-workers konden voor dezelfde prospect tegelijk providerwerk starten omdat het bestaande jobregister per proces leeft. De voorbereidingsroute reserveert nu de prospect via PostgreSQL en bewaart het rapport en de koppeling in dezelfde transactie. De regressie met twee onafhankelijke databasepools controleert één scan bij gelijktijdige aanroepen, behoud van de exacte pagina, intrekking tijdens de scan en een nieuwe poging na een afgebroken scan. Een door de provider mogelijk al geaccepteerde aanvraag met onbekende uitkomst valt buiten deze verificatie.
+
 ### Runtime en productie na merge #570
 
 - De alleen-lezen productie-API `/api/version` rapporteerde `main` op `4bc10c0f6aabb4138fece39b65de1517e7613d94`. De openbare Network-health rapporteerde module `v552` en schema `24`. De build-API verwachtte nog `v550`, waardoor de match op productie `false` was. De reparatie is op de ontwikkelbranch en is hier nog geen waarneming van productie. [Versie](https://app.contentscale.site/api/version) · [Network-health](https://app.contentscale.site/api/network/public/v1/health)

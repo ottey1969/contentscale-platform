@@ -16,7 +16,11 @@ test('CEO background preparation persists one working report linked to the origi
   const schema = 'ceo_background_' + crypto.randomBytes(8).toString('hex');
   const control = new Pool({ connectionString: database });
   const db = new Pool({ connectionString: database, options: '-c search_path=' + schema });
+  const otherDb = new Pool({ connectionString: database, options: '-c search_path=' + schema });
   const page = 'https://commercial.example/Services/?v=1';
+  let releaseScan, enterScan;
+  const held = new Promise(resolve => { releaseScan = resolve; });
+  const entered = new Promise(resolve => { enterScan = resolve; });
   try {
     await control.query('CREATE SCHEMA ' + schema);
     await db.query(`CREATE TABLE prospect_quick_scans (
@@ -24,7 +28,7 @@ test('CEO background preparation persists one working report linked to the origi
       ceo_report_created_at timestamptz, ceo_report_page_url text, outreach_email_status text,
       outreach_error text, updated_at timestamptz, revoked_at timestamptz, outreach_sent_at timestamptz);
       CREATE TABLE opportunity_reports (
-      token text PRIMARY KEY, domain text, source_url text, report_mode text, report_data jsonb)`);
+      token text PRIMARY KEY, domain text, source_url text, report_mode text, report_data jsonb, revoked_at timestamptz)`);
     await db.query("INSERT INTO prospect_quick_scans (token,url,business_name,language) VALUES ('original',$1,'Commercial fixture','es')", [page]);
 
     const source = fs.readFileSync(require.resolve('../src/index.js'), 'utf8');
@@ -33,9 +37,11 @@ test('CEO background preparation persists one working report linked to the origi
     const preparation = source.indexOf('const _pqsCeoBuilds = new Map();');
     const prepareEnd = source.indexOf('// v222', preparation);
     assert.ok(generation >= 0 && generateEnd > generation && preparation >= 0 && prepareEnd > preparation);
-    let prepare, scans = 0;
-    const context = vm.createContext({
-      pool: db, crypto, requireAdmin() {}, console: { warn() {} },
+    let scans = 0, duringScan=async()=>{};
+    function worker(pool) {
+      let prepare;
+      const context = vm.createContext({
+      pool, crypto, require: specifier => require('../src/' + specifier.replace(/^\.\//, '')), requireAdmin() {}, console: { warn() {} },
       app: { post(path, _auth, handler) {
         assert.equal(path, '/api/prospect-quick-scan/admin/:token/email-prepare');
         prepare = handler;
@@ -44,6 +50,11 @@ test('CEO background preparation persists one working report linked to the origi
       _INTERNAL_CEO_AUDIT: Symbol(),
       _auditSiteHandler: async (req, res) => {
         scans++;
+        if (scans === 1) {
+          enterScan();
+          await held;
+        }
+        await duringScan();
         assert.equal(req.body.url, page);
         assert.equal(req.body.maxPages, 1);
         res.json({ success: true, pages_scanned: 1 });
@@ -54,15 +65,26 @@ test('CEO background preparation persists one working report linked to the origi
       }),
       _pqsResolveLanguage: value => value,
       _pqsShortPrivatePath: (_type, token) => '/r/' + token
-    });
-    vm.runInContext(source.slice(generation, generateEnd) + source.slice(preparation, prepareEnd), context);
-    const callPrepare = async () => {
-      const res = { code: 200, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
-      await prepare({ params: { token: 'original' } }, res);
-      return res;
-    };
-    assert.equal((await callPrepare()).code, 202);
-    await vm.runInContext("_pqsCeoBuilds.get('original')", context);
+      });
+      vm.runInContext(source.slice(generation, generateEnd) + source.slice(preparation, prepareEnd), context);
+      return {
+        async call(token='original') {
+          const res = { code: 200, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } };
+          await prepare({ params: { token } }, res);
+          return res;
+        },
+        job: (token='original') => vm.runInContext('_pqsCeoBuilds.get('+JSON.stringify(token)+')', context)
+      };
+    }
+    const first = worker(db), second = worker(otherDb);
+    assert.equal((await first.call()).code, 202);
+    const initial = first.job();
+    await entered;
+    assert.equal((await second.call()).code, 202);
+    await second.job();
+    releaseScan();
+    await initial;
+    assert.equal(scans, 1, 'an independent worker must not start a duplicate scan');
     const { rows: [prospect] } = await db.query('SELECT * FROM prospect_quick_scans');
     const { rows: [report] } = await db.query('SELECT * FROM opportunity_reports');
     assert.ok(report?.token);
@@ -73,10 +95,26 @@ test('CEO background preparation persists one working report linked to the origi
     assert.equal(prospect.outreach_sent_at, null);
     assert.equal(report.report_data.quick_scan_token, 'original');
     assert.equal(report.report_data.report_language, 'es');
-    assert.equal((await callPrepare()).body.ceo_report_url, prospect.ceo_report_url);
+    assert.equal((await second.call()).body.ceo_report_url, prospect.ceo_report_url);
     assert.equal(scans, 1);
+    await db.query("INSERT INTO prospect_quick_scans (token,url,language) VALUES ('revoked',$1,'nl'),('interrupted',$1,'en')", [page]);
+    duringScan=()=>otherDb.query("UPDATE prospect_quick_scans SET revoked_at=NOW() WHERE token='revoked'");
+    assert.equal((await first.call('revoked')).code, 202);
+    assert.equal((await first.job('revoked')).status, 'unavailable');
+    assert.equal((await second.call('revoked')).code, 404);
+    assert.equal((await db.query('SELECT count(*)::int AS count FROM opportunity_reports')).rows[0].count, 1);
+
+    duringScan=async()=>{throw new Error('Fixture scan interrupted before saving');};
+    assert.equal((await first.call('interrupted')).code, 202);
+    assert.equal((await first.job('interrupted')).status, 'failed');
+    assert.equal((await db.query('SELECT count(*)::int AS count FROM opportunity_reports')).rows[0].count, 1);
+    duringScan=async()=>{};
+    assert.equal((await second.call('interrupted')).code, 202);
+    assert.equal((await second.job('interrupted')).status, 'ready');
+    assert.equal((await db.query('SELECT count(*)::int AS count FROM opportunity_reports')).rows[0].count, 2);
   } finally {
-    await db.end();
+    releaseScan();
+    await Promise.all([db.end(), otherDb.end()]);
     try { await control.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE'); }
     finally { await control.end(); }
   }

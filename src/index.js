@@ -17336,10 +17336,6 @@ return result;
 
                async function _generateProspectOpportunityReport(req, input){
                  const body=Object.assign({},input||{});
-                 const shareLink=token=>{
-                   const path=_pqsShortPrivatePath('report',token);
-                   return {token,url:req?req.protocol+'://'+req.get('host')+path:path};
-                 };
                  const reportMode=String(body.report_mode||'prospect').toLowerCase()==='verified'?'verified':'prospect';
                  // CEO first-touch must analyse ONE smart-selected commercial page only.
                  // Keep the same canonical Audit/scoring engine; only constrain its scope.
@@ -17396,11 +17392,7 @@ return result;
                      if(pool && body._skip_persist!==true){
                        try{
                          await _ensureOpportunityReportTable();
-                         const token=crypto.randomBytes(32).toString('hex');
-                         const domain=String(report.company&&report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
-                         const link=shareLink(token);
-                         await pool.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',[token,domain,report.company&&report.company.url||body.url||'',reportMode,JSON.stringify(report)]);
-                         share=link;
+                         share=await _storeProspectOpportunityReport(pool,req,report,reportMode,body.url);
                        }catch(saveErr){
                          save_warning='Report generated but share-link persistence failed: '+String(saveErr&&saveErr.message||saveErr);
                          console.error('[opportunity-report] v178 fallback save failed (report preserved):',saveErr&&saveErr.stack||saveErr);
@@ -17421,13 +17413,19 @@ return result;
                  let share=null;
                  if(pool && body._skip_persist!==true){
                    await _ensureOpportunityReportTable();
-                   const token=crypto.randomBytes(32).toString('hex');
-                   const domain=String(report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
-                   const link=shareLink(token);
-                   await pool.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',[token,domain,report.company.url,reportMode,JSON.stringify(report)]);
-                   share=link;
+                   share=await _storeProspectOpportunityReport(pool,req,report,reportMode,body.url);
                  }
                  return {success:true,report,share};
+               }
+
+               async function _storeProspectOpportunityReport(db,req,report,mode,sourceUrl){
+                 const token=crypto.randomBytes(32).toString('hex');
+                 const path=_pqsShortPrivatePath('report',token);
+                 const url=req?req.protocol+'://'+req.get('host')+path:path;
+                 const domain=String(report.company?.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
+                 await db.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',
+                   [token,domain,report.company?.url||sourceUrl||'',mode,JSON.stringify(report)]);
+                 return {token,url};
                }
 
                app.post('/api/audit-opportunity-report', async (req,res)=>{
@@ -22455,31 +22453,72 @@ function _pqsUpgradeOutreachEmail(text,locale,shareUrl){
 // The browser gets an immediate response while the CEO report is built in the background.
 // This prevents a long crawl/report request from being misreported as a Brevo/email 502.
 const _pqsCeoBuilds = new Map();
+// Limit background preparation to one reserved pool connection per server.
+let _pqsCeoWorker=Promise.resolve();
 async function _pqsPrepareCeoOutreachReport(token){
   if(_pqsCeoBuilds.has(token))return _pqsCeoBuilds.get(token);
-  const job=(async()=>{
-    let row=null;
+  const job=_pqsCeoWorker.then(async()=>{
+    let client,locked=false,discard=false,transaction=false,requestedUrl;
+    const lockId='lead-crawler-ceo:'+token;
+    const disconnected=()=>{discard=true;};
     try{
-      const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[token]);
-      if(!q.rows.length)throw new Error('Lead prospect not found');
-      row=q.rows[0];
+      client=await pool.connect();
+      client.on('error',disconnected);
+      const lock=await client.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS acquired',[lockId]);
+      locked=lock.rows[0].acquired;
+      if(!locked)return {success:true,status:'building_report'};
+      const {rows:[row]}=await client.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[token]);
+      if(!row)return {success:false,status:'unavailable'};
+      requestedUrl=row.url;
       if(String(row.ceo_report_url||'').trim())return {success:true,status:'ready',ceo_report_url:String(row.ceo_report_url).trim()};
-      await pool.query(`UPDATE prospect_quick_scans SET outreach_email_status='building_report',outreach_error=NULL,updated_at=NOW() WHERE token=$1`,[token]);
+      const started=await client.query(`UPDATE prospect_quick_scans SET outreach_email_status='building_report',outreach_error=NULL,updated_at=NOW()
+        WHERE token=$1 AND revoked_at IS NULL AND url=$2 RETURNING token`,[token,row.url]);
+      if(!started.rowCount)return {success:false,status:'unavailable'};
       const out=await _generateProspectOpportunityReport(null,{
         url:row.url,business_name:row.business_name,language:row.language,quick_scan_token:token,
-        report_mode:'prospect',origin:'lead_crawler_ceo_report',ceo_single_page:true
+        report_mode:'prospect',origin:'lead_crawler_ceo_report',ceo_single_page:true,_skip_persist:true
       });
-      if(!out||!out.share||!out.share.url)throw new Error('CEO Prospect Report could not be created');
-      const ceoUrl=out.share.url,ceoToken=out.share.token||'';
-      const ceoPageUrl=String((out.report&&out.report.page_analysis&&out.report.page_analysis[0]&&out.report.page_analysis[0].url)||row.url||'').trim();
-      await pool.query(`UPDATE prospect_quick_scans SET ceo_report_url=$1,ceo_report_token=$2,ceo_report_created_at=NOW(),ceo_report_page_url=$3,outreach_email_status='draft',outreach_error=NULL,updated_at=NOW() WHERE token=$4`,[ceoUrl,ceoToken,ceoPageUrl,token]);
-      return {success:true,status:'ready',ceo_report_url:ceoUrl};
+      if(discard)return {success:false,status:'unavailable'};
+      if(!out?.report)throw new Error('CEO Prospect Report could not be created');
+      const ceoPageUrl=String(out.report.page_analysis?.[0]?.url||out.report.company?.url||'').trim();
+      const {exactUrl}=require('./implementation-report.cjs');
+      if(exactUrl(ceoPageUrl)!==exactUrl(row.url)||exactUrl(out.report.company?.url||ceoPageUrl)!==exactUrl(row.url)){
+        throw new Error('CEO report belongs to a different page');
+      }
+      await _ensureOpportunityReportTable();
+      await client.query('BEGIN');
+      transaction=true;
+      const {rows:[current]}=await client.query(`SELECT url,revoked_at,ceo_report_url FROM prospect_quick_scans WHERE token=$1 FOR UPDATE`,[token]);
+      if(!current||current.revoked_at||current.url!==row.url){
+        await client.query('ROLLBACK');transaction=false;
+        return {success:false,status:'unavailable'};
+      }
+      if(String(current.ceo_report_url||'').trim()){
+        await client.query('COMMIT');transaction=false;
+        return {success:true,status:'ready',ceo_report_url:current.ceo_report_url};
+      }
+      const share=await _storeProspectOpportunityReport(client,null,out.report,'prospect',row.url);
+      await client.query(`UPDATE prospect_quick_scans SET ceo_report_url=$1,ceo_report_token=$2,ceo_report_created_at=NOW(),ceo_report_page_url=$3,outreach_email_status='draft',outreach_error=NULL,updated_at=NOW() WHERE token=$4`,[share.url,share.token,ceoPageUrl,token]);
+      await client.query('COMMIT');
+      transaction=false;
+      return {success:true,status:'ready',ceo_report_url:share.url};
     }catch(e){
-      await pool.query(`UPDATE prospect_quick_scans SET outreach_email_status='failed',outreach_error=$1,updated_at=NOW() WHERE token=$2`,[String(e.message||e).slice(0,1000),token]).catch(()=>{});
+      if(transaction)await client.query('ROLLBACK').catch(()=>{discard=true;});
+      if(locked&&!discard)await client.query(`UPDATE prospect_quick_scans SET outreach_email_status='failed',outreach_error=$1,updated_at=NOW()
+        WHERE token=$2 AND url=$3 AND revoked_at IS NULL AND outreach_email_status='building_report' AND NULLIF(ceo_report_url,'') IS NULL`,
+      [String(e.message||e).slice(0,1000),token,requestedUrl]).catch(()=>{discard=true;});
       console.warn('[ceo-outreach-build]',token,String(e.message||e));
       return {success:false,status:'failed',error:String(e.message||e)};
-    }finally{_pqsCeoBuilds.delete(token)}
-  })();
+    }finally{
+      if(locked&&!discard)await client.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',[lockId]).catch(()=>{discard=true;});
+      if(client){
+        client.removeListener('error',disconnected);
+        client.release(discard);
+      }
+      _pqsCeoBuilds.delete(token);
+    }
+  });
+  _pqsCeoWorker=job.catch(()=>{});
   _pqsCeoBuilds.set(token,job);return job;
 }
 app.post('/api/prospect-quick-scan/admin/:token/email-prepare',requireAdmin,async(req,res)=>{
