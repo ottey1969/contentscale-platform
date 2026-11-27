@@ -25,10 +25,6 @@ De repo heeft nog meerdere historische app-kopieën en compatibiliteitspatches i
 
 De Lead Crawler-voorbereidingsroute slaagde in opslag van het CEO-rapport, waarna de linkgenerator faalde omdat er geen actief HTTP-request was. De canonical generator maakt in achtergrondwerk de bestaande relatieve privélink vóór opslag en bewaart dezelfde prospecttoken, gekozen pagina en taal. De PostgreSQL-regressie gebruikt een auditfixture en toont dat herhaling naar hetzelfde rapport leidt, zonder tweede scan of e-mail.
 
-### Audit20- en CEO-scan hervatten
-
-De gedeelde scanroute kon opslag hergebruiken voor URL's die verschilden in padhoofdletters, queryparameters of een afsluitende slash. Een audit op aangeleverde HTML kon bovendien de hervatting van een live scan beïnvloeden. De route hergebruikt voortaan alleen checkpointbewijs voor dezelfde exact opgevraagde live URL en bewaart handmatige HTML buiten de gedeelde hervattingscache. Een regressie met geïsoleerd PostgreSQL controleert ook een oude handmatige checkpoint en hervatting vanuit een tweede worker. De opgeslagen rapporten en baselines zijn niet gemigreerd.
-
 ### Runtime en productie na merge #570
 
 - De alleen-lezen productie-API `/api/version` rapporteerde `main` op `4bc10c0f6aabb4138fece39b65de1517e7613d94`. De openbare Network-health rapporteerde module `v552` en schema `24`. De build-API verwachtte nog `v550`, waardoor de match op productie `false` was. De reparatie is op de ontwikkelbranch en is hier nog geen waarneming van productie. [Versie](https://app.contentscale.site/api/version) · [Network-health](https://app.contentscale.site/api/network/public/v1/health)
@@ -254,3 +250,7 @@ De PostgreSQL-regressie oefent upgrades van de bestaande reviewtabel, autorisati
 ### LinkedPod Boost in Neon
 
 De opgegeven inventaris van `neondb` biedt een doel voor een geautoriseerde export. In deze sessie zijn geen Neon-connector, geautoriseerde databaseverbinding of schema-export aangetroffen. Geen tabeldata uitgelezen. De acht tabeldefinities zijn nodig voor de geïsoleerde schedulertest.
+
+### Audit20- en CEO-scan hervatten
+
+De gedeelde scanroute kon opslag hergebruiken voor URL's die verschilden in padhoofdletters, queryparameters of een afsluitende slash. Een audit op aangeleverde HTML kon bovendien de hervatting van een live scan beïnvloeden. De route hergebruikt voortaan alleen checkpointbewijs voor dezelfde exact opgevraagde live URL en bewaart handmatige HTML buiten de gedeelde hervattingscache. Een regressie met geïsoleerd PostgreSQL controleert ook een oude handmatige checkpoint en hervatting vanuit een tweede worker. De opgeslagen rapporten en baselines zijn niet gemigreerd.
