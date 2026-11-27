@@ -61,11 +61,19 @@ test('post-publication AI observations are private, exact, replay-safe and appen
       citation_urls: [publishedUrl] };
     const post = (body, options = headers) => fetch(url, { method: 'POST', headers: options, body: JSON.stringify(body) });
     assert.equal((await post(observation, { 'Content-Type': 'application/json' })).status, 401);
-    assert.equal((await post({ ...observation, published_url: 'https://publisher.example/article/?v=1' })).status, 409);
-    assert.equal((await post({ ...observation, observed_at: '2020-01-01T00:00:00Z' })).status, 422);
-    const written = await Promise.all([post(observation), post(observation)]);
+    const initialEdition = (await pool.query(`SELECT to_char(updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS revision
+      FROM network_publication_versions WHERE id=1`)).rows[0];
+    const prepared = await (await fetch(url, { headers })).json();
+    assert.equal(prepared.can_record, true);
+    assert.equal(prepared.edition.publication_version_id, '1');
+    assert.equal(prepared.edition.publication_revision, initialEdition.revision);
+    assert.equal(prepared.edition.publisher_website_id, '1');
+    const preparedObservation = { ...observation, edition: prepared.edition };
+    assert.equal((await post({ ...preparedObservation, published_url: 'https://publisher.example/article/?v=1' })).status, 409);
+    assert.equal((await post({ ...preparedObservation, observed_at: '2020-01-01T00:00:00Z' })).status, 422);
+    const written = await Promise.all([post(preparedObservation), post(preparedObservation)]);
     assert.deepEqual(written.map(response => response.status).sort(), [200, 201]);
-    assert.equal((await post({ ...observation, engine: 'claude', citation_urls: [] })).status, 201);
+    assert.equal((await post({ ...preparedObservation, engine: 'claude', citation_urls: [] })).status, 201);
 
     const listed = await fetch(url, { headers });
     assert.equal(listed.status, 200);
@@ -74,6 +82,7 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.equal(observations.find(item => item.engine === 'chatgpt').exact_page_cited, true);
     assert.equal(observations.find(item => item.engine === 'claude').exact_page_cited, null);
     assert.ok(observations.every(item => item.published_url === publishedUrl));
+    assert.ok(observations.every(item => item.observation_source === 'manual_admin'));
     assert.equal((await fetch(url)).status, 401);
     const publisherPackage = await fetch(new URL('/api/network/publisher/' + publisherToken + '/placements/1/package', url));
     assert.equal(publisherPackage.status, 200);
@@ -85,28 +94,55 @@ test('post-publication AI observations are private, exact, replay-safe and appen
       const { chromium } = require('playwright');
       const browser = await chromium.launch();
       try {
-        const context = await browser.newContext({ locale: 'nl-NL', timezoneId: 'UTC', viewport: { width: 390, height: 840 } });
-        await context.addInitScript(() => localStorage.setItem('admin_id', 'local-fixture'));
-        const page = await context.newPage();
-        const ui = new URL('/network/publishing/1/post-publication-ai', url).href;
-        assert.equal((await page.goto(ui)).status(), 200);
-        await page.getByLabel('AI-systeem').selectOption('copilot');
-        await page.getByLabel('Tijdstip van waarneming (lokaal)').fill(observedAt.slice(0, 16));
-        await page.getByLabel('Exacte zoekvraag').fill('Browserfixture voor Copilot');
-        await page.getByLabel('Waargenomen antwoord of resultaat').fill('Een antwoord uit de geïsoleerde test.');
-        await page.getByRole('button', { name: 'Waarneming opslaan' }).click();
-        await page.getByText('Waarneming opgeslagen.', { exact: true }).waitFor();
-        await page.reload();
-        await page.locator('#history li').filter({ hasText: 'Browserfixture voor Copilot' }).waitFor();
-        expectedCount++;
+        for (const [locale, width, labels] of [
+          ['en-US', 1280, ['AI system', 'Observation time (local)', 'Exact query', 'Observed answer or result', 'Save observation', 'Observation saved.', 'Manual observation']],
+          ['nl-NL', 390, ['AI-systeem', 'Tijdstip van waarneming (lokaal)', 'Exacte zoekvraag', 'Waargenomen antwoord of resultaat', 'Waarneming opslaan', 'Waarneming opgeslagen.', 'Handmatige waarneming']],
+          ['es-ES', 390, ['Sistema de IA', 'Hora de la observación (local)', 'Consulta exacta', 'Respuesta o resultado observado', 'Guardar observación', 'Observación guardada.', 'Observación manual']]
+        ]) {
+          const [engineLabel, timeLabel, queryLabel, answerLabel, saveLabel, savedLabel, manualLabel] = labels;
+          const context = await browser.newContext({ locale, timezoneId: 'UTC', viewport: { width, height: 840 } });
+          try {
+            await context.addInitScript(() => localStorage.setItem('admin_id', 'local-fixture'));
+            const page = await context.newPage();
+            const ui = new URL('/network/publishing/1/post-publication-ai', url).href;
+            const query = 'Copilot fixture ' + locale;
+            assert.equal((await page.goto(ui)).status(), 200);
+            await page.getByLabel(engineLabel).selectOption('copilot');
+            await page.getByLabel(timeLabel).fill(observedAt.slice(0, 16));
+            await page.getByLabel(queryLabel).fill(query);
+            await page.getByLabel(answerLabel).fill('Observed answer from the isolated fixture.');
+            await page.getByRole('button', { name: saveLabel }).click();
+            await page.getByText(savedLabel, { exact: true }).waitFor();
+            await page.reload();
+            await page.locator('#history li').filter({ hasText: query }).getByText(manualLabel, { exact: false }).waitFor({ timeout: 2500 });
+            expectedCount++;
+          } finally { await context.close(); }
+        }
       } finally { await browser.close(); }
     }
     assert.deepEqual((await pool.query('SELECT brief_json FROM prewrite_briefs')).rows[0].brief_json, { approved: 'original' });
     assert.equal((await pool.query('SELECT html FROM network_publication_versions')).rows[0].html, '<article>Original edition</article>');
     assert.equal((await pool.query("SELECT note FROM network_placement_review_events WHERE event_type='verified'")).rows[0].note, 'Original review');
     await pool.query("UPDATE network_placements SET status='accepted',verified_at=NULL WHERE id=1");
-    assert.equal((await post(observation)).status, 409);
+    assert.equal((await post(preparedObservation)).status, 409);
     assert.equal((await (await fetch(url, { headers })).json()).observations.length, expectedCount);
+    await pool.query(`UPDATE network_publication_versions SET html='<article>Revised edition</article>',updated_at=clock_timestamp() WHERE id=1;
+      UPDATE network_placements SET status='verified',submitted_at=NOW()-INTERVAL '30 seconds',verified_at=NOW()-INTERVAL '20 seconds' WHERE id=1`);
+    const revisedEdition = (await (await fetch(url, { headers })).json()).edition;
+    assert.equal(revisedEdition.publication_version_id, prepared.edition.publication_version_id);
+    assert.notEqual(revisedEdition.publication_revision, prepared.edition.publication_revision);
+    const newObservation = { ...observation, observed_at: new Date().toISOString() };
+    assert.equal((await post({ ...newObservation, edition: prepared.edition })).status, 409);
+    assert.equal((await post(newObservation)).status, 409, 'omitting the edition must not bypass revision checking');
+    for (const edition of [null, {}, [], { ...revisedEdition, publisher_website_id: '2' }]) {
+      assert.equal((await post({ ...newObservation, edition })).status, 409);
+    }
+    assert.equal((await (await fetch(url, { headers })).json()).observations.length, expectedCount);
+    assert.equal((await post({ ...newObservation, edition: revisedEdition })).status, 201);
+    const revisedHistory = (await (await fetch(url, { headers })).json()).observations;
+    assert.equal(revisedHistory.length, expectedCount + 1);
+    assert.equal(revisedHistory[0].publication_revision, revisedEdition.publication_revision);
+    assert.ok(revisedHistory.slice(1).every(item => item.publication_revision === initialEdition.revision));
     const remove = new URL('/api/network/admin/placements/1/delete-from-publishing', url);
     const removal = await fetch(remove, { method: 'POST', headers, body: '{"confirm":true}' });
     assert.equal(removal.status, 409);
