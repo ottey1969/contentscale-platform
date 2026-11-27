@@ -35,14 +35,24 @@ test('post-publication AI observations are private, exact, replay-safe and appen
       VALUES (1,1,1,'verified','https://publisher.example/Article/?v=1',NOW()-INTERVAL '1 day');
       INSERT INTO network_publication_versions (id,placement_id,content_id,publisher_website_id,html)
       VALUES (1,1,1,1,'<article>Original edition</article>');
+      INSERT INTO network_credit_wallets (website_id,balance,reserved) VALUES (1,10,0);
       INSERT INTO network_placement_review_events (placement_id,event_type,published_url,note)
       VALUES (1,'verified','https://publisher.example/Article/?v=1','Original review')`);
+    await pool.query(`CREATE TABLE tracker_clients (id INT PRIMARY KEY, token TEXT, status TEXT);
+      CREATE TABLE tracker_pages (id INT PRIMARY KEY,tracker_client_id INT,url TEXT);
+      CREATE TABLE tracker_case_studies (id INT PRIMARY KEY,tracker_client_id INT,tracker_page_id INT);
+      CREATE TABLE tracker_case_study_events (id BIGSERIAL,case_study_id INT,tracker_page_id INT,tracker_client_id INT,
+        event_type TEXT,event_at TIMESTAMPTZ DEFAULT NOW(),source TEXT,event_data JSONB);
+      INSERT INTO tracker_clients VALUES (1,'tracker-owner','active'),(2,'other-owner','active');
+      INSERT INTO tracker_pages VALUES (1,1,'https://publisher.example/Article/?v=1'),
+        (2,2,'https://publisher.example/Article/?v=1'),(3,1,'https://publisher.example/article/?v=1');`);
     await ensureNetworkTables(pool);
     await pool.query(`INSERT INTO network_publisher_accounts (website_id,email,access_token,status)
       VALUES (1,'fixture@publisher.example',$1,'active')`, [publisherToken]);
 
     const app = express();
     app.use(express.json());
+    require('../src/tracker-proof-sources.cjs').registerProofSourceRoutes(app, pool);
     registerNetwork({ app, pool,
       verifyAdmin(req, res, next) {
         if (req.get('x-admin-key') !== 'local-fixture') return res.sendStatus(401);
@@ -143,6 +153,46 @@ test('post-publication AI observations are private, exact, replay-safe and appen
     assert.equal(revisedHistory.length, expectedCount + 1);
     assert.equal(revisedHistory[0].publication_revision, revisedEdition.publication_revision);
     assert.ok(revisedHistory.slice(1).every(item => item.publication_revision === initialEdition.revision));
+    const release = new URL(url + '/tracker-proof');
+    const grant = (body, options = headers) => fetch(release, { method: 'POST', headers: options, body: JSON.stringify(body) });
+    const proof = (owner, page) => fetch(new URL('/api/tracker-client/' + owner + '/pages/' + page + '/proof-sources', url));
+    const binding = { tracker_token: 'tracker-owner', tracker_page_id: 1, edition: revisedEdition };
+    assert.equal((await grant(binding, { 'Content-Type': 'application/json' })).status, 401);
+    assert.equal((await grant({ ...binding, tracker_token: 'wrong-owner' })).status, 404);
+    assert.equal((await grant({ ...binding, tracker_page_id: 3 })).status, 409);
+    assert.equal((await grant({ ...binding, edition: prepared.edition })).status, 409);
+    if (process.env.NETWORK_POST_AI_BROWSER === '1') {
+      const { chromium } = require('playwright');
+      const browser = await chromium.launch();
+      try {
+        const context = await browser.newContext({ locale: 'nl-NL', viewport: { width: 390, height: 840 } });
+        await context.addInitScript(() => localStorage.setItem('admin_id', 'local-fixture'));
+        const page = await context.newPage();
+        await page.goto(new URL('/network/publishing/1/post-publication-ai', url).href);
+        await page.getByLabel('Privélink van Tracker').fill(new URL('/track/tracker-owner', url).href);
+        await page.getByLabel('Tracker-pagina-ID').fill('1');
+        await page.getByRole('button', { name: 'Bewijs delen' }).click();
+        await page.getByText('Bewijs gedeeld.', { exact: true }).waitFor({ timeout: 5000 });
+      } finally { await browser.close(); }
+    } else assert.equal((await grant(binding)).status, 200);
+    assert.equal((await grant(binding)).status, 200);
+    assert.equal((await pool.query("SELECT count(*)::int AS total FROM tracker_case_study_events WHERE event_type='proof_source_released'")).rows[0].total, 1);
+    assert.equal((await grant({ ...binding, tracker_token: 'other-owner', tracker_page_id: 2 })).status, 409);
+    const ownerEvidence = (await (await proof('tracker-owner', 1)).json()).proof_sources.network_ai;
+    assert.equal(ownerEvidence.length, expectedCount + 1);
+    assert.equal(ownerEvidence[0].observation_source, 'manual_admin');
+    assert.ok(ownerEvidence.some(item => item.exact_page_cited === null));
+    assert.ok(ownerEvidence.every(item => item.published_url === publishedUrl && item.query === undefined && item.evidence === undefined));
+    assert.deepEqual((await (await proof('other-owner', 2)).json()).proof_sources.network_ai, []);
+    assert.equal((await proof('other-owner', 1)).status, 404);
+    assert.equal((await post({ ...newObservation, query: 'Still private', edition: revisedEdition })).status, 201);
+    assert.equal((await (await proof('tracker-owner', 1)).json()).proof_sources.network_ai.length, expectedCount + 1);
+
+    assert.equal((await fetch(release, { method: 'DELETE', headers })).status, 200);
+    assert.deepEqual((await (await proof('tracker-owner', 1)).json()).proof_sources.network_ai, []);
+    assert.equal((await (await fetch(url, { headers })).json()).observations.length, expectedCount + 2);
+    assert.deepEqual((await pool.query('SELECT balance,reserved FROM network_credit_wallets WHERE website_id=1')).rows[0],
+      { balance: 10, reserved: 0 });
     const remove = new URL('/api/network/admin/placements/1/delete-from-publishing', url);
     const removal = await fetch(remove, { method: 'POST', headers, body: '{"confirm":true}' });
     assert.equal(removal.status, 409);

@@ -233,7 +233,7 @@ for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, c
         assert.equal(result.notifications_sent, 0);
         return result;
       }
-      let browser;
+      let browser, publisher, content, placement, networkAdmin;
       try {
         await fetch(base + '/api/prospect-quick-scan/test-missing-' + token);
         await db.query(`INSERT INTO opportunity_reports(token,domain,source_url,report_data)
@@ -287,6 +287,35 @@ for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, c
         const body = await response.json();
         assert.equal(body.proof_sources.quick_scan[0].url, url);
         assert.equal(body.proof_sources.quick_scan[0].score, 0);
+        if (index === 0 && size === 1 && process.env.LC_ADMIN_CODE) {
+          networkAdmin = randomBytes(32).toString('hex');
+          await db.query(`INSERT INTO super_admins(username,password_hash,session_token)
+            VALUES($1,'fixture-no-password-login',$2)`, ['network-proof-' + networkAdmin.slice(0, 12), networkAdmin]);
+          const adminHeaders = { 'x-admin-key': networkAdmin, 'content-type': 'application/json' };
+          const initialized = await page.request.post(base + '/api/network/admin/init', { headers: adminHeaders });
+          assert.equal(initialized.status(), 200, await initialized.text());
+          ({ rows: [{ id: publisher }] } = await db.query(
+            "INSERT INTO network_websites(domain,status) VALUES($1,'approved') RETURNING id", [domain]));
+          ({ rows: [{ id: content }] } = await db.query(
+            "INSERT INTO network_content(title,primary_niche) VALUES('Network test publication','marketing') RETURNING id"));
+          ({ rows: [{ id: placement }] } = await db.query(`
+            INSERT INTO network_placements(content_id,publisher_website_id,status,published_url,verified_at)
+            VALUES($1,$2,'verified',$3,NOW()-INTERVAL '1 day') RETURNING id`, [content, publisher, url]));
+          await db.query(`INSERT INTO network_publication_versions(placement_id,content_id,publisher_website_id,html)
+            VALUES($1,$2,$3,'<article>Isolated publication fixture</article>')`, [placement, content, publisher]);
+          const adminUrl = base + '/api/network/admin/publications/' + placement + '/post-publication-ai';
+          const prepared = await page.request.get(adminUrl, { headers: adminHeaders });
+          assert.equal(prepared.status(), 200, await prepared.text());
+          const { edition } = await prepared.json();
+          const created = await page.request.post(adminUrl, { headers: adminHeaders, data: {
+            edition, published_url: url, observed_at: new Date(Date.now() - 60000).toISOString(), engine: 'claude',
+            query: 'Private Network query', evidence: 'Private Network answer', citation_urls: []
+          } });
+          assert.equal(created.status(), 201, await created.text());
+          const released = await page.request.post(adminUrl + '/tracker-proof', { headers: adminHeaders,
+            data: { edition, tracker_token: account.token, tracker_page_id: account.linked_page_id } });
+          assert.equal(released.status(), 200, await released.text());
+        }
         await context.addInitScript(() => localStorage.setItem('cs_welcome_seen', '1'));
         const [tracker] = await Promise.all([
           page.waitForResponse(response => new URL(response.url()).pathname === '/track/' + account.token),
@@ -299,6 +328,13 @@ for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, c
           throw new Error(JSON.stringify({ errors, listed: (await trackerData.json()).pages?.map(item => item.id), pageList: await page.locator('#pagesList').innerText() }), { cause: error });
         });
         const proof = page.locator('#caseStudyBox');
+        if (placement) {
+          await proof.getByText('Network AI Evidence', { exact: true }).click();
+          const evidence = proof.getByRole('listitem').filter({ hasText: 'Manual observation' });
+          assert.equal(await evidence.isVisible(), true);
+          assert.match(await evidence.textContent(), /claude.*Manual observation.*—/);
+          assert.equal(await proof.getByText('Private Network answer').count(), 0);
+        }
         await proof.locator('summary').filter({ hasText: ceoLabel }).click({ timeout: 7000 });
         await proof.locator('summary').filter({ hasText: auditLabel }).click({ timeout: 7000 });
         assert.equal(await proof.getByText(ceoUrl + ' · ContentScore 0', { exact: true }).isVisible(), true);
@@ -319,6 +355,14 @@ for (const [index, [language, locale, registerLabel, trackerLabel, proofLabel, c
         assert.equal((await db.query('SELECT follow_up_status FROM prospect_quick_scans WHERE token=$1', [token])).rows[0].follow_up_status, 'replied');
       } finally {
         if (browser) await browser.close();
+        if (placement) {
+          await db.query('DELETE FROM network_placement_review_events WHERE placement_id=$1', [placement]);
+          await db.query('DELETE FROM network_publication_versions WHERE placement_id=$1', [placement]);
+          await db.query('DELETE FROM network_placements WHERE id=$1', [placement]);
+        }
+        if (content) await db.query('DELETE FROM network_content WHERE id=$1', [content]);
+        if (publisher) await db.query('DELETE FROM network_websites WHERE id=$1', [publisher]);
+        if (networkAdmin) await db.query('DELETE FROM super_admins WHERE session_token=$1', [networkAdmin]);
         const client = (await db.query('SELECT id FROM tracker_clients WHERE domain=$1', [domain])).rows[0];
         if (client) {
           await db.query("DELETE FROM tracker_case_study_events WHERE (to_jsonb(tracker_case_study_events)->>'tracker_client_id')::int=$1", [client.id]);

@@ -46395,7 +46395,19 @@ function openCaseStudy(pageId,caseId){
       return '<details><summary>'+_csEscH(heading+stamp)+'</summary><ul>'+pages+'</ul>'
         +(findings?'<h4>'+_csEscH(researchText[2])+'</h4><ul>'+findings+'</ul>':'')+'</details>';
     }).join('');
-    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prospectResearch+prewriteReports;
+    var networkLabels={
+      en:['Network AI Evidence','Manual observation'],
+      nl:['Network AI Evidence','Handmatige waarneming'],
+      es:['Evidencias de IA de Network','Observación manual']
+    };
+    var networkText=networkLabels[proofLocale]||networkLabels.en;
+    var networkRows=(sources.network_ai||[]).map(function(row){
+      var citation=row.exact_page_cited===true?labels[9]:'—';
+      return '<li>'+_csEscH([row.engine,networkText[1],utcStamp(row.observed_at),row.published_url,
+        row.publication_revision,citation].join(' · '))+'</li>';
+    }).join('');
+    var networkHistory=networkRows?'<details><summary>'+_csEscH(networkText[0])+'</summary><ul>'+networkRows+'</ul></details>':'';
+    var sourceHtml='<button type="button" id="caseStudyLinkProof">'+_csEscH(labels[0])+'</button>'+audited+freeGrowth+scanProof+prospectResearch+prewriteReports+networkHistory;
     if(!d.case_study){
       var trackerMeasurements=snaps.map(function(row){
         var date=utcStamp(row.checked_at);

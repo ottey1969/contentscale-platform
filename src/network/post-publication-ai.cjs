@@ -3,6 +3,7 @@
 const { createHash } = require('node:crypto');
 const { resolve } = require('node:path');
 const { exactUrl } = require('../implementation-report.cjs');
+const { ensureProofSourceSchema, releaseNetworkAi, revokeNetworkAi } = require('../tracker-proof-sources.cjs');
 
 const path = '/api/network/admin/publications/:placementId/post-publication-ai';
 const eventType = 'ai_observation';
@@ -63,6 +64,16 @@ function verifiedEdition(placement) {
   };
 }
 
+const LOCK_EDITION = `SELECT p.status,p.published_url,p.submitted_at,p.verified_at,${editionColumns}
+  FROM network_placements p JOIN network_publication_versions pv
+    ON pv.placement_id=p.id AND pv.publisher_website_id=p.publisher_website_id
+  WHERE p.id=$1 FOR UPDATE OF p,pv`;
+
+function matchesEdition(edition, submitted) {
+  return edition && submitted && typeof submitted === 'object' && !Array.isArray(submitted) &&
+    Object.keys(edition).every(key => submitted[key] === edition[key]);
+}
+
 function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema }) {
   app.get('/network/publishing/:placementId/post-publication-ai', (_req, res) =>
     res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow')
@@ -110,10 +121,7 @@ function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const { rows: [placement] } = await client.query(`SELECT p.status,p.published_url,p.submitted_at,p.verified_at,${editionColumns}
-        FROM network_placements p JOIN network_publication_versions pv
-          ON pv.placement_id=p.id AND pv.publisher_website_id=p.publisher_website_id
-        WHERE p.id=$1 FOR UPDATE OF p,pv`, [id]);
+      const { rows: [placement] } = await client.query(LOCK_EDITION, [id]);
       if (!placement) {
         const { rowCount } = await client.query('SELECT 1 FROM network_placements WHERE id=$1', [id]);
         await client.query('ROLLBACK');
@@ -124,9 +132,7 @@ function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema 
       const submittedEdition = req.body?.edition;
       let currentUrl;
       try { currentUrl = exactUrl(placement.published_url); } catch {}
-      if (!edition || currentUrl !== observation.published_url ||
-          !submittedEdition || typeof submittedEdition !== 'object' || Array.isArray(submittedEdition) ||
-          Object.keys(edition).some(key => submittedEdition[key] !== edition[key])) {
+      if (currentUrl !== observation.published_url || !matchesEdition(edition, submittedEdition)) {
         await client.query('ROLLBACK');
         return res.status(409).json({ error: 'This observation requires the exact URL of the currently verified edition.' });
       }
@@ -152,6 +158,42 @@ function registerPostPublicationAi({ app, pool, verifyAdmin, wrap, ensureSchema 
       throw error;
     } finally { client.release(); }
   }));
+  let proofSchema;
+  async function changeTrackerRelease(req, res) {
+    const placementId = Number(req.params.placementId);
+    if (!Number.isSafeInteger(placementId) || placementId < 1) return res.status(400).json({ success: false });
+    const revoke = req.method === 'DELETE';
+    const { tracker_token, tracker_page_id, edition: requestedEdition } = req.body || {};
+    if (!revoke && (typeof tracker_token !== 'string' || !tracker_token || tracker_token.length > 128 ||
+        !Number.isInteger(tracker_page_id) || tracker_page_id < 1)) return res.status(400).json({ success: false });
+    if (!proofSchema) proofSchema = ensureProofSourceSchema(pool).catch(error => { proofSchema = undefined; throw error; });
+    await proofSchema;
+    const db = await pool.connect();
+    try {
+      await db.query('BEGIN');
+      const { rows: [placement] } = await db.query(revoke ?
+        'SELECT id FROM network_placements WHERE id=$1 FOR UPDATE' : LOCK_EDITION, [placementId]);
+      let status = 404;
+      if (placement && revoke) {
+        await revokeNetworkAi(db, placementId);
+        status = 200;
+      } else if (placement) {
+        const edition = verifiedEdition(placement);
+        let url;
+        try { url = exactUrl(placement.published_url); } catch {}
+        status = url && matchesEdition(edition, requestedEdition) ?
+          await releaseNetworkAi(db, { placementId, url, edition, trackerToken: tracker_token, trackerPageId: String(tracker_page_id) }) : 409;
+      }
+      await db.query(status === 200 ? 'COMMIT' : 'ROLLBACK');
+      return res.status(status).set('Cache-Control', 'no-store').json({ success: status === 200 });
+    } catch (error) {
+      await db.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally { db.release(); }
+  }
+  app.post(path + '/tracker-proof', verifyAdmin, wrap(changeTrackerRelease));
+  app.delete(path + '/tracker-proof', verifyAdmin, wrap(changeTrackerRelease));
+
 }
 
 module.exports = { ensureObservationEventType, registerPostPublicationAi };
