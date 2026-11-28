@@ -301,5 +301,5 @@ test('one central integration: every module is a named module and only the share
  const index=src('index.js');
  assert.match(index,/'FREE_PREWRITE'[\s\S]{0,80}'NETWORK_PREWRITE'[\s\S]{0,40}'TRACKER_PREWRITE'/);
  assert.match(index,/_canonicalContentScoreScan\(\{url:row\.url\},\{timeoutMs:90000,firecrawlModule:'QUICK_SCAN'\}\)/);
- assert.match(index,/firecrawlModule:req\[_INTERNAL_CEO_AUDIT\]\?'CEO_SCAN':null/);
+ assert.match(index,/firecrawlModule:_access\.role==='internal-ceo'\?'CEO_SCAN':null/);
 });

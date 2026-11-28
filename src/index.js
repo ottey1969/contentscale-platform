@@ -16365,7 +16365,7 @@ return result;
                        if(_jobRef)_jobRef.scanController=_pageController;
                        // Canonical ContentScore entry: live URL uses /api/scan; explicit supplied HTML
                        // uses /api/scan/paste. Both are the same contracts as app.contentscale.site.
-                       const r = await _canonicalContentScoreScan(_manualSource?{html:sourceHtml}:{url:u},{timeoutMs:90000,firecrawlModule:req[_INTERNAL_CEO_AUDIT]?'CEO_SCAN':null});
+                       const r = await _canonicalContentScoreScan(_manualSource?{html:sourceHtml}:{url:u},{timeoutMs:90000,firecrawlModule:_access.role==='internal-ceo'?'CEO_SCAN':null});
                        if (r && r.success !== false && (r.score != null)) {
                          const cs = r.content_stats || {};
                          const met = r.metrics || {};
