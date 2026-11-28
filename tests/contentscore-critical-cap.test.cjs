@@ -47,3 +47,14 @@ test('a serious fault caps the score at 69 with the reason first; a sound page k
  const weak=computeScore('https://example.com/x/',{...strong,h1Count:0,h1VisibleCount:0,wordCount:90,statsFound:0,externalLinks:0,h2Count:0,listItemCount:0,hasSchema:false,hasOrganizationSchema:false});
  assert.equal(weak.score,weak.score_cap.uncapped_score);
 });
+
+test('the homepage notice and the scan notice announce v3 (28 Nov 2026) and the 69 ceiling, in EN, NL, ES and AR',()=>{
+ const src=fs.readFileSync(require.resolve('../src/index.js'),'utf8');
+ assert.match(src,/title:'ContentScore v3 — scoring methodology updated 28 Nov 2026'/);
+ assert.match(src,/title:'ContentScore v3 — scoringsmethode bijgewerkt op 28 nov 2026'/);
+ assert.match(src,/title:'ContentScore v3 — metodología de puntuación actualizada el 28 nov 2026'/);
+ assert.match(src,/title:'ContentScore v3 — تم تحديث منهجية التقييم في 28 نوفمبر 2026'/);
+ assert.match(src,/maximaal 69/);assert.match(src,/at most 69/);assert.match(src,/máximo de 69/);
+ assert.match(src,/const CONTENTSCORE_METHODOLOGY_NOTICE = 'ContentScale updated its scoring methodology on 28 Nov 2026/);
+ assert.doesNotMatch(src,/ContentScore v2 — /,'no v2 title left on the homepage notice');
+});

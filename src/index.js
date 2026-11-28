@@ -2102,7 +2102,7 @@ path.join(__dirname, 'public/index.html'),
 const filePath = tryPaths.find(p => fs.existsSync(p));
 if (!filePath) return res.status(404).send('Not found');
 let html = fs.readFileSync(filePath, 'utf8');
-// ContentScore v2 methodology notice — visible, multilingual scanner changelog.
+// ContentScore methodology notice (v3 since 28 Nov 2026) — visible, multilingual scanner changelog.
 // The notice follows the scanner/UI language where detectable and falls back to browser language.
 const _contentScoreV2UserNotice = String.raw`
 <div id="csMethodologyNotice" role="note" aria-label="ContentScore scoring update" style="max-width:980px;margin:14px auto 18px;padding:12px 14px;border:1px solid rgba(96,165,250,.35);border-radius:10px;background:rgba(30,58,138,.16);color:#dbeafe;font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:12px;line-height:1.55;box-sizing:border-box;">
@@ -2125,32 +2125,32 @@ const _contentScoreV2UserNotice = String.raw`
   if(!notice) return;
   var COPY={
     en:{
-      title:'ContentScore v2 — scoring methodology updated 8 Sep 2026',
+      title:'ContentScore v3 — scoring methodology updated 28 Nov 2026',
       short:'The scoring method has changed. A score may therefore change even when the page itself has not.',
       read:'Read what changed',
-      full:'ContentScale now isolates main-page content from navigation and boilerplate, and applies page-type-aware scoring. Scores from before 8 Sep 2026 are not directly comparable with v2 scores. Your first v2 scan is the new baseline for measuring future improvements.',
-      meta:'Scanner: main-content visibility aware · Scoring: GRAAF page-type v2'
+      full:'A page with a serious fault — no visible H1, a noindex tag or almost no main text — now scores at most 69, so it cannot reach the leaderboard until the fault is fixed. The scan shows which fault it is and what the page would score without it. Main content is still separated from navigation and scoring is page-type aware (since 8 Sep 2026). Scores from earlier versions are not directly comparable; your first v3 scan is the new baseline.',
+      meta:'Scanner: main-content visibility aware · Scoring: GRAAF page-type v3 (critical-fault ceiling)'
     },
     nl:{
-      title:'ContentScore v2 — scoringsmethode bijgewerkt op 8 sep 2026',
+      title:'ContentScore v3 — scoringsmethode bijgewerkt op 28 nov 2026',
       short:'De scoringsmethode is gewijzigd. Daardoor kan een score veranderen zonder dat de pagina zelf is aangepast.',
       read:'Lees wat er is gewijzigd',
-      full:'ContentScale isoleert nu de hoofdcontent van navigatie en boilerplate en past page-type-aware scoring toe. Scores van vóór 8 sep 2026 zijn niet rechtstreeks vergelijkbaar met v2-scores. Je eerste v2-scan is de nieuwe baseline voor toekomstige verbeteringen.',
-      meta:'Scanner: main-content visibility aware · Scoring: GRAAF page-type v2'
+      full:'Een pagina met een ernstige fout — geen zichtbare H1, een noindex-tag of bijna geen hoofdtekst — scoort nu maximaal 69 en kan dus pas op het leaderboard als de fout is opgelost. De scan laat zien welke fout het is en wat de pagina zonder die fout zou scoren. De hoofdcontent wordt nog steeds gescheiden van navigatie en de scoring houdt rekening met het paginatype (sinds 8 sep 2026). Scores van eerdere versies zijn niet rechtstreeks vergelijkbaar; je eerste v3-scan is de nieuwe baseline.',
+      meta:'Scanner: main-content visibility aware · Scoring: GRAAF page-type v3 (plafond bij ernstige fouten)'
     },
     es:{
-      title:'ContentScore v2 — metodología de puntuación actualizada el 8 sep 2026',
+      title:'ContentScore v3 — metodología de puntuación actualizada el 28 nov 2026',
       short:'La metodología de puntuación ha cambiado. Por ello, una puntuación puede cambiar aunque la página no haya sido modificada.',
       read:'Leer qué ha cambiado',
-      full:'ContentScale ahora separa el contenido principal de la navegación y del contenido repetitivo, y aplica una puntuación adaptada al tipo de página. Las puntuaciones anteriores al 8 sep 2026 no son directamente comparables con las puntuaciones v2. Tu primer análisis v2 es la nueva línea base para medir futuras mejoras.',
-      meta:'Scanner: visibilidad del contenido principal · Scoring: GRAAF page-type v2'
+      full:'Una página con un fallo grave — sin H1 visible, con una etiqueta noindex o casi sin texto principal — tiene ahora un máximo de 69 puntos, por lo que no puede entrar en la clasificación hasta que se corrija el fallo. El análisis indica cuál es el fallo y qué puntuación tendría la página sin él. El contenido principal se sigue separando de la navegación y la puntuación se adapta al tipo de página (desde el 8 sep 2026). Las puntuaciones de versiones anteriores no son directamente comparables; tu primer análisis v3 es la nueva línea base.',
+      meta:'Scanner: visibilidad del contenido principal · Scoring: GRAAF page-type v3 (límite por fallos graves)'
     },
     ar:{
-      title:'ContentScore v2 — تم تحديث منهجية التقييم في 8 سبتمبر 2026',
+      title:'ContentScore v3 — تم تحديث منهجية التقييم في 28 نوفمبر 2026',
       short:'تم تغيير منهجية التقييم، لذلك قد تتغير النتيجة حتى إذا لم تتغير الصفحة نفسها.',
       read:'اقرأ ما الذي تغيّر',
-      full:'يفصل ContentScale الآن المحتوى الرئيسي للصفحة عن عناصر التنقل والمحتوى المتكرر، ويطبّق تقييماً يتناسب مع نوع الصفحة. النتائج التي سبقت 8 سبتمبر 2026 ليست قابلة للمقارنة مباشرةً مع نتائج v2. أول فحص v2 هو خط الأساس الجديد لقياس التحسينات المستقبلية.',
-      meta:'الماسح: فحص واعٍ بظهور المحتوى الرئيسي · التقييم: GRAAF page-type v2'
+      full:'أصبحت الصفحة التي بها خطأ جسيم — عدم وجود عنوان H1 ظاهر، أو وسم noindex، أو نص رئيسي شبه معدوم — تحصل الآن على 69 نقطة كحد أقصى، فلا يمكنها دخول لوحة المتصدرين حتى يتم إصلاح الخطأ. يوضح الفحص نوع الخطأ والنتيجة التي كانت الصفحة ستحصل عليها بدونه. لا يزال المحتوى الرئيسي يُفصل عن عناصر التنقل، ولا يزال التقييم يتناسب مع نوع الصفحة (منذ 8 سبتمبر 2026). النتائج من الإصدارات السابقة ليست قابلة للمقارنة مباشرةً؛ أول فحص v3 هو خط الأساس الجديد.',
+      meta:'الماسح: فحص واعٍ بظهور المحتوى الرئيسي · التقييم: GRAAF page-type v3 (حد أقصى عند الأخطاء الجسيمة)'
     }
   };
   function normalize(v){
@@ -15070,7 +15070,7 @@ const CONTENTSCORE_SCANNER_VERSION = 'main-content-visibility-2026.09.08';
 // scores are compared only within the same scoring_version, so v2 and v3 are never mixed.
 const CONTENTSCORE_SCORING_VERSION = 'graaf-page-type-v3-critical-cap-2026.11.28';
 const CONTENTSCORE_METHODOLOGY_UPDATED_AT = '2026-11-28';
-const CONTENTSCORE_METHODOLOGY_NOTICE = 'ContentScale updated its scoring methodology on 8 Sep 2026 to better isolate main-page content from navigation/boilerplate and apply page-type-aware scoring. Scores from earlier methodology versions are not directly comparable; the first score on this version is the new baseline.';
+const CONTENTSCORE_METHODOLOGY_NOTICE = 'ContentScale updated its scoring methodology on 28 Nov 2026: a page with a serious fault (no visible H1, a noindex tag or almost no main text) scores at most 69. Main content is still isolated from navigation/boilerplate and scoring is page-type aware (since 8 Sep 2026). Scores from earlier methodology versions are not directly comparable; the first score on this version is the new baseline.';
 
 function computeScore(scanUrl, analysis, extractedEmails) {
 extractedEmails = extractedEmails || [];
@@ -19175,7 +19175,7 @@ ${report.email_found ? `<span class="chip">✉ ${report.email_found}</span>` : '
 ${report.business_url ? `<a href="${report.business_url}" target="_blank" class="rescan-btn" data-url="${report.business_url}">🔄 Rescan Now</a>` : ''}
 </div>
 ${score < 90 && new Date(report.created_at) < new Date(Date.now() - 7*24*60*60*1000) ? '<div style="margin-top:10px;padding:8px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;font-size:12px;color:#fbbf24;">⚠️ This score is from a previous scan. Your page may have changed since then. Click <strong>Rescan Now</strong> for the current score.</div>' : ''}
-<div style="margin-top:10px;padding:10px 12px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.28);border-radius:8px;font-size:12px;color:#bfdbfe;line-height:1.5;text-align:left;"><strong>ℹ️ ContentScore methodology:</strong> ${report.scoring_version ? `This report uses <strong>${report.scoring_version}</strong>. ContentScale updated its scoring methodology on 8 Sep 2026 to better isolate main content from navigation/boilerplate and apply page-type-aware scoring. Compare score changes only with scans using the same scoring version.` : `This report was created before ContentScale began recording scoring-methodology versions. Its score should not be compared directly with current v2 scores.`}</div>
+<div style="margin-top:10px;padding:10px 12px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.28);border-radius:8px;font-size:12px;color:#bfdbfe;line-height:1.5;text-align:left;"><strong>ℹ️ ContentScore methodology:</strong> ${report.scoring_version ? `This report uses <strong>${report.scoring_version}</strong>. ContentScale updated its scoring methodology on 28 Nov 2026: a page with a serious fault (no visible H1, a noindex tag or almost no main text) scores at most 69. Compare score changes only with scans using the same scoring version.` : `This report was created before ContentScale began recording scoring-methodology versions. Its score should not be compared directly with current v2 scores.`}</div>
 <div class="score-block">
 <div class="score-circle">
 <div class="score-num">${score}</div>
