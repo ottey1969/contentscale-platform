@@ -30,6 +30,8 @@ test('Free Growth: the owner signs in on the form — no daily limit, AI writing
   const express = require('express');
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
+  // The weekly free limit stays on; a rerun on the same disposable database starts as a new week for this visitor.
+  await pool.query("DELETE FROM free_tool_usage WHERE tool='FREE_GROWTH'").catch(() => {});
   const engineDeps = { retryDelayMs: 0, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
     fetchLive: async url => { const html = PAGES[url]; if (!html) throw Object.assign(Error('TEST page not available'), { code: 'PUBLIC_HTML_UNAVAILABLE' });
       return { html, final_url: url, retrieved_at: new Date().toISOString(), truncated: false, source: 'LIVE_PUBLIC_HTTPS' }; },

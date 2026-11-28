@@ -168,8 +168,10 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     const headers = { authorization: 'Bearer ' + publicKey, 'content-type': 'application/json' };
     const publicKeyword = 'TEST editorial planning for public briefs';
     const beforePublic = Number((await db.query('SELECT COUNT(*) FROM tracker_clients')).rows[0].count);
+    // The weekly free limit stays on: a rerun on the same disposable database starts as a new week for this visitor.
+    await db.query("DELETE FROM free_tool_usage WHERE tool='FREE_PREWRITE'").catch(() => {});
     const accepted = await fetch(base + '/api/free-pre-write', { method: 'POST', headers, body: JSON.stringify({
-      website: 'https://test-free-prewrite.example/', keyword: publicKeyword, language: 'en', region: 'US'
+      website: 'https://test-free-prewrite.example/', keyword: publicKeyword, language: 'en', region: 'US', email: 'public-brief@test-free-prewrite.example'
     }) });
     assert.equal(accepted.status, 202, await accepted.text());
     let standalone;

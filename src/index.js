@@ -54973,7 +54973,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <!-- SIDEBAR -->
             <nav id="sidebar">
                 <div class="sidebar-section-label">Lead Flow</div>
-
+                <a href="/owner" class="sidebar-btn" style="text-decoration:none"><i class="fas fa-table-cells-large"></i><span>Owner overview</span></a>
 
                 <hr class="sidebar-divider">
                 <div class="sidebar-section-label">Admin</div>
@@ -60973,6 +60973,8 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
 async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
   publicBrief = publicBrief?.site ? publicBrief : null;
   let _pwbStage='start';
+  // Free Pre-Write waiting page (owner 2026-11-28): the real research step is saved, so the visitor sees it moving.
+  const _pwbReport=()=>{try{if(publicBrief&&typeof publicBrief.stage==='function')Promise.resolve(publicBrief.stage(_pwbStage)).catch(()=>{})}catch(e){}};
   const _pwbStartedAt=Date.now();
   let _pwbPreNormalizationMissing=[];
   let _pwbNetworkAuthorized = false;
@@ -61070,7 +61072,7 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     // silently rerun that work. Reuse the exact diagnostic snapshot and make at most ONE targeted
     // Gemini call for fields that are still missing after deterministic completion.
     if(!publicBrief&&String(completionFromJobId||'').trim()){
-      _pwbStage='completion';
+      _pwbStage='completion';_pwbReport();
       return await _pwbCompleteMissingFromDiagnostic({client:client,jobId:String(completionFromJobId).trim(),placementId:_pwbNetworkPlacementId,keyword:keyword,workingTitle:workingTitle,language:language,region:region,briefsUsed:briefsUsed,briefsAllowed:briefsAllowed,manualAiEvidence:manualAiEvidence,publisherDomain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain,publisherCheckedUrl:_pwbNetworkPublisherCheckedUrl},res);
     }
 
@@ -61083,7 +61085,7 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     const _pwbSerpLocation=_pwbSerpMarket.location;
 
     // ── AUTO INTERNAL LINK RESEARCH — sitemap discovery/import ─────────────
-    _pwbStage='sitemap';
+    _pwbStage='sitemap';_pwbReport();
     let clientSitemapUrls = [];
     let _pwbSitemapUrl = String(client.sitemap_url || '').trim();
     let _pwbSitemapStatus = 'not_found';
@@ -61262,7 +61264,7 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
       aioDetected = true;
       console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
     }
-    _pwbStage='serp';
+    _pwbStage='serp';_pwbReport();
     if (serperKey) {
       for(let _attempt=1;_attempt<=(_pwbNetworkFastLane?1:2)&&!serpUrls.length;_attempt++){
         _pwbSerperAttempts=_attempt;
@@ -61432,7 +61434,7 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
       } catch (e) { console.warn('[prewrite-brief] Perplexity check failed:', e.message); }
     }
 
-    _pwbStage='competitor_scrape';
+    _pwbStage='competitor_scrape';_pwbReport();
     const top10 = serpUrls
       .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
       .slice(0, _pwbNetworkFastLane ? 5 : 10);
@@ -61648,7 +61650,7 @@ Return ONLY valid JSON, no markdown, no preamble.
       + '\n- Every external_link_targets.exact_url must be copied verbatim from AUTO EXTERNAL SOURCE RESEARCH.'
       + '\n- Never invent an internal or external URL.'
       + '\n- Do not output Markdown; return valid JSON only.';
-    _pwbStage='gemini';
+    _pwbStage='gemini';_pwbReport();
     const geminiKey = process.env.GEMINI_API_KEY;
     let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0,_pwbGeminiNetworkFailure=false,_pwbGeminiModelUsed='';
     let _pwbGeminiTimedOut=false;
@@ -62000,7 +62002,7 @@ ${claimsBlock.slice(0,2400)}`;
       const _failError=_failStage==='quality_gate'?'Prewrite research completed, but the Brief did not pass the publication-quality gate.':'Prewrite research completed, but Gemini could not generate the Brief.';
       return res.status(_failStage==='quality_gate'?422:502).json({success:false,stage:_failStage,retryable:true,error:_failError,generation_usage:_pwbUsageSnapshot(),diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,split_generation:!!_pwbNetworkFastLane,generation_usage:_pwbUsageSnapshot()}});
     }
-    _pwbStage='gemini_parse';
+    _pwbStage='gemini_parse';_pwbReport();
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
     // Live 2026-11-13: a long (Spanish) Brief was cut off or had one bad string, the light repair failed and all paid
@@ -62267,7 +62269,7 @@ ${claimsBlock.slice(0,2400)}`;
       if(!_pwbRealPaaQuestions.every(function(q){return _pwbCanonicalGood(_paaMap.get(_pwbPaaKey(q)));}))_pwbCanonicalNeeds.push('paa_questions');
     }
     if(_pwbCanonicalNeeds.length && typeof _pwbCompactCall==='function'){
-      _pwbStage='quality_gate';
+      _pwbStage='quality_gate';_pwbReport();
       const _pwbCanonicalRules={
         opening_passage:'Return exactly {"opening_passage":{"direct_answer":"40-60 word self-contained answer","why_it_wins":"one sentence explaining why this passage is clear and extractable"}}. Lead immediately with the answer to the target query. Use only supplied research and conservative definitions. Do not invent URLs, statistics, client outcomes, rankings, guarantees, credentials or experience.',
         page_blueprint:'Return exactly {"page_blueprint":[{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."}]}. At least 5 distinct sections, in writing order. Every section needs h2 + purpose. Use the supplied research for subtopics and citation hooks. Do not invent URLs, statistics, client outcomes or experience.',
@@ -62323,7 +62325,7 @@ ${claimsBlock.slice(0,2400)}`;
     // -> approved_for_writing. "Found on a web page" is not the same as "best available
     // source". We therefore verify exact evidence first, then attempt to resolve upstream
     // provenance and grade the source before the writer receives it.
-    _pwbStage='evidence_quality_ladder';
+    _pwbStage='evidence_quality_ladder';_pwbReport();
     const _pwbEvidenceNorm=function(v){return String(v||'').toLowerCase().replace(/[“”„‟]/g,'"').replace(/[‘’‚‛]/g,"'").replace(/\s+/g,' ').trim();};
     const _pwbEvidenceTokens=function(v){
       const stop=new Set(['the','and','for','with','from','that','this','into','than','have','has','had','were','was','are','but','not','only','more','most','their','there','about','your','our','its','per','all','over','under','between','through','using','used','use']);
@@ -62540,7 +62542,7 @@ ${sourceText}`;
       if(!brief.external_link_targets.some(function(x){try{return new URL(String(x&&x.exact_url||'')).href===u}catch(_e){return false;}}))brief.external_link_targets.push({anchor_text:ev.person||ev.best_source_title||ev.source_title||'Source',source_name:ev.best_source_title||ev.source_title||ev.person||'Source',exact_url:u,why:'Approved evidence from the Prewrite Evidence Quality Ladder.',supports_claim:ev.supports||ev.evidence_text||ev.insight||ev.quote||'',source_type:ev.quote?'expert_quote_research':(ev.insight?'expert_insight_research':'evidence_quality_ladder'),quality_stage:ev.quality_stage||'source_verified',authority_class:ev.authority_class||''});
     });
 
-    _pwbStage='link_validation';
+    _pwbStage='link_validation';_pwbReport();
     // ── SERVER-ENFORCED LINK WHITELISTS ─────────────────────────────────
     const _pwbNormExactUrl = u => { try { return new URL(String(u||'').trim()).href; } catch(e) { return ''; } };
     const _internalAllowed = new Set(clientSitemapUrls.map(_pwbNormExactUrl).filter(Boolean));
@@ -62607,7 +62609,7 @@ ${sourceText}`;
     if(_pwbNetworkAuthorized){_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain});_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain,owner_domain:_pwbNetworkOwnerDomain,checked_url:_pwbNetworkPublisherCheckedUrl});}
     _pwbEvidenceBackedGapV506(brief);
 
-    _pwbStage='fact_safety';
+    _pwbStage='fact_safety';_pwbReport();
     // Server-owned fact safety: the model cannot promote UNVERIFIED research to VERIFIED.
     brief.fact_safety = brief.fact_safety || {};
     brief.fact_safety.verified_business_facts = _pwbVerified;
@@ -62684,7 +62686,7 @@ ${sourceText}`;
         });
     };
     if(!_pwbPostScrubOutlineValid() && typeof _pwbCompactCall==='function'){
-      _pwbStage='quality_gate';
+      _pwbStage='quality_gate';_pwbReport();
       const _hs=_pwbCanonicalHeadingList(brief);
       const _repairPrompt=`FINAL POST-SAFETY OUTLINE REPAIR. JSON ONLY. Return exactly {"definitive_outline":[...]}. Keep every required H2 exactly once and in exactly this order. Every section must have a concise, factual purpose. Do not use statistics, percentages, rankings, guarantees, client outcomes, credentials, response times, prices or any quantified/performance claim. Do not invent URLs or experience. Preserve safe existing cover/citation_hook material where possible.\n\nREQUIRED H2 ORDER:\n${_hs.map(function(h,i){return (i+1)+'. '+h;}).join('\n')}\n\nCURRENT OUTLINE:\n${JSON.stringify(brief.definitive_outline||[]).slice(0,8500)}`;
       const _rr=await _pwbCompactCall('quality_post_safety_definitive_outline',_repairPrompt,5600,['definitive_outline']);
@@ -62760,7 +62762,7 @@ ${sourceText}`;
       if(!Array.isArray(brief.surgical_changes)||!brief.surgical_changes.length)brief.surgical_changes=[{where:(_recSafe&&_recSafe.target)||brief.content_decision.closest_existing_url||'Existing target page',change:(_recSafe&&_recSafe.action)||'Apply only the focused evidence-backed optimization from Intelligence.',why:(_recSafe&&_recSafe.evidence)||brief.content_decision.reason,complete_when:'The focused change is published, live-verified and recorded in the next page scan.'}];
     }
 
-    _pwbStage='finalize';
+    _pwbStage='finalize';_pwbReport();
     const _pwbManualAiStatus={
       google_aio:!!_manualAi.google_aio,chatgpt:!!_manualAi.chatgpt,perplexity:!!_manualAi.perplexity,claude:!!_manualAi.claude,copilot:!!_manualAi.copilot
     };
@@ -62956,7 +62958,7 @@ ${sourceText}`;
       return res.status(saved.rowCount ? 200 : 409).json({ success: Boolean(saved.rowCount) });
     }
 
-    _pwbStage='persistence';
+    _pwbStage='persistence';_pwbReport();
     const _saveConn=await pool.connect();
     try {
       await _saveConn.query('BEGIN');
@@ -62984,7 +62986,7 @@ ${sourceText}`;
       return res.status(503).json({success:false,stage:'persistence',retryable:true,error:'The Brief passed quality checks but could not be saved safely. Nothing was counted. Please retry.',diagnostic:{message:String(e&&e.message||e),readiness_score:brief.ai_quality_check.readiness_score,saved:false,counted:false}});
     } finally { _saveConn.release(); }
 
-    _pwbStage='complete';
+    _pwbStage='complete';_pwbReport();
     console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${committedBriefsUsed}/${briefsAllowed} | ${Date.now()-_pwbStartedAt}ms`);
     res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top10.length, region: glParam, briefs_used: committedBriefsUsed, briefs_allowed: briefsAllowed, search_intent: brief.search_intent });
   } catch (e) {
@@ -62994,6 +62996,10 @@ ${sourceText}`;
 }
 
 app.post('/api/tracker-client/:token/prewrite-brief', _handlePrewriteBriefGeneration);
+// Owner overview (owner 2026-11-28): one owner-only page with every admin area and today's numbers.
+require('./owner-overview.cjs').registerOwnerOverview(app, pool, {
+  firecrawl: () => require('./firecrawl-owner-dashboard.cjs').dashboard({ manager: require('./firecrawl-manager.cjs').firecrawlManager })
+});
 require('./free-prewrite.cjs').registerFreePrewrite(app, pool, {
   generate: async context => {
     const { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } = context;

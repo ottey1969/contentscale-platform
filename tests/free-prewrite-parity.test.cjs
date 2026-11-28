@@ -182,7 +182,7 @@ test('Free Pre-Write: intent follows the SERP first and is corrected afterwards;
   assert.match((await request(app).get('/free-pre-write/r?lang=en').expect(200)).text, /Commercial/);
   assert.match((await request(app).get('/free-pre-write/r?lang=es').expect(200)).text, /Comercial/);
   await request(app).post('/api/free-pre-write').set('Authorization', 'Bearer ' + 'a'.repeat(64)).send({
-    website: 'https://contentscale.site/', keyword: 'seo check', region: 'nl', language: 'nl',
+    website: 'https://contentscale.site/', keyword: 'seo check', region: 'nl', language: 'nl', email: 'parity@example.com',
     manualAiEvidence: { google_source: 'ai_overview', google_aio: 'Een SEO check is een analyse…', chatgpt: 'x'.repeat(13000), perplexity: '', claude: 'Claude answer', copilot: 'Copilot answer', ai_question: 'Wat is een SEO check?', extra: 'dropped' }
   }).expect(202);
   await new Promise(resolve => setImmediate(resolve));

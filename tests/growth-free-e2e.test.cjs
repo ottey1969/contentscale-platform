@@ -28,6 +28,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   const express = require('express');
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
+  // The weekly free limit stays on; a rerun on the same disposable database starts as a new week for this visitor.
+  await pool.query("DELETE FROM free_tool_usage WHERE tool='FREE_GROWTH'").catch(() => {});
   const writes = [], mails = [];
   let publishedText = '';
   const engineDeps = { retryDelayMs: 0, aiGapModel: null, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
