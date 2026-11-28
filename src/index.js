@@ -62301,7 +62301,7 @@ ${claimsBlock.slice(0,2400)}`;
       if(!_pwbRealPaaQuestions.every(function(q){return _pwbCanonicalGood(_paaMap.get(_pwbPaaKey(q)));}))_pwbCanonicalNeeds.push('paa_questions');
     }
     // Named competitors in a reader-facing field: that field is repaired by the model with the names forbidden.
-    try{_pwbBrands=_pwbQuality.competitorBrands({serpUrls,aiLeads:_pwbAiSourceLeads,competitorTable:brief.competitor_table||[],ownUrl:_pwbOwnOrigin});}catch(e){}
+    try{const _pwbAiNamed=Object.values(brief.ai_systems_analysis&&typeof brief.ai_systems_analysis==='object'?brief.ai_systems_analysis:{}).flatMap(function(x){return x&&typeof x==='object'?[].concat(x.mentioned_companies||[],x.recommended_companies||[]):[];});_pwbBrands=_pwbQuality.competitorBrands({serpUrls,aiLeads:_pwbAiSourceLeads,competitorTable:brief.competitor_table||[],ownUrl:_pwbOwnOrigin,aiCompanies:_pwbAiNamed});}catch(e){}
     const _pwbCompetitorKeys=_pwbQuality.competitorFields(brief,_pwbBrands).filter(function(k){return ['opening_passage','page_blueprint','definitive_outline','ai_answer','quick_facts','use_cases','paa_questions'].includes(k);});
     _pwbCompetitorKeys.forEach(function(k){if(!_pwbCanonicalNeeds.includes(k))_pwbCanonicalNeeds.push(k);});
     const _pwbNoCompetitorRule=function(k){return _pwbCompetitorKeys.includes(k)
@@ -62963,6 +62963,8 @@ ${sourceText}`;
       brief.ai_quality_check=_pwbReadiness(brief);
     }
     _pwbQuality.alignOpening(brief);
+    // A stale year and a cut-off meta description are repaired, not only flagged (owner 2026-11-29).
+    _pwbQuality.repairMetadata(brief.meta_package,keyword,new Date().getUTCFullYear());
     brief.metadata_review={issues:_pwbQuality.metadataIssues(brief.meta_package,keyword,new Date().getUTCFullYear())};
     Object.assign(brief.generation_usage,_pwbUsageSnapshot());
     if(!brief.ai_quality_check.ready_for_generation){

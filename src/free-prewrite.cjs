@@ -65,12 +65,40 @@ function manualEvidence(raw) {
   return out;
 }
 const intents = ['', 'informational', 'commercial', 'transactional', 'navigational'];
+// The brief in plain words, above Copy brief and Download (owner 2026-11-29: "er moet eerst iets staan zodat ik het kan
+// lezen en begrijpen, want de copy is JSON" and "een editor is niet altijd een AI").
+const readableTexts = {
+  en: { intro: 'The brief in plain words, for you and for a writer or editor. Copy brief and Download below give the full brief, which an AI can also use.',
+    decision: 'What to do', create: 'New page', expand: 'Expand the existing page', page: 'Page', h1: 'H1 (main heading)', title: 'SEO title', description: 'Meta description',
+    intent: 'Search intent', opening: 'Start the page with this answer', outline: 'Sections (H2) in this order', words: 'about § words',
+    questions: 'Questions to answer on the page', links: 'Link to these own pages', verify: 'Check before you write it down', plan: 'Steps' },
+  nl: { intro: 'De brief in gewone woorden, voor jou en voor een schrijver of redacteur. Kopieer brief en Download hieronder geven de volledige brief, die ook een AI kan gebruiken.',
+    decision: 'Wat te doen', create: 'Nieuwe pagina', expand: 'Bestaande pagina uitbreiden', page: 'Pagina', h1: 'H1 (hoofdkop)', title: 'SEO-titel', description: 'Metabeschrijving',
+    intent: 'Zoekintentie', opening: 'Begin de pagina met dit antwoord', outline: 'Secties (H2) in deze volgorde', words: 'ca. § woorden',
+    questions: 'Vragen die de pagina beantwoordt', links: 'Link naar deze eigen pagina\'s', verify: 'Controleer dit voordat je het opschrijft', plan: 'Stappen' },
+  es: { intro: 'El brief en palabras sencillas, para ti y para un redactor o editor. Copiar brief y Descargar abajo dan el brief completo, que también puede usar una IA.',
+    decision: 'Qué hacer', create: 'Página nueva', expand: 'Ampliar la página existente', page: 'Página', h1: 'H1 (título principal)', title: 'Título SEO', description: 'Meta descripción',
+    intent: 'Intención de búsqueda', opening: 'Empieza la página con esta respuesta', outline: 'Secciones (H2) en este orden', words: 'unas § palabras',
+    questions: 'Preguntas que responde la página', links: 'Enlaza a estas páginas propias', verify: 'Comprueba esto antes de escribirlo', plan: 'Pasos' }
+};
 // What the brief uses now, shown above the correction (owner 2026-11-28: "dan moet ik weten wat het nu was").
 const currentIntentTexts = {
   en: { now: 'Current search intent', auto: 'automatic, follows Google', owner: 'corrected by you', also: 'Also', why: 'Why' },
   nl: { now: 'Huidige zoekintentie', auto: 'automatisch, volgt Google', owner: 'door jou gecorrigeerd', also: 'Ook', why: 'Waarom' },
   es: { now: 'Intención de búsqueda actual', auto: 'automática, sigue a Google', owner: 'corregida por ti', also: 'También', why: 'Por qué' }
 };
+// The market in the website address leads (owner 2026-11-29: "de es in de url is leidend; iemand die het niet op Spaans
+// zet moet geen last hebben"): an es./nl. subdomain or an /es/ /nl/ first path segment sets the brief's language and
+// search country, whatever the form language and country say. Other addresses keep the form's choice.
+const MARKETS = { es: 'es', nl: 'nl' };
+function marketOf(address) {
+  let url;
+  try { url = new URL(String(address)); } catch { return null; }
+  const sub = url.hostname.toLowerCase().split('.')[0];
+  const segment = url.pathname.toLowerCase().split('/')[1] || '';
+  const code = Object.hasOwn(MARKETS, sub) && url.hostname.split('.').length > 2 ? sub : Object.hasOwn(MARKETS, segment) ? segment : '';
+  return code ? { language: code, region: MARKETS[code] } : null;
+}
 // The page address the owner wants for a new page (owner 2026-11-28: "de slug moet in het begin worden aangegeven").
 // A path on the same site: lower-case letters, digits and hyphens per segment. Empty = the brief proposes one.
 function normalizeSlug(raw) {
@@ -171,6 +199,7 @@ function page(lang, result) {
   const w = workflowTexts[lang];
   const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p>${progress}<section id="decision" hidden></section>
     <section id="handoff" hidden><h2>${w.step1}</h2><p class="note">${w.step1Why}</p>
+      <div id="brief-readable" class="readable"></div>
       <p class="actions"><button type="button" id="copy-brief">${w.copy}</button> <a id="download" class="button-link" download="pre-write-brief.txt">${w.download}</a> <span id="copy-brief-status" role="status" class="note"></span></p>
       <textarea id="editor" rows="15" readonly></textarea></section>
     <section id="implementation" hidden>
@@ -190,8 +219,8 @@ function page(lang, result) {
     ${priceInput}${aiFields(lang)}<button type="submit">${t[4]}</button></form><p id="status" role="status"></p>
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
-    <style>.current-intent{font-weight:600;background:#eef2ff;border-left:4px solid #4338ca;border-radius:6px;padding:10px 12px;margin:10px 0}button{transition:transform .12s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer}button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(67,56,202,.28);filter:brightness(1.06)}button:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:none}button:disabled{cursor:default;opacity:.75}button[aria-busy=true]{opacity:1;cursor:progress}button[aria-busy=true]::before{content:'';display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pw-spin .7s linear infinite}@keyframes pw-spin{to{transform:rotate(360deg)}}.ai-prompt-copy.done,#copy-brief.done{animation:pw-pop .45s ease}@keyframes pw-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){button,button:hover,button:active{transition:none;transform:none}button[aria-busy=true]::before{animation-duration:2s}.ai-prompt-copy.done,#copy-brief.done{animation:none}}#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}#availability{margin:12px 0 0}#handoff{border:2px solid #4338ca}#handoff h2,#implementation h2,#intent-adjust h2{font-size:1.1rem;margin:18px 0 4px}#handoff h2{margin-top:0}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.button-link{display:inline-block;padding:8px 12px;border:1px solid #1d4ed8;color:#1d4ed8;border-radius:6px;text-decoration:none;font-weight:600}#editor{width:100%;box-sizing:border-box}#availability.blocked{color:#b91c1c;font-weight:700;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
-    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};window.prewriteIntentTexts=${JSON.stringify({ ...currentIntentTexts[lang], labels: Object.fromEntries(intents.slice(1).map((value, index) => [value, intentLabels[lang][index + 2]])) })};window.prewriteFetchTexts=${JSON.stringify(fetchLabels[lang])};window.prewriteWorkflow=${JSON.stringify({ copied: workflowTexts[lang].copied })};</script><script src="/prewrite-ai-answer-research.js" defer></script>
+    <style>.readable{background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px 18px;margin:12px 0}.readable h3{margin:14px 0 4px;font-size:15px}.readable dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:6px 0}.readable dt{font-weight:600}.readable dd{margin:0}.current-intent{font-weight:600;background:#eef2ff;border-left:4px solid #4338ca;border-radius:6px;padding:10px 12px;margin:10px 0}button{transition:transform .12s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer}button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(67,56,202,.28);filter:brightness(1.06)}button:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:none}button:disabled{cursor:default;opacity:.75}button[aria-busy=true]{opacity:1;cursor:progress}button[aria-busy=true]::before{content:'';display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pw-spin .7s linear infinite}@keyframes pw-spin{to{transform:rotate(360deg)}}.ai-prompt-copy.done,#copy-brief.done{animation:pw-pop .45s ease}@keyframes pw-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){button,button:hover,button:active{transition:none;transform:none}button[aria-busy=true]::before{animation-duration:2s}.ai-prompt-copy.done,#copy-brief.done{animation:none}}#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}#availability{margin:12px 0 0}#handoff{border:2px solid #4338ca}#handoff h2,#implementation h2,#intent-adjust h2{font-size:1.1rem;margin:18px 0 4px}#handoff h2{margin-top:0}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.button-link{display:inline-block;padding:8px 12px;border:1px solid #1d4ed8;color:#1d4ed8;border-radius:6px;text-decoration:none;font-weight:600}#editor{width:100%;box-sizing:border-box}#availability.blocked{color:#b91c1c;font-weight:700;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
+    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};window.prewriteReadable=${JSON.stringify(readableTexts[lang])};window.prewriteIntentTexts=${JSON.stringify({ ...currentIntentTexts[lang], labels: Object.fromEntries(intents.slice(1).map((value, index) => [value, intentLabels[lang][index + 2]])) })};window.prewriteFetchTexts=${JSON.stringify(fetchLabels[lang])};window.prewriteWorkflow=${JSON.stringify({ copied: workflowTexts[lang].copied })};</script><script src="/prewrite-ai-answer-research.js" defer></script>
     <script src="/free-prewrite.js" defer></script></body></html>`;
 }
 
@@ -333,7 +362,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
   }
 
   app.post(API, async (req, res) => {
-    let site, priceSource;
+    let site, priceSource, market = null;
     const { keyword, region, language, intentOverride = '', pricingSource } = req.body || {};
     // Every refusal says which field is wrong, in the page language (owner 2026-11-28: a bare 400 told him nothing).
     const lang = Object.hasOwn(texts, language) ? language : 'en';
@@ -345,6 +374,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
     try {
       const url = validateUrl(req.body?.website);
       site = url.origin + '/';
+      market = marketOf(url.href);
     } catch { return refuse('WEBSITE'); }
     try { priceSource = pricingEvidenceUrl(site, pricingSource); } catch { return refuse('PRICING_URL'); }
     const key = credentials(req);
@@ -352,6 +382,8 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
     if (typeof keyword !== 'string' || !keyword.trim() || keyword.length > 300) return refuse('TOPIC');
     if (typeof region !== 'string' || !/^[a-z]{2}$/i.test(region)) return refuse('COUNTRY');
     if (typeof language !== 'string' || !Object.hasOwn(texts, language) || !intents.includes(intentOverride)) return refuse('LANGUAGE');
+    const briefLanguage = market ? market.language : language;
+    const briefRegion = market ? market.region : region.toLowerCase();
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().slice(0, 200) : '';
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const revisionOf = typeof req.body?.revisionOf === 'string' && /^[a-f0-9]{64}$/.test(req.body.revisionOf) ? req.body.revisionOf : null;
@@ -400,7 +432,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
         return res.status(429).json({ success: false, code: busyNow ? 'BUSY' : 'DAILY_TOTAL', error: (busyNow ? busyTexts : dailyTexts)[lang] });
       }
       row = (await db.query(`INSERT INTO prewrite_briefs (keyword,language,region,brief_json,status,public_site,public_access_hash)
-        VALUES ($1,$2,$3,'{}','generating',$4,$5) RETURNING id`, [keyword.trim(), language, region.toLowerCase(), site, hash(key)])).rows[0];
+        VALUES ($1,$2,$3,'{}','generating',$4,$5) RETURNING id`, [keyword.trim(), briefLanguage, briefRegion, site, hash(key)])).rows[0];
       await db.query('COMMIT');
     } catch (error) {
       if (db) await db.query('ROLLBACK').catch(() => {});
@@ -417,7 +449,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       if (discovered.site !== site) {
         await pool.query("UPDATE prewrite_briefs SET public_site=$2 WHERE id=$1 AND status='generating'", [row.id, discovered.site]);
       }
-      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, sitemapUrls: discovered.sitemap_urls || 0, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride, pricingSource: priceSource, manualAiEvidence, stage, slug });
+      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, sitemapUrls: discovered.sitemap_urls || 0, keyword: keyword.trim(), language: briefLanguage, region: briefRegion, intentOverride, pricingSource: priceSource, manualAiEvidence, stage, slug });
     } catch (error) {
       console.warn('[free-prewrite] generation failed', error.code || error.name);
     } finally {
@@ -523,4 +555,4 @@ async function sourceForGrowth(pool, id, url, query) {
     ? { target, recorded_at: row.created_at, brief: publicBriefData(row.brief_json) } : null;
 }
 
-module.exports = { registerFreePrewrite, resolveGrowthSource, sourceForGrowth, discoverSite, normalizeSlug };
+module.exports = { marketOf, registerFreePrewrite, resolveGrowthSource, sourceForGrowth, discoverSite, normalizeSlug };
