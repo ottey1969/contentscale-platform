@@ -101,4 +101,37 @@ function createFreeGrowthFirecrawlReader({
  };
  return {reader,stats};
 }
-module.exports={enabled,createFreeGrowthFirecrawlReader};
+// Pre-Write (owner 2026-11-28): Firecrawl only when the normal reader could not read a page, never by default, to keep the
+// budget down. Used for: a timeout or network error, a 5xx, or a page whose visible text is too thin (a JavaScript shell).
+// Never for a refusal (401/403/406/429), a bot check or a 404: bot blocks are respected, a missing page stays missing.
+const REFUSED=/^HTTP_(401|403|406|429)$/;
+const visibleChars=html=>String(html||'').replace(/<(script|style|noscript|template)[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim().length;
+function createFallbackReader({env=process.env,original=fetchPublicGrowthHtml,fetchImpl=globalThis.fetch,lookup=dns.lookup,
+ manager,maxPages=6,minChars=400,module='PREWRITE'}={}){
+ const key=String(env.FIRECRAWL_API_KEY||'').trim();
+ const on=!!key&&env.PREWRITE_FIRECRAWL_FALLBACK!=='false';
+ const stats={enabled:on,attempted:0,used:0,reasons:[]};
+ const {isBotCheck}=require('./gsc-report/site-audit.cjs');
+ const reader=async(raw,options=RESEARCH_FETCH)=>{
+  let direct=null,failure=null;
+  try{direct=await original(raw,options)}
+  catch(e){if(REFUSED.test(String(e?.code||'')))throw e;failure=e}
+  if(direct){
+   if(isBotCheck(direct.html))return direct;
+   const thin=direct.status===200&&visibleChars(direct.html)<minChars;
+   if(!(direct.status>=500||thin))return direct;
+  }
+  if(!on||stats.attempted>=maxPages){if(direct)return direct;throw failure}
+  stats.attempted++;
+  stats.reasons.push(failure?String(failure.code||failure.name||'ERROR').slice(0,40):direct.status>=500?'HTTP_'+direct.status:'THIN_TEXT');
+  const inner=createFreeGrowthFirecrawlReader({env:{...env,FREE_GROWTH_FIRECRAWL_ENABLED:'true',FIRECRAWL_API_KEY:key},
+   original:async()=>{if(direct)return direct;throw failure},fetchImpl,lookup,module,maxPages:1,
+   ...(manager?{manager}:{})});
+  const page=await inner.reader(raw,options);
+  if(inner.stats.used)stats.used++;
+  return page;
+ };
+ reader.stats=stats;
+ return reader;
+}
+module.exports={enabled,createFreeGrowthFirecrawlReader,createFallbackReader};

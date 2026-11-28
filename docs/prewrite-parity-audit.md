@@ -18,3 +18,20 @@ De twee oorspronkelijke Nederlandse ‘seo check’-briefs waren niet beschikbaa
 | PWB-12 | De Network-JSON-reparatie kon het onbegrensde omgevingsmodel rechtstreeks als fallback gebruiken. De teller trok daarnaast uit providermetadata een factuurconclusie en miste de laatste reparatieaanroep in de opslagsnapshot. De gedeelde handler beperkt modellen tot de configureerbare Flash-familie, registreert provider-versie, gevraagd budget, output, reasoning, tool-input en resterende tokens en slaat de laatste snapshot op. | Gedeelde handler. Geen ruwe productieaanvragen, Railway-modeloverrides of facturen ingezien. Providergerapporteerde reasoning met budget nul blijft een observatie tot factuur en feitelijk modelverkeer beschikbaar zijn. |
 
 De twaalf afzonderlijke regressies staan in `tests/prewrite-parity-quality.test.cjs`. De bestaande canonieke CI voert ook afzonderlijke Tracker-, Free- en Network-controles uit. Dat bewijst geen ononderbroken A/B-pariteit tussen de drie routes. De Network-embed behoudt zijn bestaande gesegmenteerde synthese en `_pwbNetworkFastLane` wegens het eerder gedocumenteerde gatewaygedrag. De compacte calls krijgen dezelfde vastgelegde website- en beslisgegevens. Het opheffen van het resterende verschil vraagt een test tegen de daadwerkelijke asynchrone Network-route.
+
+## Owner review 2026-11-28 (Free Pre-Write, "how can i earn money with content at scale")
+
+| Item | Fix | Test |
+| --- | --- | --- |
+| Intent chosen before the brief | The intake has no intent choice; the intent follows the SERP and is corrected on the result. Each option names the term: Informational, Commercial, Transactional, Navigational (EN/NL/ES). | `free-prewrite-parity` |
+| No AI systems in Free | The five AI answer fields of the Tracker (Google AIO/Gemini with source, ChatGPT, Perplexity, Claude, Copilot) and the question, at intake and with a correction. Passed as `manualAiEvidence` to the shared generator. | `free-prewrite-parity` |
+| No internal links | Discovery reads robots.txt sitemaps, a sitemap index (Rank Math, Yoast) and its page/post sitemaps, and sister subdomains linked from the site. Up to 16 own pages are read, topic-first. Links come from read pages that share a topic stem, plus the own tool or service. | `free-prewrite-parity`, e2e |
+| Scanner on another subdomain | `sameSite` treats app.example.com as the own site of example.com (incl. co.uk-type suffixes). | `free-prewrite-parity` |
+| Silent empty link lists | `link_research.internal/external` get a state and a reason; the result page shows it. | `free-prewrite-parity`, e2e |
+| Competitor research lost for the writer | The writer copy keeps `competition_gaps` (has, gap, add), `entity_strategy` and the AI-system findings with competitor names and links replaced by "a ranking page". | `free-prewrite-parity` |
+| Cut-off metadata | "…Strategies for", "…and achieving.", "…Direct & Verbeter" are incomplete (EN/NL/ES). | `free-prewrite-parity` |
+| Placeholder PAA answers | "The provided context does not contain…" answers are removed with their question. | `free-prewrite-parity`, e2e |
+| Questions counted as removed claims | A question field is never scrubbed as a claim. | `free-prewrite-parity` |
+| Unreadable pages | Firecrawl only as a fallback for a timeout, network error, 5xx or a thin (JavaScript) page; never for 401/403/406/429, a bot check or a 404; at most 6 pages per brief; off without `FIRECRAWL_API_KEY` or with `PREWRITE_FIRECRAWL_FALLBACK=false`. | `free-prewrite-parity` |
+
+Not included: GSC queries per page (a new page has none). Topic fit with the website's offer is not judged automatically.

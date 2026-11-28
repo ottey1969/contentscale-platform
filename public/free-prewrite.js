@@ -25,6 +25,12 @@
     return response.json();
   }
 
+  // The five AI systems (owner 2026-11-28), sent with a new brief and with a correction afterwards.
+  const evidence = form => ({
+    ai_question: form.get('ai-question') || '', google_source: form.get('google-source') || '',
+    google_aio: form.get('ai-google_aio') || '', chatgpt: form.get('ai-chatgpt') || '', perplexity: form.get('ai-perplexity') || '',
+    claude: form.get('ai-claude') || '', copilot: form.get('ai-copilot') || ''
+  });
   if (intake) {
     intake.addEventListener('submit', async event => {
       event.preventDefault();
@@ -37,7 +43,7 @@
       const form = new FormData(intake);
       const resultPath = root + '/r?lang=' + lang + '#' + key;
       try {
-        await call('', { website: form.get('website'), keyword: form.get('keyword'), region: form.get('country'), language: lang, intentOverride: form.get('intent'), pricingSource: form.get('pricing-source') });
+        await call('', { website: form.get('website'), keyword: form.get('keyword'), region: form.get('country'), language: lang, pricingSource: form.get('pricing-source'), manualAiEvidence: evidence(form) });
         location.assign(resultPath);
       } catch {
         status.textContent = labels[7];
@@ -96,7 +102,12 @@
     addText(card, 'h2', result.target.mode + ' · ' + result.target.url);
     const reason = result.brief.content_decision?.reason;
     if (reason) addText(card, 'p', reason);
-    const pricing = result.brief.missing_information;
+    // Why links are or are not in the brief (owner 2026-11-28): never a silent empty list.
+    for (const side of ['internal', 'external']) {
+      const research = result.brief.link_research?.[side];
+      if (research?.reason && research.state !== 'ok') addText(card, 'p', research.reason);
+    }
+        const pricing = result.brief.missing_information;
     if (pricing?.state === 'needs_input') addText(card, 'p', window.prewritePricingHelp);
     const adjust = element('intent-adjust');
     adjust.hidden = result.status === 'published';
@@ -124,7 +135,7 @@
       adjust.querySelector('button[type=submit]').disabled = true;
       try {
         await call('', { website: result.website, keyword: result.keyword, region: result.region, language: result.language,
-          intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value });
+          intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value, manualAiEvidence: evidence(new FormData(adjust)) });
         history.replaceState(null, '', root + '/r?lang=' + lang + '#' + key);
         location.reload();
       } catch {

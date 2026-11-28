@@ -183,6 +183,16 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     assert.doesNotMatch(JSON.stringify(standalone), /generation_usage|promptTokenCount/);
     const standaloneRow = (await db.query('SELECT client_id, tracker_page_id, published_at FROM prewrite_briefs WHERE keyword=$1', [publicKeyword])).rows[0];
     assert.deepEqual(standaloneRow, { client_id: null, tracker_page_id: null, published_at: null });
+    // Owner 2026-11-28: the brief says why links are (not) there, records the page reader and keeps no placeholder PAA.
+    const full = (await db.query('SELECT brief_json FROM prewrite_briefs WHERE keyword=$1', [publicKeyword])).rows[0].brief_json;
+    // The stubbed public run stops at the quality gate, but the link research is already saved on the brief.
+    assert.ok(full.link_research && full.link_research.internal, 'link research saved');
+    {
+      assert.match(String(full.link_research.internal.state), /^(?:ok|few|none_found)$/); assert.ok(full.link_research.internal.reason);
+      assert.match(String(full.link_research.external.state), /^(?:ok|none_verified)$/); assert.ok(full.link_research.external.reason);
+      assert.equal(typeof full.link_research.page_reader.enabled, 'boolean');
+      assert.ok((full.paa_questions || []).every(x => !/provided context|does not contain information/i.test(String(x.a || ''))));
+    }
     assert.equal(Number((await db.query('SELECT COUNT(*) FROM tracker_clients')).rows[0].count), beforePublic);
   } finally {
     app.kill(); try { await db.end(); } catch (e) {} fs.rmSync(built, { force: true }); fs.rmSync(capture, { force: true });

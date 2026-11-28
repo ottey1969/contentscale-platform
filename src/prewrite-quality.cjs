@@ -40,6 +40,7 @@ function serpFormats(rows) {
 
 function websitePage(url, html) {
   const titles = [];
+  let h1 = '';
   const visible = [];
   const pricePassages = [];
   const schema = new Set();
@@ -77,6 +78,7 @@ function websitePage(url, html) {
     if (['nav','footer','style','template','noscript','iframe'].includes(tag) || Object.hasOwn(a, 'hidden') || a['aria-hidden'] === 'true') return;
     collectType(a.itemtype);
     if (['title','h1','h2'].includes(tag)) titles.push(text(node).trim());
+    if (tag === 'h1' && !h1) h1 = text(node).replace(/\s+/g, ' ').trim();
     if (node.nodeName === '#text') visible.push(node.value);
     if (tag === 'form') form = true;
     if (inForm && urlInput(node)) websiteInput = true;
@@ -99,7 +101,7 @@ function websitePage(url, html) {
     if (explicitAmount.test(passage)) pricePolicy = { status: 'published_amount', passage: passage.trim() };
     else if (!pricePolicy && quote.test(passage)) pricePolicy = { status: 'on_request', passage: passage.trim() };
   }
-  return { url, heading, type: tool.test(heading) && ((form && websiteInput) || pairedControls) ? 'interactive_tool' : service.test(heading) ? 'service' : 'content',
+  return { url, heading, h1, type: tool.test(heading) && ((form && websiteInput) || pairedControls) ? 'interactive_tool' : service.test(heading) ? 'service' : 'content',
     schema: [...schema], pricing: pricePolicy, text: body.slice(0, 3200) };
 }
 
@@ -211,12 +213,28 @@ function prewritePublicationBlockers(brief) {
   return blockers;
 }
 
+// A model that runs out of characters stops mid-phrase: on a preposition, article or conjunction, or on "and doing." /
+// "& Verbeter" with nothing after it (owner 2026-11-28: "Strategies for", "and achieving.", "Direct & Verbeter").
+const dangling = new Set(['a','an','the','for','and','or','of','to','in','on','at','with','by','from','into','your','our','their',
+  'een','de','het','voor','en','of','van','met','naar','op','in','je','jouw','uw','te','om','bij','door',
+  'un','una','el','la','los','las','de','del','y','o','para','con','por','en','tu','su','al','que']);
+function cutOff(text) {
+  const clean = String(text || '').trim().replace(/[.!?]+$/, '');
+  const parts = words(clean);
+  const last = parts[parts.length - 1] || '';
+  if (dangling.has(last)) return true;
+  // "… Direct & Verbeter": one word after "&" at the length where models get cut off (a short "Prijzen & Tarieven" is fine).
+  if (clean.length >= 50 && /&\s*[\p{L}]+$/u.test(clean)) return true;
+  const previous = parts[parts.length - 2] || '';
+  return ['and','or','en','of','y','o'].includes(previous) && /(?:ing|end|ando|iendo)$/.test(last) && /\.\s*$/.test(String(text).trim());
+}
+
 function metadataIssues(meta, topic, year) {
   const title = String(meta?.seo_title || '').trim();
   const description = String(meta?.meta_description || '').trim();
   const issues = [];
-  if (!title || title.length > 70 || /(?:…|\.\.\.|[-–—:])$/.test(title)) issues.push('seo_title_incomplete');
-  if (description.length < 55 || description.length > 170 || /(?:…|\.\.\.|[-–—:])$/.test(description)) issues.push('meta_description_incomplete');
+  if (!title || title.length > 70 || /(?:…|\.\.\.|[-–—:&])$/.test(title) || cutOff(title)) issues.push('seo_title_incomplete');
+  if (description.length < 55 || description.length > 170 || /(?:…|\.\.\.|[-–—:])$/.test(description) || cutOff(description)) issues.push('meta_description_incomplete');
   if (/\b20\d{2}\b/.test(topic) === false && [...(title + ' ' + description).matchAll(/\b20\d{2}\b/g)].some(match => Number(match[0]) < year)) issues.push('stale_year');
   const terms = topicWords(topic);
   if (terms.length && !terms.some(word => words(title).includes(word))) issues.push('seo_title_off_topic');
@@ -247,24 +265,109 @@ function verifiedSourceTargets(targets, captures) {
   });
 }
 
+// Questions are what people ask, never a claim made by the page (owner 2026-11-28: PAA questions were "removed claims").
+function isQuestionField(path, value) {
+  return typeof value === 'string' && /\?\s*$/.test(value) &&
+    /(?:^|\.)(?:q|question|primary_question)$|(?:^|\.)(?:secondary_questions|questions|paa_questions)\[\d+\]$/.test(String(path || ''));
+}
+// "The provided context does not contain information about …" is the model saying it has no answer: not an answer.
+const placeholderAnswer = /\b(?:(?:the\s+)?(?:provided\s+)?context|(?:de\s+)?(?:aangeleverde\s+|gegeven\s+)?context|(?:el\s+)?contexto(?:\s+proporcionado)?)\b[^.]{0,40}\b(?:does\s+not|doesn't|did\s+not|bevat\s+geen|geeft\s+geen|no\s+(?:contiene|especifica|proporciona|ofrece))\b|\bthe context does not specify\b/i;
+function cleanPaa(list) {
+  return (Array.isArray(list) ? list : []).filter(item => item && typeof item.q === 'string' && item.q.trim() &&
+    !(typeof item.a === 'string' && placeholderAnswer.test(item.a)) && !(typeof item.a === 'string' && !item.a.trim()));
+}
+
+// Same site: equal registrable domain, so a scanner on app.example.com is the own site of www.example.com.
+const multiPartSuffix = /^(?:co|com|org|net|gov|ac|edu)$/;
+function siteOf(value) {
+  let host;
+  try { host = new URL(value).hostname.toLowerCase().replace(/\.$/, ''); } catch { return ''; }
+  const labels = host.split('.');
+  const keep = labels.length >= 3 && labels[labels.length - 1].length === 2 && multiPartSuffix.test(labels[labels.length - 2]) ? 3 : 2;
+  return labels.slice(-keep).join('.');
+}
+function sameSite(a, b) {
+  const one = siteOf(a);
+  return Boolean(one) && one === siteOf(b);
+}
+
+// Internal links from pages that were actually read (owner 2026-11-28: an empty list is not an answer). A page counts when
+// it shares a topic word (stem) with the search, or is the own tool or service for it. Never the target itself.
+const stop = new Set(['how','can','what','why','when','who','which','with','the','and','for','you','your','are','does','make','get',
+  'hoe','wat','waarom','wanneer','kan','een','het','voor','met','mijn','jouw','van','zijn','wordt',
+  'como','que','por','para','con','los','las','del','una','mas','puedo']);
+const stem = word => word.replace(/(?:ings?|ers?|es|s|ing|en|e)$/,'').slice(0, 6);
+const stems = text => new Set(words(text).filter(word => word.length >= 3 && !stop.has(word)).map(stem).filter(word => word.length >= 3));
+function suggestInternalLinks(targets, pages, topic, target, { min = 3, max = 6 } = {}) {
+  const chosen = relevantInternalLinks(Array.isArray(targets) ? targets : [], pages, topic, target);
+  const seen = new Set(chosen.map(link => link.link_to));
+  const want = stems(topic);
+  const wantsTool = /\b(?:check|checker|scan|scanner|tool|audit|comprobador|controle)\b/i.test(topic);
+  const scored = pages.filter(page => page.url !== target && !seen.has(page.url)).map(page => {
+    const shared = [...stems(page.heading)].filter(word => want.has(word));
+    const own = page.type !== 'content' && (wantsTool ? page.type === 'interactive_tool' : true) && shared.length > 0 ||
+      (wantsTool && page.type === 'interactive_tool' && stems(page.heading).size > 0 && /\b(?:seo|content|website|site|pagina|página)\b/i.test(page.heading));
+    return { page, shared, own };
+  }).filter(item => item.own || item.shared.length > 0)
+    .sort((a, b) => (b.own - a.own) || (b.shared.length - a.shared.length));
+  for (const { page, shared, own } of scored) {
+    if (chosen.length >= max) break;
+    const anchor = String(page.h1 || page.heading || '').replace(/\s+/g, ' ').trim().split(' ').slice(0, 9).join(' ');
+    if (!anchor) continue;
+    chosen.push({ link_to: page.url, anchor_text: anchor, reason: own ? 'Own ' + (page.type === 'interactive_tool' ? 'tool' : 'service') + ' for this search' : 'Shares the topic: ' + shared.join(', ') });
+    seen.add(page.url);
+  }
+  return chosen.slice(0, max);
+}
+function linkResearch({ sitemapUrls = 0, pagesRead = 0, internal = [], external = [], externalCandidates = 0 } = {}) {
+  const count = internal.length;
+  return {
+    internal: { state: count >= 3 ? 'ok' : count ? 'few' : 'none_found', count, sitemap_urls: sitemapUrls, pages_read: pagesRead,
+      reason: count >= 3 ? 'Relevant own pages were read and checked.' : sitemapUrls === 0
+        ? 'No sitemap could be read, so only ' + pagesRead + ' page(s) of the site were checked. Add internal links by hand.'
+        : 'Read ' + pagesRead + ' of ' + sitemapUrls + ' sitemap pages; fewer than three share this topic. Add internal links by hand.' },
+    external: { state: external.length ? 'ok' : 'none_verified', count: external.length, candidates: externalCandidates,
+      reason: external.length ? 'Each external link was verified on its source page.'
+        : 'No primary source was verified: an external link is kept only when its claim is on that page (government, standards body, official documentation, never a competitor). Add one only after checking it.' }
+  };
+}
+
 const writerFields = new Set(['keyword','language','search_intent','content_decision','meta_package','ai_answer','opening_passage',
   'definitive_outline','page_blueprint','fact_safety','internal_link_targets','external_link_targets','surgical_changes',
-  'preserve_sections','action_plan','quick_facts','paa_questions','conclusion','first_party_offers','schema_advice','missing_information','metadata_review','cannibalization_review']);
+  'preserve_sections','action_plan','quick_facts','paa_questions','conclusion','first_party_offers','schema_advice','missing_information','metadata_review','cannibalization_review',
+  'entity_strategy','ai_systems_analysis','aio_citation_gap','ai_overview_citation_strategy','link_research']);
 function writerBrief(brief) {
   const ownUrl = brief.website_evidence?.origin || brief.first_party_offers?.[0]?.url || brief.content_decision?.closest_existing_url;
   const sites = competitorSites({ competitorTable: brief.competitor_table, ownUrl });
   const domains = [...sites].filter(domain => isCompetitorLink('https://' + domain, sites));
   const names = (brief.competitor_table || []).filter(entry => domains.some(domain => fold(entry.domain).endsWith(domain)))
-    .map(entry => fold(entry.company_or_publisher)).filter(name => name.length >= 5);
-  const hasCompetitor = value => [...domains, ...names].some(name => fold(value).includes(name)) ||
-    (value.match(/https?:\/\/[^\s<>()]+/gi) || []).some(url => isCompetitorLink(url, sites));
+    .map(entry => String(entry.company_or_publisher || '').trim()).filter(name => name.length >= 4);
+  const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const mention = new RegExp('(?:' + [...domains, ...domains.map(domain => domain.replace(/\.[^.]+$/, '')).filter(stem => stem.length >= 4), ...names]
+    .map(escape).sort((a, b) => b.length - a.length).join('|') + ')', 'gi');
+  const competitorUrl = value => typeof value === 'string' && /^https?:\/\//i.test(value.trim()) && isCompetitorLink(value.trim(), sites);
+  // Research stays useful for the writer: the competitor's name and links are taken out, the finding stays (owner 2026-11-28).
+  const anonymize = value => {
+    let text = value.replace(/https?:\/\/[^\s<>()"]+/gi, url => isCompetitorLink(url.replace(/[.,;:)]+$/, ''), sites) ? '' : url);
+    if (domains.length || names.length) text = text.replace(mention, 'a ranking page');
+    return text.replace(/\s+([.,;:])/g, '$1').replace(/\s{2,}/g, ' ').trim();
+  };
   function safe(value) {
-    if (typeof value === 'string' && hasCompetitor(value)) return undefined;
-    if (Array.isArray(value)) return value.map(safe).filter(item => item !== undefined);
-    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, safe(child)]).filter(([, child]) => child !== undefined));
+    if (typeof value === 'string') return anonymize(value);
+    if (Array.isArray(value)) return value.map(safe).filter(item => item !== undefined && item !== '');
+    if (value && typeof value === 'object') {
+      if (['exact_url', 'url', 'link_to', 'source_url'].some(key => competitorUrl(value[key]))) return undefined;
+      return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, safe(child)]).filter(([, child]) => child !== undefined));
+    }
     return value;
   }
-  return safe(Object.fromEntries(Object.entries(brief).filter(([key]) => writerFields.has(key))));
+  const writer = safe(Object.fromEntries(Object.entries(brief).filter(([key]) => writerFields.has(key))));
+  const gaps = (Array.isArray(brief.competitor_table) ? brief.competitor_table : []).map((entry, index) => ({
+    position: Number(entry?.rank) || index + 1,
+    has: safe(String(entry?.what_they_have || '')), gap: safe(String(entry?.the_gap || '')), add: safe(String(entry?.what_to_add || ''))
+  })).filter(entry => entry.gap || entry.add);
+  if (gaps.length) writer.competition_gaps = gaps;
+  return writer;
 }
 
 function googleObservation(evidence, searchAnswerBox) {
@@ -313,5 +416,6 @@ function geminiUsage(model, response) {
 module.exports = {
   serpFormats, websitePage, firstPartyOffers, contentMatch, pricingEvidenceUrl, missingInformation, repairPricingDraft, alignOpening, overlappingPlan,
   prewritePublicationBlockers, metadataIssues, schemaAdvice, relevantInternalLinks, verifiedSourceTargets, writerBrief, googleObservation, aiObservations,
+  cutOff, isQuestionField, cleanPaa, sameSite, siteOf, suggestInternalLinks, linkResearch,
   selectIntent, zeroThinkingModel, geminiUsage
 };
