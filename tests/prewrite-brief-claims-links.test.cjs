@@ -70,5 +70,7 @@ test('readable brief: per AI system "what it takes to be cited" from its citatio
   const text=await box.innerText();
   assert.match(text,/To be cited by Claude, the page needs:\s*\n?\s*Explain the limits of free versions\./);
   assert.ok(text.includes('List what is analysed on-page.'));
+  // Owner 2026-11-28 (review of #628): one list per system, not a second copy of the same needs.
+  for(const need of ['Explain the limits of free versions.','List what is analysed on-page.'])assert.equal(text.split(need).length-1,1,need+' shown once');
  }finally{await browser.close();srv.close()}
 });
