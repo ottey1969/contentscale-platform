@@ -2020,6 +2020,8 @@ app.use(function(req, res, next) {
   next();
 });
 
+// One consent-aware chat with Ottmar on every public page (owner 2026-11-28); not on admin, owner or internal pages.
+const _publicChat=require('./public-chat.cjs');
 // ── Global badge-loader injection ────────────────────────────────────────────
 // Injects badge-loader.js into every HTML page served by this server
 app.use((req, res, next) => {
@@ -2062,6 +2064,7 @@ body = body.slice(0, lastIdx) +
 body.slice(lastIdx + 7);
 }
 }
+if (typeof body === 'string' && _publicChat.shouldInjectChat(req.path||'') && res.getHeader('Content-Type')?.includes('text/html')) body = _publicChat.injectChat(body);
 return origSend(body);
 };
 next();
