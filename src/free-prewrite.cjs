@@ -77,7 +77,7 @@ const readableTexts = {
     links: 'Link to these own pages', external: 'External sources (verified)', entities: 'Entities', core: 'Core: use explicitly', secondary: 'Secondary: where relevant', supporting: 'Supporting: optional', relations: 'How they relate',
     questions: 'Questions to answer on the page', faqIdeas: 'More FAQ ideas', eeat: 'Evidence and trust (E-E-A-T)', trust: 'Trust signals', experience: 'Experience to include', leads: 'Source leads from AI answers: not verified, check before use',
     balance: 'Balanced view', limits: 'Limitations', notFor: 'Not for', compare: 'Comparisons', useCases: 'Use cases', conclusion: 'Conclusion', recap: 'Recap', outlook: 'Outlook', recommendation: 'Recommendation',
-    verify: 'Check before you write it down', plan: 'Steps' },
+    verify: 'Check before you write it down', plan: 'Steps', noOfficial: 'Fewer than 2 official sources were found. Add an official source (government, standards body, official documentation) before you state a fact that needs one.' },
   nl: { intro: 'De brief in gewone woorden, per onderwerp, voor jou en voor een schrijver of redacteur. Kopieer brief en Download hieronder geven de volledige brief, die ook een AI kan gebruiken.',
     decision: 'Wat te doen', create: 'Nieuwe pagina', expand: 'Bestaande pagina uitbreiden', page: 'Pagina', h1: 'H1 (hoofdkop)', title: 'SEO-titel', description: 'Metabeschrijving', slug: 'Adres',
     intent: 'Zoekintentie', opening: 'Begin de pagina met dit antwoord', takeaways: 'Belangrijkste punten', who: 'Voor wie', why: 'Waarom het ertoe doet', facts: 'Korte feiten',
@@ -87,7 +87,7 @@ const readableTexts = {
     links: 'Link naar deze eigen pagina\'s', external: 'Externe bronnen (gecontroleerd)', entities: 'Entiteiten', core: 'Kern: expliciet gebruiken', secondary: 'Secundair: waar relevant', supporting: 'Ondersteunend: optioneel', relations: 'Hoe ze samenhangen',
     questions: 'Vragen die de pagina beantwoordt', faqIdeas: 'Meer FAQ-ideeën', eeat: 'Bewijs en vertrouwen (E-E-A-T)', trust: 'Vertrouwenssignalen', experience: 'Ervaring om op te nemen', leads: 'Bronnen uit AI-antwoorden: niet gecontroleerd, eerst nakijken',
     balance: 'Eerlijk beeld', limits: 'Beperkingen', notFor: 'Niet voor', compare: 'Vergelijkingen', useCases: 'Toepassingen', conclusion: 'Conclusie', recap: 'Samenvatting', outlook: 'Vooruitblik', recommendation: 'Aanbeveling',
-    verify: 'Controleer dit voordat je het opschrijft', plan: 'Stappen' },
+    verify: 'Controleer dit voordat je het opschrijft', plan: 'Stappen', noOfficial: 'Er zijn minder dan 2 officiële bronnen gevonden. Voeg een officiële bron toe (overheid, norminstantie, officiële documentatie) voordat je een feit noemt dat er een nodig heeft.' },
   es: { intro: 'El brief en palabras sencillas, un tema por bloque, para ti y para un redactor o editor. Copiar brief y Descargar abajo dan el brief completo, que también puede usar una IA.',
     decision: 'Qué hacer', create: 'Página nueva', expand: 'Ampliar la página existente', page: 'Página', h1: 'H1 (título principal)', title: 'Título SEO', description: 'Meta descripción', slug: 'Dirección',
     intent: 'Intención de búsqueda', opening: 'Empieza la página con esta respuesta', takeaways: 'Puntos clave', who: 'Para quién', why: 'Por qué importa', facts: 'Datos rápidos',
@@ -97,7 +97,7 @@ const readableTexts = {
     links: 'Enlaza a estas páginas propias', external: 'Fuentes externas (verificadas)', entities: 'Entidades', core: 'Núcleo: usar explícitamente', secondary: 'Secundarias: donde encajen', supporting: 'De apoyo: opcional', relations: 'Cómo se relacionan',
     questions: 'Preguntas que responde la página', faqIdeas: 'Más ideas para FAQ', eeat: 'Evidencia y confianza (E-E-A-T)', trust: 'Señales de confianza', experience: 'Experiencia a incluir', leads: 'Fuentes de respuestas de IA: sin verificar, revísalas antes',
     balance: 'Visión equilibrada', limits: 'Limitaciones', notFor: 'No es para', compare: 'Comparaciones', useCases: 'Casos de uso', conclusion: 'Conclusión', recap: 'Resumen', outlook: 'Perspectiva', recommendation: 'Recomendación',
-    verify: 'Comprueba esto antes de escribirlo', plan: 'Pasos' }
+    verify: 'Comprueba esto antes de escribirlo', plan: 'Pasos', noOfficial: 'Se encontraron menos de 2 fuentes oficiales. Añade una fuente oficial (administración, organismo de normalización, documentación oficial) antes de afirmar un dato que la necesite.' }
 };
 // A brief that was made but did not pass the quality check (owner 2026-11-28: "WAAR IS DE ZICHTBARE LEESBARE SECTIE … WAAROM?").
 // The brief is shown in plain words with the reason; it cannot be approved until a corrected brief passes.

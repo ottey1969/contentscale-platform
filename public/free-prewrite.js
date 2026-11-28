@@ -326,7 +326,9 @@
     if (uses.length) { section(t.useCases); list(uses.map(u => [u.audience, u.scenario].filter(Boolean).join(': ') + (u.benefit ? ' → ' + u.benefit : ''))); }
     const c = b.conclusion || {};
     if (str(c.recap) || str(c.outlook) || str(c.recommendation)) { section(t.conclusion); pairs([[t.recap, str(c.recap)], [t.outlook, str(c.outlook)], [t.recommendation, str(c.recommendation)]]); }
-    const verify = arr(b.fact_safety?.verify_first).map(textOf);
+    // A named quality warning (owner 2026-11-28): fewer than 2 official sources no longer fails the brief, but is said here.
+    const warnings = arr(b.ai_quality_check?.quality_warnings).includes('official_sources') && t.noOfficial ? [t.noOfficial] : [];
+    const verify = [...warnings, ...arr(b.fact_safety?.verify_first).map(textOf)];
     if (verify.length) { section(t.verify); list(verify); }
     const plan = arr(b.action_plan).map(x => x && x.action).filter(Boolean);
     if (plan.length) { section(t.plan); list(plan, true); }
