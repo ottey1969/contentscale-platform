@@ -100,7 +100,7 @@
         field.dispatchEvent(new Event('input', { bubbles: true }));
         note.textContent = [body.provider, body.note].filter(Boolean).join(' · ');
       } catch (error) {
-        note.textContent = (t[4] || 'Could not fetch') + ' (' + error.message + ')';
+        note.textContent = (t[4] || 'Could not fetch') + ' (' + error.message + '). ' + (t[7] || '');
       } finally { busy(button, false); }
     }
     form.querySelectorAll('.ai-fetch').forEach(button => button.addEventListener('click', () => one(button)));
