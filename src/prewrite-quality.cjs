@@ -332,6 +332,22 @@ function cutOff(text) {
   return ['and','or','en','of','y','o'].includes(previous) && /(?:ing|end|ando|iendo)$/.test(last) && /\.\s*$/.test(String(text).trim());
 }
 
+// Unverified numbers in any page language (owner 2026-11-29: "más de 100 señales críticas" passed the English-only check).
+const QUANTITY = String.raw`(?:more\s+than|over|up\s+to|at\s+least|más\s+de|hasta|al\s+menos|meer\s+dan|ruim|tot\s+wel|minstens|ten\s+minste)`;
+const quantityRe = new RegExp(String.raw`(?<![\p{L}\p{N}])` + QUANTITY + String.raw`\s+\d[\d.,]*\s*\p{L}`, 'iu');
+const plusRe = /(?<![\p{L}\p{N}])\d[\d.,]*\s*\+\s*\p{L}/u;
+const countedRe = /(?<![\p{L}\p{N}-])\d[\d.,]*\s+(?:clientes?|empresas?|proyectos?|casos?|sitios(?:\s+web)?|negocios?|klanten|bedrijven|projecten|websites?|sites?|clients?|customers?|businesses?|projects?|años|jaar|jaren|years?)(?![\p{L}])/iu;
+function metricRiskAnyLanguage(text) {
+  const value = String(text || '');
+  return quantityRe.test(value) || plusRe.test(value) || countedRe.test(value);
+}
+// "[Tu Marca]", "[Your Brand]": a fill-in placeholder, never page text.
+const placeholderRe = /\[[^\]\n]{2,40}\]/;
+function dropPlaceholders(text) {
+  return String(text || '').replace(/\s*(?:[|·:\-–—]|\b(?:con|with|met|de|del|van|of|by|por|door)\b)?\s*\[[^\]\n]{2,40}\]/giu, '')
+    .replace(/\s{2,}/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
+}
+
 function metadataIssues(meta, topic, year) {
   const title = String(meta?.seo_title || '').trim();
   const description = String(meta?.meta_description || '').trim();
@@ -339,6 +355,7 @@ function metadataIssues(meta, topic, year) {
   if (!title || title.length > 70 || /(?:…|\.\.\.|[-–—:&])$/.test(title) || cutOff(title)) issues.push('seo_title_incomplete');
   if (description.length < 55 || description.length > 170 || /(?:…|\.\.\.|[-–—:])$/.test(description) || cutOff(description)) issues.push('meta_description_incomplete');
   if (/\b20\d{2}\b/.test(topic) === false && [...(title + ' ' + description).matchAll(/\b20\d{2}\b/g)].some(match => Number(match[0]) < year)) issues.push('stale_year');
+  if ([title, description, String(meta?.h1 || '')].some(text => placeholderRe.test(text))) issues.push('placeholder');
   const terms = topicWords(topic);
   if (terms.length && !terms.some(word => words(title).includes(word))) issues.push('seo_title_off_topic');
   return issues;
@@ -348,6 +365,7 @@ function metadataIssues(meta, topic, year) {
 // this year; a meta description that stops mid-phrase ends at its last complete sentence, if that keeps 55+ characters.
 function repairMetadata(meta, topic, year) {
   if (!meta || typeof meta !== 'object') return meta;
+  for (const key of ['seo_title', 'meta_description', 'h1']) if (typeof meta[key] === 'string' && placeholderRe.test(meta[key])) meta[key] = dropPlaceholders(meta[key]);
   if (!/\b20\d{2}\b/.test(String(topic || ''))) {
     for (const key of ['seo_title', 'meta_description', 'h1']) {
       if (typeof meta[key] === 'string') meta[key] = meta[key].replace(/\b20\d{2}\b/g, found => Number(found) < year ? String(year) : found);
@@ -421,12 +439,43 @@ const stop = new Set(['how','can','what','why','when','who','which','with','the'
   'como','que','por','para','con','los','las','del','una','mas','puedo']);
 const stem = word => word.replace(/(?:ings?|ers?|es|s|ing|en|e)$/,'').slice(0, 6);
 const stems = text => new Set(words(text).filter(word => word.length >= 3 && !stop.has(word)).map(stem).filter(word => word.length >= 3));
-function suggestInternalLinks(targets, pages, topic, target, { min = 3, max = 6 } = {}) {
-  const chosen = relevantInternalLinks(Array.isArray(targets) ? targets : [], pages, topic, target);
+// An own page read for the brief. A redirect inside the same site is followed (owner 2026-11-29: app.contentscale.site, the
+// own SEO checker, was dropped on a redirect, so the brief did not know the tool exists); the page is the final address.
+function ownPageFromRead(url, page, isBotCheck = () => false) {
+  if (!page || page.status !== 200 || page.truncated || isBotCheck(page.html)) return null;
+  const finalUrl = page.final_url || url;
+  if (!sameSite(finalUrl, url)) return null;
+  return websitePage(finalUrl, page.html);
+}
+// The market of a page: an es./nl./en. subdomain or an /es/ /nl/ /en/ first path segment; '' is the site's default market.
+function marketOfUrl(value) {
+  let url;
+  try { url = new URL(String(value)); } catch { return ''; }
+  const labels = url.hostname.toLowerCase().split('.');
+  if (labels.length > 2 && ['es', 'nl', 'en'].includes(labels[0])) return labels[0];
+  const segment = url.pathname.toLowerCase().split('/')[1] || '';
+  return ['es', 'nl', 'en'].includes(segment) ? segment : '';
+}
+// A whole anchor: the heading up to its first ":" "|" or dash, and never ending on "y", "en", "the"… (owner 2026-11-29).
+function wholeAnchor(heading) {
+  let text = String(heading || '').replace(/\s+/g, ' ').trim();
+  const head = text.split(/\s*(?::|\||—|–|\s-\s)\s*/)[0];
+  if (head && head.split(' ').length >= 2) text = head;
+  let parts = text.split(' ');
+  if (parts.length > 9) parts = parts.slice(0, 9);
+  while (parts.length > 2 && dangling.has(parts[parts.length - 1].toLowerCase().replace(/[^\p{L}]/gu, ''))) parts.pop();
+  return parts.join(' ').replace(/[,;:]+$/, '');
+}
+function suggestInternalLinks(targets, pages, topic, target, { min = 3, max = 6, market } = {}) {
+  // Content from another market is not linked (a Spanish page does not send readers to the Dutch homepage); the own tool may be.
+  const targetMarket = typeof market === 'string' ? market : /^https?:/i.test(String(target || '')) ? marketOfUrl(target) : null;
+  const typeOf = url => (pages.find(page => page.url === url) || {}).type;
+  const sameMarket = (url, type) => targetMarket === null || type === 'interactive_tool' || marketOfUrl(url) === targetMarket;
+  const chosen = relevantInternalLinks(Array.isArray(targets) ? targets : [], pages, topic, target).filter(link => sameMarket(link.link_to, typeOf(link.link_to)));
   const seen = new Set(chosen.map(link => link.link_to));
   const want = stems(topic);
   const wantsTool = /\b(?:check|checker|scan|scanner|tool|audit|comprobador|controle)\b/i.test(topic);
-  const scored = pages.filter(page => page.url !== target && !seen.has(page.url)).map(page => {
+  const scored = pages.filter(page => page.url !== target && !seen.has(page.url) && sameMarket(page.url, page.type)).map(page => {
     const shared = [...stems(page.heading)].filter(word => want.has(word));
     const own = page.type !== 'content' && (wantsTool ? page.type === 'interactive_tool' : true) && shared.length > 0 ||
       (wantsTool && page.type === 'interactive_tool' && stems(page.heading).size > 0 && /\b(?:seo|content|website|site|pagina|página)\b/i.test(page.heading));
@@ -435,7 +484,7 @@ function suggestInternalLinks(targets, pages, topic, target, { min = 3, max = 6 
     .sort((a, b) => (b.own - a.own) || (b.shared.length - a.shared.length));
   for (const { page, shared, own } of scored) {
     if (chosen.length >= max) break;
-    const anchor = String(page.h1 || page.heading || '').replace(/\s+/g, ' ').trim().split(' ').slice(0, 9).join(' ');
+    const anchor = wholeAnchor(page.h1 || page.heading || '');
     if (!anchor) continue;
     chosen.push({ link_to: page.url, anchor_text: anchor, reason: own ? 'Own ' + (page.type === 'interactive_tool' ? 'tool' : 'service') + ' for this search' : 'Shares the topic: ' + shared.join(', ') });
     seen.add(page.url);
@@ -536,7 +585,7 @@ function geminiUsage(model, response) {
     usage_reported: Boolean(response?.usageMetadata), billing_verified: false };
 }
 
-module.exports = { repairMetadata,
+module.exports = { ownPageFromRead, metricRiskAnyLanguage, marketOfUrl, wholeAnchor, repairMetadata,
   serpFormats, websitePage, firstPartyOffers, contentMatch, pricingEvidenceUrl, missingInformation, repairPricingDraft, alignOpening, overlappingPlan,
   prewritePublicationBlockers, metadataIssues, schemaAdvice, relevantInternalLinks, verifiedSourceTargets, writerBrief, googleObservation, aiObservations,
   cutOff, isQuestionField, cleanPaa, sameSite, siteOf, suggestInternalLinks, linkResearch,

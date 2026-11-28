@@ -283,6 +283,9 @@
           addText(box, 'p', t.ownCited + ': ' + (cited ? t.yes : t.no));
           const sources = arr(x.citation_sources).map(s => [s.source_name, s.exact_url].filter(Boolean).join(' · ')).filter(Boolean);
           if (sources.length) { addText(box, 'p', t.sources + ':'); list(sources); }
+        // What this system needs to cite the page (citation_needs from the brief).
+        const needs = arr(x.citation_needs).map(textOf).filter(Boolean);
+        if (needs.length) { addText(box, 'p', (t.citedBy || '').replace('§', names[key].split(' /')[0])).className = 'cited-by'; list(needs); }
         }
         const needs = [...(checked ? arr(x.citation_needs).map(textOf) : []), ...extra].filter(Boolean);
         if (needs.length) { addText(box, 'p', t.aiGap + ':').className = 'label'; list(needs); }
