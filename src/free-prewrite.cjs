@@ -31,10 +31,18 @@ const aiLabels = {
   nl: ['AI-antwoorden (optioneel)', 'Stel de vraag in elk AI-systeem en plak het volledige antwoord met de bronnen. Zonder antwoorden wordt Perplexity automatisch gecontroleerd.', 'Vraag die je aan de AI-systemen stelde', 'Welke Google-bron?', 'Niet gecontroleerd', 'Google AI-overzicht', 'Gemini', 'Geen AI-overzicht getoond', 'Google AI-overzicht of Gemini', 'ChatGPT Search', 'Perplexity', 'Claude', 'Microsoft Copilot'],
   es: ['Respuestas de IA (opcional)', 'Haz la pregunta en cada sistema de IA y pega la respuesta completa con sus fuentes. Sin respuestas, Perplexity se comprueba automáticamente.', 'Pregunta que hiciste a los sistemas de IA', '¿Qué fuente de Google?', 'No comprobado', 'Google AI Overview', 'Gemini', 'No se mostró AI Overview', 'Google AI Overview o Gemini', 'ChatGPT Search', 'Perplexity', 'Claude', 'Microsoft Copilot']
 };
+// The exact research prompt of the Tracker Pre-Write, filled in for the question, ready to copy (owner 2026-11-28).
+const promptLabels = {
+  en: ['Prompt to paste into each AI system', 'Copy prompt', 'Copied. Paste it into each AI system and paste the full answer below.', 'Select the text and copy it with Ctrl+C / Cmd+C.'],
+  nl: ['Prompt om in elk AI-systeem te plakken', 'Kopieer prompt', 'Gekopieerd. Plak hem in elk AI-systeem en plak het volledige antwoord hieronder.', 'Selecteer de tekst en kopieer met Ctrl+C / Cmd+C.'],
+  es: ['Prompt para pegar en cada sistema de IA', 'Copiar prompt', 'Copiado. Pégalo en cada sistema de IA y pega la respuesta completa abajo.', 'Selecciona el texto y cópialo con Ctrl+C / Cmd+C.']
+};
 function aiFields(lang) {
   const l = aiLabels[lang];
+  const p = promptLabels[lang];
   const sources = ['', 'ai_overview', 'gemini', 'no_ai_overview'].map((value, index) => `<option value="${value}">${l[4 + index]}</option>`).join('');
   return `<fieldset class="ai"><legend>${l[0]}</legend><p>${l[1]}</p><label>${l[2]}<input name="ai-question" maxlength="300"></label>
+    <label>${p[0]}<textarea class="ai-prompt" rows="12" readonly></textarea></label><p><button type="button" class="ai-prompt-copy">${p[1]}</button> <span class="ai-prompt-status" role="status"></span></p>
     <label>${l[3]}<select name="google-source">${sources}</select></label>
     ${aiEngines.map((engine, index) => `<label>${l[8 + index]}<textarea name="ai-${engine}" rows="4" maxlength="12000"></textarea></label>`).join('')}</fieldset>`;
 }
@@ -89,11 +97,12 @@ function page(lang, result) {
     <label>${t[2]}<input name="keyword" maxlength="300" required></label>
     <label>${limitTexts[lang][0]}<input name="email" type="email" maxlength="200" autocomplete="email" required></label><p class="note">${limitTexts[lang][1]}</p>
     <label>${t[3]}<input name="country" value="${{en:'US',nl:'NL',es:'ES'}[lang]}" pattern="[A-Za-z]{2}" maxlength="2" required></label>
-    ${priceInput}${aiFields(lang)}<button>${t[4]}</button></form><p id="status" role="status"></p>
+    ${priceInput}${aiFields(lang)}<button type="submit">${t[4]}</button></form><p id="status" role="status"></p>
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
     <style>#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
-    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};</script><script src="/free-prewrite.js" defer></script></body></html>`;
+    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};</script><script src="/prewrite-ai-answer-research.js" defer></script>
+    <script src="/free-prewrite.js" defer></script></body></html>`;
 }
 
 function view(row, strip) {

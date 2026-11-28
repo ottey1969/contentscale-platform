@@ -30,6 +30,27 @@
     return response.json();
   }
 
+  // The research prompt of the Tracker Pre-Write, filled in for the question (or the topic when the question is empty),
+  // so the owner only copies and pastes it into each AI system (owner 2026-11-28).
+  function wirePrompt(form, topic) {
+    if (!form) return;
+    const box = form.querySelector('.ai-prompt'), question = form.querySelector('[name=ai-question]');
+    const copy = form.querySelector('.ai-prompt-copy'), note = form.querySelector('.ai-prompt-status');
+    const lib = window.PrewriteAiAnswerResearch;
+    if (!box || !question || !lib || !lib.buildCustomerResearchPrompt) return;
+    const texts = window.prewritePromptTexts || [];
+    const update = () => { box.value = lib.buildCustomerResearchPrompt(question.value.trim() || topic()); };
+    question.addEventListener('input', update);
+    const keyword = form.querySelector('[name=keyword]');
+    if (keyword) keyword.addEventListener('input', update);
+    update();
+    form.__updatePrompt = update;
+    copy.addEventListener('click', async () => {
+      update();
+      try { await navigator.clipboard.writeText(box.value); note.textContent = texts[2] || 'Copied.'; }
+      catch { box.focus(); box.select(); note.textContent = texts[3] || ''; }
+    });
+  }
   // The five AI systems (owner 2026-11-28), sent with a new brief and with a correction afterwards.
   const evidence = form => ({
     ai_question: form.get('ai-question') || '', google_source: form.get('google-source') || '',
@@ -37,9 +58,10 @@
     claude: form.get('ai-claude') || '', copilot: form.get('ai-copilot') || ''
   });
   if (intake) {
+    wirePrompt(intake, () => (intake.querySelector('[name=keyword]').value || '').trim());
     intake.addEventListener('submit', async event => {
       event.preventDefault();
-      const submit = intake.querySelector('button');
+      const submit = intake.querySelector('button[type=submit]');
       submit.disabled = true;
       status.textContent = labels[6];
       if (!validKey(key)) {
@@ -134,6 +156,7 @@
     if (pricing?.state === 'needs_input') addText(card, 'p', window.prewritePricingHelp);
     const adjust = element('intent-adjust');
     adjust.hidden = result.status === 'published';
+    if (!adjust.__updatePrompt) wirePrompt(adjust, () => result.keyword || '');
     adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
     const repair = element('repair-pricing');
     repair.hidden = pricing?.state !== 'needs_input' || result.status !== 'open';

@@ -94,7 +94,7 @@ test('private public briefs in Chromium use the canonical publication history fo
       await page.locator('[name=website]').fill(site);
       await page.locator('[name=keyword]').fill(topic);
       await page.locator('[name=email]').fill('visitor-' + lang + '@new-prewrite.example');
-      await page.locator('#intake button').click();
+      await page.locator('#intake button[type=submit]').click();
       await page.locator('#decision h2').waitFor();
       return page;
     }
@@ -146,7 +146,7 @@ test('private public briefs in Chromium use the canonical publication history fo
         await again.locator('[name=website]').fill(site);
         await again.locator('[name=keyword]').fill('Planning again');
         await again.locator('[name=email]').fill('someone-else@new-prewrite.example');
-        await again.locator('#intake button').click();
+        await again.locator('#intake button[type=submit]').click();
         await again.waitForFunction(() => /Je hebt je gratis Pre-Write Brief voor deze week gebruikt\. Wacht tot .+ of laat Ottmar het voor je doen/.test(document.getElementById('status').textContent));
         assert.equal(new URL(again.url()).pathname, '/free-pre-write', 'no brief was started');
         await again.close();
