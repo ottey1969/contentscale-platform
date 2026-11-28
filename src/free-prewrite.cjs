@@ -6,6 +6,8 @@ const { parse } = require('parse5');
 const { validateUrl, fetchPublicGrowthHtml } = require('./growth-public-html-reader.cjs');
 const { isBotCheck } = require('./gsc-report/site-audit.cjs');
 const { resolveTarget, editorInstructions, registerRoutes } = require('./prewrite-implementation.cjs');
+const weeklyLimit = require('./free-weekly-limit.cjs');
+const { ownerSessionValid } = require('./owner-session.cjs');
 
 const ROOT = '/free-pre-write';
 const API = '/api/free-pre-write';
@@ -46,6 +48,20 @@ function manualEvidence(raw) {
   return out;
 }
 const intents = ['', 'informational', 'commercial', 'transactional', 'navigational'];
+// Owner 2026-11-28: one free brief per person per week, counted on the e-mail address (and the same browser or IP).
+const limitTexts = {
+  en: ['E-mail address', 'One free brief per person per week. Your e-mail is only used for this limit and is not stored as text.'],
+  nl: ['E-mailadres', 'Eén gratis brief per persoon per week. Je e-mailadres wordt alleen voor deze limiet gebruikt en niet als tekst opgeslagen.'],
+  es: ['Email', 'Un brief gratuito por persona y semana. Tu email solo se usa para este límite y no se guarda como texto.']
+};
+// The waiting page follows the real research step (owner 2026-11-28: "nu weet ik niet of het werkt of niet").
+const STEP_OF = { website: 1, start: 1, completion: 1, sitemap: 1, serp: 2, competitor_scrape: 3, gemini: 4, gemini_parse: 4,
+  quality_gate: 5, evidence_quality_ladder: 5, link_validation: 5, fact_safety: 5, finalize: 5, persistence: 5, complete: 5 };
+const stepTexts = {
+  en: ['Reading your website and sitemap', 'Checking Google results', 'Reading the pages that rank', 'Writing the brief with AI', 'Checking facts, links and quality', 'Step § of 5', 'Still working… this usually takes 1 to 3 minutes.'],
+  nl: ['Je website en sitemap lezen', 'Google-resultaten bekijken', 'De pagina’s lezen die goed scoren', 'De brief schrijven met AI', 'Feiten, links en kwaliteit controleren', 'Stap § van 5', 'Bezig… dit duurt meestal 1 tot 3 minuten.'],
+  es: ['Leyendo tu sitio web y sitemap', 'Revisando los resultados de Google', 'Leyendo las páginas que posicionan', 'Escribiendo el brief con IA', 'Comprobando datos, enlaces y calidad', 'Paso § de 5', 'Trabajando… suele tardar de 1 a 3 minutos.']
+};
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const credentials = req => /^Bearer ([a-f0-9]{64})$/.exec(req.get('authorization') || '')?.[1];
 
@@ -59,7 +75,11 @@ function page(lang, result) {
     es: ['URL pública de precios o presupuestos (opcional)', 'Añade una página pública con tus precios o con la indicación de que se ofrecen bajo consulta.', 'Reparar borrador con evidencia de precios']
   }[lang];
   const priceInput = `<label>${price[0]}<input name="pricing-source" type="url" maxlength="500"></label>`;
-  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p><section id="decision" hidden></section><form id="intent-adjust" hidden>${intent}${priceInput}${aiFields(lang)}<button type="submit">${labels[0]}</button> <button type="button" id="repair-pricing" hidden>${price[2]}</button></form>
+  const steps = stepTexts[lang];
+  const progress = `<section id="progress" hidden aria-live="polite"><div class="pulse" aria-hidden="true"><span></span><span></span><span></span></div>
+    <p id="progress-step" class="kicker"></p><ol id="progress-list">${steps.slice(0, 5).map(x => `<li>${x}</li>`).join('')}</ol>
+    <div class="bar" aria-hidden="true"><div id="progress-bar"></div></div><p id="progress-time" class="note">${steps[6]}</p></section>`;
+  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p>${progress}<section id="decision" hidden></section><form id="intent-adjust" hidden>${intent}${priceInput}${aiFields(lang)}<button type="submit">${labels[0]}</button> <button type="button" id="repair-pricing" hidden>${price[2]}</button></form>
     <section id="implementation" hidden><h2>${t[9]}</h2><textarea id="editor" rows="15" readonly></textarea><p><a id="download" download="pre-write-brief.txt">${t[9]}</a></p>
     <label>${t[11]}<textarea id="copy" rows="5" minlength="200" maxlength="12000"></textarea></label><button id="approve" type="button">${t[12]}</button>
     <label>${t[13]}<textarea id="report" rows="7" maxlength="16000"></textarea></label><button id="save" type="button">${t[14]}</button>
@@ -67,12 +87,13 @@ function page(lang, result) {
     <section id="history" hidden><h2>${t[10]}</h2><div id="entries"></div><details><summary>${t[0]}</summary><pre id="research"></pre></details></section>` :
     `<form id="intake"><label>${t[1]}<input name="website" type="url" placeholder="https://" maxlength="500" required></label>
     <label>${t[2]}<input name="keyword" maxlength="300" required></label>
+    <label>${limitTexts[lang][0]}<input name="email" type="email" maxlength="200" autocomplete="email" required></label><p class="note">${limitTexts[lang][1]}</p>
     <label>${t[3]}<input name="country" value="${{en:'US',nl:'NL',es:'ES'}[lang]}" pattern="[A-Za-z]{2}" maxlength="2" required></label>
     ${priceInput}${aiFields(lang)}<button>${t[4]}</button></form><p id="status" role="status"></p>
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
-    <style>body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
-    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};</script><script src="/free-prewrite.js" defer></script></body></html>`;
+    <style>#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
+    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};</script><script src="/free-prewrite.js" defer></script></body></html>`;
 }
 
 function view(row, strip) {
@@ -158,7 +179,35 @@ function publicBriefData(brief) {
 
 const defaultDiscover = site => discoverSite(site, { homeReader: require('./growth-free-firecrawl-reader.cjs').createFallbackReader({ module:'FREE_PREWRITE' }) });
 
-function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, discover = defaultDiscover, dailyLimit = 5, verification } = {}) {
+// The running step of a free brief, for the waiting page. Its own small table, so prewrite_briefs is not changed.
+const progressReady = new WeakMap();
+function ensureProgress(pool) {
+  if (!progressReady.has(pool)) progressReady.set(pool, pool.query(`CREATE TABLE IF NOT EXISTS free_prewrite_progress(
+    brief_id INTEGER PRIMARY KEY, progress JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`).catch(error => { progressReady.delete(pool); throw error; }));
+  return progressReady.get(pool);
+}
+async function saveProgress(pool, briefId, stage) {
+  if (!Object.hasOwn(STEP_OF, stage)) return;
+  try {
+    await ensureProgress(pool);
+    await pool.query(`INSERT INTO free_prewrite_progress(brief_id,progress,updated_at) VALUES($1,$2,NOW())
+      ON CONFLICT(brief_id) DO UPDATE SET progress=EXCLUDED.progress,updated_at=NOW()`, [briefId, { stage }]);
+  } catch { /* The waiting page falls back to the general message; research continues. */ }
+}
+async function readProgress(pool, row) {
+  let stage = 'website', elapsed = null;
+  try {
+    await ensureProgress(pool);
+    const found = (await pool.query(`SELECT p.progress, GREATEST(0, EXTRACT(EPOCH FROM (LOCALTIMESTAMP - b.created_at)))::int AS elapsed
+      FROM prewrite_briefs b LEFT JOIN free_prewrite_progress p ON p.brief_id=b.id WHERE b.id=$1`, [row.id])).rows[0];
+    stage = found?.progress?.stage || stage;
+    elapsed = Number.isFinite(found?.elapsed) ? found.elapsed : null;
+  } catch {}
+  return { stage, step: STEP_OF[stage] || 1, steps: 5, elapsed_seconds: elapsed };
+}
+
+function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, discover = defaultDiscover, dailyLimit = 5, verification,
+  perWeek = weeklyLimit.perWeek('FREE_PREWRITE') } = {}) {
   const privateHeaders = (req, res, next) => {
     res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer')
       .set('X-Robots-Tag', 'noindex').set('Content-Security-Policy', "frame-ancestors 'none'");
@@ -199,24 +248,50 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
         typeof region !== 'string' || !/^[a-z]{2}$/i.test(region) || typeof language !== 'string' || !Object.hasOwn(texts, language) || !intents.includes(intentOverride)) {
       return res.status(400).json({ success: false });
     }
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().slice(0, 200) : '';
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const revisionOf = typeof req.body?.revisionOf === 'string' && /^[a-f0-9]{64}$/.test(req.body.revisionOf) ? req.body.revisionOf : null;
+    if (email && !emailOk) return res.status(400).json({ success: false });
+    if (!emailOk && !revisionOf) return res.status(400).json({ success: false });
     if (!generate || dailyLimit < 1) return res.status(503).json({ success: false });
+    const owner = ownerSessionValid(req);
     let db;
     let row;
+    let weekly = null;
     try {
+      // The same private link sent twice is the same brief.
+      if ((await pool.query('SELECT id FROM prewrite_briefs WHERE public_access_hash=$1', [hash(key)])).rows[0]) return res.status(202).json({ success: true });
+      // One free brief per person per week. Correcting the intent of your own brief (revisionOf = its private key) is free,
+      // up to three times. The owner is not limited.
+      if (!owner && perWeek > 0) {
+        let rootRef = null;
+        if (revisionOf) {
+          const previous = (await pool.query('SELECT id,public_site,keyword FROM prewrite_briefs WHERE public_access_hash=$1 AND client_id IS NULL', [hash(revisionOf)])).rows[0];
+          if (previous && previous.public_site === site && previous.keyword === keyword.trim()) rootRef = 'prewrite:' + previous.id;
+        }
+        weekly = await weeklyLimit.reserve(pool, { tool: 'FREE_PREWRITE', id: weeklyLimit.identity(req, res, { email }), limit: perWeek, rootRef });
+        if (!weekly.ok) {
+          return res.status(429).json({ success: false, code: 'WEEKLY_LIMIT', retry_at: weekly.retry_at,
+            error: weeklyLimit.limitMessage('FREE_PREWRITE', weekly.limit, weekly.retry_at, language, { contactUrl: process.env.GROWTH_FREE_CONTACT_URL || '' }) });
+        }
+        if (!weekly.correction && !emailOk) { await weeklyLimit.refund(pool, weekly.usage_id); weekly = null; return res.status(400).json({ success: false }); }
+      }
       db = await pool.connect();
       await db.query('BEGIN');
       await db.query("SELECT pg_advisory_xact_lock(hashtext('free-prewrite-generation'))");
       const existing = (await db.query('SELECT id FROM prewrite_briefs WHERE public_access_hash=$1', [hash(key)])).rows[0];
       if (existing) {
         await db.query('COMMIT');
+        if (weekly) await weeklyLimit.refund(pool, weekly.usage_id).catch(() => {});
         return res.status(202).json({ success: true });
       }
       const { rows: [quota] } = await db.query(`SELECT COUNT(*) FILTER (
         WHERE created_at >= date_trunc('day', NOW() AT TIME ZONE 'UTC'))::int AS daily,
         COUNT(*) FILTER (WHERE status='generating' AND created_at >= NOW() - INTERVAL '15 minutes')::int AS active
         FROM prewrite_briefs WHERE public_access_hash IS NOT NULL`);
-      if (quota.daily >= dailyLimit || quota.active >= 2) {
+      if ((!owner && quota.daily >= dailyLimit) || quota.active >= 2) {
         await db.query('ROLLBACK');
+        if (weekly) await weeklyLimit.refund(pool, weekly.usage_id).catch(() => {});
         return res.status(429).json({ success: false });
       }
       row = (await db.query(`INSERT INTO prewrite_briefs (keyword,language,region,brief_json,status,public_site,public_access_hash)
@@ -224,20 +299,26 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       await db.query('COMMIT');
     } catch (error) {
       if (db) await db.query('ROLLBACK').catch(() => {});
+      if (weekly) await weeklyLimit.refund(pool, weekly.usage_id).catch(() => {});
       console.error('[free-prewrite]', error.code || error.name);
       return res.status(503).json({ success: false });
     } finally { db?.release(); }
+    if (weekly) await weeklyLimit.attach(pool, weekly.usage_id, 'prewrite:' + row.id).catch(() => {});
     res.status(202).json({ success: true });
+    const stage = name => saveProgress(pool, row.id, name);
     try {
+      await stage('website');
       const discovered = await discover(site);
       if (discovered.site !== site) {
         await pool.query("UPDATE prewrite_briefs SET public_site=$2 WHERE id=$1 AND status='generating'", [row.id, discovered.site]);
       }
-      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, sitemapUrls: discovered.sitemap_urls || 0, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride, pricingSource: priceSource, manualAiEvidence });
+      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, sitemapUrls: discovered.sitemap_urls || 0, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride, pricingSource: priceSource, manualAiEvidence, stage });
     } catch (error) {
       console.warn('[free-prewrite] generation failed', error.code || error.name);
     } finally {
-      await pool.query("UPDATE prewrite_briefs SET status='failed' WHERE id=$1 AND status='generating'", [row.id]).catch(() => {});
+      const failed = await pool.query("UPDATE prewrite_briefs SET status='failed' WHERE id=$1 AND status='generating'", [row.id]).catch(() => null);
+      // A brief that could not be made is given back.
+      if (failed?.rowCount && weekly) await weeklyLimit.refund(pool, weekly.usage_id).catch(() => {});
     }
   });
   app.get(API + '/result', async (req, res) => {
@@ -247,7 +328,8 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
         AND status='generating' AND created_at < NOW() - INTERVAL '15 minutes'`, [hash(credentials(req))]);
       const row = await lookup(req);
       if (!row) return res.status(404).json({ success: false });
-      res.json({ success: true, ...view(row, strip) });
+      const progress = row.status === 'generating' ? await readProgress(pool, row) : undefined;
+      res.json({ success: true, ...view(row, strip), ...(progress ? { progress } : {}) });
     } catch {
       res.status(503).json({ success: false });
     }

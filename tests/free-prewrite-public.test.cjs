@@ -52,6 +52,8 @@ test('private public briefs in Chromium use the canonical publication history fo
     const pricePage = '<h1>SEO advies en diensten</h1><p>Prijzen voor SEO advies op aanvraag.</p>';
     registerFreePrewrite(app, pool, {
       dailyLimit: 8,
+      // Seven briefs from one browser: the weekly free limit has its own test (free-weekly-limit.test.cjs).
+      perWeek: 0,
       discover: async () => ({ site, urls: [existingUrl] }),
       generate: async ({ id, keyword, intentOverride, pricingSource }) => {
         generationCalls++;
@@ -87,6 +89,7 @@ test('private public briefs in Chromium use the canonical publication history fo
       await page.goto(origin + '/free-pre-write?lang=' + lang);
       await page.locator('[name=website]').fill(site);
       await page.locator('[name=keyword]').fill(topic);
+      await page.locator('[name=email]').fill('visitor-' + lang + '@new-prewrite.example');
       await page.locator('#intake button').click();
       await page.locator('#decision h2').waitFor();
       return page;

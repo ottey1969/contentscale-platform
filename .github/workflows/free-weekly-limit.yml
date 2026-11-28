@@ -1,0 +1,52 @@
+name: Free tools weekly limit and owner overview
+# One free Growth check and one free Pre-Write Brief per person per week (e-mail, browser or IP); progress on the waiting
+# page; the owner-only overview. Real PostgreSQL for the limit, so concurrency and refunds are tested for real.
+on:
+  pull_request:
+    paths:
+      - 'src/free-weekly-limit.cjs'
+      - 'src/owner-session.cjs'
+      - 'src/owner-overview.cjs'
+      - 'src/free-prewrite.cjs'
+      - 'public/free-prewrite.js'
+      - 'src/growth-free/**'
+      - 'src/index.js'
+      - 'tests/free-weekly-limit.test.cjs'
+      - 'tests/owner-overview.test.cjs'
+      - '.github/workflows/free-weekly-limit.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/free-weekly-limit.cjs'
+      - 'src/owner-overview.cjs'
+      - 'src/free-prewrite.cjs'
+jobs:
+  free-weekly-limit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: free_limit_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U test -d free_limit_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (no browser download)
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci --ignore-scripts
+      - name: Weekly limit (Free Growth, Free Pre-Write), progress, owner overview
+        env:
+          PREWRITE_E2E_DATABASE_URL: postgres://test:test@127.0.0.1:5432/free_limit_test
+        run: node --test tests/free-weekly-limit.test.cjs tests/owner-overview.test.cjs tests/free-prewrite-parity.test.cjs
+      - name: Golden owner cases (AGENTS.md)
+        run: node --test tests/golden-owner-cases.test.cjs

@@ -28,7 +28,9 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
   const capture = path.join(require('node:os').tmpdir(), 'prewrite-e2e-gemini-' + process.pid + '.jsonl');
   fs.rmSync(capture, { force: true });
   const app = cp.spawn(process.execPath, ['--require', path.join(__dirname, 'staging-boot-no-egress.cjs'), '--require', path.join(__dirname, 'prewrite-e2e-gemini-stub.cjs'), built], {
-    env: { ...process.env, PORT: String(port), DATABASE_URL: DB, GEMINI_API_KEY: 'TEST-not-a-real-key', SERPAPI_KEY: 'TEST-not-a-real-key', PREWRITE_E2E_CAPTURE: capture, ENABLE_TRACKER_SCHEDULER: '0', ENABLE_BULK_WORKER: '0', NODE_ENV: 'test' } });
+    env: { ...process.env, PORT: String(port), DATABASE_URL: DB, GEMINI_API_KEY: 'TEST-not-a-real-key', SERPAPI_KEY: 'TEST-not-a-real-key', PREWRITE_E2E_CAPTURE: capture, ENABLE_TRACKER_SCHEDULER: '0', ENABLE_BULK_WORKER: '0', NODE_ENV: 'test',
+      // The weekly free limit has its own test; on a reused local database it would block a rerun from 127.0.0.1.
+      FREE_PREWRITE_PER_WEEK: '0', GROWTH_FREE_PER_WEEK: '0' } });
   app.stdout.on('data', d => { log += d; }); app.stderr.on('data', d => { log += d; });
   const db = new pg.Client({ connectionString: DB });
   try {
@@ -169,7 +171,7 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     const publicKeyword = 'TEST editorial planning for public briefs';
     const beforePublic = Number((await db.query('SELECT COUNT(*) FROM tracker_clients')).rows[0].count);
     const accepted = await fetch(base + '/api/free-pre-write', { method: 'POST', headers, body: JSON.stringify({
-      website: 'https://test-free-prewrite.example/', keyword: publicKeyword, language: 'en', region: 'US'
+      website: 'https://test-free-prewrite.example/', keyword: publicKeyword, language: 'en', region: 'US', email: 'public-brief@test-free-prewrite.example'
     }) });
     assert.equal(accepted.status, 202, await accepted.text());
     let standalone;

@@ -16,6 +16,8 @@ const aiGap=require('./ai-gap.cjs');
 const contacts=require('./contacts.cjs');
 const {FORM_TEXTS,FORM_LANGS,formLang}=require('./form-texts.cjs');
 const {translateError}=require('./error-texts.cjs');
+const weeklyLimit=require('../free-weekly-limit.cjs');
+const {ownerSessionValid}=require('../owner-session.cjs');
 const {readSearchLocation,locationError}=require('./search-location.cjs');
 const uiTexts=require('./ui-texts.cjs');
 const {buildContentPriorities}=require('./content-priorities.cjs');
@@ -85,6 +87,8 @@ function freeGrowthDefaults(env){
   authorImage:/^https:\/\//.test(env.GROWTH_FREE_AUTHOR_IMAGE||'')?env.GROWTH_FREE_AUTHOR_IMAGE:DEFAULT_AUTHOR_IMAGE,
   perEmail:int(env.GROWTH_FREE_PER_EMAIL_PER_DAY,3),
   perIp:int(env.GROWTH_FREE_PER_IP_PER_DAY,3),
+  // Owner 2026-11-28: free checks per person per week (same e-mail, browser or IP); 0 = off. The owner is not limited.
+  perWeek:weeklyLimit.perWeek('FREE_GROWTH',env),
   daily:int(env.GROWTH_FREE_DAILY_LIMIT,50),
   concurrency:Math.max(1,int(env.GROWTH_FREE_CONCURRENCY,2)),
   // Admin needs a long secret; a short one keeps the admin switched off.
@@ -207,7 +211,7 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  ${audit?`<p class="note" id="auditGscAvailable"><strong>${esc({nl:"GSC-data uit Audit beschikbaar",es:"Datos GSC disponibles del informe",en:"GSC data available from Audit"}[lang])}</strong> · ${esc(audit.fileName)}${audit.upload.period?` · ${esc(audit.upload.period.start)} – ${esc(audit.upload.period.end)}`:""}<br>${esc({nl:"Opnieuw uploaden is niet nodig. De cijfers gelden voor deze pagina.",es:"No es necesario volver a subir los datos de esta página.",en:"No need to upload the data for this page again."}[lang])}</p>`:""}
  <label class="check" for="noGsc"><input type="checkbox" id="noGsc" name="no_gsc"> <span>${esc(t.noGsc)}</span></label>
  <label for="email">${esc(t.email)}</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="${esc(t.emailPh)}"><small>${esc(t.emailHelp)}</small>
- <label class="check"><input type="checkbox" id="consent" name="consent" required> <span>${esc(t.consent)}${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':' '+esc(t.perDay.replace('§',cfg.perEmail))}`}</span></label>
+ <label class="check"><input type="checkbox" id="consent" name="consent" required> <span>${esc(t.consent)}${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':' '+esc(cfg.perWeek===1&&t.perWeek?t.perWeek:t.perDay.replace('§',cfg.perEmail))}`}</span></label>
  <div id="tipsBox"><p class="muted" style="font-size:14px;margin:10px 0 2px">${esc(t.tips)}</p>
  <label class="check"><input type="checkbox" name="notips"> <span>${esc(t.noTips)}</span></label></div>
  ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
@@ -1682,7 +1686,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     try{
      await storage.setStatus(pool,job.id,{status:'RUNNING'});
      const chosenQuestion=job.query?null:await autoQuestion(job);
-     if(chosenQuestion&&!chosenQuestion.text&&chosenQuestion.excluded_treated){await storage.setStatus(pool,job.id,{status:'FAILED',error_code:'QUESTION_ALREADY_TREATED'});if(job.inviteId)await storage.refundInvite(pool,job.inviteId);return}
+     if(chosenQuestion&&!chosenQuestion.text&&chosenQuestion.excluded_treated){await storage.setStatus(pool,job.id,{status:'FAILED',error_code:'QUESTION_ALREADY_TREATED'});if(job.inviteId)await storage.refundInvite(pool,job.inviteId);if(job.weeklyId)await weeklyLimit.refund(pool,job.weeklyId).catch(()=>{});return}
      if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
      // No customer question found for a rank tracker topic: the tracked keyword itself is researched.
      else if(job.topic){job.query=job.topic;if(chosenQuestion)chosenQuestion.text_fallback='TOPIC'}
@@ -1698,6 +1702,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
+      if(job.weeklyId)await weeklyLimit.refund(pool,job.weeklyId).catch(()=>{});
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
@@ -1728,6 +1733,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      console.warn('[free-growth] check failed',String(e&&e.code||e&&e.message||'unknown').slice(0,80));
      await storage.setStatus(pool,job.id,{status:'FAILED',error_code:'RESEARCH_FAILED'}).catch(()=>{});
      if(job.inviteId)await storage.refundInvite(pool,job.inviteId).catch(()=>{});
+     if(job.weeklyId)await weeklyLimit.refund(pool,job.weeklyId).catch(()=>{});
     }finally{running--;pump()}
    })();
    jobs.add(p);p.finally(()=>jobs.delete(p));
@@ -1861,11 +1867,21 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,cacheEligible,accessLabel:entry.label,market,prewriteBriefId,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});
+   // One free check per person per week (e-mail, browser or IP). A result reused from the cache costs nothing and is free.
+   let weekly=null;
+   if(!cached&&pool&&config.perWeek>0){
+    weekly=await weeklyLimit.reserve(pool,{tool:'FREE_GROWTH',id:weeklyLimit.identity(req,res,{email}),limit:config.perWeek});
+    if(!weekly.ok)return res.status(429).json({success:false,code:'WEEKLY_LIMIT',retry_at:weekly.retry_at,
+     error:weeklyLimit.limitMessage('FREE_GROWTH',weekly.limit,weekly.retry_at,uiLangOf(req),{who:String(entry.authorName||entry.brand||config.brand).split(/\s+/)[0],contactUrl:entry.contactUrl||config.contactUrl})});
+   }
+   let row;
+   try{row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,cacheEligible,accessLabel:entry.label,market,prewriteBriefId,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null,gscDeclined:b.no_gsc===true&&!(b.gsc_file&&b.gsc_file.content_base64)});}
+   catch(e){if(weekly)await weeklyLimit.refund(pool,weekly.usage_id).catch(()=>{});throw e}
+   if(weekly)await weeklyLimit.attach(pool,weekly.usage_id,'growth:'+row.id).catch(()=>{});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
-   if(!cached){queue.push({id:row.id,url:v.url,query,topic,market,sitemap,gscRows:gscRowsOf(gsc,v.url)});pump()}
+   if(!cached){queue.push({id:row.id,url:v.url,query,topic,market,sitemap,gscRows:gscRowsOf(gsc,v.url),weeklyId:weekly&&weekly.usage_id});pump()}
    res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
  });
@@ -2523,10 +2539,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const SESSION='gf_admin',SESSION_MS=12*3600*1000;
  const sign=exp=>crypto.createHmac('sha256',config.adminKey).update('growth-free-admin|'+exp).digest('base64url');
  const readCookie=(req,name)=>{for(const part of String(req.headers&&req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0&&part.slice(0,i).trim()===name)return part.slice(i+1).trim()}return ''};
- function sessionValid(req){
-  const [exp,mac]=readCookie(req,SESSION).split('.');
-  return !!config.adminKey&&Number(exp)>Date.now()&&store.sameKey(sign(exp),mac);
- }
+ function sessionValid(req){return ownerSessionValid(req,config.adminKey)}
  const admin=(req,res)=>{
   const header=req.get?.('x-admin-key')||req.headers?.['x-admin-key'];
   const viaKey=!!config.adminKey&&!!header&&store.sameKey(config.adminKey,header);

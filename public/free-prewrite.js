@@ -21,7 +21,12 @@
       options.body = JSON.stringify(body);
     }
     const response = await fetch(api + path, options);
-    if (!response.ok) throw Error('Request failed');
+    if (!response.ok) {
+      // The weekly limit says until when, in the page language (owner 2026-11-28).
+      const failure = Error('Request failed');
+      try { const body = await response.json(); if (body && body.code === 'WEEKLY_LIMIT' && typeof body.error === 'string') failure.message = body.error, failure.limit = true; } catch {}
+      throw failure;
+    }
     return response.json();
   }
 
@@ -43,10 +48,11 @@
       const form = new FormData(intake);
       const resultPath = root + '/r?lang=' + lang + '#' + key;
       try {
-        await call('', { website: form.get('website'), keyword: form.get('keyword'), region: form.get('country'), language: lang, pricingSource: form.get('pricing-source'), manualAiEvidence: evidence(form) });
+        await call('', { website: form.get('website'), keyword: form.get('keyword'), email: form.get('email'), region: form.get('country'), language: lang, pricingSource: form.get('pricing-source'), manualAiEvidence: evidence(form) });
         location.assign(resultPath);
-      } catch {
-        status.textContent = labels[7];
+      } catch (error) {
+        status.textContent = error.limit ? error.message : labels[7];
+        if (error.limit) key = '';
         submit.disabled = false;
       }
     });
@@ -82,13 +88,30 @@
       entries.append(details);
     }
   }
+  // The waiting page: the real research step from the server, with a moving bar so the visitor sees it works.
+  function showProgress(progress) {
+    const box = element('progress');
+    if (!box) return;
+    const steps = window.prewriteSteps || [];
+    const step = Math.min(5, Math.max(1, Number(progress && progress.step) || 1));
+    box.hidden = false;
+    element('progress-step').textContent = (steps[5] || '§').replace('§', step) + ' · ' + (steps[step - 1] || '');
+    Array.from(element('progress-list').children).forEach((item, index) => {
+      item.className = index + 1 < step ? 'done' : index + 1 === step ? 'now' : '';
+    });
+    element('progress-bar').style.width = Math.round(((step - 1) + 0.5) / 5 * 100) + '%';
+    const seconds = Number(progress && progress.elapsed_seconds);
+    if (Number.isFinite(seconds)) element('progress-time').textContent = (steps[6] || '') + ' ' + Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+  }
   async function render() {
     const result = await call('/result');
     if (result.status === 'generating') {
       status.textContent = labels[6];
+      showProgress(result.progress);
       setTimeout(() => render().catch(reportError), 2500);
       return;
     }
+    if (element('progress')) element('progress').hidden = true;
     if (!result.target) {
       if (Object.keys(result.brief || {}).length) {
         element('research').textContent = JSON.stringify(result.brief, null, 2);
@@ -135,12 +158,14 @@
       adjust.querySelector('button[type=submit]').disabled = true;
       try {
         await call('', { website: result.website, keyword: result.keyword, region: result.region, language: result.language,
-          intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value, manualAiEvidence: evidence(new FormData(adjust)) });
+          intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value, manualAiEvidence: evidence(new FormData(adjust)),
+          // A correction of this brief, not a new one: it does not use the weekly free brief.
+          revisionOf: previousKey });
         history.replaceState(null, '', root + '/r?lang=' + lang + '#' + key);
         location.reload();
-      } catch {
+      } catch (error) {
         key = previousKey;
-        reportError();
+        if (error.limit) status.textContent = error.message; else reportError();
         adjust.querySelector('button[type=submit]').disabled = false;
       }
     };
