@@ -256,29 +256,40 @@
       box.append(table);
     }
     const ai = b.ai_systems_analysis && typeof b.ai_systems_analysis === 'object' ? b.ai_systems_analysis : null;
-    const aiGap = [str(b.aio_citation_gap), str(typeof b.ai_overview_citation_strategy === 'string' ? b.ai_overview_citation_strategy : '')].filter(Boolean);
-    if (ai || aiGap.length) {
+    // The Google AI Overview gap: a list of cited sources from the generator ({source, what_they_do_well, our_gap, what_to_do}),
+    // or plain text in older briefs.
+    const gapLine = g => typeof g === 'string' ? g.trim() : g && typeof g === 'object'
+      ? [g.source ? g.source + ': ' + (g.what_they_do_well || '') : str(g.what_they_do_well), g.our_gap ? t.ourGap + ': ' + g.our_gap : '', g.what_to_do ? t.toDo + ': ' + g.what_to_do : '']
+        .map(x => String(x || '').trim()).filter(Boolean).join(' ') : '';
+    const aioGap = [...(Array.isArray(b.aio_citation_gap) ? b.aio_citation_gap : [b.aio_citation_gap]).map(gapLine),
+      str(typeof b.ai_overview_citation_strategy === 'string' ? b.ai_overview_citation_strategy : '')].filter(Boolean);
+    const hostOf = u => { try { return new URL(String(u)).hostname.replace(/^www\./, '').toLowerCase(); } catch { return String(u || '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./, '').toLowerCase(); } };
+    const own = result.website ? hostOf(result.website) : '';
+    if (ai || aioGap.length) {
       section(t.ai);
       const names = { google_aio: 'Google AI Overview / Gemini', chatgpt: 'ChatGPT Search', perplexity: 'Perplexity', claude: 'Claude', copilot: 'Microsoft Copilot' };
       for (const key of Object.keys(names)) {
         const x = ai && ai[key];
-        if (!x) continue;
-        addText(box, 'h4', names[key] + (x.checked ? '' : ' · ' + t.notChecked));
-        if (!x.checked) continue;
-        if (str(x.answer_summary)) addText(box, 'p', x.answer_summary);
-        // Cited means the own site among the cited domains or pages (not just any citation).
-        const own = (() => { try { return new URL(result.website).hostname.replace(/^www\./, ''); } catch { return ''; } })();
-        const cited = arr(x.exact_page_citations).length > 0 || (!!own && arr(x.domain_citations).some(d => String(d).replace(/^www\./, '').toLowerCase() === own));
-        const recommends = arr(x.recommended_companies).map(textOf).join(', ');
-        if (recommends) addText(box, 'p', t.recommends + ': ' + recommends);
-        addText(box, 'p', t.ownCited + ': ' + (cited ? t.yes : t.no));
-        const sources = arr(x.citation_sources).map(s => [s.source_name, s.exact_url].filter(Boolean).join(' · ')).filter(Boolean);
-        if (sources.length) { addText(box, 'p', t.sources + ':'); list(sources); }
+        const extra = key === 'google_aio' ? aioGap : [];
+        if (!x && !extra.length) continue;
+        const checked = !!(x && x.checked);
+        addText(box, 'h4', names[key] + (checked || extra.length ? '' : ' · ' + t.notChecked));
+        if (checked) {
+          if (str(x.answer_summary)) addText(box, 'p', x.answer_summary);
+          const recommends = arr(x.recommended_companies).map(textOf).join(', ');
+          if (recommends) addText(box, 'p', t.recommends + ': ' + recommends);
+          // Cited means the own domain among the cited domains or pages; a competitor page is not your site.
+          const cited = !!own && [...arr(x.domain_citations), ...arr(x.exact_page_citations)].some(d => hostOf(d) === own);
+          addText(box, 'p', t.ownCited + ': ' + (cited ? t.yes : t.no));
+          const sources = arr(x.citation_sources).map(s => [s.source_name, s.exact_url].filter(Boolean).join(' · ')).filter(Boolean);
+          if (sources.length) { addText(box, 'p', t.sources + ':'); list(sources); }
+        }
+        const needs = [...(checked ? arr(x.citation_needs).map(textOf) : []), ...extra].filter(Boolean);
+        if (needs.length) { addText(box, 'p', t.aiGap + ':').className = 'label'; list(needs); }
       }
-      if (aiGap.length) { addText(box, 'h4', t.aiGap); for (const g of aiGap) addText(box, 'p', g); }
     }
     const links = arr(b.internal_link_targets).filter(x => x && x.link_to);
-    if (links.length) { section(t.links); list(links.map(x => (x.anchor_text ? x.anchor_text + ' → ' : '') + x.link_to + (x.reason ? ' (' + x.reason + ')' : ''))); }
+    if (links.length) { section(t.links); list(links.map(x => (x.anchor_text ? x.anchor_text + ' → ' : '') + x.link_to + (str(x.why || x.reason) ? ' (' + str(x.why || x.reason) + ')' : ''))); }
     const external = arr(b.external_link_targets).filter(x => x && (x.exact_url || x.url));
     if (external.length) { section(t.external); list(external.map(x => [x.anchor_text || x.source_name || x.page_title || '', x.exact_url || x.url, x.supports_claim || x.supports || ''].filter(Boolean).join(' · '))); }
     const e = b.entity_strategy || {};
