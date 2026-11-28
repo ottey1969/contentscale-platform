@@ -66,3 +66,25 @@ test('pasted text survives a refresh; a refused field is named in the page (pric
   assert.equal(await page.inputValue('[name=ai-chatgpt]'),'Respuesta pegada de ChatGPT con fuentes https://example.com/a','still there after the error');
  }finally{await browser.close();srv.close()}
 });
+
+test('buttons show they are working: Generate brief spins while the request runs, then returns',{skip:!chromium&&'Playwright not installed',timeout:60000},async()=>{
+ const srv=app().listen(0),base='http://127.0.0.1:'+srv.address().port;
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage();
+  let release;const held=new Promise(r=>{release=r});
+  await page.route('**/api/free-pre-write',async route=>{await held;route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({success:false,code:'TOPIC',error:'Escribe un tema.'})})});
+  await page.goto(base+'/free-pre-write?lang=es');
+  await page.fill('[name=website]','https://es.contentscale.site/');await page.fill('[name=keyword]','seo checker');await page.fill('[name=email]','a@b.es');
+  await page.click('#intake button[type=submit]');
+  const btn=page.locator('#intake button[type=submit]');
+  await page.waitForFunction(()=>document.querySelector('#intake button[type=submit]').getAttribute('aria-busy')==='true');
+  assert.equal(await btn.isDisabled(),true);
+  const spinner=await page.evaluate(()=>getComputedStyle(document.querySelector('#intake button[type=submit]'),'::before').animationName);
+  assert.equal(spinner,'pw-spin');
+  release();
+  await page.waitForFunction(()=>!document.querySelector('#intake button[type=submit]').hasAttribute('aria-busy'));
+  assert.equal(await btn.isDisabled(),false);
+  assert.equal(await page.textContent('#status'),'Escribe un tema.');
+ }finally{await browser.close();srv.close()}
+});

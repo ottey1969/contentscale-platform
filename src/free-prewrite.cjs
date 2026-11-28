@@ -56,6 +56,9 @@ function manualEvidence(raw) {
   return out;
 }
 const intents = ['', 'informational', 'commercial', 'transactional', 'navigational'];
+const busyTexts = { en: 'Two briefs are being researched right now. Try again in a few minutes.', nl: 'Er worden nu twee briefs onderzocht. Probeer het over een paar minuten opnieuw.', es: 'Ahora se están investigando dos briefs. Inténtalo de nuevo en unos minutos.' };
+const dailyTexts = { en: 'Today\'s free briefs are used up. Try again tomorrow.', nl: 'De gratis briefs van vandaag zijn op. Probeer het morgen opnieuw.', es: 'Los briefs gratuitos de hoy se han agotado. Inténtalo mañana.' };
+const unavailableTexts = { en: 'The brief service is temporarily unavailable. Your text is kept; try again in a moment.', nl: 'De briefdienst is tijdelijk niet beschikbaar. Je tekst blijft bewaard; probeer het zo opnieuw.', es: 'El servicio no está disponible temporalmente. Tu texto se conserva; inténtalo de nuevo en un momento.' };
 const inputErrors = {
   en: { AI_ANSWERS: 'The AI answers could not be read. Paste plain text into the answer fields.', WEBSITE: 'Enter the full website address, for example https://example.com/.',
     PRICING_URL: 'The pricing page must be a public https page on the same website as above (same domain, no ? or #). Leave the field empty if you have none.',
@@ -117,7 +120,7 @@ function page(lang, result) {
     ${priceInput}${aiFields(lang)}<button type="submit">${t[4]}</button></form><p id="status" role="status"></p>
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
-    <style>#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
+    <style>button{transition:transform .12s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer}button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(67,56,202,.28);filter:brightness(1.06)}button:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:none}button:disabled{cursor:default;opacity:.75}button[aria-busy=true]{opacity:1;cursor:progress}button[aria-busy=true]::before{content:'';display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pw-spin .7s linear infinite}@keyframes pw-spin{to{transform:rotate(360deg)}}.ai-prompt-copy.done{animation:pw-pop .45s ease}@keyframes pw-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){button,button:hover,button:active{transition:none;transform:none}button[aria-busy=true]::before{animation-duration:2s}.ai-prompt-copy.done{animation:none}}#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
     <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};</script><script src="/prewrite-ai-answer-research.js" defer></script>
     <script src="/free-prewrite.js" defer></script></body></html>`;
 }
@@ -282,7 +285,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
     const revisionOf = typeof req.body?.revisionOf === 'string' && /^[a-f0-9]{64}$/.test(req.body.revisionOf) ? req.body.revisionOf : null;
     if (email && !emailOk) return refuse('EMAIL');
     if (!emailOk && !revisionOf) return refuse('EMAIL');
-    if (!generate || dailyLimit < 1) return res.status(503).json({ success: false });
+    if (!generate || dailyLimit < 1) return res.status(503).json({ success: false, code: 'UNAVAILABLE', error: unavailableTexts[lang] });
     const owner = ownerSessionValid(req);
     let db;
     let row;
@@ -321,7 +324,8 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       if ((!owner && quota.daily >= dailyLimit) || quota.active >= 2) {
         await db.query('ROLLBACK');
         if (weekly) await weeklyLimit.refund(pool, weekly.usage_id).catch(() => {});
-        return res.status(429).json({ success: false });
+        const busyNow = quota.active >= 2;
+        return res.status(429).json({ success: false, code: busyNow ? 'BUSY' : 'DAILY_TOTAL', error: (busyNow ? busyTexts : dailyTexts)[lang] });
       }
       row = (await db.query(`INSERT INTO prewrite_briefs (keyword,language,region,brief_json,status,public_site,public_access_hash)
         VALUES ($1,$2,$3,'{}','generating',$4,$5) RETURNING id`, [keyword.trim(), language, region.toLowerCase(), site, hash(key)])).rows[0];
@@ -330,7 +334,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       if (db) await db.query('ROLLBACK').catch(() => {});
       if (weekly) await weeklyLimit.refund(pool, weekly.usage_id).catch(() => {});
       console.error('[free-prewrite]', error.code || error.name);
-      return res.status(503).json({ success: false });
+      return res.status(503).json({ success: false, code: 'UNAVAILABLE', error: unavailableTexts[lang] });
     } finally { db?.release(); }
     if (weekly) await weeklyLimit.attach(pool, weekly.usage_id, 'prewrite:' + row.id).catch(() => {});
     res.status(202).json({ success: true });

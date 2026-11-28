@@ -12,6 +12,9 @@
   let downloadUrl;
   const newKey = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
   const element = id => document.getElementById(id);
+  // Every button shows it is working while its request runs (owner 2026-11-28: "generate brief en alle andere knoppen
+  // animatie").
+  const busy = (button, on) => { if (!button) return; button.disabled = on; if (on) button.setAttribute('aria-busy', 'true'); else button.removeAttribute('aria-busy'); };
   async function call(path, body) {
     const headers = { Authorization: 'Bearer ' + key };
     const options = { headers, cache: 'no-store' };
@@ -62,6 +65,7 @@
     form.__updatePrompt = update;
     copy.addEventListener('click', async () => {
       update();
+      copy.classList.remove('done'); void copy.offsetWidth; copy.classList.add('done');
       try { await navigator.clipboard.writeText(box.value); note.textContent = texts[2] || 'Copied.'; }
       catch { box.focus(); box.select(); note.textContent = texts[3] || ''; }
     });
@@ -78,7 +82,7 @@
     intake.addEventListener('submit', async event => {
       event.preventDefault();
       const submit = intake.querySelector('button[type=submit]');
-      submit.disabled = true;
+      busy(submit, true);
       status.textContent = labels[6];
       if (!validKey(key)) {
         key = newKey();
@@ -92,7 +96,7 @@
       } catch (error) {
         status.textContent = error.limit ? error.message : labels[7];
         if (error.limit) key = '';
-        submit.disabled = false;
+        busy(submit, false);
       }
     });
     element('reopen').addEventListener('submit', event => {
@@ -180,7 +184,7 @@
     repair.onclick = async () => {
       const source = adjust.elements['pricing-source'];
       if (!source.value || !source.reportValidity()) { source.focus(); return; }
-      repair.disabled = true;
+      busy(repair, true);
       const revisionKey = newKey();
       try {
         await call('/repair-pricing', { pricingSource: source.value, revisionKey });
@@ -188,14 +192,14 @@
         location.reload();
       } catch {
         reportError();
-        repair.disabled = false;
+        busy(repair, false);
       }
     };
     adjust.onsubmit = async event => {
       event.preventDefault();
       const previousKey = key;
       key = newKey();
-      adjust.querySelector('button[type=submit]').disabled = true;
+      busy(adjust.querySelector('button[type=submit]'), true);
       try {
         await call('', { website: result.website, keyword: result.keyword, region: result.region, language: result.language,
           intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value, manualAiEvidence: evidence(new FormData(adjust)),
@@ -207,7 +211,7 @@
       } catch (error) {
         key = previousKey;
         if (error.limit) status.textContent = error.message; else reportError();
-        adjust.querySelector('button[type=submit]').disabled = false;
+        busy(adjust.querySelector('button[type=submit]'), false);
       }
     };
     const research = JSON.stringify(result.brief, null, 2);
@@ -235,14 +239,15 @@
   function action(id, path, payload, success, failure) {
     const button = element(id);
     button.addEventListener('click', async () => {
-      button.disabled = true;
+      busy(button, true);
       try {
         await call(path, payload());
+        button.removeAttribute('aria-busy');
         status.textContent = labels[success];
         await render();
       } catch {
         status.textContent = labels[failure];
-        button.disabled = false;
+        busy(button, false);
       }
     });
   }
