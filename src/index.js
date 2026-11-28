@@ -54973,7 +54973,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <!-- SIDEBAR -->
             <nav id="sidebar">
                 <div class="sidebar-section-label">Lead Flow</div>
-
+                <a href="/owner" class="sidebar-btn" style="text-decoration:none"><i class="fas fa-table-cells-large"></i><span>Owner overview</span></a>
 
                 <hr class="sidebar-divider">
                 <div class="sidebar-section-label">Admin</div>

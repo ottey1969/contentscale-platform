@@ -30,13 +30,15 @@ test('Free Growth: the owner signs in on the form — no daily limit, AI writing
   const express = require('express');
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
+  // The weekly free limit stays on; a rerun on the same disposable database starts as a new week for this visitor.
+  await pool.query("DELETE FROM free_tool_usage WHERE tool='FREE_GROWTH'").catch(() => {});
   const engineDeps = { retryDelayMs: 0, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
     fetchLive: async url => { const html = PAGES[url]; if (!html) throw Object.assign(Error('TEST page not available'), { code: 'PUBLIC_HTML_UNAVAILABLE' });
       return { html, final_url: url, retrieved_at: new Date().toISOString(), truncated: false, source: 'LIVE_PUBLIC_HTTPS' }; },
     searchLive: async ({ query }) => ({ status: 'FRESH_GOOGLE_ORGANIC_LEADS', source: 'SERPER_GOOGLE_ORGANIC', query, leads: LEADS, provider_attempts: ['SERPER_GOOGLE_ORGANIC'], checked_at: new Date().toISOString() }) };
   const app = express(); app.use(express.json({ limit: '5mb' }));
   // Visitors: one check per e-mail per day and no AI writing (writing=admin), so the difference is visible.
-  const service = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: '[{"key":"e2e-owner-key-1","per_email":1,"per_ip":50,"daily":20}]' }), writing: 'admin', adminKey: 'e2e-owner-secret-0123456789', perIp: 50, daily: 20, perEmail: 1, perWeek: 0 }, engineDeps, fetchImpl: async () => ({ ok: true }) });
+  const service = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: '[{"key":"e2e-owner-key-1","per_email":1,"per_ip":50,"daily":20}]' }), writing: 'admin', adminKey: 'e2e-owner-secret-0123456789', perIp: 50, daily: 20, perEmail: 1 }, engineDeps, fetchImpl: async () => ({ ok: true }) });
   const srv = app.listen(0); const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
   try {

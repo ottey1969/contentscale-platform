@@ -17,6 +17,8 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
   const express = require('express');
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
+  // The weekly free limit stays on; a rerun on the same disposable database starts as a new week for this visitor.
+  await pool.query("DELETE FROM free_tool_usage WHERE tool='FREE_GROWTH'").catch(() => {});
   const writes = [];
   const engineDeps = { retryDelayMs: 0, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
     fetchLive: async url => { const html = PAGES[url]; if (!html) throw Object.assign(Error('TEST page not available'), { code: 'PUBLIC_HTML_UNAVAILABLE' });
@@ -25,7 +27,7 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
       leads: [{ url: 'https://roofer-a.example/roof-repair-nj/', title: 'Roof Repair in Paterson, NJ | Roofer A', snippet: 'Local roof repair', source: 'SERPER_GOOGLE_ORGANIC', serp_position: 1 }] }),
     generateDraft: async a => { writes.push(a); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: [] } }; } };
   const app = express(); app.use(express.json({ limit: '5mb' }));
-  const service = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-2' }), perIp: 50, daily: 20, perEmail: 10, perWeek: 0 }, engineDeps, fetchImpl: async () => ({ ok: true }) });
+  const service = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-2' }), perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }) });
   const srv = app.listen(0); const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
   try {

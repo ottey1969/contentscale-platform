@@ -28,6 +28,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   const express = require('express');
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
+  // The weekly free limit stays on; a rerun on the same disposable database starts as a new week for this visitor.
+  await pool.query("DELETE FROM free_tool_usage WHERE tool='FREE_GROWTH'").catch(() => {});
   const writes = [], mails = [];
   let publishedText = '';
   const engineDeps = { retryDelayMs: 0, aiGapModel: null, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
@@ -51,7 +53,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   const app = express(); app.use(express.json({ limit: '1mb' }));
   // The key's site domain (here 127.0.0.1): e-mail links open on the domain the visitor used, without extra settings.
   const baseCfg = freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' });
-  const service = registerFreeGrowth(app, pool, { config: { ...baseCfg, accessKeys: baseCfg.accessKeys.map(k => ({ ...k, hosts: ['127.0.0.1'] })), writing: 'admin', adminKey: 'e2e-owner-secret-0123456789', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10, perWeek: 0 }, engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async m => { mails.push(m); return true; } });
+  const service = registerFreeGrowth(app, pool, { config: { ...baseCfg, accessKeys: baseCfg.accessKeys.map(k => ({ ...k, hosts: ['127.0.0.1'] })), writing: 'admin', adminKey: 'e2e-owner-secret-0123456789', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async m => { mails.push(m); return true; } });
   const srv = app.listen(0); const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
   try {

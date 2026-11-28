@@ -52,8 +52,6 @@ test('private public briefs in Chromium use the canonical publication history fo
     const pricePage = '<h1>SEO advies en diensten</h1><p>Prijzen voor SEO advies op aanvraag.</p>';
     registerFreePrewrite(app, pool, {
       dailyLimit: 8,
-      // Seven briefs from one browser: the weekly free limit has its own test (free-weekly-limit.test.cjs).
-      perWeek: 0,
       discover: async () => ({ site, urls: [existingUrl] }),
       generate: async ({ id, keyword, intentOverride, pricingSource }) => {
         generationCalls++;
@@ -84,8 +82,14 @@ test('private public briefs in Chromium use the canonical publication history fo
     const endpoint = '/api/free-pre-write';
     const api = request(app);
     browser = await chromium.launch({ args: ['--no-sandbox'] });
-    async function start(lang, topic) {
+    // The weekly free limit is on (one brief per person per week). The first brief is a visitor's; the same computer is
+    // then refused with the message in the page; the remaining briefs are made by the signed-in owner, who is not limited.
+    const ownerKey = 'public-owner-secret-0123456789';
+    process.env.GROWTH_FREE_ADMIN_KEY = ownerKey;
+    const ownerCookie = () => { const exp = String(Date.now() + 3600000); return { name: 'gf_admin', value: exp + '.' + require('../src/owner-session.cjs').sign(ownerKey, exp), url: origin }; };
+    async function start(lang, topic, { owner = true } = {}) {
       const page = await browser.newPage({ viewport: lang === 'en' ? { width: 1280, height: 900 } : { width: 390, height: 844 } });
+      if (owner) await page.context().addCookies([ownerCookie()]);
       await page.goto(origin + '/free-pre-write?lang=' + lang);
       await page.locator('[name=website]').fill(site);
       await page.locator('[name=keyword]').fill(topic);
@@ -95,7 +99,7 @@ test('private public briefs in Chromium use the canonical publication history fo
       return page;
     }
     for (const [lang, heading] of [['en', 'Proof & History'], ['nl', 'Bewijs en historie'], ['es', 'Evidencias e historial']]) {
-      const page = await start(lang, 'Planning');
+      const page = await start(lang, 'Planning', { owner: lang !== 'en' });
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
       if (lang === 'en') {
         const original = page.url();
@@ -135,6 +139,18 @@ test('private public briefs in Chromium use the canonical publication history fo
       await reopened.goto(privateUrl);
       await reopened.waitForFunction(() => document.querySelector('#entries').textContent.includes('LIVE_PUBLIC_HTTPS'));
       await reopened.close();
+      if (lang === 'en') {
+        // The visitor's second brief this week, from the same computer: refused, with the date and "let Ottmar do it".
+        const again = await browser.newPage();
+        await again.goto(origin + '/free-pre-write?lang=nl');
+        await again.locator('[name=website]').fill(site);
+        await again.locator('[name=keyword]').fill('Planning again');
+        await again.locator('[name=email]').fill('someone-else@new-prewrite.example');
+        await again.locator('#intake button').click();
+        await again.waitForFunction(() => /Je hebt je gratis Pre-Write Brief voor deze week gebruikt\. Wacht tot .+ of laat Ottmar het voor je doen/.test(document.getElementById('status').textContent));
+        assert.equal(new URL(again.url()).pathname, '/free-pre-write', 'no brief was started');
+        await again.close();
+      }
     }
     const expand = await start('nl', 'Existing');
     const link = new URL(await expand.locator('#decision a').getAttribute('href'), origin);

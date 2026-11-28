@@ -165,9 +165,7 @@ test('Free Pre-Write: intent follows the SERP first and is corrected afterwards;
   };
   registerFreePrewrite(app, pool, {
     discover: async site => ({ site, urls: [] }),
-    generate: async value => { context = value; },
-    // The weekly free limit has its own test (free-weekly-limit.test.cjs); here it would block reruns on one database.
-    perWeek: 0
+    generate: async value => { context = value; }
   });
   const form = (await request(app).get('/free-pre-write?lang=en').expect(200)).text;
   const intake = form.slice(form.indexOf('id="intake"'), form.indexOf('</form>', form.indexOf('id="intake"')));
