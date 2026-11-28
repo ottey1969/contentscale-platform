@@ -11,9 +11,12 @@ const URL_RE=/^https:\/\/[^\s<>"]+$/i;
 const MODEL_RE=/^[a-zA-Z0-9._-]{3,80}$/;
 const TIMEOUT=90000;
 
+// Production keeps its Serper.dev key in SERPAPI_KEY as well as SERPER_API_KEY (growth-customer-questions.cjs); sent to
+// serpapi.com it is refused. A real serpapi.com key (needed for Copilot) is SERPAPI_COM_KEY.
+const serperKey=env=>String(env.SERPER_API_KEY||env.SERPAPI_KEY||'').trim();
 function configuredEngines(env=process.env){
- return {google_aio:!!(env.SERPAPI_KEY||env.GEMINI_API_KEY),chatgpt:!!env.OPENAI_API_KEY,perplexity:!!env.PERPLEXITY_API_KEY,
-  claude:!!env.ANTHROPIC_API_KEY,copilot:!!env.SERPAPI_KEY};
+ return {google_aio:!!(serperKey(env)||env.SERPAPI_COM_KEY||env.GEMINI_API_KEY),chatgpt:!!env.OPENAI_API_KEY,perplexity:!!env.PERPLEXITY_API_KEY,
+  claude:!!env.ANTHROPIC_API_KEY,copilot:!!env.SERPAPI_COM_KEY};
 }
 const cleanUrl=u=>{try{const x=new URL(String(u));for(const k of [...x.searchParams.keys()])if(/^utm_/i.test(k))x.searchParams.delete(k);return x.href.replace(/\?$/,'')}catch{return ''}};
 function urlsOf(list){const out=[];for(const u of list){const c=cleanUrl(u);if(c&&URL_RE.test(c)&&!out.includes(c))out.push(c)}return out.slice(0,20)}
@@ -28,7 +31,7 @@ const format=(answer,urls)=>'ANSWER:\n'+answer+'\n\nRESOURCES:\n'+(urls.length?u
 const model=(value,fallback)=>MODEL_RE.test(String(value||''))?String(value):fallback;
 // A refused call keeps the provider's HTTP code and its own message, so the owner sees why (owner 2026-11-28, live:
 // "Could not fetch (PROVIDER_UNAVAILABLE)"). Query strings and every configured key are removed from the message.
-const SECRET_KEYS=['SERPAPI_KEY','GEMINI_API_KEY','OPENAI_API_KEY','PERPLEXITY_API_KEY','ANTHROPIC_API_KEY'];
+const SECRET_KEYS=['SERPAPI_KEY','SERPER_API_KEY','SERPAPI_COM_KEY','GEMINI_API_KEY','OPENAI_API_KEY','PERPLEXITY_API_KEY','ANTHROPIC_API_KEY'];
 function providerMessage(body,env){
  const raw=body&&(typeof body.error==='string'?body.error:body.error&&body.error.message||body.message||body.detail)||'';
  let text=String(typeof raw==='string'?raw:JSON.stringify(raw)).replace(/\?[^\s]*/g,'');
@@ -54,24 +57,42 @@ function blocksText(blocks){
  }};
  walk(blocks,0);return lines.filter(Boolean).join('\n');
 }
-const serp=(env,params)=>'https://serpapi.com/search.json?'+new URLSearchParams({...params,api_key:env.SERPAPI_KEY}).toString();
+const serp=(env,params)=>'https://serpapi.com/search.json?'+new URLSearchParams({...params,api_key:env.SERPAPI_COM_KEY}).toString();
 
+// A Serper aiOverview in whatever shape it comes: SerpApi-like text_blocks, or text/snippet fields; links as references.
+function serperOverview(aio){
+ if(!aio||typeof aio!=='object')return {answer:'',links:[]};
+ if(Array.isArray(aio.text_blocks))return {answer:blocksText(aio.text_blocks),links:(aio.references||[]).map(r=>r&&(r.link||r.url))};
+ const texts=[],links=[];
+ const walk=v=>{if(Array.isArray(v))return v.forEach(walk);if(!v||typeof v!=='object')return;
+  for(const [k,x] of Object.entries(v)){if(typeof x==='string'){if(/^(snippet|text|content|answer)$/i.test(k))texts.push(x.trim());else if(/^(link|url)$/i.test(k))links.push(x)}else walk(x)}};
+ walk(aio);return {answer:texts.filter(Boolean).join('\n'),links};
+}
 async function google({question,env,fetchImpl,language,country}){
- let serpRefused=null;
- if(env.SERPAPI_KEY)try{
+ const hl=/^[a-z]{2}$/.test(language)?language:'',gl=/^[a-z]{2}$/.test(country)?(country==='uk'?'gb':country):'';
+ let refused=null,refusedBy='',shown=null;
+ if(env.SERPAPI_COM_KEY)try{
   const params={engine:'google',q:question,no_cache:'true'};
-  if(/^[a-z]{2}$/.test(language))params.hl=language;
-  if(/^[a-z]{2}$/.test(country))params.gl=country==='uk'?'gb':country;
-  const data=await getJson(fetchImpl,serp(env,params));
+  if(hl)params.hl=hl;if(gl)params.gl=gl;
+  const data=await getJson(fetchImpl,serp(env,params),{},env);
   let aio=data&&data.ai_overview;
   if(aio&&aio.page_token&&!Array.isArray(aio.text_blocks)){
    const more=await getJson(fetchImpl,serp(env,{engine:'google_ai_overview',page_token:aio.page_token}),{},env);
    aio=more&&more.ai_overview;
   }
+  shown=!!aio;
   const answer=aio?blocksText(aio.text_blocks):'';
   if(answer)return {status:'SUCCESS',google_source:'ai_overview',provider:'Google AI Overview (SerpApi)',
    text:format(answer,urlsOf((aio.references||[]).map(r=>r&&r.link)))};
- }catch(e){if(!env.GEMINI_API_KEY)throw e;serpRefused=e}
+ }catch(e){refused=e;refusedBy='SerpApi'}
+ else if(serperKey(env))try{
+  const body={q:question};if(gl)body.gl=gl;if(hl)body.hl=hl;
+  const data=await getJson(fetchImpl,'https://google.serper.dev/search',{method:'POST',
+   headers:{'X-API-KEY':serperKey(env),'Content-Type':'application/json'},body:JSON.stringify(body)},env);
+  shown=!!(data&&data.aiOverview);
+  const o=serperOverview(data&&data.aiOverview);
+  if(o.answer)return {status:'SUCCESS',google_source:'ai_overview',provider:'Google AI Overview (Serper.dev)',text:format(o.answer,urlsOf(o.links))};
+ }catch(e){refused=e;refusedBy='Serper.dev'}
  if(env.GEMINI_API_KEY){
   const m=model(env.PREWRITE_GEMINI_MODEL||env.GROWTH_GROUNDED_ANSWER_MODEL,'gemini-2.5-flash');
   const data=await getJson(fetchImpl,'https://generativelanguage.googleapis.com/v1beta/models/'+m+':generateContent?key='+encodeURIComponent(env.GEMINI_API_KEY),{
@@ -81,11 +102,15 @@ async function google({question,env,fetchImpl,language,country}){
   const answer=answerPart((c&&c.content&&c.content.parts||[]).map(p=>p.text||'').join(''));
   if(!answer)return {status:'NO_ANSWER'};
   const urls=urlsOf((c.groundingMetadata&&c.groundingMetadata.groundingChunks||[]).map(x=>x&&x.web&&x.web.uri));
-  return {status:'SUCCESS',google_source:'gemini',provider:'Gemini with Google Search ('+m+')',
-   note:serpRefused?'SerpApi refused ('+serpRefused.provider+(serpRefused.detail?': '+serpRefused.detail:'')+'); this is the Gemini answer, not the AI Overview.'
-    :env.SERPAPI_KEY?'Google showed no AI Overview for this question; this is the Gemini answer.':'Gemini answer (no SerpApi key to read the Google AI Overview).',text:format(answer,urls)};
+  const note=refused?refusedBy+' refused ('+refused.provider+(refused.detail?': '+refused.detail:'')+'); this is the Gemini answer, not the AI Overview.'
+   :shown===true?'Google shows an AI Overview for this question, but Serper.dev does not return its text; this is the Gemini answer.'
+   :shown===false?'Google showed no AI Overview for this question; this is the Gemini answer.'
+   :'Gemini answer (no key to read the Google results).';
+  return {status:'SUCCESS',google_source:'gemini',provider:'Gemini with Google Search ('+m+')',note,text:format(answer,urls)};
  }
- return {status:'NO_AI_OVERVIEW',google_source:'no_ai_overview',provider:'Google AI Overview (SerpApi)',note:'Google showed no AI Overview for this question.',text:''};
+ if(refused)throw refused;
+ if(shown)return {status:'NO_ANSWER',note:'Google shows an AI Overview, but its text could not be read; paste it by hand.'};
+ return {status:'NO_AI_OVERVIEW',google_source:'no_ai_overview',provider:'Google search',note:'Google showed no AI Overview for this question.',text:''};
 }
 async function perplexity({question,env,fetchImpl}){
  const m=model(env.PREWRITE_PERPLEXITY_MODEL,'sonar');

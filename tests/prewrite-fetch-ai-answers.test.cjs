@@ -16,7 +16,8 @@ const {sign}=require('../src/owner-session.cjs');
 const Q='¿Qué seo checker gratis analiza el SEO de mi web?';
 const json=body=>({ok:true,status:200,json:async()=>body});
 function fake(routes){const calls=[];const f=async(url,opt={})=>{calls.push({url:String(url),opt});for(const [re,fn] of routes)if(re.test(String(url)))return fn(String(url),opt);throw Error('unexpected '+url)};f.calls=calls;return f}
-const ENV={SERPAPI_KEY:'serp',GEMINI_API_KEY:'gem',OPENAI_API_KEY:'oai',PERPLEXITY_API_KEY:'pplx',ANTHROPIC_API_KEY:'ant'};
+// Production keeps the Serper.dev key in SERPAPI_KEY (see growth-customer-questions.cjs); a real serpapi.com key is SERPAPI_COM_KEY.
+const ENV={SERPAPI_COM_KEY:'serp',GEMINI_API_KEY:'gem',OPENAI_API_KEY:'oai',PERPLEXITY_API_KEY:'pplx',ANTHROPIC_API_KEY:'ant'};
 
 test('Google: the real AI Overview, fetched with its page_token, with the cited references',async()=>{
  const f=fake([[/engine=google_ai_overview/,()=>json({ai_overview:{text_blocks:[{type:'paragraph',snippet:'Un SEO checker gratuito analiza tu web.'},{type:'list',list:[{snippet:'Revisa títulos y metadescripciones.'},{snippet:'Detecta errores técnicos.'}]}],references:[{index:0,link:'https://a.example/checker'},{index:1,link:'https://b.example/guia'}]}})],
@@ -35,7 +36,7 @@ test('Google without an AI Overview: Gemini with Google Search, marked as Gemini
  const r=await fetchAiAnswer('google_aio',Q,{env:ENV,fetchImpl:f,language:'es',country:'es'});
  assert.equal(r.status,'SUCCESS');assert.equal(r.google_source,'gemini');assert.match(r.note,/no AI Overview/i);
  assert.match(r.text,/^ANSWER:\nPuedes usar un SEO checker gratuito\.\n\nRESOURCES:\nhttps:\/\/g\.example\/a$/);
- const none=await fetchAiAnswer('google_aio',Q,{env:{SERPAPI_KEY:'serp'},fetchImpl:f,language:'es',country:'es'});
+ const none=await fetchAiAnswer('google_aio',Q,{env:{SERPAPI_COM_KEY:'serp'},fetchImpl:f,language:'es',country:'es'});
  assert.equal(none.status,'NO_AI_OVERVIEW');assert.equal(none.google_source,'no_ai_overview');assert.equal(none.text,'');
 });
 
@@ -64,7 +65,8 @@ test('Copilot through SerpApi; a system without a key says so and is not called'
  assert.equal(r.text,'ANSWER:\nHerramientas SEO gratuitas\nUn checker revisa el SEO de tu web.\n\nRESOURCES:\nhttps://m.example/a');
  assert.equal((await fetchAiAnswer('chatgpt',Q,{env:{},fetchImpl:f})).status,'NOT_CONFIGURED');
  assert.equal(f.calls.length,1);
- assert.deepEqual(configuredEngines({SERPAPI_KEY:'x',PERPLEXITY_API_KEY:'y'}),{google_aio:true,chatgpt:false,perplexity:true,claude:false,copilot:true});
+ assert.deepEqual(configuredEngines({SERPAPI_COM_KEY:'x',PERPLEXITY_API_KEY:'y'}),{google_aio:true,chatgpt:false,perplexity:true,claude:false,copilot:true});
+ assert.deepEqual(configuredEngines({SERPAPI_KEY:'serper-key',PERPLEXITY_API_KEY:'y'}),{google_aio:true,chatgpt:false,perplexity:true,claude:false,copilot:false},'a Serper key cannot read Copilot');
  const fail=await fetchAiAnswer('perplexity',Q,{env:ENV,fetchImpl:async()=>({ok:false,status:429,json:async()=>({})})});
  assert.equal(fail.status,'PROVIDER_UNAVAILABLE');
 });
@@ -72,7 +74,7 @@ test('Copilot through SerpApi; a system without a key says so and is not called'
 const KEY='k'.repeat(32);
 const ownerCookie=()=>{const exp=Date.now()+3600e3;return 'gf_admin='+exp+'.'+sign(KEY,exp)};
 function app(fetcher){const a=express();a.use(express.json());a.use(express.static(path.join(__dirname,'..','public')));
- registerFreePrewrite(a,{query:()=>{throw Error('no database')}},{fetchAiAnswer:fetcher,aiEnv:{SERPAPI_KEY:'x',PERPLEXITY_API_KEY:'y'}});return a}
+ registerFreePrewrite(a,{query:()=>{throw Error('no database')}},{fetchAiAnswer:fetcher,aiEnv:{SERPAPI_COM_KEY:'x',PERPLEXITY_API_KEY:'y'}});return a}
 
 test('only the owner may fetch; the question is required; the owner learns which systems are connected',async()=>{
  const prev=process.env.GROWTH_FREE_ADMIN_KEY;process.env.GROWTH_FREE_ADMIN_KEY=KEY;
@@ -149,4 +151,25 @@ test('route: the owner gets code and detail with the refusal',async()=>{
   const r=await request(a).post('/api/free-pre-write/ai-answer').set('Cookie',ownerCookie()).send({engine:'claude',question:Q}).expect(502);
   assert.equal(r.body.code,400);assert.equal(r.body.detail,'Web search is not enabled for your organization.');
  }finally{if(prev===undefined)delete process.env.GROWTH_FREE_ADMIN_KEY;else process.env.GROWTH_FREE_ADMIN_KEY=prev}
+});
+
+// Owner 2026-11-28: "serper.dev" with 12,065 credits — the Google key in production is a Serper.dev key, so asking
+// serpapi.com with it was refused. Google is read through Serper; its AI Overview is used when Serper returns its text,
+// otherwise Gemini with Google Search, and the note says whether Google showed an AI Overview.
+test('Google through Serper.dev (the production key): its AI Overview when Serper gives the text, else Gemini with the reason',async()=>{
+ let sent;
+ const f=fake([[/google\.serper\.dev\/search/,(u,o)=>{sent=o;return json({organic:[{link:'https://x.example'}],aiOverview:{text_blocks:[{type:'paragraph',snippet:'Un SEO checker revisa tu web.'}],references:[{link:'https://s.example/a'}]}})}]]);
+ const r=await fetchAiAnswer('google_aio',Q,{env:{SERPAPI_KEY:'serper-key'},fetchImpl:f,language:'es',country:'es'});
+ assert.equal(r.status,'SUCCESS');assert.equal(r.google_source,'ai_overview');assert.match(r.provider,/Serper/);
+ assert.equal(r.text,'ANSWER:\nUn SEO checker revisa tu web.\n\nRESOURCES:\nhttps://s.example/a');
+ assert.equal(sent.headers['X-API-KEY'],'serper-key');assert.deepEqual(JSON.parse(sent.body),{q:Q,gl:'es',hl:'es'});
+ assert.ok(!f.calls.some(c=>/serpapi\.com/.test(c.url)),'never serpapi.com with a Serper key');
+ const g=fake([[/google\.serper\.dev/,()=>json({organic:[],aiOverview:true})],
+  [/generativelanguage/,()=>json({candidates:[{content:{parts:[{text:'Respuesta de Gemini.'}]},groundingMetadata:{groundingChunks:[{web:{uri:'https://g.example/c'}}]}}]})]]);
+ const shown=await fetchAiAnswer('google_aio',Q,{env:{SERPER_API_KEY:'serper-key',GEMINI_API_KEY:'gem'},fetchImpl:g});
+ assert.equal(shown.google_source,'gemini');assert.match(shown.note,/shows an AI Overview.*Serper.*not.*text/i);
+ const h=fake([[/google\.serper\.dev/,()=>json({organic:[]})],[/generativelanguage/,()=>json({candidates:[{content:{parts:[{text:'Gemini.'}]},groundingMetadata:{groundingChunks:[]}}]})]]);
+ const no=await fetchAiAnswer('google_aio',Q,{env:{SERPER_API_KEY:'k',GEMINI_API_KEY:'gem'},fetchImpl:h});
+ assert.match(no.note,/no AI Overview/i);assert.match(no.text,/RESOURCES:\nNO VERIFIED RESOURCES$/);
+ assert.equal((await fetchAiAnswer('copilot',Q,{env:{SERPAPI_KEY:'serper-key'},fetchImpl:f})).status,'NOT_CONFIGURED');
 });
