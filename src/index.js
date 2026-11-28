@@ -14263,7 +14263,8 @@ app.get('/api/admin/leaderboard', verifyAdmin, async (req, res) => {
 });
 
 app.get('/api/admin/leaderboard/pending', verifyAdmin, async (req, res) => {
-try { const r = await pool.query(`SELECT * FROM leaderboard WHERE admin_verified = FALSE ORDER BY created_at DESC LIMIT 50`); res.json({ success: true, pending: r.rows }); }
+// Only requests whose e-mail is confirmed (and older entries without e-mail) reach Pending.
+try { const r = await pool.query(require('./leaderboard-confirm.cjs').PENDING_SQL); res.json({ success: true, pending: r.rows }); }
 catch (e) { res.json({ success: true, pending: [] }); }
 });
 // ── Database health diagnostic ──
@@ -14435,27 +14436,7 @@ res.json({ success: true, entries, total, averageScore: avg, stats: { totalAgenc
 } catch (e) { res.json({ success: true, entries: [], stats: {} }); }
 });
 app.post('/api/leaderboard/submit', async (req, res) => {
-if (!pool) return res.json({ success: false, error: 'Database unavailable' });
-const { url, company_name, score, country, niche } = req.body;
-if (!url || score === undefined) return res.status(400).json({ success: false, error: 'URL and Score are required' });
-try {
-const finalScore = parseInt(score);
-const r = await pool.query(
-`INSERT INTO leaderboard (url, company_name, score, country, niche, admin_verified, is_verified, submission_ip)
-VALUES ($1, $2, $3, $4, $5, FALSE, FALSE, $6)
-ON CONFLICT (url) DO UPDATE SET
-score = EXCLUDED.score,
-company_name = COALESCE(EXCLUDED.company_name, leaderboard.company_name),
-niche = COALESCE(EXCLUDED.niche, leaderboard.niche),
-admin_verified = FALSE, is_verified = FALSE
-RETURNING id`,
-[url, company_name || null, finalScore, country || 'NL', niche || null, req.ip || req.connection.remoteAddress]
-);
-res.json({ success: true, id: r.rows[0]?.id, message: 'Submission received. Pending admin approval.' });
-} catch (e) {
-console.error('Leaderboard submit error:', e.message);
-res.status(500).json({ success: false, error: e.message });
-}
+return res.status(410).json({ success: false, code: 'USE_CONFIRMATION', error: 'Leaderboard entries need a confirmed e-mail. Use the leaderboard pop-up after your scan.' });
 });
 app.get('/api/freelancers', async (req, res) => {
 if (!pool) return res.json({ success: true, freelancers: [] });
@@ -14889,6 +14870,9 @@ const { domain, company_name, avg_score, avg_graaf, avg_craft, avg_technical, pa
 if (!domain || avg_score === undefined) return res.status(400).json({ success: false, error: 'Missing required fields' });
 const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
 const autoApprove = AUTO_APPROVE_DOMAINS.includes(cleanDomain);
+// Owner 2026-11-28: nobody is listed without a confirmed e-mail (POST /api/leaderboard/request). Only ContentScale's
+// own domains keep the direct route.
+if (!autoApprove) return res.status(410).json({ success: false, code: 'USE_CONFIRMATION', error: 'Leaderboard entries need a confirmed e-mail. Use the leaderboard pop-up after your scan.' });
 try {
 const r = await pool.query(
 `INSERT INTO leaderboard (url, company_name, score, graaf_score, craft_score, technical_score, country, niche, business_type, page_count, page_scores, scan_source, admin_verified, is_verified)
@@ -55937,6 +55921,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function openMessageModal(targetType, userId) { messageTarget=(targetType==='single')?userId:targetType; document.getElementById('messageModal').classList.add('active'); }
 
 
+        function _lbEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
         async function loadPendingData() {
             try {
                 const lbData = await apiCall('/api/admin/leaderboard/pending');
@@ -55946,6 +55931,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<h4 style="font-weight:700;">'+(p.company_name||extractDomain(p.url))+'</h4>' +
                     '<a href="'+p.url+'" target="_blank" style="color:#60a5fa;font-size:0.8rem;">'+p.url+'</a>' +
                     '<div style="font-size:1.5rem;font-weight:900;color:'+(p.score>=70?'#4ade80':p.score>=50?'#fbbf24':'#f87171')+';">'+p.score+'/100</div>' +
+                    (p.contact_email ? '<div style="font-size:0.78rem;color:#cbd5e1;margin-top:6px;line-height:1.6;">✉️ '+_lbEsc(p.contact_email)+
+                      ' · <span style="color:#4ade80;">✓ e-mail confirmed '+(p.email_confirmed_at?new Date(p.email_confirmed_at).toLocaleString():'')+'</span>'+
+                      ' · '+(p.email_domain_match?'<span style="color:#4ade80;">e-mail on the site&#39;s domain</span>':'<span style="color:#fbbf24;">e-mail NOT on the site&#39;s domain — check who this is</span>')+
+                      (p.score_source==='scan_log'?' · score from ContentScale scan log':'')+
+                      (p.consent_at?'<br>Consent given '+new Date(p.consent_at).toLocaleString()+(p.consent_text?': “'+_lbEsc(p.consent_text)+'”':''):'')+'</div>'
+                      : '<div style="font-size:0.75rem;color:#9ca3af;margin-top:6px;">Older entry without e-mail confirmation</div>') +
                     '<div style="display:flex;gap:8px;margin-top:12px;">' +
                     '<button onclick="approveLB('+p.id+')" class="btn btn-success" style="flex:1;">OK Approve</button>' +
                     '<button onclick="apiCall(&apos;/api/admin/leaderboard/'+p.id+'/reject&apos;,&apos;POST&apos;).then(()=>loadPendingData())" class="btn btn-danger">x Reject</button>' +
@@ -63049,6 +63040,8 @@ ${sourceText}`;
 }
 
 app.post('/api/tracker-client/:token/prewrite-brief', _handlePrewriteBriefGeneration);
+// Leaderboard self-submission with e-mail confirmation (owner 2026-11-28).
+require('./leaderboard-confirm.cjs').registerLeaderboardConfirm(app, pool);
 // Owner overview (owner 2026-11-28): one owner-only page with every admin area and today's numbers.
 require('./owner-overview.cjs').registerOwnerOverview(app, pool, {
   firecrawl: () => require('./firecrawl-owner-dashboard.cjs').dashboard({ manager: require('./firecrawl-manager.cjs').firecrawlManager })

@@ -15,7 +15,8 @@ test('an e-mail address or a URL with a user name is not a page to scan',()=>{
 });
 
 let chromium=null;try{({chromium}=require('playwright'))}catch{}
-test('single page: a score of 70+ offers "Submit to Leaderboard" (pending admin approval); below 70 it does not; EN, NL, ES',{skip:!chromium&&'Playwright not installed',timeout:120000},async()=>{
+// Owner 2026-11-28 (later the same day): the offer is a pop-up with e-mail and consent; a confirmation e-mail follows.
+test('single page: a score of 70+ opens the leaderboard pop-up (e-mail + consent, then a confirmation e-mail); below 70 nothing; EN, NL, ES',{skip:!chromium&&'Playwright not installed',timeout:120000},async()=>{
  const express=require('express');
  const app=express();
  for(const [prefix,dir] of [['/','public'],['/nl/','public/nl'],['/es/','public/es']])
@@ -23,7 +24,8 @@ test('single page: a score of 70+ offers "Submit to Leaderboard" (pending admin 
  const srv=app.listen(0);const base='http://127.0.0.1:'+srv.address().port;
  const browser=await chromium.launch();
  try{
-  for(const [prefix,button,email] of [['/','Submit to Leaderboard','Enter a web page address'],['/nl/','Aanmelden voor het leaderboard','Vul het adres van een webpagina in'],['/es/','Enviar a la clasificación','Introduce la dirección de una página web']]){
+  const {CONSENT}=require('../src/leaderboard-confirm.cjs');
+  for(const [prefix,button,email,lang] of [['/','Add to the Leaderboard','Enter a web page address','en'],['/nl/','Toevoegen aan het leaderboard','Vul het adres van een webpagina in','nl'],['/es/','Añadir a la clasificación','Introduce la dirección de una página web','es']]){
    for(const score of [82,64]){
     const page=await browser.newPage();
     const submitted=[],scanned=[];
@@ -31,7 +33,7 @@ test('single page: a score of 70+ offers "Submit to Leaderboard" (pending admin 
      const u=new URL(route.request().url());
      if(u.origin!==base)return route.fulfill({status:204,body:''});
      if(u.pathname==='/api/scan'){scanned.push(JSON.parse(route.request().postData()).url);return route.fulfill({contentType:'application/json',body:JSON.stringify({success:true,url:'https://example.com/service/',score,quality:'good',metrics:{},content_stats:{},recommendations:{all:[]}})})}
-     if(u.pathname==='/api/leaderboard/submit'){submitted.push(JSON.parse(route.request().postData()));return route.fulfill({contentType:'application/json',body:'{"success":true}'})}
+     if(u.pathname==='/api/leaderboard/request'){submitted.push(JSON.parse(route.request().postData()));return route.fulfill({contentType:'application/json',body:'{"success":true,"sent":true}'})}
      if(u.pathname==='/api/leaderboard')return route.fulfill({contentType:'application/json',body:'{"success":true,"entries":[]}'});
      return route.continue();
     });
@@ -46,12 +48,19 @@ test('single page: a score of 70+ offers "Submit to Leaderboard" (pending admin 
     await page.waitForFunction(()=>!document.getElementById('singleResult').classList.contains('hidden')&&/\d/.test(document.getElementById('singleResult').textContent));
     await page.waitForTimeout(300);
     const btn=page.locator('#singleLbBtn');
-    if(score<70){assert.equal(await btn.count(),0,prefix+' no submit below 70');await page.close();continue}
+    if(score<70){assert.equal(await btn.count(),0,prefix+' no submit below 70');assert.equal(await page.locator('#lbPopup').count(),0);await page.close();continue}
     assert.match(await btn.textContent(),new RegExp(button),prefix);
-    await page.fill('#singleLbName','Example Services');
-    await btn.click();
-    await page.waitForFunction(()=>/✅/.test(document.getElementById('singleLbBtn').textContent));
-    assert.deepEqual(submitted.map(s=>[s.url,s.score,s.company_name]),[['https://example.com/service/',82,'Example Services']],prefix);
+    await page.locator('#lbPopup').waitFor();
+    assert.match(await page.textContent('#lbPopupTitle'),/82\/100/);
+    assert.equal(await page.textContent('#lbConsentText'),CONSENT[lang],prefix+' the same consent text as stored and e-mailed');
+    assert.equal(await page.textContent('#lbNoPromo'),require('../src/leaderboard-confirm.cjs').NO_PROMO[lang],prefix+' never for promotion');
+    await page.fill('#lbCompany','Example Services');
+    await page.click('#lbSend');
+    await page.waitForFunction(()=>document.getElementById('lbStatus').textContent.length>0);
+    assert.equal(submitted.length,0,prefix+' nothing is sent without e-mail and consent');
+    await page.fill('#lbEmail','info@example.com');await page.check('#lbConsent');await page.click('#lbSend');
+    await page.waitForFunction(()=>document.getElementById('lbSend').style.display==='none');
+    assert.deepEqual(submitted.map(s=>[s.kind,s.url,s.company_name,s.email,s.consent,s.lang,'score' in s]),[['page','https://example.com/service/','Example Services','info@example.com',true,lang,false]],prefix);
     await page.close();
    }
   }
