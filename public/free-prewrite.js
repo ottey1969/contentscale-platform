@@ -94,7 +94,7 @@
         const response = await fetch(api + '/ai-answer', { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ engine, question, language: lang, country: country() }) });
         const body = await response.json().catch(() => ({}));
-        if (!response.ok || !body.success) throw Error(body.status || String(response.status));
+        if (!response.ok || !body.success) throw Error([body.status || String(response.status), body.code, body.detail, body.note].filter(Boolean).join(' · '));
         field.value = body.text || '';
         if (engine === 'google_aio' && body.google_source) { const select = form.querySelector('[name=google-source]'); if (select) select.value = body.google_source; }
         field.dispatchEvent(new Event('input', { bubbles: true }));
