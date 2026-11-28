@@ -95,7 +95,8 @@ test('result page: the brief to copy comes first, right under the decision; ever
   ['nl','Stap 1 · Kopieer of download de brief','Stap 2 · Keur de definitieve paginatekst goed','zodat later te controleren is dat de livepagina hem echt toont'],
   ['es','Paso 1 · Copia o descarga el brief','Paso 2 · Aprueba el texto final de la página','para comprobar después que la página publicada lo muestra']]){
   const html=(await request(a).get('/free-pre-write/r?lang='+lang).expect(200)).text;
-  const order=['id="decision"','id="handoff"','id="intent-adjust"','id="implementation"','id="history"'].map(x=>html.indexOf(x));
+  // Owner 2026-11-28 (later): "Optional gaat naar beneden: step 1, dan 2 etc., laatste optional zaken".
+  const order=['id="decision"','id="handoff"','id="implementation"','id="intent-adjust"','id="history"'].map(x=>html.indexOf(x));
   assert.deepEqual([...order].sort((x,y)=>x-y),order,lang+' order');assert.ok(order.every(i=>i>0));
   for(const t of [step1,step2,why])assert.ok(html.includes(t),lang+': '+t);
   assert.match(html,/<button type="button" id="copy-brief">/);assert.match(html,/<a id="download" class="button-link" download/);

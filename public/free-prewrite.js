@@ -238,6 +238,16 @@
     adjust.hidden = result.status === 'published';
     if (!adjust.__updatePrompt) { adjust.__draft = remember(adjust, 'cs-free-prewrite:adjust:' + key); wirePrompt(adjust, () => result.keyword || ''); wireFetch(adjust, () => result.keyword || '', () => result.region || ''); }
     adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
+    // The intent the brief uses now, whether it follows Google or the owner, and the evidence for it.
+    const current = element('intent-current'), it = window.prewriteIntentTexts, si = result.brief.search_intent;
+    if (current && it && si && si.primary) {
+      const name = value => (it.labels && it.labels[value]) || value;
+      const parts = [it.now + ': ' + name(si.primary) + ' (' + (si.user_override || si.overridden ? it.owner : it.auto) + ')'];
+      const also = (si.secondary_intents || []).filter(value => value && value !== si.primary);
+      if (also.length) parts.push(it.also + ': ' + also.map(name).join(', '));
+      if ((si.evidence || []).length) parts.push(it.why + ': ' + si.evidence.join('; '));
+      current.textContent = parts.join(' · ');
+    }
     const repair = element('repair-pricing');
     repair.hidden = pricing?.state !== 'needs_input' || result.status !== 'open';
     repair.onclick = async () => {
