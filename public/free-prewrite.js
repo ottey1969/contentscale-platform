@@ -243,8 +243,19 @@
     const display = await call('/implementation-report');
     renderHistory(display.history);
     element('implementation').hidden = false;
+    element('handoff').hidden = false;
     const editorText = result.instructions + '\n\n' + JSON.stringify(display.editor_brief, null, 2);
     element('editor').value = editorText;
+    const copyBrief = element('copy-brief');
+    if (copyBrief && !copyBrief.__wired) {
+      copyBrief.__wired = true;
+      copyBrief.addEventListener('click', async () => {
+        const note = element('copy-brief-status');
+        try { await navigator.clipboard.writeText(element('editor').value); note.textContent = (window.prewriteWorkflow || {}).copied || 'Copied.'; }
+        catch { element('editor').focus(); element('editor').select(); }
+        copyBrief.classList.remove('done'); void copyBrief.offsetWidth; copyBrief.classList.add('done');
+      });
+    }
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     downloadUrl = URL.createObjectURL(new Blob([editorText], { type: 'text/plain;charset=utf-8' }));
     element('download').href = downloadUrl;

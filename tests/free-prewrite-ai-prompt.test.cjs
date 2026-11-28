@@ -88,3 +88,16 @@ test('buttons show they are working: Generate brief spins while the request runs
   assert.equal(await page.textContent('#status'),'Escribe un tema.');
  }finally{await browser.close();srv.close()}
 });
+
+test('result page: the brief to copy comes first, right under the decision; every step says what it is for (EN/NL/ES)',async()=>{
+ const a=app();
+ for(const [lang,step1,step2,why] of [['en','Step 1 · Copy or download the brief','Step 2 · Approve the final page text','so it can later check that the live page really shows it'],
+  ['nl','Stap 1 · Kopieer of download de brief','Stap 2 · Keur de definitieve paginatekst goed','zodat later te controleren is dat de livepagina hem echt toont'],
+  ['es','Paso 1 · Copia o descarga el brief','Paso 2 · Aprueba el texto final de la página','para comprobar después que la página publicada lo muestra']]){
+  const html=(await request(a).get('/free-pre-write/r?lang='+lang).expect(200)).text;
+  const order=['id="decision"','id="handoff"','id="intent-adjust"','id="implementation"','id="history"'].map(x=>html.indexOf(x));
+  assert.deepEqual([...order].sort((x,y)=>x-y),order,lang+' order');assert.ok(order.every(i=>i>0));
+  for(const t of [step1,step2,why])assert.ok(html.includes(t),lang+': '+t);
+  assert.match(html,/<button type="button" id="copy-brief">/);assert.match(html,/<a id="download" class="button-link" download/);
+ }
+});

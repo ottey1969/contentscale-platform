@@ -101,6 +101,9 @@ test('private public briefs in Chromium use the canonical publication history fo
     for (const [lang, heading] of [['en', 'Proof & History'], ['nl', 'Bewijs en historie'], ['es', 'Evidencias e historial']]) {
       const page = await start(lang, 'Planning', { owner: lang !== 'en' });
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+      // The brief to copy is the first thing under the decision, with its copy button.
+      await page.locator('#handoff #copy-brief').waitFor();
+      assert.ok((await page.locator('#editor').inputValue()).length > 100);
       if (lang === 'en') {
         const original = page.url();
         await page.locator('#intent-adjust select[name=intent]').selectOption('informational');
