@@ -775,7 +775,8 @@ test('admin: market and language like the public form; fresh research ignores a 
  const stored=await run({market:'nl — Netherlands',language:'Dutch'});await s.service.idle();
  assert.equal(s.calls.length,n,'stored result reused');assert.equal(stored.body.status,'DONE');
  const view=await s.get('/api/free-growth/checks/'+stored.body.id+'?k='+stored.body.key);assert.equal(view.body.cached,true);
- assert.match((await s.get('/free-growth/r/'+stored.body.id+'?k='+stored.body.key)).body,/Result from earlier today\.<\/strong> This page was checked for the same question and market/);
+ // The notice is built in the page language (owner 2026-11-28), so the source holds it with a date placeholder.
+ assert.match((await s.get('/free-growth/r/'+stored.body.id+'?k='+stored.body.key)).body,/'Result from earlier today\.','This page was checked for the same question and market §WHEN, so that result is shown\./);
  await run({market:'nl — Netherlands',language:'Dutch',fresh:true});await s.service.idle();
  assert.equal(s.calls.length,n+1,'fresh research runs again');
  // Fresh is admin only: the public form ignores it.

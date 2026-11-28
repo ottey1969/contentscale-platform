@@ -157,7 +157,8 @@ function summarizeFreeGrowth(report,{url,query}={}){
   'Only Google\'s normal search results were compared. AI answers (ChatGPT, Perplexity, Google AI Overviews) were not checked automatically; only answers you paste below are analysed.',
   ...(gate.research_limitations||[]).slice(0,3).map(x=>typeof x==='string'?x:(x.detail||x.message||x.code||'')).filter(Boolean)
  ];
- if(scopeNote)limitations.push('Google shows more than one kind of page for this search. Your page was compared only with the '+gate.intent_scope.compared_with+' ('+gate.intent_scope.results_of_this_type+' of '+gate.intent_scope.of+'). '+scopeNote);
+ // The generic note only repeats "compared only with …"; the specific notes (where the other intent lives) are added.
+ if(scopeNote)limitations.push('Google shows more than one kind of page for this search. Your page was compared only with the '+gate.intent_scope.compared_with+' ('+gate.intent_scope.results_of_this_type+' of '+gate.intent_scope.of+').'+(/^Google shows several page types/.test(scopeNote)?'':' '+scopeNote));
  const gaps=buildGapList(report||{});
  // Free Growth must not call a topic 'recommended' while the actual editorial evidence decision is blocked.
  // Keep every source and heading available for manual review and export; disable automatic writing.
