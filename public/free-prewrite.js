@@ -12,6 +12,10 @@
   let downloadUrl;
   const newKey = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
   const element = id => document.getElementById(id);
+  // Switching language keeps the brief (its private key in the address) and the half-filled form (owner 2026-11-29).
+  document.querySelectorAll('[data-lang-switch]').forEach(link => link.addEventListener('click', () => {
+    link.href = link.pathname + link.search + (/^#[a-f0-9]{64}$/.test(location.hash) ? location.hash : '');
+  }));
   // Every button shows it is working while its request runs (owner 2026-11-28: "generate brief en alle andere knoppen
   // animatie").
   const busy = (button, on) => { if (!button) return; button.disabled = on; if (on) button.setAttribute('aria-busy', 'true'); else button.removeAttribute('aria-busy'); };
@@ -117,7 +121,9 @@
     claude: form.get('ai-claude') || '', copilot: form.get('ai-copilot') || ''
   });
   if (intake) {
-    const draft = remember(intake, 'cs-free-prewrite:intake:' + lang);
+    // One draft for all page languages, so switching language keeps what was filled in (older per-language drafts are read once).
+    try { if (!localStorage.getItem('cs-free-prewrite:intake')) { const old = localStorage.getItem('cs-free-prewrite:intake:' + lang); if (old) localStorage.setItem('cs-free-prewrite:intake', old); } } catch {}
+    const draft = remember(intake, 'cs-free-prewrite:intake');
     // Before anyone fills in the form: how many free briefs are left today and whether this computer may start one.
     (async () => {
       const box = element('availability');
