@@ -1,4 +1,4 @@
-name: Free tools weekly limit and owner overview
+name: Free tools weekly limit, owner overview and leaderboard confirmation
 # One free Growth check and one free Pre-Write Brief per person per week (e-mail, browser or IP); progress on the waiting
 # page; the owner-only overview. Real PostgreSQL for the limit, so concurrency and refunds are tested for real.
 on:
@@ -13,6 +13,8 @@ on:
       - 'src/index.js'
       - 'tests/free-weekly-limit.test.cjs'
       - 'tests/owner-overview.test.cjs'
+      - 'src/leaderboard-confirm.cjs'
+      - 'tests/leaderboard-self-submit.test.cjs'
       - '.github/workflows/free-weekly-limit.yml'
   push:
     branches: [ main ]
@@ -47,6 +49,6 @@ jobs:
       - name: Weekly limit (Free Growth, Free Pre-Write), progress, owner overview
         env:
           PREWRITE_E2E_DATABASE_URL: postgres://test:test@127.0.0.1:5432/free_limit_test
-        run: node --test tests/free-weekly-limit.test.cjs tests/owner-overview.test.cjs tests/free-prewrite-parity.test.cjs
+        run: node --test tests/free-weekly-limit.test.cjs tests/owner-overview.test.cjs tests/free-prewrite-parity.test.cjs tests/leaderboard-self-submit.test.cjs
       - name: Golden owner cases (AGENTS.md)
         run: node --test tests/golden-owner-cases.test.cjs
