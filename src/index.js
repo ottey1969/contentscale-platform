@@ -61244,9 +61244,8 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
       }).slice(0,16);
     const _pwbOwnPages=(await Promise.all(_pwbOwnCandidates.map(async url=>{
       try{
-        const page=await _pwbFallbackReader(url,{timeout:4500,redirects:0,limit:300000});
-        if(page.status!==200||page.final_url!==url||page.truncated||require('./gsc-report/site-audit.cjs').isBotCheck(page.html))return null;
-        return _pwbQuality.websitePage(url,page.html);
+        const page=await _pwbFallbackReader(url,{timeout:8000,redirects:3,limit:300000});
+        return _pwbQuality.ownPageFromRead(url,page,require('./gsc-report/site-audit.cjs').isBotCheck);
       }catch{return null}
     }))).filter(Boolean);
     const _pwbOwnOffers=_pwbQuality.firstPartyOffers(keyword,_pwbOwnPages);
@@ -62653,7 +62652,8 @@ ${sourceText}`;
       unverified_count:_unverifiedExternal.length-brief.external_link_targets.length};
     // Owner 2026-11-28: internal links from pages that were read and share the topic, plus the own tool or service.
     brief.internal_link_targets=_pwbQuality.suggestInternalLinks(brief.internal_link_targets,_pwbOwnPages,keyword,
-      _pwbSameContent?.url||brief.content_decision?.closest_existing_url);
+      _pwbSameContent?.url||brief.content_decision?.closest_existing_url,
+      {market:_pwbQuality.marketOfUrl((_pwbSameContent&&_pwbSameContent.url)||(_pwbDesiredSlug?_pwbOwnOrigin+_pwbDesiredSlug:'')||_pwbOwnOrigin)});
     brief.link_research = {
       external_other_meaning:_pwbSenseDropped.slice(0,10),
       internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),publisher_domain:(_pwbNetworkPublisherDomain||''),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are reader-facing same-domain pages. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only.'},
@@ -62684,6 +62684,7 @@ ${sourceText}`;
     const _pwbVerifiedNorm = _pwbVerified.map(_pwbFactNorm).filter(Boolean);
     const _pwbMetricRisk = function(v){
       const s=String(v||'');
+      if(_pwbQuality.metricRiskAnyLanguage(s))return true;
       return /(?:\b\d+(?:\.\d+)?\s*%|\b\d+(?:\.\d+)?\s*[x×](?=\s|$)|\b\d[\d,]*(?:\+|k\+?)?\s+(?:(?:monthly|manual|documented)\s+)?(?:clients?|customers?|websites?|sites?|projects?|recover(?:y|ies)|cases?|penalt(?:y|ies)|businesses?)\b|\b(?:success|recovery|improvement|conversion|traffic)\s+rate\b|\b(?:average|documented|guaranteed)\s+(?:recovery|result)[^.]{0,60}\b\d+\s+days?\b|\bwithin\s+\d+\s+days?\b|\b\d+\s*\+?\s*years?\b|\$\s*\d[\d,.]*)/i.test(s);
     };
     const _pwbMetricSupported = function(v){

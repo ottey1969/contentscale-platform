@@ -62,9 +62,9 @@ test('Step 1: own site cited only for the own domain; per AI system what it take
    claude=block('Claude','Microsoft Copilot'),copilot=block('Microsoft Copilot','Link to these own pages');
   assert.match(chatgpt,/Your site cited: no/,'a competitor page is not your site');
   assert.match(perplexity,/Your site cited: yes/,'your own page (www. or not) counts');
-  assert.match(google,/What it takes to be cited[\s\S]*a numbered checklist in the first screen/);
+  assert.match(google,/To be cited by Google AI Overview, the page needs:[\s\S]*a numbered checklist in the first screen/);
   assert.match(google,/rival\.example: A step list\. Misses on your page: No step list yet\. Do: Add a 5-step list near the top\./,'the real aio_citation_gap list');
-  assert.match(chatgpt,/What it takes to be cited[\s\S]*a dated test log with screenshots/);
+  assert.match(chatgpt,/To be cited by ChatGPT Search, the page needs:[\s\S]*a dated test log with screenshots/);
   assert.match(perplexity,/keep the guide current/);
   assert.match(copilot,/name Bing Webmaster Tools/);
   assert.match(claude,/not researched/);assert.doesNotMatch(claude,/Never shown/);

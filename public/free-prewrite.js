@@ -285,7 +285,8 @@
           if (sources.length) { addText(box, 'p', t.sources + ':'); list(sources); }
         }
         const needs = [...(checked ? arr(x.citation_needs).map(textOf) : []), ...extra].filter(Boolean);
-        if (needs.length) { addText(box, 'p', t.aiGap + ':').className = 'label'; list(needs); }
+        // One list per system, headed with its name ("To be cited by Claude, the page needs:").
+        if (needs.length) { addText(box, 'p', t.citedBy ? t.citedBy.replace('§', names[key].split(' /')[0]) : t.aiGap + ':').className = 'label'; list(needs); }
       }
     }
     const links = arr(b.internal_link_targets).filter(x => x && x.link_to);
