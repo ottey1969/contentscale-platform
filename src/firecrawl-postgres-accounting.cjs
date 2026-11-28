@@ -15,7 +15,8 @@ const MODULE_SCHEMA=`CREATE TABLE IF NOT EXISTS firecrawl_module_usage (
  errors bigint NOT NULL DEFAULT 0,
  PRIMARY KEY(account_hash,day_utc,module)
 )`;
-const MODULES=new Set(['FREE_GROWTH','GSC_AUDIT','TRACKER_GROWTH','GOOGLE_COMPETITOR','AI_GAP','UNCLASSIFIED']);
+const MODULES=new Set(['FREE_GROWTH','GSC_AUDIT','TRACKER_GROWTH','GOOGLE_COMPETITOR','AI_GAP',
+ 'FREE_PREWRITE','TRACKER_PREWRITE','NETWORK_PREWRITE','CEO_SCAN','QUICK_SCAN','UNCLASSIFIED']);
 const safeModule=m=>MODULES.has(m)?m:'UNCLASSIFIED';
 const RESERVE=`INSERT INTO firecrawl_request_usage AS u(account_hash,month_utc,monthly_requests,days)
  SELECT $1,$2::date,1,jsonb_build_object($3::text,1)
@@ -85,4 +86,4 @@ function productionAccounting(env=process.env){
  pool.on('error',()=>console.warn('[firecrawl] accounting connection unavailable'));
  return createFirecrawlPostgresAccounting(pool);
 }
-module.exports={createFirecrawlPostgresAccounting,productionAccounting,SCHEMA,RESERVE};
+module.exports={createFirecrawlPostgresAccounting,productionAccounting,SCHEMA,RESERVE,MODULES};

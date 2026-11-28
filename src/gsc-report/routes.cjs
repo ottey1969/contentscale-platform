@@ -22,7 +22,9 @@ function registerGscReport(app,pool,{config=require('../growth-free/routes.cjs')
  serperKey=process.env.SERPER_API_KEY||'',pagespeedKey=process.env.PAGESPEED_API_KEY||'',firecrawlKey=process.env.FIRECRAWL_API_KEY||'',
  makeRenderer=null}={}){
  // Firecrawl (paid per page, runs JavaScript): only when the owner ticks it, through the same guarded reader Free Growth uses.
- const renderer=makeRenderer||(({max})=>createFreeGrowthFirecrawlReader({module:'GSC_AUDIT',env:{FREE_GROWTH_FIRECRAWL_ENABLED:'true',FIRECRAWL_API_KEY:firecrawlKey},original:siteReader,maxPages:max,hardCap:50}).reader);
+ const renderer=makeRenderer||(({max})=>createFreeGrowthFirecrawlReader({module:'GSC_AUDIT',env:{...process.env,FREE_GROWTH_FIRECRAWL_ENABLED:'true',FIRECRAWL_API_KEY:firecrawlKey},original:siteReader,maxPages:max,hardCap:50,
+  // The site audit already chose only pages that look empty without JavaScript.
+  insufficient:()=>true}).reader);
  // The Free Growth invitation for a recipient lives in the Free Growth tables; they are made on first use.
  const st=storage||{...reportStore,createInvite:async(p,o)=>{await growthStore.ensureTables(p);return growthStore.createInvite(p,o)},
   revokeInviteToken:async(p,t)=>{const i=await growthStore.getInvite(p,t);return i?growthStore.revokeInvite(p,i.id):null}};
