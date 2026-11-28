@@ -675,6 +675,14 @@ function detectSearchIntent(kw, org, paaArr, aiOv, comps) {
   const providerRows = orgRows.slice(0, 8).filter(o => providerRe.test(String(o.title || '')) || /\b(?:servicios|services|diensten|contratar|hire|presupuesto|offerte|quote)\b/i.test(String(o.title || ''))).length;
   if (providerRows >= 3) { score.commercial += providerRows * 2; evidence.push(providerRows + ' of the top results are providers offering the service'); }
 
+  // Owner 2026-11-28 (Spanish "seo checker"): when most top results are free online tools, the searcher wants to USE a
+  // tool (transactional), not read a "best tools" comparison. Lists ("best", "top 10", "mejores") are not tool pages.
+  const toolTitleRe = /\b(?:checker|analy[sz]er|analizador|comprobador|scanner|herramienta|seo\s*check|site\s*audit|audit\s*tool)\b/i;
+  const toolUseRe = /\b(?:free|gratis|gratuit[oa]s?|online)\b[\s\S]{0,60}\b(?:check|analy[sz]e|analiza|test|scan|score|puntuaci[oó]n)/i;
+  const listRe = /\b(?:best|top\s*\d+|mejores|beste|\d+\s+(?:best|mejores|beste)|las\s+\d+|reviews?|compared|vergelijking)\b/i;
+  const toolRows = orgRows.slice(0, 8).filter(o => { const t = String(o.title||''), all = t + ' ' + String(o.snippet||'');
+    return !listRe.test(t) && (toolTitleRe.test(t) || toolUseRe.test(all)); }).length;
+  if (toolRows >= 3) { score.transactional += toolRows * 2; evidence.push(toolRows + ' of the top results are free online tools'); }
   const fw = orgRows.slice(0,8).map(o => (o.title||'').toLowerCase().split(/[\s|\u2014-]/)[0]).filter(Boolean);
   const bc = {}; fw.forEach(w => { bc[w] = (bc[w]||0)+1; });
   const tb = Object.entries(bc).sort((a,b)=>b[1]-a[1])[0];
@@ -61060,7 +61068,9 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
     const _pwbQuality=require('./prewrite-quality.cjs');
-    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId, pricingSource } = req.body || {};
+    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId, pricingSource, desiredSlug } = req.body || {};
+    // The page address the owner fixed on the form (Free Pre-Write; Tracker can send desiredSlug too).
+    const _pwbDesiredSlug=(()=>{try{return require('./free-prewrite.cjs').normalizeSlug(desiredSlug)||'';}catch(e){return '';}})();
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -61215,7 +61225,10 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     }
     const _pwbTopicWords=String(keyword||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').match(/[a-z0-9]{3,}/g)||[];
     const _pwbTopicHits=url=>{try{const path=new URL(url).pathname.toLowerCase();return _pwbTopicWords.filter(word=>path.includes(word.slice(0,5))).length}catch{return 0}};
-    const _pwbOwnCandidates=[...new Set([_pwbPricingUrl,..._pwbAuthorizedPageMatches,..._pwbSameIntent.map(x=>x.url),
+    // The site's sister subdomains (the scanner on app.) are read from their start page too, so a tool question finds the
+    // site's own tool (owner 2026-11-28).
+    const _pwbSisterRoots=[...new Set(clientSitemapUrls.map(url=>{try{const u=new URL(url);return u.origin!==new URL(_pwbOwnOrigin).origin?u.origin+'/':null}catch{return null}}).filter(Boolean))].slice(0,4);
+    const _pwbOwnCandidates=[...new Set([_pwbPricingUrl,..._pwbSisterRoots,..._pwbAuthorizedPageMatches,..._pwbSameIntent.map(x=>x.url),
       ...clientSitemapUrls.filter(url=>{try{return /\/(?:[^/]*(?:seo|scan|checker|diensten|services|servicios)[^/]*)/i.test(new URL(url).pathname)}catch{return false}}),
       ...clientSitemapUrls.slice().sort((a,b)=>_pwbTopicHits(b)-_pwbTopicHits(a))])].filter(url=>{
         // Owner 2026-11-28: a sister subdomain (the scanner on app.) is the own site too.
@@ -61229,6 +61242,8 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
       }catch{return null}
     }))).filter(Boolean);
     const _pwbOwnOffers=_pwbQuality.firstPartyOffers(keyword,_pwbOwnPages);
+    // Competitor names (live results, AI answers, later the competitor table) never reach the reader-facing brief.
+    let _pwbBrands=[];
     const _pwbSameContent=_pwbQuality.contentMatch(keyword,_pwbOwnPages,{region:_pwbSerpMarket.gl});
     const _pwbMissingInfo=_pwbQuality.missingInformation(keyword,_pwbOwnPages);
     let _pwbPriorPlans=[];
@@ -61645,6 +61660,11 @@ Return ONLY valid JSON, no markdown, no preamble.
       existing_page:_pwbSameContent?.url||null,missing_information:_pwbMissingInfo,overlapping_create:_pwbOverlappingPlan};
     const finalPrompt = prompt + '\n\nPRE-PUBLICATION AI WRITING RESEARCH:\n' + _pwbAiWritingPrompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.' + '\n\nACTUAL GOOGLE SERP REQUEST SCOPE: '+JSON.stringify({country:_pwbSerpMarket.gl,language:_pwbSerpMarket.hl,requested_location:_pwbSerpLocation||null,location_applied:!!_pwbSerpLocation})+'; observed SERP URLs are from this request, not verified rankings for every city. Do not claim a different locale was searched.'
       + '\n\nWEBSITE AND DECISION EVIDENCE: ' + JSON.stringify(_pwbDecisionEvidence)
+      + (()=>{try{_pwbBrands=_pwbQuality.competitorBrands({serpUrls,aiLeads:_pwbAiSourceLeads,competitorTable:[],ownUrl:_pwbOwnOrigin});}catch(e){_pwbBrands=[];}
+          return '\n\nNEVER NAME THESE COMPANIES OR TOOLS in opening_passage, ai_answer, page_blueprint, definitive_outline, quick_facts, use_cases, paa_questions answers, faq, titles or meta: '
+            +(_pwbBrands.map(b=>b.name).join(', ')||'none listed')+'. They are research only. Do not write "best tools" lists or comparison tables of named competitors; compare criteria instead.'
+            +(_pwbOwnOffers.length?' The answer to which tool or service to use is the site\'s own offer: '+JSON.stringify(_pwbOwnOffers.map(o=>({url:o.url,heading:o.heading})))+'. Put it in the opening and give it its own section.':'');})()
+      + (_pwbDesiredSlug?'\nThe owner fixed the page address of a new page: '+_pwbDesiredSlug+' (use it as meta_package.url_slug).':'')
       + '\nUse relevant first-party functionality in the blueprint. Competitor names and URLs are research only. If a verified existing page answers the same intent, expand it. Flag overlapping CREATE plans for review. Ask for missing business facts. Preserve quoted-only pricing when verified. No minimum link count.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
       + '\n- Every supplied competitor must be represented in competitor_table.'
@@ -62277,6 +62297,13 @@ ${claimsBlock.slice(0,2400)}`;
       const _paaMap=new Map((Array.isArray(brief.paa_questions)?brief.paa_questions:[]).map(function(x){return [_pwbPaaKey(x&&x.q),x&&x.a];}).filter(function(x){return x[0];}));
       if(!_pwbRealPaaQuestions.every(function(q){return _pwbCanonicalGood(_paaMap.get(_pwbPaaKey(q)));}))_pwbCanonicalNeeds.push('paa_questions');
     }
+    // Named competitors in a reader-facing field: that field is repaired by the model with the names forbidden.
+    try{_pwbBrands=_pwbQuality.competitorBrands({serpUrls,aiLeads:_pwbAiSourceLeads,competitorTable:brief.competitor_table||[],ownUrl:_pwbOwnOrigin});}catch(e){}
+    const _pwbCompetitorKeys=_pwbQuality.competitorFields(brief,_pwbBrands).filter(function(k){return ['opening_passage','page_blueprint','definitive_outline','ai_answer','quick_facts','use_cases','paa_questions'].includes(k);});
+    _pwbCompetitorKeys.forEach(function(k){if(!_pwbCanonicalNeeds.includes(k))_pwbCanonicalNeeds.push(k);});
+    const _pwbNoCompetitorRule=function(k){return _pwbCompetitorKeys.includes(k)
+      ?'\nNEVER NAME THESE COMPANIES OR TOOLS (research only): '+_pwbBrands.map(function(b){return b.name;}).join(', ')+'. Rewrite without them; compare criteria, not named competitors.'
+        +(_pwbOwnOffers.length?' Where the reader needs a tool or service, present the site\'s own offer: '+JSON.stringify(_pwbOwnOffers.map(function(o){return {url:o.url,heading:o.heading};}))+'.':''):'';};
     if(_pwbCanonicalNeeds.length && typeof _pwbCompactCall==='function'){
       _pwbStage='quality_gate';_pwbReport();
       const _pwbCanonicalRules={
@@ -62292,7 +62319,7 @@ ${claimsBlock.slice(0,2400)}`;
         const _key=_pwbCanonicalNeeds[_cr];
         const _prompt=`FINAL CANONICAL PUBLICATION REPAIR — ${_key}. Repair ONLY this top-level key. JSON ONLY. The value must satisfy the exact schema below after normalization. Never invent URLs, statistics, rankings, traffic changes, client outcomes, credentials or personal experience. Prefer conservative definitions and practical guidance.
 
-${_pwbCanonicalRules[_key]}
+${_pwbCanonicalRules[_key]}${_pwbNoCompetitorRule(_key)}
 
 CURRENT VERIFIED BRIEF CONTEXT:
 ${JSON.stringify({keyword:keyword,search_intent:_chosenIntent,recommended_title_h1:brief.recommended_title_h1||'',top10_gap:brief.top10_gap||'',opening_passage:brief.opening_passage||{},recommended_structure:brief.recommended_structure||{},must_cover_entities:brief.must_cover_entities||[],conclusion:brief.conclusion||{},current_value:brief[_key]||null}).slice(0,9500)}
@@ -62745,6 +62772,14 @@ ${sourceText}`;
       if(brief.meta_package)brief.meta_package.url_slug=new URL(_pwbSameContent.url).pathname;
     }
     brief.first_party_offers=_pwbOwnOffers;
+    // Last resort after the repair: sentences and outline sections that still name a competitor are removed.
+    const _pwbStillNamed=_pwbQuality.competitorFields(brief,_pwbBrands);
+    const _pwbScrubbed=_pwbStillNamed.length?_pwbQuality.scrubCompetitorSentences(brief,_pwbBrands):0;
+    brief.competitor_name_check={brands_checked:_pwbBrands.length,repaired_fields:_pwbCompetitorKeys,fields_after_repair:_pwbStillNamed,sentences_removed:_pwbScrubbed};
+    _pwbQuality.alignH1(brief);
+    if(_pwbDesiredSlug&&String(brief.content_decision.recommended_treatment||'').toUpperCase()==='CREATE_NEW_PAGE'){
+      brief.meta_package.url_slug=_pwbDesiredSlug;brief.slug_source='owner';
+    }
     brief.website_evidence={origin:_pwbOwnOrigin||null,pages_read:_pwbOwnPages.map(page=>page.url)};
     brief.missing_information=_pwbMissingInfo;
     brief.cannibalization_review=_pwbOverlappingPlan&&brief.content_decision.recommended_treatment==='CREATE_NEW_PAGE'
@@ -63013,8 +63048,8 @@ require('./owner-overview.cjs').registerOwnerOverview(app, pool, {
 });
 require('./free-prewrite.cjs').registerFreePrewrite(app, pool, {
   generate: async context => {
-    const { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } = context;
-    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } }, {
+    const { keyword, language, region, manualAiEvidence, intentOverride, pricingSource, slug } = context;
+    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence, intentOverride, pricingSource, desiredSlug: slug || '' } }, {
       status() { return this; },
       json() {}
     }, context);
