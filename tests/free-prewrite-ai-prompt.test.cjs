@@ -44,3 +44,25 @@ test('typing the question fills the exact Tracker prompt; empty question uses th
   assert.deepEqual(errors,[]);
  }finally{await browser.close();srv.close()}
 });
+
+test('pasted text survives a refresh; a refused field is named in the page (pricing page on another domain)',{skip:!chromium&&'Playwright not installed',timeout:60000},async()=>{
+ const srv=app().listen(0),base='http://127.0.0.1:'+srv.address().port;
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage();
+  await page.goto(base+'/free-pre-write?lang=es');
+  await page.fill('[name=website]','https://es.contentscale.site/');
+  await page.fill('[name=keyword]','seo checker');
+  await page.fill('[name=email]','info@contentscale.site');
+  await page.fill('[name=pricing-source]','https://contentscale.site/services/');
+  await page.fill('[name=ai-question]','¿Qué seo checker gratis analiza el SEO de mi web?');
+  await page.fill('[name=ai-chatgpt]','Respuesta pegada de ChatGPT con fuentes https://example.com/a');
+  await page.reload();
+  assert.equal(await page.inputValue('[name=ai-chatgpt]'),'Respuesta pegada de ChatGPT con fuentes https://example.com/a');
+  assert.equal(await page.inputValue('[name=keyword]'),'seo checker');
+  assert.equal(await page.inputValue('#intake .ai-prompt'),buildCustomerResearchPrompt('¿Qué seo checker gratis analiza el SEO de mi web?'));
+  await page.click('#intake button[type=submit]');
+  await page.waitForFunction(()=>/misma|mismo dominio/.test(document.getElementById('status').textContent));
+  assert.equal(await page.inputValue('[name=ai-chatgpt]'),'Respuesta pegada de ChatGPT con fuentes https://example.com/a','still there after the error');
+ }finally{await browser.close();srv.close()}
+});

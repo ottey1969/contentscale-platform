@@ -24,12 +24,27 @@
     if (!response.ok) {
       // The weekly limit says until when, in the page language (owner 2026-11-28).
       const failure = Error('Request failed');
-      try { const body = await response.json(); if (body && body.code === 'WEEKLY_LIMIT' && typeof body.error === 'string') failure.message = body.error, failure.limit = true; } catch {}
+      // The weekly limit and an invalid field say what is wrong, in the page language (owner 2026-11-28).
+      try { const body = await response.json(); if (body && typeof body.error === 'string' && body.error) failure.message = body.error, failure.limit = true; } catch {}
       throw failure;
     }
     return response.json();
   }
 
+  // Pasted text is remembered in this browser until the brief has started (owner 2026-11-28: "de tekst die ik plak moet
+  // onthouden worden"), so a refresh or an error never loses the AI answers.
+  function remember(form, storageKey) {
+    if (!form) return { clear() {} };
+    const fields = () => Array.from(form.querySelectorAll('input[name], textarea[name], select[name]')).filter(el => el.type !== 'checkbox' && el.type !== 'hidden');
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      for (const el of fields()) if (typeof saved[el.name] === 'string' && saved[el.name] && !el.value) el.value = saved[el.name];
+    } catch {}
+    const save = () => { try { const data = {}; for (const el of fields()) if (el.value) data[el.name] = el.value; localStorage.setItem(storageKey, JSON.stringify(data)); } catch {} };
+    form.addEventListener('input', save);
+    form.addEventListener('change', save);
+    return { clear() { try { localStorage.removeItem(storageKey); } catch {} } };
+  }
   // The research prompt of the Tracker Pre-Write, filled in for the question (or the topic when the question is empty),
   // so the owner only copies and pastes it into each AI system (owner 2026-11-28).
   function wirePrompt(form, topic) {
@@ -58,6 +73,7 @@
     claude: form.get('ai-claude') || '', copilot: form.get('ai-copilot') || ''
   });
   if (intake) {
+    const draft = remember(intake, 'cs-free-prewrite:intake:' + lang);
     wirePrompt(intake, () => (intake.querySelector('[name=keyword]').value || '').trim());
     intake.addEventListener('submit', async event => {
       event.preventDefault();
@@ -71,6 +87,7 @@
       const resultPath = root + '/r?lang=' + lang + '#' + key;
       try {
         await call('', { website: form.get('website'), keyword: form.get('keyword'), email: form.get('email'), region: form.get('country'), language: lang, pricingSource: form.get('pricing-source'), manualAiEvidence: evidence(form) });
+        draft.clear();
         location.assign(resultPath);
       } catch (error) {
         status.textContent = error.limit ? error.message : labels[7];
@@ -156,7 +173,7 @@
     if (pricing?.state === 'needs_input') addText(card, 'p', window.prewritePricingHelp);
     const adjust = element('intent-adjust');
     adjust.hidden = result.status === 'published';
-    if (!adjust.__updatePrompt) wirePrompt(adjust, () => result.keyword || '');
+    if (!adjust.__updatePrompt) { adjust.__draft = remember(adjust, 'cs-free-prewrite:adjust:' + key); wirePrompt(adjust, () => result.keyword || ''); }
     adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
     const repair = element('repair-pricing');
     repair.hidden = pricing?.state !== 'needs_input' || result.status !== 'open';
@@ -184,6 +201,7 @@
           intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value, manualAiEvidence: evidence(new FormData(adjust)),
           // A correction of this brief, not a new one: it does not use the weekly free brief.
           revisionOf: previousKey });
+        if (adjust.__draft) adjust.__draft.clear();
         history.replaceState(null, '', root + '/r?lang=' + lang + '#' + key);
         location.reload();
       } catch (error) {

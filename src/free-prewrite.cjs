@@ -56,6 +56,23 @@ function manualEvidence(raw) {
   return out;
 }
 const intents = ['', 'informational', 'commercial', 'transactional', 'navigational'];
+const inputErrors = {
+  en: { AI_ANSWERS: 'The AI answers could not be read. Paste plain text into the answer fields.', WEBSITE: 'Enter the full website address, for example https://example.com/.',
+    PRICING_URL: 'The pricing page must be a public https page on the same website as above (same domain, no ? or #). Leave the field empty if you have none.',
+    LINK: 'This private link is not valid. Reload the page and try again.', TOPIC: 'Enter a topic or customer question (at most 300 characters).',
+    COUNTRY: 'Enter the search country as two letters, for example ES.', LANGUAGE: 'The language or intent choice is not valid. Reload the page and try again.',
+    EMAIL: 'Enter a valid e-mail address.' },
+  nl: { AI_ANSWERS: 'De AI-antwoorden konden niet worden gelezen. Plak gewone tekst in de antwoordvelden.', WEBSITE: 'Vul het volledige websiteadres in, bijvoorbeeld https://voorbeeld.nl/.',
+    PRICING_URL: 'De prijspagina moet een openbare https-pagina op dezelfde website zijn als hierboven (zelfde domein, zonder ? of #). Laat het veld leeg als je die niet hebt.',
+    LINK: 'Deze privélink is niet geldig. Herlaad de pagina en probeer het opnieuw.', TOPIC: 'Vul een onderwerp of klantvraag in (maximaal 300 tekens).',
+    COUNTRY: 'Vul het zoekland in met twee letters, bijvoorbeeld NL.', LANGUAGE: 'De taal- of intentiekeuze is niet geldig. Herlaad de pagina en probeer het opnieuw.',
+    EMAIL: 'Vul een geldig e-mailadres in.' },
+  es: { AI_ANSWERS: 'No se pudieron leer las respuestas de IA. Pega texto normal en los campos de respuesta.', WEBSITE: 'Escribe la dirección completa del sitio, por ejemplo https://ejemplo.es/.',
+    PRICING_URL: 'La página de precios debe ser una página https pública del mismo sitio web (mismo dominio, sin ? ni #). Deja el campo vacío si no tienes ninguna.',
+    LINK: 'Este enlace privado no es válido. Recarga la página e inténtalo de nuevo.', TOPIC: 'Escribe un tema o pregunta del cliente (máximo 300 caracteres).',
+    COUNTRY: 'Escribe el país de búsqueda con dos letras, por ejemplo ES.', LANGUAGE: 'La elección de idioma o intención no es válida. Recarga la página e inténtalo de nuevo.',
+    EMAIL: 'Escribe un email válido.' }
+};
 // Owner 2026-11-28: one free brief per person per week, counted on the e-mail address (and the same browser or IP).
 const limitTexts = {
   en: ['E-mail address', 'One free brief per person per week. Your e-mail is only used for this limit and is not stored as text.'],
@@ -245,23 +262,26 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
   app.post(API, async (req, res) => {
     let site, priceSource;
     const { keyword, region, language, intentOverride = '', pricingSource } = req.body || {};
+    // Every refusal says which field is wrong, in the page language (owner 2026-11-28: a bare 400 told him nothing).
+    const lang = Object.hasOwn(texts, language) ? language : 'en';
+    const refuse = code => res.status(400).json({ success: false, code, error: inputErrors[lang][code] || inputErrors.en[code] });
     const manualAiEvidence = manualEvidence(req.body?.manualAiEvidence);
-    if (!manualAiEvidence) return res.status(400).json({ success: false });
+    if (!manualAiEvidence) return refuse('AI_ANSWERS');
     try {
       const url = validateUrl(req.body?.website);
       site = url.origin + '/';
-      priceSource = pricingEvidenceUrl(site, pricingSource);
-    } catch { return res.status(400).json({ success: false }); }
+    } catch { return refuse('WEBSITE'); }
+    try { priceSource = pricingEvidenceUrl(site, pricingSource); } catch { return refuse('PRICING_URL'); }
     const key = credentials(req);
-    if (!key || typeof keyword !== 'string' || !keyword.trim() || keyword.length > 300 ||
-        typeof region !== 'string' || !/^[a-z]{2}$/i.test(region) || typeof language !== 'string' || !Object.hasOwn(texts, language) || !intents.includes(intentOverride)) {
-      return res.status(400).json({ success: false });
-    }
+    if (!key) return refuse('LINK');
+    if (typeof keyword !== 'string' || !keyword.trim() || keyword.length > 300) return refuse('TOPIC');
+    if (typeof region !== 'string' || !/^[a-z]{2}$/i.test(region)) return refuse('COUNTRY');
+    if (typeof language !== 'string' || !Object.hasOwn(texts, language) || !intents.includes(intentOverride)) return refuse('LANGUAGE');
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().slice(0, 200) : '';
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const revisionOf = typeof req.body?.revisionOf === 'string' && /^[a-f0-9]{64}$/.test(req.body.revisionOf) ? req.body.revisionOf : null;
-    if (email && !emailOk) return res.status(400).json({ success: false });
-    if (!emailOk && !revisionOf) return res.status(400).json({ success: false });
+    if (email && !emailOk) return refuse('EMAIL');
+    if (!emailOk && !revisionOf) return refuse('EMAIL');
     if (!generate || dailyLimit < 1) return res.status(503).json({ success: false });
     const owner = ownerSessionValid(req);
     let db;
@@ -283,7 +303,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
           return res.status(429).json({ success: false, code: 'WEEKLY_LIMIT', retry_at: weekly.retry_at,
             error: weeklyLimit.limitMessage('FREE_PREWRITE', weekly.limit, weekly.retry_at, language, { contactUrl: process.env.GROWTH_FREE_CONTACT_URL || '' }) });
         }
-        if (!weekly.correction && !emailOk) { await weeklyLimit.refund(pool, weekly.usage_id); weekly = null; return res.status(400).json({ success: false }); }
+        if (!weekly.correction && !emailOk) { await weeklyLimit.refund(pool, weekly.usage_id); weekly = null; return refuse('EMAIL'); }
       }
       db = await pool.connect();
       await db.query('BEGIN');
