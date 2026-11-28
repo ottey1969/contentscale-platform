@@ -3072,6 +3072,10 @@
          const progressText = document.getElementById('singleProgressText');
          let url = input.value.trim();
          if (!url) { alert('Enter URL'); return; }
+         // An e-mail address or a URL with a user name is not a page (owner 2026-11-28).
+         { const _raw = url.trim(); const _mail = /^mailto:/i.test(_raw) || /^[^\s/:?#]+@[^\s/]+\.[a-z]{2,}$/i.test(_raw); let _bad = false;
+           try { const _u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(_raw) ? _raw : 'https://' + _raw); _bad = !!(_u.username || _u.password) || !/^https?:$/.test(_u.protocol); } catch (e) { _bad = true; }
+           if (_mail || _bad) { const _r = document.getElementById('singleResult'); _r.innerHTML = '<div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:14px;padding:18px;margin-top:16px;text-align:center;color:#fca5a5"></div>'; _r.firstChild.textContent = _mail ? "That looks like an e-mail address. Enter a web page address, for example https://example.com/page/" : "Enter a web page address, for example https://example.com/page/"; _r.classList.remove('hidden'); return; } }
          if (!url.startsWith('http')) url = 'https://' + url;
          _lastScannedUrl = url; // track for heartbeat
          button.disabled = true;
@@ -3086,6 +3090,7 @@
          const data = await response.json();
          if (!response.ok || !data.success) throw new Error(data.error || 'Scan failed');
          displayScanResult(data);
+         if (data.score >= 70) showSingleLeaderboardSubmit(data.url || url, data.score);
          progressBar.style.width = '100%';
          progressText.textContent = 'Complete!';
          setTimeout(() => { progress.classList.add('hidden'); button.disabled = false; button.innerHTML = '<i class="fas fa-search mr-2"></i> Start Scan'; }, 1000);
@@ -4406,6 +4411,24 @@
          if (history.length && input) input.value = history[0].url;
          if (banner) banner.classList.add('hidden');
          scanSingleURL();
+         }
+         // Single page, score 70+: the visitor can submit the page; it waits in Admin → Pending until approved.
+         function showSingleLeaderboardSubmit(url, score) {
+         const resultDiv = document.getElementById('singleResult');
+         if (!resultDiv || document.getElementById('singleLbBox')) return;
+         const box = document.createElement('div');
+         box.id = 'singleLbBox';
+         box.style.cssText = 'background:linear-gradient(135deg,#3b0764,#1e1b4b);border:1px solid #7c3aed;border-radius:14px;padding:18px;margin-top:14px;';
+         box.innerHTML = '<div style="font-weight:800;color:#e9d5ff;margin-bottom:6px;"></div><label style="display:block;font-size:0.78rem;color:#c4b5fd;margin-bottom:4px;"></label>'
+           + '<input id="singleLbName" type="text" maxlength="120" style="width:100%;padding:9px 11px;background:#0f0a2e;border:1px solid #6d28d9;border-radius:8px;color:#fff;margin-bottom:10px;box-sizing:border-box;">'
+           + '<button id="singleLbBtn" type="button" style="width:100%;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:#fff;font-weight:800;cursor:pointer;"></button>'
+           + '<p style="font-size:0.72rem;color:#a78bfa;margin-top:8px;"></p>';
+         box.children[0].textContent = "🏆 Your page qualifies for the ContentScale Leaderboard";
+         box.children[1].textContent = "Company name (shown on the leaderboard)";
+         box.querySelector('#singleLbBtn').textContent = "🏆 Submit to Leaderboard";
+         box.querySelector('p').textContent = "Score 70+. Your entry appears after review by ContentScale.";
+         box.querySelector('#singleLbBtn').addEventListener('click', function () { submitSingleToLeaderboard(url, score, document.getElementById('singleLbName').value.trim()); });
+         resultDiv.appendChild(box);
          }
          async function submitSingleToLeaderboard(url, score, name) {
          const btn = document.getElementById('singleLbBtn');
