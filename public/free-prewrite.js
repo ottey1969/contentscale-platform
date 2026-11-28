@@ -368,6 +368,18 @@
     addText(card, 'h2', result.target.mode + ' · ' + result.target.url);
     const reason = result.brief.content_decision?.reason;
     if (reason) addText(card, 'p', reason);
+    // Made, but not passed: say so and why, in plain words, above the brief (owner 2026-11-28).
+    const notPassedBox = element('not-passed'), np = window.prewriteNotPassed;
+    if (notPassedBox) {
+      notPassedBox.replaceChildren();
+      notPassedBox.hidden = !(result.not_passed && np);
+      if (result.not_passed && np) {
+        addText(notPassedBox, 'strong', np.title);
+        const names = [...new Set((result.not_passed.missing || []).map(code => (np.names && np.names[code]) || np.other))];
+        if (names.length) { addText(notPassedBox, 'p', np.missing + ':'); const ul = document.createElement('ul'); names.forEach(n => addText(ul, 'li', n)); notPassedBox.append(ul); }
+        addText(notPassedBox, 'p', np.next);
+      }
+    }
     // Why links are or are not in the brief (owner 2026-11-28): never a silent empty list.
     for (const side of ['internal', 'external']) {
       const research = result.brief.link_research?.[side];
@@ -457,7 +469,7 @@
     element('verify').disabled = result.status !== 'published';
     element('publish').disabled = result.status !== 'approved' || pricing?.state === 'needs_input';
     element('save').disabled = result.status !== 'approved';
-    element('approve').disabled = result.status === 'published';
+    element('approve').disabled = result.status === 'published' || !!result.not_passed;
   }
   const reportError = () => { status.textContent = labels[7]; };
   function action(id, path, payload, success, failure) {
