@@ -2,7 +2,7 @@
 
 const { parse } = require('parse5');
 const { marketOf, coreWords } = require('./prewrite-existing-page.cjs');
-const { competitorSites, isCompetitorLink } = require('./prewrite-competitor-links.cjs');
+const { competitorSites, isCompetitorLink, isOfficial } = require('./prewrite-competitor-links.cjs');
 
 const fold = text => String(text ?? '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
 const words = text => fold(text).match(/[\p{L}\p{N}]{2,}/gu) || [];
@@ -105,10 +105,98 @@ function websitePage(url, html) {
     schema: [...schema], pricing: pricePolicy, text: body.slice(0, 3200) };
 }
 
+// Words that say nothing about the subject of a tool question ("¿Qué seo checker gratis analiza el SEO de mi web?").
+const GENERIC_TOOL_WORDS = new Set(['gratis','free','gratuito','gratuita','gratuitos','online','web','website','site','sitio','pagina','page','mi','my','mijn','tu','your','je',
+  'analiza','analyze','analyse','analizar','check','checker','scan','scanner','tool','test','que','what','which','welke','cual','best','mejor','beste','hoe','how','como']);
 function firstPartyOffers(topic, pages) {
-  const wantsTool = /\b(?:check|checker|scan|scanner|tool|comprobador)\b/i.test(topic);
-  return pages.filter(page => page.type !== 'content' && (!wantsTool || page.type === 'interactive_tool') &&
+  const wantsTool = /\b(?:check|checker|scan|scanner|tool|comprobador|analizador|analyzer|analyser)\b/i.test(topic) && !pricing.test(topic);
+  if (wantsTool) {
+    // A tool question is answered by the site's own tool (owner 2026-11-28: the Spanish brief left the own checker out
+    // because a question has more words than the tool's heading). The subject words must match, not every word.
+    const subject = topicWords(topic).filter(word => !GENERIC_TOOL_WORDS.has(word) && !tool.test(word));
+    return pages.filter(page => page.type === 'interactive_tool' && (subject.length === 0 ||
+      subject.some(word => new Set(words(page.heading + ' ' + (page.h1 || '') + ' ' + String(page.text || '').slice(0, 600))).has(word))))
+      .map(({ url, heading, type }) => ({ url, heading, type }));
+  }
+  return pages.filter(page => page.type !== 'content' &&
     hasTopic(topic, page.heading)).map(({ url, heading, type }) => ({ url, heading, type }));
+}
+
+// Competitors are research only (AGENTS.md). Their names must never reach the reader-facing parts of a brief: the
+// Spanish "seo checker" brief named Seobility, Semrush, Ahrefs and Rank Math in its opening and its outline.
+const GENERIC_BRANDS = new Set(['medium','blog','blogs','wiki','news','info','online','web','seo','tools','tool','site','home','help','support','docs','forum','reddit','quora','youtube','linkedin','facebook','twitter','instagram','amazon']);
+function competitorBrands({ serpUrls = [], aiLeads = [], competitorTable = [], ownUrl = '' } = {}) {
+  const own = siteOf(ownUrl);
+  const out = new Map();
+  const add = (name, source) => {
+    const key = fold(name).replace(/[^\p{L}\p{N}]+/gu, '');
+    if (key.length < 4 || GENERIC_BRANDS.has(key) || out.has(key)) return;
+    const letters = [...key].map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\-_.]?');
+    out.set(key, { name: key, source, re: new RegExp('(?<![\\p{L}\\p{N}])' + letters + '(?![\\p{L}\\p{N}])', 'u') });
+  };
+  const fromUrl = (url, source) => {
+    const value = typeof url === 'string' ? url : url && (url.url || url.link || url.exact_url);
+    if (!value || isOfficial(value)) return;
+    const site = siteOf(value);
+    if (!site || site === own) return;
+    add(site.split('.')[0], source);
+  };
+  for (const url of serpUrls || []) fromUrl(url, 'serp');
+  for (const url of aiLeads || []) fromUrl(url, 'ai_answer');
+  for (const row of competitorTable || []) {
+    const value = row && (row.exact_url || row.url || (row.domain ? 'https://' + String(row.domain).replace(/^https?:\/\//, '') : ''));
+    if (value) fromUrl(value, 'competitor_table');
+    const name = String(row && row.company_or_publisher || '').trim();
+    if (name && !(value && (isOfficial(value) || siteOf(value) === own))) add(name, 'competitor_table');
+  }
+  return [...out.values()];
+}
+const namedCompetitors = (text, brands) => {
+  const folded = fold(text);
+  return (brands || []).filter(brand => brand.re.test(folded)).map(brand => brand.name);
+};
+const READER_FIELDS = ['opening_passage','ai_answer','page_blueprint','definitive_outline','quick_facts','use_cases','paa_questions',
+  'recommended_title_h1','meta_package','faq_questions','conclusion'];
+function stringsOf(value, skipKeys = []) {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(item => stringsOf(item, skipKeys));
+  if (value && typeof value === 'object') return Object.entries(value).filter(([key]) => !skipKeys.includes(key)).flatMap(([, child]) => stringsOf(child, skipKeys));
+  return [];
+}
+// The reader-facing fields that name a competitor (a real Google question in paa_questions[].q stays verbatim).
+function competitorFields(brief, brands) {
+  return READER_FIELDS.filter(key => stringsOf(brief && brief[key], key === 'paa_questions' ? ['q'] : []).some(text => namedCompetitors(text, brands).length));
+}
+// Last resort after the model repair: remove only the sentences (and outline sections) that name a competitor.
+function scrubCompetitorSentences(brief, brands) {
+  let removed = 0;
+  const clean = text => {
+    if (!namedCompetitors(text, brands).length) return text;
+    const parts = String(text).split(/(?<=[.!?])\s+/u);
+    const kept = parts.filter(part => !namedCompetitors(part, brands).length);
+    removed += parts.length - kept.length;
+    return kept.join(' ').trim();
+  };
+  const walk = (value, key) => {
+    if (typeof value === 'string') return key === 'q' ? value : clean(value);
+    if (Array.isArray(value)) return value.map(item => walk(item, key)).filter(item => item !== '' && item !== undefined);
+    if (value && typeof value === 'object') {
+      const heading = value.h2 || value.heading;
+      if (typeof heading === 'string' && namedCompetitors(heading, brands).length) { removed++; return undefined; }
+      return Object.fromEntries(Object.entries(value).map(([k, child]) => [k, walk(child, k)]).filter(([, child]) => child !== undefined));
+    }
+    return value;
+  };
+  for (const key of READER_FIELDS) if (brief && brief[key] != null) brief[key] = walk(brief[key], key);
+  return removed;
+}
+// One H1 for the whole brief: the SEO package's H1 wins; otherwise the recommended title fills it.
+function alignH1(brief) {
+  if (!brief) return brief;
+  brief.meta_package = brief.meta_package && typeof brief.meta_package === 'object' ? brief.meta_package : {};
+  const h1 = String(brief.meta_package.h1 || brief.recommended_title_h1 || '').trim();
+  if (h1) { brief.meta_package.h1 = h1; brief.recommended_title_h1 = h1; }
+  return brief;
 }
 
 function pageInMarket(page, pages, region) {
@@ -417,5 +505,6 @@ module.exports = {
   serpFormats, websitePage, firstPartyOffers, contentMatch, pricingEvidenceUrl, missingInformation, repairPricingDraft, alignOpening, overlappingPlan,
   prewritePublicationBlockers, metadataIssues, schemaAdvice, relevantInternalLinks, verifiedSourceTargets, writerBrief, googleObservation, aiObservations,
   cutOff, isQuestionField, cleanPaa, sameSite, siteOf, suggestInternalLinks, linkResearch,
+  competitorBrands, namedCompetitors, competitorFields, scrubCompetitorSentences, alignH1,
   selectIntent, zeroThinkingModel, geminiUsage
 };
