@@ -61077,7 +61077,9 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
     const _pwbQuality=require('./prewrite-quality.cjs');
-    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId, pricingSource } = req.body || {};
+    const { keyword, workingTitle, language, region, searchLocation, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId, pricingSource, desiredSlug } = req.body || {};
+    // The page address the owner fixed on the form (Free Pre-Write; Tracker can send desiredSlug too).
+    const _pwbDesiredSlug=(()=>{try{return require('./free-prewrite.cjs').normalizeSlug(desiredSlug)||'';}catch(e){return '';}})();
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -61671,6 +61673,7 @@ Return ONLY valid JSON, no markdown, no preamble.
           return '\n\nNEVER NAME THESE COMPANIES OR TOOLS in opening_passage, ai_answer, page_blueprint, definitive_outline, quick_facts, use_cases, paa_questions answers, faq, titles or meta: '
             +(_pwbBrands.map(b=>b.name).join(', ')||'none listed')+'. They are research only. Do not write "best tools" lists or comparison tables of named competitors; compare criteria instead.'
             +(_pwbOwnOffers.length?' The answer to which tool or service to use is the site\'s own offer: '+JSON.stringify(_pwbOwnOffers.map(o=>({url:o.url,heading:o.heading})))+'. Put it in the opening and give it its own section.':'');})()
+      + (_pwbDesiredSlug?'\nThe owner fixed the page address of a new page: '+_pwbDesiredSlug+' (use it as meta_package.url_slug).':'')
       + '\nUse relevant first-party functionality in the blueprint. Competitor names and URLs are research only. If a verified existing page answers the same intent, expand it. Flag overlapping CREATE plans for review. Ask for missing business facts. Preserve quoted-only pricing when verified. No minimum link count.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
       + '\n- Every supplied competitor must be represented in competitor_table.'
@@ -62783,6 +62786,9 @@ ${sourceText}`;
     const _pwbScrubbed=_pwbStillNamed.length?_pwbQuality.scrubCompetitorSentences(brief,_pwbBrands):0;
     brief.competitor_name_check={brands_checked:_pwbBrands.length,repaired_fields:_pwbCompetitorKeys,fields_after_repair:_pwbStillNamed,sentences_removed:_pwbScrubbed};
     _pwbQuality.alignH1(brief);
+    if(_pwbDesiredSlug&&String(brief.content_decision.recommended_treatment||'').toUpperCase()==='CREATE_NEW_PAGE'){
+      brief.meta_package.url_slug=_pwbDesiredSlug;brief.slug_source='owner';
+    }
     brief.website_evidence={origin:_pwbOwnOrigin||null,pages_read:_pwbOwnPages.map(page=>page.url)};
     brief.missing_information=_pwbMissingInfo;
     brief.cannibalization_review=_pwbOverlappingPlan&&brief.content_decision.recommended_treatment==='CREATE_NEW_PAGE'
@@ -63049,8 +63055,8 @@ require('./owner-overview.cjs').registerOwnerOverview(app, pool, {
 });
 require('./free-prewrite.cjs').registerFreePrewrite(app, pool, {
   generate: async context => {
-    const { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } = context;
-    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence, intentOverride, pricingSource } }, {
+    const { keyword, language, region, manualAiEvidence, intentOverride, pricingSource, slug } = context;
+    return _handlePrewriteBriefGeneration({ params: {}, query: {}, body: { keyword, language, region, manualAiEvidence, intentOverride, pricingSource, desiredSlug: slug || '' } }, {
       status() { return this; },
       json() {}
     }, context);

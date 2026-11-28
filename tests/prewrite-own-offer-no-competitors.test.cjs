@@ -90,3 +90,23 @@ test('the generator uses all of this (Free and Tracker Pre-Write share it)',()=>
  assert.match(src,/NEVER NAME THESE COMPANIES OR TOOLS/);
  assert.match(src,/_pwbSisterRoots/);
 });
+
+// Owner 2026-11-28: "de slug moet eigenlijk ook worden aangegeven in het begin." The owner can fix the slug on the form.
+test('the slug can be given at the start; it is checked and becomes the page address of a new page',async()=>{
+ const express=require('express'),request=require('supertest');
+ const {registerFreePrewrite}=require('../src/free-prewrite.cjs');
+ for(const lang of ['en','nl','es']){
+  const a=express();a.use(express.json());registerFreePrewrite(a,{query:()=>{throw Error('no database')}});
+  const html=(await request(a).get('/free-pre-write?lang='+lang).expect(200)).text;
+  assert.match(html,/<input name="slug" maxlength="120"/,lang);
+ }
+ const {normalizeSlug}=require('../src/free-prewrite.cjs');
+ assert.equal(normalizeSlug('/seo-checker/'),'/seo-checker/');
+ assert.equal(normalizeSlug('SEO-Checker'),'/seo-checker/');
+ assert.equal(normalizeSlug('es/analisis-seo'),'/es/analisis-seo/');
+ assert.equal(normalizeSlug(''),'');
+ for(const bad of ['https://evil.example/x','/a b/','../etc','/a?b=c','/ñ/'])assert.equal(normalizeSlug(bad),null,bad);
+ const src=fs.readFileSync(require.resolve('../src/index.js'),'utf8');
+ assert.match(src,/desiredSlug/);
+ assert.match(src,/if\(_pwbDesiredSlug&&String\(brief\.content_decision\.recommended_treatment\|\|''\)\.toUpperCase\(\)==='CREATE_NEW_PAGE'\)/);
+});

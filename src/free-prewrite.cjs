@@ -48,6 +48,21 @@ function manualEvidence(raw) {
   return out;
 }
 const intents = ['', 'informational', 'commercial', 'transactional', 'navigational'];
+// The page address the owner wants for a new page (owner 2026-11-28: "de slug moet in het begin worden aangegeven").
+// A path on the same site: lower-case letters, digits and hyphens per segment. Empty = the brief proposes one.
+function normalizeSlug(raw) {
+  const value = String(raw ?? '').trim().toLowerCase();
+  if (!value) return '';
+  if (/[?#:\\]|\.\./.test(value)) return null;
+  const parts = value.replace(/^\/+|\/+$/g, '').split('/');
+  if (!parts.length || parts.length > 4 || !parts.every(part => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(part))) return null;
+  return '/' + parts.join('/') + '/';
+}
+const slugTexts = {
+  en: ['Page address (slug, optional)', 'For a new page, for example /seo-checker/. Empty: the brief proposes one.', 'Use a path with lower-case letters, digits and hyphens, for example /seo-checker/.'],
+  nl: ['Paginaadres (slug, optioneel)', 'Voor een nieuwe pagina, bijvoorbeeld /seo-check/. Leeg: de brief stelt er een voor.', 'Gebruik een pad met kleine letters, cijfers en streepjes, bijvoorbeeld /seo-check/.'],
+  es: ['Dirección de la página (slug, opcional)', 'Para una página nueva, por ejemplo /seo-checker/. Vacío: el brief propone una.', 'Usa una ruta con minúsculas, números y guiones, por ejemplo /seo-checker/.']
+};
 // Owner 2026-11-28: one free brief per person per week, counted on the e-mail address (and the same browser or IP).
 const limitTexts = {
   en: ['E-mail address', 'One free brief per person per week. Your e-mail is only used for this limit and is not stored as text.'],
@@ -87,6 +102,7 @@ function page(lang, result) {
     <section id="history" hidden><h2>${t[10]}</h2><div id="entries"></div><details><summary>${t[0]}</summary><pre id="research"></pre></details></section>` :
     `<form id="intake"><label>${t[1]}<input name="website" type="url" placeholder="https://" maxlength="500" required></label>
     <label>${t[2]}<input name="keyword" maxlength="300" required></label>
+    <label>${slugTexts[lang][0]}<input name="slug" maxlength="120" placeholder="/seo-checker/" autocomplete="off"></label><p class="note">${slugTexts[lang][1]}</p>
     <label>${limitTexts[lang][0]}<input name="email" type="email" maxlength="200" autocomplete="email" required></label><p class="note">${limitTexts[lang][1]}</p>
     <label>${t[3]}<input name="country" value="${{en:'US',nl:'NL',es:'ES'}[lang]}" pattern="[A-Za-z]{2}" maxlength="2" required></label>
     ${priceInput}${aiFields(lang)}<button>${t[4]}</button></form><p id="status" role="status"></p>
@@ -238,6 +254,8 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
     const { keyword, region, language, intentOverride = '', pricingSource } = req.body || {};
     const manualAiEvidence = manualEvidence(req.body?.manualAiEvidence);
     if (!manualAiEvidence) return res.status(400).json({ success: false });
+    const slug = normalizeSlug(req.body?.slug);
+    if (slug === null) return res.status(400).json({ success: false, code: 'SLUG', error: slugTexts[Object.hasOwn(slugTexts, language) ? language : 'en'][2] });
     try {
       const url = validateUrl(req.body?.website);
       site = url.origin + '/';
@@ -312,7 +330,7 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       if (discovered.site !== site) {
         await pool.query("UPDATE prewrite_briefs SET public_site=$2 WHERE id=$1 AND status='generating'", [row.id, discovered.site]);
       }
-      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, sitemapUrls: discovered.sitemap_urls || 0, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride, pricingSource: priceSource, manualAiEvidence, stage });
+      await generate({ id: row.id, site: discovered.site, urls: discovered.urls, sitemapUrls: discovered.sitemap_urls || 0, keyword: keyword.trim(), language, region: region.toLowerCase(), intentOverride, pricingSource: priceSource, manualAiEvidence, stage, slug });
     } catch (error) {
       console.warn('[free-prewrite] generation failed', error.code || error.name);
     } finally {
@@ -374,4 +392,4 @@ async function sourceForGrowth(pool, id, url, query) {
     ? { target, recorded_at: row.created_at, brief: publicBriefData(row.brief_json) } : null;
 }
 
-module.exports = { registerFreePrewrite, resolveGrowthSource, sourceForGrowth, discoverSite };
+module.exports = { registerFreePrewrite, resolveGrowthSource, sourceForGrowth, discoverSite, normalizeSlug };
