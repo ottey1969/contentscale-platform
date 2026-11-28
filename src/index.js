@@ -15066,8 +15066,10 @@ res.send(_injectProspectFooter(html,'en'));
 });
 // ContentScore methodology versioning — scores across methodology versions are not directly comparable.
 const CONTENTSCORE_SCANNER_VERSION = 'main-content-visibility-2026.09.08';
-const CONTENTSCORE_SCORING_VERSION = 'graaf-page-type-v2-2026.09.08';
-const CONTENTSCORE_METHODOLOGY_UPDATED_AT = '2026-09-08';
+// 2026-11-28 (owner): serious faults (no visible H1, noindex, almost no main text) cap the score at 69. New version:
+// scores are compared only within the same scoring_version, so v2 and v3 are never mixed.
+const CONTENTSCORE_SCORING_VERSION = 'graaf-page-type-v3-critical-cap-2026.11.28';
+const CONTENTSCORE_METHODOLOGY_UPDATED_AT = '2026-11-28';
 const CONTENTSCORE_METHODOLOGY_NOTICE = 'ContentScale updated its scoring methodology on 8 Sep 2026 to better isolate main-page content from navigation/boilerplate and apply page-type-aware scoring. Scores from earlier methodology versions are not directly comparable; the first score on this version is the new baseline.';
 
 function computeScore(scanUrl, analysis, extractedEmails) {
@@ -15175,7 +15177,16 @@ tMax += 1; if (analysis.hasOpenGraph) tPts += 1;
 tMax += 1; if (analysis.hasTwitterCard) tPts += 1;
 let technicalScore = _normScore(tPts, tMax, 20);
 
-const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
+const _uncappedScore = Math.min(100, graafScore + craftScore + technicalScore);
+// Serious faults: the scanner exists to point people to serious changes (owner 2026-11-28), so a page with one of these
+// can never score 70+ (and never reaches the leaderboard), however strong the rest is.
+const _capReasons = [];
+if ((analysis.h1Count||0) === 0) _capReasons.push('NO_H1');
+else if (analysis.h1IsHidden && (analysis.h1VisibleCount||0) === 0) _capReasons.push('H1_HIDDEN');
+if ((analysis.robotsMeta||[]).some(function(x){return /(?:^|[,\s])noindex(?:[,\s]|$)/i.test(String(x&&x.content||''));})) _capReasons.push('NOINDEX');
+if ((analysis.wordCount||0) < 120) _capReasons.push('THIN_CONTENT');
+const SCORE_CAP = 69;
+const totalScore = _capReasons.length ? Math.min(_uncappedScore, SCORE_CAP) : _uncappedScore;
 const quality = totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
 console.log('[GRAAF-DIAG-V2] ' + (scanUrl||'') + ' → ' + totalScore + '/100 | G=' + graafScore + ' C=' + craftScore + ' T=' + technicalScore + ' | pageType=' + (_graafIsHomepage?'homepage':(_graafIsArticleLike?'article-like':'general')));
 
@@ -15289,11 +15300,16 @@ const finalRecommendations = recommendations.filter((r) => {
   _seenRec.add(k);
   return true;
 });
+if (_capReasons.length && _uncappedScore > SCORE_CAP) {
+  const _capText = { NO_H1: 'no H1 heading', H1_HIDDEN: 'the H1 is hidden', NOINDEX: 'a noindex robots tag keeps the page out of search results', THIN_CONTENT: 'almost no main text' };
+  finalRecommendations.unshift({ title: '⛔ Score capped at 69 until a serious fault is fixed', description: 'Without this fault the page would score ' + _uncappedScore + '/100. Fault: ' + _capReasons.map(function(c){return _capText[c];}).join('; ') + '.', priority: 'high', action: 'Fix the fault(s) above first; the other recommendations matter less until then.', why: 'A page that search engines cannot read, index or understand properly cannot perform well, however good the rest of the page is.', target: 'No serious fault: one visible H1, indexable, real main content' });
+}
 if (!finalRecommendations.length) finalRecommendations.push({ title: '✅ Strong Foundation', description: 'No material gaps were triggered by the current deterministic checks.', priority: 'none', action: 'Validate the page against its actual search intent, competitors, accessibility needs, and current performance data before making changes.', learning: 'A scanner score is a diagnostic aid, not proof that a page should be changed.', target: 'Preserve what performs and improve only evidence-backed gaps' });
 
 const result = {
   success: true, url: scanUrl, score: totalScore, quality,
   metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+  score_cap: { applied: _capReasons.length > 0 && _uncappedScore > SCORE_CAP, max: SCORE_CAP, reasons: _capReasons, uncapped_score: _uncappedScore },
   content_stats: {
     wordCount: analysis.wordCount, wordCountContent: analysis.wordCount, wordCountTotal: analysis.wordCountTotal != null ? analysis.wordCountTotal : analysis.wordCount, emails_found: extractedEmails,
     extractedEmail: extractedEmails[0] || null,
