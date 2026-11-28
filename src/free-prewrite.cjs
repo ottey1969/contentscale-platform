@@ -40,9 +40,9 @@ const promptLabels = {
 };
 // The owner's fetch buttons, one per AI system and one for all (owner 2026-11-28). Hidden for visitors.
 const fetchLabels = {
-  en: ['Fetch automatically', 'Fetch all answers', 'Fetching…', 'Not connected (no API key)', 'Could not fetch', 'Fill in the question or the topic first.', 'Asks each connected AI system the question above and fills in its answer with the sources it cites. Owner only.'],
-  nl: ['Automatisch ophalen', 'Alle antwoorden ophalen', 'Bezig met ophalen…', 'Niet gekoppeld (geen API-sleutel)', 'Ophalen mislukt', 'Vul eerst de vraag of het onderwerp in.', 'Stelt de vraag hierboven aan elk gekoppeld AI-systeem en vult het antwoord in met de bronnen die het noemt. Alleen voor de eigenaar.'],
-  es: ['Obtener automáticamente', 'Obtener todas las respuestas', 'Obteniendo…', 'No conectado (sin clave API)', 'No se pudo obtener', 'Escribe primero la pregunta o el tema.', 'Hace la pregunta de arriba a cada sistema de IA conectado y rellena su respuesta con las fuentes que cita. Solo para el propietario.']
+  en: ['Fetch automatically', 'Fetch all answers', 'Fetching…', 'Not connected (no API key): paste the answer above by hand.', 'Could not fetch', 'Fill in the question or the topic first.', 'Asks each connected AI system the question above and fills in its answer with the sources it cites. Owner only.', 'Paste the answer above by hand.'],
+  nl: ['Automatisch ophalen', 'Alle antwoorden ophalen', 'Bezig met ophalen…', 'Niet gekoppeld (geen API-sleutel): plak het antwoord hierboven met de hand.', 'Ophalen mislukt', 'Vul eerst de vraag of het onderwerp in.', 'Stelt de vraag hierboven aan elk gekoppeld AI-systeem en vult het antwoord in met de bronnen die het noemt. Alleen voor de eigenaar.', 'Plak het antwoord hierboven met de hand.'],
+  es: ['Obtener automáticamente', 'Obtener todas las respuestas', 'Obteniendo…', 'No conectado (sin clave API): pega la respuesta arriba a mano.', 'No se pudo obtener', 'Escribe primero la pregunta o el tema.', 'Hace la pregunta de arriba a cada sistema de IA conectado y rellena su respuesta con las fuentes que cita. Solo para el propietario.', 'Pega la respuesta arriba a mano.']
 };
 function aiFields(lang) {
   const l = aiLabels[lang];

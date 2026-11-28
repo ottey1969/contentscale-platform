@@ -173,3 +173,27 @@ test('Google through Serper.dev (the production key): its AI Overview when Serpe
  assert.match(no.note,/no AI Overview/i);assert.match(no.text,/RESOURCES:\nNO VERIFIED RESOURCES$/);
  assert.equal((await fetchAiAnswer('copilot',Q,{env:{SERPAPI_KEY:'serper-key'},fetchImpl:f})).status,'NOT_CONFIGURED');
 });
+
+// Owner 2026-11-28: "alles dat faalt of geen API heeft moet wel handmatig kunnen." A system that fails or has no key
+// says so and asks to paste by hand; its field stays editable and is sent with the brief.
+test('browser: a failed or unconnected system asks to paste by hand, and the pasted answer is kept',{skip:!chromium&&'Playwright not installed',timeout:60000},async()=>{
+ const prev=process.env.GROWTH_FREE_ADMIN_KEY;process.env.GROWTH_FREE_ADMIN_KEY=KEY;
+ const a=app(async engine=>engine==='perplexity'?{status:'PROVIDER_UNAVAILABLE',code:400,detail:'Your credit balance is too low.'}:{status:'SUCCESS',text:'ANSWER:\nx\n\nRESOURCES:\nhttps://a.example',provider:'P'});
+ const srv=a.listen(0),base='http://127.0.0.1:'+srv.address().port;
+ const browser=await chromium.launch();
+ try{
+  const ctx=await browser.newContext();const [name,value]=ownerCookie().split('=');await ctx.addCookies([{name,value,url:base}]);
+  const page=await ctx.newPage();
+  await page.goto(base+'/free-pre-write?lang=nl');
+  await page.fill('[name=ai-question]',Q);
+  await page.locator('.ai-fetch-all').waitFor({state:'visible'});
+  assert.match(await page.locator('.ai-fetch-note[data-engine=chatgpt]').textContent(),/plak het antwoord hierboven met de hand/i);
+  await page.click('.ai-fetch[data-engine=perplexity]');
+  await page.waitForFunction(()=>/400/.test(document.querySelector('.ai-fetch-note[data-engine=perplexity]').textContent));
+  assert.match(await page.locator('.ai-fetch-note[data-engine=perplexity]').textContent(),/credit balance is too low.*plak het antwoord hierboven met de hand/i);
+  assert.equal(await page.locator('[name=ai-chatgpt]').isEditable(),true);
+  await page.fill('[name=ai-chatgpt]','Handmatig geplakt antwoord https://m.example/a');
+  await page.reload();
+  assert.equal(await page.inputValue('[name=ai-chatgpt]'),'Handmatig geplakt antwoord https://m.example/a');
+ }finally{await browser.close();srv.close();if(prev===undefined)delete process.env.GROWTH_FREE_ADMIN_KEY;else process.env.GROWTH_FREE_ADMIN_KEY=prev}
+});
