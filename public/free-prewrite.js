@@ -70,6 +70,46 @@
       catch { box.focus(); box.select(); note.textContent = texts[3] || ''; }
     });
   }
+  // The owner fetches the answers instead of pasting them (owner 2026-11-28: "per vraag moet ik de search in AI kunnen
+  // opvragen"). The server says whether this browser is the owner and which systems have a key; visitors see nothing.
+  const ownerEngines = fetch(api + '/ai-answer/engines', { cache: 'no-store' }).then(r => r.ok ? r.json() : { owner: false }).catch(() => ({ owner: false }));
+  function wireFetch(form, topic, country) {
+    if (!form || form.__fetchWired) return;
+    form.__fetchWired = true;
+    const t = window.prewriteFetchTexts || [];
+    ownerEngines.then(info => {
+      if (!info || !info.owner) return;
+      form.querySelectorAll('.ai-fetch-row').forEach(row => { row.hidden = false; });
+      form.querySelectorAll('.ai-fetch').forEach(button => {
+        if (!info.engines || !info.engines[button.dataset.engine]) { button.disabled = true; button.title = t[3] || ''; const note = form.querySelector('.ai-fetch-note[data-engine="' + button.dataset.engine + '"]'); if (note) note.textContent = t[3] || ''; }
+      });
+    });
+    async function one(button) {
+      const engine = button.dataset.engine, note = form.querySelector('.ai-fetch-note[data-engine="' + engine + '"]');
+      const field = form.querySelector('[name="ai-' + engine + '"]');
+      const question = ((form.querySelector('[name=ai-question]') || {}).value || '').trim() || topic();
+      if (!question) { note.textContent = t[5] || ''; return; }
+      busy(button, true); note.textContent = t[2] || '';
+      try {
+        const response = await fetch(api + '/ai-answer', { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ engine, question, language: lang, country: country() }) });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body.success) throw Error(body.status || String(response.status));
+        field.value = body.text || '';
+        if (engine === 'google_aio' && body.google_source) { const select = form.querySelector('[name=google-source]'); if (select) select.value = body.google_source; }
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        note.textContent = [body.provider, body.note].filter(Boolean).join(' · ');
+      } catch (error) {
+        note.textContent = (t[4] || 'Could not fetch') + ' (' + error.message + ')';
+      } finally { busy(button, false); }
+    }
+    form.querySelectorAll('.ai-fetch').forEach(button => button.addEventListener('click', () => one(button)));
+    const all = form.querySelector('.ai-fetch-all');
+    if (all) all.addEventListener('click', async () => {
+      busy(all, true);
+      try { await Promise.all(Array.from(form.querySelectorAll('.ai-fetch')).filter(b => !b.disabled).map(one)); } finally { busy(all, false); }
+    });
+  }
   // The five AI systems (owner 2026-11-28), sent with a new brief and with a correction afterwards.
   const evidence = form => ({
     ai_question: form.get('ai-question') || '', google_source: form.get('google-source') || '',
@@ -97,6 +137,7 @@
       } catch {}
     })();
     wirePrompt(intake, () => (intake.querySelector('[name=keyword]').value || '').trim());
+    wireFetch(intake, () => (intake.querySelector('[name=keyword]').value || '').trim(), () => (intake.querySelector('[name=country]').value || '').trim());
     intake.addEventListener('submit', async event => {
       event.preventDefault();
       const submit = intake.querySelector('button[type=submit]');
@@ -195,7 +236,7 @@
     if (pricing?.state === 'needs_input') addText(card, 'p', window.prewritePricingHelp);
     const adjust = element('intent-adjust');
     adjust.hidden = result.status === 'published';
-    if (!adjust.__updatePrompt) { adjust.__draft = remember(adjust, 'cs-free-prewrite:adjust:' + key); wirePrompt(adjust, () => result.keyword || ''); }
+    if (!adjust.__updatePrompt) { adjust.__draft = remember(adjust, 'cs-free-prewrite:adjust:' + key); wirePrompt(adjust, () => result.keyword || ''); wireFetch(adjust, () => result.keyword || '', () => result.region || ''); }
     adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
     const repair = element('repair-pricing');
     repair.hidden = pricing?.state !== 'needs_input' || result.status !== 'open';

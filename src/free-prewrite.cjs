@@ -8,6 +8,7 @@ const { isBotCheck } = require('./gsc-report/site-audit.cjs');
 const { resolveTarget, editorInstructions, registerRoutes } = require('./prewrite-implementation.cjs');
 const weeklyLimit = require('./free-weekly-limit.cjs');
 const { ownerSessionValid } = require('./owner-session.cjs');
+const aiFetch = require('./prewrite-ai-fetch.cjs');
 
 const ROOT = '/free-pre-write';
 const API = '/api/free-pre-write';
@@ -37,14 +38,22 @@ const promptLabels = {
   nl: ['Prompt om in elk AI-systeem te plakken', 'Kopieer prompt', 'Gekopieerd. Plak hem in elk AI-systeem en plak het volledige antwoord hieronder.', 'Selecteer de tekst en kopieer met Ctrl+C / Cmd+C.'],
   es: ['Prompt para pegar en cada sistema de IA', 'Copiar prompt', 'Copiado. Pégalo en cada sistema de IA y pega la respuesta completa abajo.', 'Selecciona el texto y cópialo con Ctrl+C / Cmd+C.']
 };
+// The owner's fetch buttons, one per AI system and one for all (owner 2026-11-28). Hidden for visitors.
+const fetchLabels = {
+  en: ['Fetch automatically', 'Fetch all answers', 'Fetching…', 'Not connected (no API key)', 'Could not fetch', 'Fill in the question or the topic first.', 'Asks each connected AI system the question above and fills in its answer with the sources it cites. Owner only.'],
+  nl: ['Automatisch ophalen', 'Alle antwoorden ophalen', 'Bezig met ophalen…', 'Niet gekoppeld (geen API-sleutel)', 'Ophalen mislukt', 'Vul eerst de vraag of het onderwerp in.', 'Stelt de vraag hierboven aan elk gekoppeld AI-systeem en vult het antwoord in met de bronnen die het noemt. Alleen voor de eigenaar.'],
+  es: ['Obtener automáticamente', 'Obtener todas las respuestas', 'Obteniendo…', 'No conectado (sin clave API)', 'No se pudo obtener', 'Escribe primero la pregunta o el tema.', 'Hace la pregunta de arriba a cada sistema de IA conectado y rellena su respuesta con las fuentes que cita. Solo para el propietario.']
+};
 function aiFields(lang) {
   const l = aiLabels[lang];
   const p = promptLabels[lang];
+  const f = fetchLabels[lang];
   const sources = ['', 'ai_overview', 'gemini', 'no_ai_overview'].map((value, index) => `<option value="${value}">${l[4 + index]}</option>`).join('');
   return `<fieldset class="ai"><legend>${l[0]}</legend><p>${l[1]}</p><label>${l[2]}<input name="ai-question" maxlength="300"></label>
     <label>${p[0]}<textarea class="ai-prompt" rows="12" readonly></textarea></label><p><button type="button" class="ai-prompt-copy">${p[1]}</button> <span class="ai-prompt-status" role="status"></span></p>
     <label>${l[3]}<select name="google-source">${sources}</select></label>
-    ${aiEngines.map((engine, index) => `<label>${l[8 + index]}<textarea name="ai-${engine}" rows="4" maxlength="12000"></textarea></label>`).join('')}</fieldset>`;
+    <p class="ai-fetch-row" hidden><button type="button" class="ai-fetch-all">${f[1]}</button> <span>${f[6]}</span></p>
+    ${aiEngines.map((engine, index) => `<label>${l[8 + index]}<textarea name="ai-${engine}" rows="4" maxlength="12000"></textarea></label><p class="ai-fetch-row" hidden><button type="button" class="ai-fetch" data-engine="${engine}">${f[0]}</button> <span class="ai-fetch-note" data-engine="${engine}" role="status"></span></p>`).join('')}</fieldset>`;
 }
 function manualEvidence(raw) {
   if (raw == null) return {};
@@ -160,7 +169,7 @@ function page(lang, result) {
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
     <style>button{transition:transform .12s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer}button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(67,56,202,.28);filter:brightness(1.06)}button:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:none}button:disabled{cursor:default;opacity:.75}button[aria-busy=true]{opacity:1;cursor:progress}button[aria-busy=true]::before{content:'';display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pw-spin .7s linear infinite}@keyframes pw-spin{to{transform:rotate(360deg)}}.ai-prompt-copy.done,#copy-brief.done{animation:pw-pop .45s ease}@keyframes pw-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){button,button:hover,button:active{transition:none;transform:none}button[aria-busy=true]::before{animation-duration:2s}.ai-prompt-copy.done,#copy-brief.done{animation:none}}#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}#availability{margin:12px 0 0}#handoff{border:2px solid #4338ca}#handoff h2,#implementation h2,#intent-adjust h2{font-size:1.1rem;margin:18px 0 4px}#handoff h2{margin-top:0}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.button-link{display:inline-block;padding:8px 12px;border:1px solid #1d4ed8;color:#1d4ed8;border-radius:6px;text-decoration:none;font-weight:600}#editor{width:100%;box-sizing:border-box}#availability.blocked{color:#b91c1c;font-weight:700;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
-    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};window.prewriteWorkflow=${JSON.stringify({ copied: workflowTexts[lang].copied })};</script><script src="/prewrite-ai-answer-research.js" defer></script>
+    <body><main><nav aria-label="Language"><a href="${ROOT}?lang=en">EN</a> · <a href="${ROOT}?lang=nl">NL</a> · <a href="${ROOT}?lang=es">ES</a></nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};window.prewriteFetchTexts=${JSON.stringify(fetchLabels[lang])};window.prewriteWorkflow=${JSON.stringify({ copied: workflowTexts[lang].copied })};</script><script src="/prewrite-ai-answer-research.js" defer></script>
     <script src="/free-prewrite.js" defer></script></body></html>`;
 }
 
@@ -275,7 +284,7 @@ async function readProgress(pool, row) {
 }
 
 function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, discover = defaultDiscover, dailyLimit = 5, verification,
-  perWeek = weeklyLimit.perWeek('FREE_PREWRITE') } = {}) {
+  perWeek = weeklyLimit.perWeek('FREE_PREWRITE'), fetchAiAnswer = aiFetch.fetchAiAnswer, aiEnv = process.env } = {}) {
   const privateHeaders = (req, res, next) => {
     res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer')
       .set('X-Robots-Tag', 'noindex').set('Content-Security-Policy', "frame-ancestors 'none'");
@@ -392,6 +401,23 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       // A brief that could not be made is given back.
       if (failed?.rowCount && weekly) await weeklyLimit.refund(pool, weekly.usage_id).catch(() => {});
     }
+  });
+  // The owner fetches the answer of each AI system for the question (owner 2026-11-28: "per vraag moet ik de search in AI
+  // kunnen opvragen"). Owner only: every call is a paid API call. A visitor keeps pasting answers by hand.
+  app.get(API + '/ai-answer/engines', (req, res) => {
+    if (!ownerSessionValid(req)) return res.json({ owner: false });
+    res.json({ owner: true, engines: aiFetch.configuredEngines(aiEnv) });
+  });
+  app.post(API + '/ai-answer', async (req, res) => {
+    if (!ownerSessionValid(req)) return res.status(403).json({ success: false, code: 'OWNER_ONLY' });
+    const { engine, question, language = '', country = '' } = req.body || {};
+    if (!aiFetch.ENGINES.includes(engine)) return res.status(400).json({ success: false, code: 'ENGINE' });
+    if (typeof question !== 'string' || !question.trim() || question.length > 300) return res.status(400).json({ success: false, code: 'QUESTION' });
+    const out = await fetchAiAnswer(engine, question.trim(), { env: aiEnv,
+      language: /^[a-z]{2}$/i.test(language) ? language.toLowerCase() : '', country: /^[a-z]{2}$/i.test(country) ? country.toLowerCase() : '' });
+    const ok = out && (out.status === 'SUCCESS' || out.status === 'NO_AI_OVERVIEW');
+    res.status(ok ? 200 : out && out.status === 'NOT_CONFIGURED' ? 409 : 502).json({ success: !!ok, engine, status: out && out.status,
+      text: ok ? String(out.text || '') : '', google_source: out && out.google_source || '', provider: out && out.provider || '', note: out && out.note || '' });
   });
   app.get(API + '/availability', async (req, res) => {
     const lang = Object.hasOwn(texts, req.query.lang) ? req.query.lang : 'en';
