@@ -149,7 +149,7 @@
       const form = new FormData(intake);
       const resultPath = root + '/r?lang=' + lang + '#' + key;
       try {
-        await call('', { website: form.get('website'), keyword: form.get('keyword'), email: form.get('email'), region: form.get('country'), language: lang, pricingSource: form.get('pricing-source'), manualAiEvidence: evidence(form) });
+        await call('', { website: form.get('website'), keyword: form.get('keyword'), slug: form.get('slug') || '', email: form.get('email'), region: form.get('country'), language: lang, pricingSource: form.get('pricing-source'), manualAiEvidence: evidence(form) });
         draft.clear();
         location.assign(resultPath);
       } catch (error) {
@@ -262,6 +262,8 @@
       try {
         await call('', { website: result.website, keyword: result.keyword, region: result.region, language: result.language,
           intentOverride: adjust.elements.intent.value, pricingSource: adjust.elements['pricing-source'].value, manualAiEvidence: evidence(new FormData(adjust)),
+          // A correction keeps the page address of the brief it corrects.
+          slug: result.target && result.target.mode === 'CREATE' ? (() => { try { return new URL(result.target.url).pathname; } catch { return ''; } })() : '',
           // A correction of this brief, not a new one: it does not use the weekly free brief.
           revisionOf: previousKey });
         if (adjust.__draft) adjust.__draft.clear();

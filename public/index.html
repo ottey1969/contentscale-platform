@@ -2780,40 +2780,12 @@
          }
          
          async function submitSitemapWithMeta(domain, avgScore, pageCount, sitemapUrl) {
-           const company_name  = document.getElementById('sbCompanyName')?.value.trim() || domain;
-           const country       = document.getElementById('sbCountry')?.value || '';
-           const niche         = document.getElementById('sbNiche')?.value || '';
-           const business_type = document.getElementById('sbBizType')?.value || '';
-           // Filter ONLY results from this specific domain to avoid cross-scan contamination
+           // Owner 2026-11-28: the sitemap entry needs the same confirmed e-mail; the average comes from the server's scan log.
            const successful = bulkResults.filter(r => r.success && r.score > 0 && r.url && r.url.replace(/https?:\/\//,'').split('/')[0] === domain);
-           const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a,b) => a+b, 0) / arr.length) : 0;
-           // Use passed-in avgScore as authoritative (it was computed at render time from correct results)
-           const payload = {
-             domain: 'https://' + domain,
-             company_name,
-             avg_score:     avgScore,
-             avg_graaf:     avg(successful.map(r => r.metrics?.graaf || 0)),
-             avg_craft:     avg(successful.map(r => r.metrics?.craft || 0)),
-             avg_technical: avg(successful.map(r => r.metrics?.technical || 0)),
-             page_count: pageCount || successful.length,
-             page_scores: successful.map(r => ({ url: r.url, score: r.score, graaf: r.metrics?.graaf||0, craft: r.metrics?.craft||0, technical: r.metrics?.technical||0 })),
-             country, niche, business_type
-           };
-           try {
-             const res = await fetch('/api/sitemap/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-             const data = await res.json();
-             const banner = document.getElementById('sitemapSubmitBanner');
-             if (banner) {
-               if (data.success) {
-                 const msg = data.auto_approved
-                   ? '🏆 Live on leaderboard!'
-                   : '✅ Submitted — pending admin approval';
-                 banner.querySelector('button').outerHTML = `<div style="text-align:center;padding:10px;background:rgba(74,222,128,0.1);border:1px solid #166534;border-radius:8px;color:#4ade80;font-weight:700;">${msg}</div>`;
-               } else {
-                 showToast('❌ Submit mislukt: ' + (data.error || 'unknown'), '#ef4444');
-               }
-             }
-           } catch(e) { showToast('❌ Submit mislukt', '#ef4444'); }
+           openLeaderboardPopup({ kind: 'site', url: 'https://' + domain + '/', score: avgScore, page_urls: successful.map(r => r.url),
+             company_name: document.getElementById('sbCompanyName')?.value.trim() || domain,
+             country: document.getElementById('sbCountry')?.value || '', niche: document.getElementById('sbNiche')?.value || '',
+             business_type: document.getElementById('sbBizType')?.value || '' });
          }
          // ========== END SITEMAP MODE ==========
          
@@ -4412,45 +4384,68 @@
          if (banner) banner.classList.add('hidden');
          scanSingleURL();
          }
-         // Single page, score 70+: the visitor can submit the page; it waits in Admin → Pending until approved.
+         // Owner 2026-11-28: after a scan of 70+, the visitor can add the page to the leaderboard. Nothing is listed
+         // without consent: an e-mail confirmation link first, then ContentScale's review in Admin → Pending.
+         const LB_TEXT = {"title": "🏆 You scored {score}/100 — add yourself to the ContentScale Leaderboard?", "intro": "Scores of 70 or more qualify. We send you one e-mail to confirm; after a short review your entry appears.", "company": "Company name", "email": "Your e-mail address", "send": "Send confirmation e-mail", "later": "Not now", "reopen": "🏆 Add to the Leaderboard", "sent": "Check your inbox: click the link in the e-mail to confirm. Nothing is published before that.", "listed": "This page is already on the leaderboard.", "fail": "Could not send the request. Please try again later.", "need": "Fill in your e-mail and tick the box."};
+         const LB_CONSENT = "I own or represent this website. ContentScale may show the company name, the page address and the score publicly on its leaderboard. I can ask for removal at any time.";
+         function openLeaderboardPopup(opts) {
+         const old = document.getElementById('lbPopup'); if (old) old.remove();
+         const wrap = document.createElement('div');
+         wrap.id = 'lbPopup';
+         wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
+         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(2,6,23,0.72);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box;';
+         wrap.innerHTML = '<div style="margin:auto;max-width:460px;width:100%;box-sizing:border-box;background:linear-gradient(160deg,#3b0764,#1e1b4b);border:1px solid #7c3aed;border-radius:16px;padding:22px;color:#e5e7eb;box-shadow:0 20px 60px rgba(0,0,0,.5);">'
+           + '<h3 id="lbPopupTitle" style="font-size:1.1rem;font-weight:800;color:#f5f3ff;margin:0 0 6px;"></h3><p id="lbPopupIntro" style="font-size:0.85rem;color:#c4b5fd;margin:0 0 14px;"></p>'
+           + '<label id="lbCompanyLabel" style="display:block;font-size:0.78rem;color:#ddd6fe;margin-bottom:4px;"></label><input id="lbCompany" type="text" maxlength="120" style="width:100%;padding:9px 11px;background:#0f0a2e;border:1px solid #6d28d9;border-radius:8px;color:#fff;margin-bottom:10px;box-sizing:border-box;">'
+           + '<label id="lbEmailLabel" style="display:block;font-size:0.78rem;color:#ddd6fe;margin-bottom:4px;"></label><input id="lbEmail" type="email" maxlength="200" autocomplete="email" style="width:100%;padding:9px 11px;background:#0f0a2e;border:1px solid #6d28d9;border-radius:8px;color:#fff;margin-bottom:10px;box-sizing:border-box;">'
+           + '<label style="display:flex;gap:8px;align-items:flex-start;font-size:0.78rem;color:#e9d5ff;margin-bottom:14px;line-height:1.45;"><input id="lbConsent" type="checkbox" style="margin-top:3px;"><span id="lbConsentText"></span></label>'
+           + '<div style="display:flex;gap:8px;"><button id="lbSend" type="button" style="flex:1;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:#fff;font-weight:800;cursor:pointer;"></button>'
+           + '<button id="lbLater" type="button" style="padding:12px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;"></button></div>'
+           + '<p id="lbNoPromo" style="font-size:0.72rem;color:#a78bfa;margin:10px 0 0;"></p>'
+           + '<p id="lbStatus" role="status" style="font-size:0.8rem;color:#a7f3d0;margin:12px 0 0;"></p></div>';
+         document.body.appendChild(wrap);
+         const $ = id => document.getElementById(id);
+         $('lbPopupTitle').textContent = LB_TEXT.title.replace('{score}', opts.score);
+         $('lbPopupIntro').textContent = LB_TEXT.intro;
+         $('lbCompanyLabel').textContent = LB_TEXT.company; $('lbEmailLabel').textContent = LB_TEXT.email;
+         $('lbConsentText').textContent = LB_CONSENT;
+         $('lbNoPromo').textContent = "Your e-mail is only used for this confirmation and for questions about your entry — never for promotion or newsletters.";
+         $('lbSend').textContent = LB_TEXT.send; $('lbLater').textContent = LB_TEXT.later;
+         $('lbCompany').value = opts.company_name || '';
+         $('lbLater').onclick = () => wrap.remove();
+         wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+         $('lbSend').onclick = async () => {
+         const email = $('lbEmail').value.trim();
+         if (!email || !$('lbEmail').checkValidity() || !$('lbConsent').checked) { $('lbStatus').style.color = '#fca5a5'; $('lbStatus').textContent = LB_TEXT.need; return; }
+         $('lbSend').disabled = true;
+         try {
+         const res = await fetch('/api/leaderboard/request', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ kind: opts.kind, url: opts.url, page_urls: opts.page_urls || [], company_name: $('lbCompany').value.trim(), email, consent: true,
+             lang: LB_LANG, country: opts.country || '', niche: opts.niche || '', business_type: opts.business_type || '' }) });
+         const data = await res.json().catch(() => ({}));
+         if (data.success) {
+           $('lbStatus').style.color = '#a7f3d0';
+           $('lbStatus').textContent = data.already_listed ? LB_TEXT.listed : LB_TEXT.sent;
+           $('lbSend').style.display = 'none'; $('lbLater').textContent = '✓';
+           if (typeof opts.done === 'function') opts.done(data);
+         } else { $('lbStatus').style.color = '#fca5a5'; $('lbStatus').textContent = data.error || LB_TEXT.fail; $('lbSend').disabled = false; }
+         } catch (e) { $('lbStatus').style.color = '#fca5a5'; $('lbStatus').textContent = LB_TEXT.fail; $('lbSend').disabled = false; }
+         };
+         setTimeout(() => $('lbEmail').focus(), 50);
+         }
+         const LB_LANG = "en";
          function showSingleLeaderboardSubmit(url, score) {
          const resultDiv = document.getElementById('singleResult');
-         if (!resultDiv || document.getElementById('singleLbBox')) return;
-         const box = document.createElement('div');
-         box.id = 'singleLbBox';
-         box.style.cssText = 'background:linear-gradient(135deg,#3b0764,#1e1b4b);border:1px solid #7c3aed;border-radius:14px;padding:18px;margin-top:14px;';
-         box.innerHTML = '<div style="font-weight:800;color:#e9d5ff;margin-bottom:6px;"></div><label style="display:block;font-size:0.78rem;color:#c4b5fd;margin-bottom:4px;"></label>'
-           + '<input id="singleLbName" type="text" maxlength="120" style="width:100%;padding:9px 11px;background:#0f0a2e;border:1px solid #6d28d9;border-radius:8px;color:#fff;margin-bottom:10px;box-sizing:border-box;">'
-           + '<button id="singleLbBtn" type="button" style="width:100%;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:8px;color:#fff;font-weight:800;cursor:pointer;"></button>'
-           + '<p style="font-size:0.72rem;color:#a78bfa;margin-top:8px;"></p>';
-         box.children[0].textContent = "🏆 Your page qualifies for the ContentScale Leaderboard";
-         box.children[1].textContent = "Company name (shown on the leaderboard)";
-         box.querySelector('#singleLbBtn').textContent = "🏆 Submit to Leaderboard";
-         box.querySelector('p').textContent = "Score 70+. Your entry appears after review by ContentScale.";
-         box.querySelector('#singleLbBtn').addEventListener('click', function () { submitSingleToLeaderboard(url, score, document.getElementById('singleLbName').value.trim()); });
-         resultDiv.appendChild(box);
+         if (!resultDiv) return;
+         if (!document.getElementById('singleLbBtn')) {
+           const btn = document.createElement('button');
+           btn.id = 'singleLbBtn'; btn.type = 'button';
+           btn.style.cssText = 'display:block;width:100%;margin-top:14px;padding:12px;background:linear-gradient(135deg,#7e22ce,#be185d);border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer;';
+           btn.textContent = LB_TEXT.reopen;
+           btn.addEventListener('click', () => openLeaderboardPopup({ kind: 'page', url, score }));
+           resultDiv.appendChild(btn);
          }
-         async function submitSingleToLeaderboard(url, score, name) {
-         const btn = document.getElementById('singleLbBtn');
-         if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Submitting...'; }
-         try {
-         const res = await fetch('/api/leaderboard/submit', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', 'x-user-id': userId || '' },
-         body: JSON.stringify({ url, score, company_name: name || '', admin_verified: false })
-         });
-         const data = await res.json();
-         if (data.success) {
-         if (btn) { btn.innerHTML = '✅ Submitted — pending review'; btn.style.background = '#065f46'; }
-         showToast('✅ Submitted to leaderboard!', '#0f7b3a');
-         } else {
-         if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
-         alert('❌ ' + (data.error || 'Submission failed'));
-         }
-         } catch(e) {
-         if (btn) { btn.disabled = false; btn.innerHTML = '🏆 Submit to Leaderboard'; }
-         alert('❌ Error: ' + e.message);
-         }
+         openLeaderboardPopup({ kind: 'page', url, score });
          }
          let allLeaderboardEntries = [];
          const MEDAL = [
