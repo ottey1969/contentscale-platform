@@ -94,6 +94,15 @@ async function reserve(pool,{tool,id,limit,rootRef=null}){
  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}
  finally{if(client!==pool)client.release()}
 }
+// Look without reserving: is this person (browser or connection; the e-mail is not known yet) still free this week?
+async function peek(pool,{tool,id,limit}){
+ if(!(limit>0))return {ok:true};
+ await ensure(pool);
+ const rows=(await pool.query(`SELECT created_at FROM free_tool_usage WHERE tool=$1 AND counted AND created_at>NOW()-INTERVAL '7 days'
+   AND (email_hash=$2 OR device_hash=$3 OR ip_hash=$4) ORDER BY created_at`,[tool,id.email,id.device,id.ip])).rows;
+ if(rows.length<limit)return {ok:true};
+ return {ok:false,limit,retry_at:new Date(new Date(rows[rows.length-limit].created_at).getTime()+WEEK_MS).toISOString()};
+}
 async function attach(pool,usageId,ref){
  if(usageId)await pool.query('UPDATE free_tool_usage SET ref=$2 WHERE id=$1',[usageId,String(ref)]);
 }
@@ -117,4 +126,4 @@ function limitMessage(tool,limit,retryAt,lang='en',{who='Ottmar',contactUrl=''}=
   es:`Espera hasta el ${day} para uno nuevo, o deja que ${who} lo haga por ti${link}`}[l];
  return used+' '+next;
 }
-module.exports={perWeek,normalizeEmail,deviceId,identity,reserve,attach,refund,limitMessage,COOKIE,MAX_CORRECTIONS};
+module.exports={perWeek,normalizeEmail,deviceId,identity,reserve,peek,attach,refund,limitMessage,COOKIE,MAX_CORRECTIONS};

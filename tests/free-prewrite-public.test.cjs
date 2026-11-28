@@ -140,14 +140,12 @@ test('private public briefs in Chromium use the canonical publication history fo
       await reopened.waitForFunction(() => document.querySelector('#entries').textContent.includes('LIVE_PUBLIC_HTTPS'));
       await reopened.close();
       if (lang === 'en') {
-        // The visitor's second brief this week, from the same computer: refused, with the date and "let Ottmar do it".
+        // The visitor's second brief this week, from the same computer: refused before the form is even filled in
+        // (owner 2026-11-28: nobody has to guess), with the date and "let Ottmar do it"; Generate brief is disabled.
         const again = await browser.newPage();
         await again.goto(origin + '/free-pre-write?lang=nl');
-        await again.locator('[name=website]').fill(site);
-        await again.locator('[name=keyword]').fill('Planning again');
-        await again.locator('[name=email]').fill('someone-else@new-prewrite.example');
-        await again.locator('#intake button[type=submit]').click();
-        await again.waitForFunction(() => /Je hebt je gratis Pre-Write Brief voor deze week gebruikt\. Wacht tot .+ of laat Ottmar het voor je doen/.test(document.getElementById('status').textContent));
+        await again.waitForFunction(() => /Je hebt je gratis Pre-Write Brief voor deze week gebruikt\. Wacht tot .+ of laat Ottmar het voor je doen/.test(document.getElementById('availability').textContent));
+        assert.equal(await again.locator('#intake button[type=submit]').isDisabled(), true);
         assert.equal(new URL(again.url()).pathname, '/free-pre-write', 'no brief was started');
         await again.close();
       }

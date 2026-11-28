@@ -78,6 +78,24 @@
   });
   if (intake) {
     const draft = remember(intake, 'cs-free-prewrite:intake:' + lang);
+    // Before anyone fills in the form: how many free briefs are left today and whether this computer may start one.
+    (async () => {
+      const box = element('availability');
+      if (!box) return;
+      try {
+        const response = await fetch(api + '/availability?lang=' + lang, { cache: 'no-store' });
+        const info = await response.json();
+        if (!info || !info.message) return;
+        let text = info.message;
+        if (info.reason === 'DAILY_TOTAL' && info.daily_resets_at) {
+          const at = new Date(info.daily_resets_at);
+          if (!Number.isNaN(at.getTime())) text += ' (' + at.toLocaleString(document.documentElement.lang, { weekday: 'long', hour: '2-digit', minute: '2-digit' }) + ')';
+        }
+        box.textContent = text;
+        box.className = info.can_start ? 'note' : 'note blocked';
+        if (!info.can_start) intake.querySelector('button[type=submit]').disabled = true;
+      } catch {}
+    })();
     wirePrompt(intake, () => (intake.querySelector('[name=keyword]').value || '').trim());
     intake.addEventListener('submit', async event => {
       event.preventDefault();

@@ -47,6 +47,6 @@ jobs:
       - name: Weekly limit (Free Growth, Free Pre-Write), progress, owner overview
         env:
           PREWRITE_E2E_DATABASE_URL: postgres://test:test@127.0.0.1:5432/free_limit_test
-        run: node --test tests/free-weekly-limit.test.cjs tests/owner-overview.test.cjs tests/free-prewrite-parity.test.cjs
+        run: node --test tests/free-weekly-limit.test.cjs tests/free-prewrite-availability.test.cjs tests/owner-overview.test.cjs tests/free-prewrite-parity.test.cjs
       - name: Golden owner cases (AGENTS.md)
         run: node --test tests/golden-owner-cases.test.cjs
