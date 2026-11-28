@@ -15714,6 +15714,8 @@ return result;
                app.post('/api/scan', async (req, res) => {
                const { url } = req.body;
                if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+               const _scanInputProblem = require('./scan-url-input.cjs').scanUrlProblem(url);
+               if (_scanInputProblem) return res.status(400).json({ success: false, error: _scanInputProblem, step: 'input' });
                let scanUrl = url.startsWith('http') ? url : 'https://' + url;
                try {
                console.log(`🔍 Elite Scanning: ${scanUrl}`);
