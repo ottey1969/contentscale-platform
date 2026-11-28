@@ -48322,7 +48322,7 @@ function renderPrewriteBrief(b) {
       if(_sources.length){
         html += '<div style="margin-top:6px;font-size:10.5px;color:#9ca3af;">Source leads (verify independently):</div>';
         _sources.forEach(function(s){
-          var u=String((s&&s.exact_url)||''), valid=/^https:\/\//i.test(u);
+          var u=String((s&&s.exact_url)||''), valid=/^https:[/][/]/i.test(u);
           html += '<div style="margin-top:3px;font-size:10.5px;">'
             + esc((s&&s.source_name)||'Source')
             + ((s&&s.page_title)?' · '+esc(s.page_title):'')
@@ -48600,7 +48600,7 @@ function renderPrewriteBrief(b) {
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
     html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">Competitor / exact URL</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
     b.competitor_table.forEach(function(c){
-      var _cu=String(c.exact_url||'');var _safeCu=/^https:\/\//i.test(_cu)?_cu:'';
+      var _cu=String(c.exact_url||'');var _safeCu=/^https:[/][/]/i.test(_cu)?_cu:'';
       html += '<tr style="border-bottom:1px solid #1a2332;"><td style="padding:5px 6px;color:#9ca3af;">' + esc(c.rank) + '</td><td style="padding:5px 6px;font-weight:700;max-width:300px;">' + esc(c.page_title||c.domain||'') + (_safeCu?'<div style="margin-top:3px;font-weight:400;"><a href="'+esc(_safeCu)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;word-break:break-all;">'+esc(_safeCu)+'</a></div>':'<div style="margin-top:3px;color:#6b7280;font-weight:400;">'+esc(c.domain||'')+'</div>') + '</td><td style="padding:5px 6px;color:#a7f3d0;">' + esc(c.what_they_have) + '</td><td style="padding:5px 6px;color:#fca5a5;">' + esc(c.the_gap) + '</td><td style="padding:5px 6px;color:#93c5fd;">' + esc(c.what_to_add) + '</td></tr>';
     });
     html += '</table></div>';

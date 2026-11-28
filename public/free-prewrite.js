@@ -197,36 +197,127 @@
     }
   }
   // The brief in plain words above the copy buttons: for the owner and for a human writer (owner 2026-11-29).
-  function renderReadable(b, result) {
+  function renderReadable(editor, result) {
     const box = element('brief-readable'), t = window.prewriteReadable;
     if (!box || !t) return;
+    const b = Object.assign({}, editor || {}, result.brief || {});
     box.replaceChildren();
     addText(box, 'p', t.intro).className = 'note';
+    const arr = value => Array.isArray(value) ? value.filter(x => x !== null && x !== undefined && x !== '') : [];
+    const str = value => typeof value === 'string' ? value.trim() : '';
     const section = title => addText(box, 'h3', title);
-    const pairs = rows => { const dl = document.createElement('dl'); for (const [k, v] of rows) if (k && v) { addText(dl, 'dt', k); addText(dl, 'dd', v); } if (dl.children.length) box.append(dl); };
-    const list = (items, ordered) => { const el = document.createElement(ordered ? 'ol' : 'ul'); for (const item of items) if (item) addText(el, 'li', item); if (el.children.length) box.append(el); };
+    const pairs = (rows, parent = box) => { const dl = document.createElement('dl'); for (const [k, v] of rows) if (k && v) { addText(dl, 'dt', k); addText(dl, 'dd', v); } if (dl.children.length) parent.append(dl); };
+    const list = (items, ordered, parent = box) => { const el = document.createElement(ordered ? 'ol' : 'ul'); for (const item of items) if (item) addText(el, 'li', item); if (el.children.length) parent.append(el); return el; };
+    const textOf = x => typeof x === 'string' ? x : (x && (x.name || x.text || x.value || x.title || x.url || x.question || x.q)) || '';
     const create = String(b.content_decision?.recommended_treatment || '').toUpperCase() !== 'EXPAND_EXISTING_PAGE';
     section(t.decision);
     pairs([[create ? t.create : t.expand, result.target?.url || '']]);
-    if (b.content_decision?.reason) addText(box, 'p', b.content_decision.reason);
+    if (str(b.content_decision?.reason)) addText(box, 'p', b.content_decision.reason);
     const m = b.meta_package || {};
     section(t.page);
-    pairs([[t.h1, m.h1 || b.recommended_title_h1 || ''], [t.title, m.seo_title || ''], [t.description, m.meta_description || ''],
+    pairs([[t.h1, m.h1 || b.recommended_title_h1 || ''], [t.title, m.seo_title || ''], [t.description, m.meta_description || ''], [t.slug, m.url_slug || ''],
       [t.intent, (window.prewriteIntentTexts?.labels?.[b.search_intent?.primary] || b.search_intent?.primary || '')]]);
-    const opening = b.opening_passage?.direct_answer || b.ai_answer?.direct_answer;
-    if (opening) { section(t.opening); addText(box, 'p', opening); }
-    const outline = Array.isArray(b.definitive_outline) && b.definitive_outline.length ? b.definitive_outline : (b.page_blueprint || []);
+    const a = b.ai_answer || {};
+    const opening = str(b.opening_passage?.direct_answer) || str(a.direct_answer);
+    if (opening || arr(a.key_takeaways).length) {
+      section(t.opening);
+      if (opening) addText(box, 'p', opening);
+      if (arr(a.key_takeaways).length) { addText(box, 'h4', t.takeaways); list(arr(a.key_takeaways).map(textOf)); }
+      pairs([[t.who, str(a.who_is_it_for)], [t.why, str(a.why_it_matters)]]);
+    }
+    const facts = arr(b.quick_facts).filter(f => f && (f.label || f.value));
+    if (facts.length) { section(t.facts); pairs(facts.map(f => [f.label || '', f.value || ''])); }
+    const outline = arr(b.definitive_outline).length ? arr(b.definitive_outline) : arr(b.page_blueprint);
     if (outline.length) {
       section(t.outline);
-      list(outline.map(x => [x.h2, x.target_words ? '(' + t.words.replace('§', x.target_words) + ')' : '', x.purpose ? '— ' + x.purpose : ''].filter(Boolean).join(' ')), true);
+      outline.forEach((x, i) => {
+        addText(box, 'h4', (i + 1) + '. ' + (x.h2 || '') + (x.target_words ? ' · ' + t.words.replace('§', x.target_words) : ''));
+        if (str(x.purpose)) addText(box, 'p', x.purpose);
+        if (arr(x.cover).length) addText(box, 'p', t.cover + ': ' + arr(x.cover).map(textOf).join(' · '));
+        if (str(x.citation_hook)) addText(box, 'p', t.hook + ': ' + x.citation_hook);
+      });
     }
-    const questions = [...(b.paa_questions || []).map(x => x && x.q), ...(b.ai_answer?.secondary_questions || [])].filter(Boolean);
-    if (questions.length) { section(t.questions); list([...new Set(questions)]); }
-    const links = (b.internal_link_targets || []).filter(x => x && x.link_to);
-    if (links.length) { section(t.links); list(links.map(x => (x.anchor_text ? x.anchor_text + ' → ' : '') + x.link_to)); }
-    const verify = b.fact_safety?.verify_first || [];
+    const competitors = arr(b.competitor_table).filter(c => c && (c.what_they_have || c.the_gap || c.what_to_add));
+    if (competitors.length) {
+      section(t.competitors);
+      addText(box, 'p', t.research).className = 'note';
+      const table = document.createElement('table'), head = table.insertRow();
+      for (const h of ['#', '', t.has, t.gap, t.add]) addText(head, 'th', h);
+      competitors.forEach((c, i) => {
+        const row = table.insertRow();
+        addText(row, 'td', String(c.rank || i + 1));
+        const who = document.createElement('td');
+        addText(who, 'strong', c.page_title || c.domain || '');
+        // Plain text, never a link: competitors are research only.
+        if (/^https:[/][/]/i.test(String(c.exact_url || ''))) addText(who, 'div', c.exact_url).className = 'url'; else if (c.domain) addText(who, 'div', c.domain).className = 'url';
+        row.append(who);
+        addText(row, 'td', c.what_they_have || ''); addText(row, 'td', c.the_gap || ''); addText(row, 'td', c.what_to_add || '');
+      });
+      box.append(table);
+    }
+    const ai = b.ai_systems_analysis && typeof b.ai_systems_analysis === 'object' ? b.ai_systems_analysis : null;
+    const aiGap = [str(b.aio_citation_gap), str(typeof b.ai_overview_citation_strategy === 'string' ? b.ai_overview_citation_strategy : '')].filter(Boolean);
+    if (ai || aiGap.length) {
+      section(t.ai);
+      const names = { google_aio: 'Google AI Overview / Gemini', chatgpt: 'ChatGPT Search', perplexity: 'Perplexity', claude: 'Claude', copilot: 'Microsoft Copilot' };
+      for (const key of Object.keys(names)) {
+        const x = ai && ai[key];
+        if (!x) continue;
+        addText(box, 'h4', names[key] + (x.checked ? '' : ' · ' + t.notChecked));
+        if (!x.checked) continue;
+        if (str(x.answer_summary)) addText(box, 'p', x.answer_summary);
+        // Cited means the own site among the cited domains or pages (not just any citation).
+        const own = (() => { try { return new URL(result.website).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+        const cited = arr(x.exact_page_citations).length > 0 || (!!own && arr(x.domain_citations).some(d => String(d).replace(/^www\./, '').toLowerCase() === own));
+        const recommends = arr(x.recommended_companies).map(textOf).join(', ');
+        if (recommends) addText(box, 'p', t.recommends + ': ' + recommends);
+        addText(box, 'p', t.ownCited + ': ' + (cited ? t.yes : t.no));
+        const sources = arr(x.citation_sources).map(s => [s.source_name, s.exact_url].filter(Boolean).join(' · ')).filter(Boolean);
+        if (sources.length) { addText(box, 'p', t.sources + ':'); list(sources); }
+      }
+      if (aiGap.length) { addText(box, 'h4', t.aiGap); for (const g of aiGap) addText(box, 'p', g); }
+    }
+    const links = arr(b.internal_link_targets).filter(x => x && x.link_to);
+    if (links.length) { section(t.links); list(links.map(x => (x.anchor_text ? x.anchor_text + ' → ' : '') + x.link_to + (x.reason ? ' (' + x.reason + ')' : ''))); }
+    const external = arr(b.external_link_targets).filter(x => x && (x.exact_url || x.url));
+    if (external.length) { section(t.external); list(external.map(x => [x.anchor_text || x.source_name || x.page_title || '', x.exact_url || x.url, x.supports_claim || x.supports || ''].filter(Boolean).join(' · '))); }
+    const e = b.entity_strategy || {};
+    if (arr(e.primary).length || arr(e.secondary).length || arr(e.relationships).length) {
+      section(t.entities);
+      pairs([[t.core, arr(e.primary).map(textOf).join(', ')], [t.secondary, arr(e.secondary).map(textOf).join(', ')], [t.supporting, arr(e.supporting).map(textOf).join(', ')]]);
+      const rels = arr(e.relationships).filter(r => r && r.subject && r.object);
+      if (rels.length) { addText(box, 'h4', t.relations); list(rels.map(r => r.subject + ' → ' + (r.relation || '') + ' → ' + r.object)); }
+    }
+    const paa = arr(b.paa_questions).filter(x => x && x.q);
+    const ideas = [...new Set([...arr(b.faq_questions).map(textOf), ...arr(a.secondary_questions).map(textOf)].filter(q => q && !paa.some(p => p.q === q)))];
+    if (paa.length || ideas.length) {
+      section(t.questions);
+      paa.forEach(x => { addText(box, 'h4', x.q); if (str(x.a)) addText(box, 'p', x.a); });
+      if (ideas.length) { addText(box, 'h4', t.faqIdeas); list(ideas); }
+    }
+    const ev = b.evidence || {};
+    const leads = arr(b.ai_source_leads).map(x => typeof x === 'string' ? x : x && x.url).filter(u => /^https:[/][/]/i.test(String(u || '')));
+    if (arr(ev.trust_signals).length || str(ev.experience_to_include) || leads.length) {
+      section(t.eeat);
+      if (arr(ev.trust_signals).length) { addText(box, 'h4', t.trust); list(arr(ev.trust_signals).map(textOf)); }
+      if (str(ev.experience_to_include)) { addText(box, 'h4', t.experience); addText(box, 'p', ev.experience_to_include); }
+      if (leads.length) { addText(box, 'h4', t.leads); list([...new Set(leads)]); }
+    }
+    const bal = b.balance || {};
+    const comparisons = arr(bal.comparisons).filter(c => c && (c.a || c.b));
+    if (arr(bal.limitations).length || arr(bal.who_should_not_use_it).length || comparisons.length) {
+      section(t.balance);
+      if (arr(bal.limitations).length) { addText(box, 'h4', t.limits); list(arr(bal.limitations).map(textOf)); }
+      if (arr(bal.who_should_not_use_it).length) { addText(box, 'h4', t.notFor); list(arr(bal.who_should_not_use_it).map(textOf)); }
+      if (comparisons.length) { addText(box, 'h4', t.compare); list(comparisons.map(c => (c.a || '') + ' vs ' + (c.b || '') + (c.why_it_matters ? ': ' + c.why_it_matters : ''))); }
+    }
+    const uses = arr(b.use_cases).filter(u => u && (u.audience || u.scenario));
+    if (uses.length) { section(t.useCases); list(uses.map(u => [u.audience, u.scenario].filter(Boolean).join(': ') + (u.benefit ? ' → ' + u.benefit : ''))); }
+    const c = b.conclusion || {};
+    if (str(c.recap) || str(c.outlook) || str(c.recommendation)) { section(t.conclusion); pairs([[t.recap, str(c.recap)], [t.outlook, str(c.outlook)], [t.recommendation, str(c.recommendation)]]); }
+    const verify = arr(b.fact_safety?.verify_first).map(textOf);
     if (verify.length) { section(t.verify); list(verify); }
-    const plan = (b.action_plan || []).map(x => x && x.action).filter(Boolean);
+    const plan = arr(b.action_plan).map(x => x && x.action).filter(Boolean);
     if (plan.length) { section(t.plan); list(plan, true); }
   }
   // The waiting page: the real research step from the server, with a moving bar so the visitor sees it works.
