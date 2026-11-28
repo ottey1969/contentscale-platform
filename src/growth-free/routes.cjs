@@ -1362,10 +1362,10 @@ function adminPage(cfg,api,base,loggedIn){
 <div id="app"${loggedIn?'':' hidden'}>
  <p><button class="ghost" id="logout" type="button">Log out</button></p>
  <details class="card" id="firecrawlSection"><summary><strong>Firecrawl Usage</strong></summary><div id="firecrawlOwnerCard"><h2 style="margin-top:0">Firecrawl usage</h2>
- <p class="muted">Application request limits, not billed credits. UTC periods.</p>
+ <p class="muted">Remaining credits come from Firecrawl's own credit API (checked at most every 5 minutes). Request limits are ContentScale's own limits across all keys. UTC periods. API keys are never shown.</p>
  <p><button type="button" class="ghost" id="firecrawlRefresh">Refresh usage</button></p>
  <div id="firecrawlOwnerUsage" role="status">Loading…</div>
- <p class="muted">Provider credit balance and key validity are not checked here. Module counts begin at deployment and may be incomplete if telemetry storage is unavailable.</p></div></details>
+ <p class="muted">Firecrawl is only used when the normal reader cannot read a page. The backup key takes over only below the minimum credits or when Firecrawl confirms the credits are used up, never on a rate limit. Module counts begin at deployment and may be incomplete if telemetry storage is unavailable.</p></div></details>
  <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">The same form your visitors use, in owner mode: no limits, AI writing, customer questions, Search Console upload, pasted AI answers kept, and the option to research again. One form, so what you test is what visitors get.</p>
   <p><a class="btn" href="${esc(base)}">Open the check form (owner mode) →</a></p></div>
  <details class="card" id="invitationSection"><summary><strong>Invitations</strong></summary><div><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
@@ -1406,24 +1406,38 @@ var API=${js(api)},H={'Content-Type':'application/json','X-Requested-With':'grow
    var r=await fetch(API+'/admin/firecrawl-usage',{credentials:'same-origin',cache:'no-store'});
    if(!r.ok)throw Error('Usage unavailable');
    var d=await r.json();target.textContent='';
-   line('API key: '+(d.key_configured?'configured (validity not checked)':'not configured'));
+   line('API key: '+(d.key_configured?'configured':'not configured')+' · Backup key: '+(d.backup_key_configured?'configured':'not configured'));
+   if(d.failover)line('Automatic failover: '+(d.failover.enabled?'on':'off')+' · switch below '+d.failover.min_credits+' credits'+(d.active_key?' · active key: '+(d.active_key==='BACKUP'?'Backup':'Primary'):''));
    line('Free Growth: '+(d.free_growth_enabled?'enabled':'disabled')+' · Tracker: '+(d.tracker_enabled?'enabled':'disabled'));
    if(d.status!=='AVAILABLE'){line(d.status==='KEY_MISSING'?'Configure an API key in Railway.':'Accounting unavailable.');return}
    line('Accounting: '+(d.scope==='POSTGRES_SHARED'?'PostgreSQL (shared)':'process-local'));
    showMeter('Today ('+d.day_utc+')',d.daily);showMeter('Month ('+d.month_utc+')',d.monthly);
-   var heading=document.createElement('h3');heading.textContent='Usage by module';target.appendChild(heading);
-   if(!Array.isArray(d.modules)){line('Module statistics unavailable.');return}
-   var labels={FREE_GROWTH:'Free Growth',GSC_AUDIT:'GSC Audit',TRACKER_GROWTH:'Tracker Growth',GOOGLE_COMPETITOR:'Google Competitor Research',AI_GAP:'AI Gap Research',UNCLASSIFIED:'Other'};
-   var wrap=document.createElement('div');wrap.style.overflowX='auto';
-   var table=document.createElement('table'),head=table.createTHead().insertRow();
-   ['Module','Today requests','Month requests','Accepted reads','Provider errors','Cache reuse','Fallbacks'].forEach(function(label){var th=document.createElement('th');th.textContent=label;th.scope='col';head.appendChild(th)});
-   var body=table.createTBody();
-   Object.keys(labels).forEach(function(key){
-    var m=d.modules.find(function(x){return x.module===key});
-    if(!m&&key==='UNCLASSIFIED')return;
-    var row=body.insertRow();[labels[key],m?.daily_requests??0,m?.requests??0,m?.used??0,m?.errors??0,m?.cache_hits??0,m?.fallbacks??0].forEach(function(value){row.insertCell().textContent=String(value)});
-   });
-   wrap.appendChild(table);target.appendChild(wrap);
+   var labels={GSC_AUDIT:'GSC Audit',FREE_GROWTH:'Free Growth',TRACKER_GROWTH:'Tracker Growth',GOOGLE_COMPETITOR:'Tracker: Google competitors',AI_GAP:'Tracker: AI gap',
+    FREE_PREWRITE:'Free Pre-Write',TRACKER_PREWRITE:'Tracker Pre-Write',NETWORK_PREWRITE:'Network Pre-Write',CEO_SCAN:'CEO Scan',QUICK_SCAN:'Quick Scan',UNCLASSIFIED:'Other'};
+   function moduleTable(title,modules){
+    var heading=document.createElement('h3');heading.textContent=title;target.appendChild(heading);
+    if(!Array.isArray(modules)){line('Module statistics unavailable.');return}
+    var wrap=document.createElement('div');wrap.style.overflowX='auto';
+    var table=document.createElement('table'),head=table.createTHead().insertRow();
+    ['Module','Today requests','Month requests','Accepted reads','Provider errors','Cache reuse','Fallbacks'].forEach(function(label){var th=document.createElement('th');th.textContent=label;th.scope='col';head.appendChild(th)});
+    var body=table.createTBody();
+    Object.keys(labels).forEach(function(key){
+     var m=modules.find(function(x){return x.module===key});
+     if(!m&&key==='UNCLASSIFIED')return;
+     var row=body.insertRow();[labels[key],m?.daily_requests??0,m?.requests??0,m?.used??0,m?.errors??0,m?.cache_hits??0,m?.fallbacks??0].forEach(function(value){row.insertCell().textContent=String(value)});
+    });
+    wrap.appendChild(table);target.appendChild(wrap);
+   }
+   var states={VERIFIED:'verified',EXHAUSTED:'used up',KEY_INVALID:'key rejected by Firecrawl',CHECK_FAILED:'check failed',NOT_CHECKED:'not checked yet'};
+   if(Array.isArray(d.accounts)&&d.accounts.length){
+    d.accounts.forEach(function(a){
+     var name=a.label==='BACKUP'?'Backup account':'Primary account';
+     moduleTable(name+(a.active?' (active)':''),a.modules);
+     var c=a.credits||{};
+     line('Remaining credits: '+(c.remaining===null||c.remaining===undefined?'unknown':c.remaining+(c.spent_since_verification?' (about '+c.estimated_remaining+' after '+c.spent_since_verification+' reads since)':''))+(c.plan_credits!==null&&c.plan_credits!==undefined?' of '+c.plan_credits:'')+' · status: '+(states[c.status]||c.status));
+     line('Last verification: '+(a.last_verified?new Date(a.last_verified).toLocaleString():'never')+(c.last_check_error?' · last check failed ('+c.last_check_error+')':''));
+    });
+   }else moduleTable('Usage by module',d.modules);
    line('All columns except Today requests cover the UTC month. Cache reuse counts avoided repeat reader attempts, not verified credit savings. Accepted reads include shared-cache results; fallbacks include rejected captures and quota blocks.');
   }catch(e){target.textContent='Firecrawl usage unavailable.'}finally{btn.disabled=false}
  }

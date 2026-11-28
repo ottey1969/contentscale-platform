@@ -14604,16 +14604,29 @@ async function _canonicalContentScoreScan(input, opts) {
   const endpoint = html ? '/api/scan/paste' : '/api/scan';
   const payload = html ? { html: html, ...(url ? {url:url} : {}) } : { url:url };
   const timeoutMs = Number(opts.timeoutMs || (html ? 45000 : 90000));
-  const r = await fetch(base + endpoint, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload),
-    signal:AbortSignal.timeout(timeoutMs)
-  });
-  const j = await r.json().catch(()=>({success:false,error:'Scanner returned no valid JSON'}));
-  if(!r.ok || !j || j.success===false || !Number.isFinite(Number(j.score))){
-    const e = new Error((j&&j.error) || ('ContentScore scan failed (HTTP '+r.status+')'));
-    e.status = r.status; e.scan = j; e.scan_mode = mode; throw e;
+  let r,j;
+  try{
+    r = await fetch(base + endpoint, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),
+      signal:AbortSignal.timeout(timeoutMs)
+    });
+    j = await r.json().catch(()=>({success:false,error:'Scanner returned no valid JSON'}));
+    if(!r.ok || !j || j.success===false || !Number.isFinite(Number(j.score))){
+      const e = new Error((j&&j.error) || ('ContentScore scan failed (HTTP '+r.status+')'));
+      e.status = r.status; e.scan = j; e.scan_mode = mode; throw e;
+    }
+  }catch(scanErr){
+    // Quick Scan / CEO Scan (owner 2026-11-28): only after a live scan failed for a non-refusal reason, the central
+    // native-first reader may supply the page; Firecrawl HTML is then scored by the same /api/scan/paste engine.
+    // Anything else (refusal, bot check, 404, static HTML) keeps the original failure.
+    const _fc = !html && url && opts.firecrawlModule ? require('./firecrawl-scan-fallback.cjs') : null;
+    if(!_fc || !_fc.scanFallbackEligible(scanErr)) throw scanErr;
+    const page = await _fc.acquireScanHtml(url,{module:opts.firecrawlModule});
+    if(!page) throw scanErr;
+    const recovered = await _canonicalContentScoreScan({html:page.html,url:url},{timeoutMs:45000});
+    return Object.assign(recovered,{firecrawl_fallback:{module:opts.firecrawlModule,reason:String(scanErr&&scanErr.scan&&scanErr.scan.step||scanErr&&scanErr.name||'scan_failed').slice(0,40),live_scan_error:String(scanErr&&scanErr.message||'').slice(0,200)}});
   }
   const rr=j.recommendations;
   const recs=Array.isArray(rr)?rr:(rr&&Array.isArray(rr.all)?rr.all:[]);
@@ -16352,7 +16365,7 @@ return result;
                        if(_jobRef)_jobRef.scanController=_pageController;
                        // Canonical ContentScore entry: live URL uses /api/scan; explicit supplied HTML
                        // uses /api/scan/paste. Both are the same contracts as app.contentscale.site.
-                       const r = await _canonicalContentScoreScan(_manualSource?{html:sourceHtml}:{url:u},{timeoutMs:90000});
+                       const r = await _canonicalContentScoreScan(_manualSource?{html:sourceHtml}:{url:u},{timeoutMs:90000,firecrawlModule:req[_INTERNAL_CEO_AUDIT]?'CEO_SCAN':null});
                        if (r && r.success !== false && (r.score != null)) {
                          const cs = r.content_stats || {};
                          const met = r.metrics || {};
@@ -25349,7 +25362,7 @@ app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
     await pool.query("UPDATE prospect_quick_scans SET status='scanning',scan_error=NULL,scan_started_at=NOW(),updated_at=NOW() WHERE token=$1",[row.token]);
     _pqsNotifyOwner(row,'started');
     let d;
-    try{d=await _canonicalContentScoreScan({url:row.url},{timeoutMs:90000});}
+    try{d=await _canonicalContentScoreScan({url:row.url},{timeoutMs:90000,firecrawlModule:'QUICK_SCAN'});}
     catch(scanErr){d=scanErr.scan||{success:false,error:scanErr.message};}
     if(!d||d.success===false||typeof d.score!=='number'){
       const err=String((d&&d.error)||'Scan failed').slice(0,1000);
@@ -60982,7 +60995,8 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     }
     // Owner 2026-11-28: Firecrawl only for a page the normal reader could not read (timeout, 5xx, JavaScript shell), never
     // past a refusal or bot check. One reader per brief, so its page cap holds for the whole brief.
-    const _pwbFallbackReader = require('./growth-free-firecrawl-reader.cjs').createFallbackReader();
+    const _pwbFallbackReader = require('./growth-free-firecrawl-reader.cjs').createFallbackReader({
+      module: () => publicBrief ? 'FREE_PREWRITE' : (_pwbNetworkPlacementId > 0 ? 'NETWORK_PREWRITE' : 'TRACKER_PREWRITE') });
     const readResearchPage = publicBrief
       ? (url, maxChars) => scrapeBodyText(url, maxChars, _pwbFallbackReader)
       : async (url, maxChars) => {

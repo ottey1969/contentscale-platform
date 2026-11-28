@@ -1,0 +1,61 @@
+name: Central Firecrawl integration
+# One Firecrawl integration for every module: native first, backup key only below FIRECRAWL_MIN_CREDITS or on confirmed
+# credit exhaustion (never on a rate limit), shared cache, quota and PostgreSQL accounting, keys never shown.
+on:
+  pull_request:
+    paths:
+      - 'src/firecrawl-*.cjs'
+      - 'src/growth-free-firecrawl-reader.cjs'
+      - 'src/growth-free/engine.cjs'
+      - 'src/growth-free/routes.cjs'
+      - 'src/gsc-report/routes.cjs'
+      - 'src/gsc-report/site-audit.cjs'
+      - 'src/tracker-growth-automatic-routes.cjs'
+      - 'src/growth-ranking-page-reader.cjs'
+      - 'src/free-prewrite.cjs'
+      - 'src/index.js'
+      - 'tests/firecrawl-*.test.cjs'
+      - 'tests/growth-free-firecrawl-pilot.test.cjs'
+      - 'tests/gsc-report-firecrawl.test.cjs'
+      - 'tests/gsc-report-audit-plus.test.cjs'
+      - '.github/workflows/firecrawl-central.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/firecrawl-*.cjs'
+      - 'src/growth-free-firecrawl-reader.cjs'
+      - 'tests/firecrawl-*.test.cjs'
+jobs:
+  firecrawl-central:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: firecrawl_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U test -d firecrawl_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (no browser download)
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci --ignore-scripts
+      - name: Failover, credit exhaustion, cache, concurrency, provider errors, dashboard, module wiring
+        run: node --test tests/firecrawl-central-failover.test.cjs tests/growth-free-firecrawl-pilot.test.cjs tests/gsc-report-firecrawl.test.cjs tests/gsc-report-audit-plus.test.cjs
+      - name: Shared quota and per-account module usage on real PostgreSQL
+        env:
+          GROWTH_E2E_DATABASE_URL: postgres://test:test@127.0.0.1:5432/firecrawl_test
+        run: node --test tests/firecrawl-central-postgres.test.cjs
+      - name: Golden owner cases (AGENTS.md)
+        run: node --test tests/golden-owner-cases.test.cjs
+      - name: Server syntax
+        run: node --check src/index.js
