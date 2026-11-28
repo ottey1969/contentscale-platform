@@ -190,6 +190,39 @@
       entries.append(details);
     }
   }
+  // The brief in plain words above the copy buttons: for the owner and for a human writer (owner 2026-11-29).
+  function renderReadable(b, result) {
+    const box = element('brief-readable'), t = window.prewriteReadable;
+    if (!box || !t) return;
+    box.replaceChildren();
+    addText(box, 'p', t.intro).className = 'note';
+    const section = title => addText(box, 'h3', title);
+    const pairs = rows => { const dl = document.createElement('dl'); for (const [k, v] of rows) if (k && v) { addText(dl, 'dt', k); addText(dl, 'dd', v); } if (dl.children.length) box.append(dl); };
+    const list = (items, ordered) => { const el = document.createElement(ordered ? 'ol' : 'ul'); for (const item of items) if (item) addText(el, 'li', item); if (el.children.length) box.append(el); };
+    const create = String(b.content_decision?.recommended_treatment || '').toUpperCase() !== 'EXPAND_EXISTING_PAGE';
+    section(t.decision);
+    pairs([[create ? t.create : t.expand, result.target?.url || '']]);
+    if (b.content_decision?.reason) addText(box, 'p', b.content_decision.reason);
+    const m = b.meta_package || {};
+    section(t.page);
+    pairs([[t.h1, m.h1 || b.recommended_title_h1 || ''], [t.title, m.seo_title || ''], [t.description, m.meta_description || ''],
+      [t.intent, (window.prewriteIntentTexts?.labels?.[b.search_intent?.primary] || b.search_intent?.primary || '')]]);
+    const opening = b.opening_passage?.direct_answer || b.ai_answer?.direct_answer;
+    if (opening) { section(t.opening); addText(box, 'p', opening); }
+    const outline = Array.isArray(b.definitive_outline) && b.definitive_outline.length ? b.definitive_outline : (b.page_blueprint || []);
+    if (outline.length) {
+      section(t.outline);
+      list(outline.map(x => [x.h2, x.target_words ? '(' + t.words.replace('§', x.target_words) + ')' : '', x.purpose ? '— ' + x.purpose : ''].filter(Boolean).join(' ')), true);
+    }
+    const questions = [...(b.paa_questions || []).map(x => x && x.q), ...(b.ai_answer?.secondary_questions || [])].filter(Boolean);
+    if (questions.length) { section(t.questions); list([...new Set(questions)]); }
+    const links = (b.internal_link_targets || []).filter(x => x && x.link_to);
+    if (links.length) { section(t.links); list(links.map(x => (x.anchor_text ? x.anchor_text + ' → ' : '') + x.link_to)); }
+    const verify = b.fact_safety?.verify_first || [];
+    if (verify.length) { section(t.verify); list(verify); }
+    const plan = (b.action_plan || []).map(x => x && x.action).filter(Boolean);
+    if (plan.length) { section(t.plan); list(plan, true); }
+  }
   // The waiting page: the real research step from the server, with a moving bar so the visitor sees it works.
   function showProgress(progress) {
     const box = element('progress');
@@ -297,6 +330,7 @@
     renderHistory(display.history);
     element('implementation').hidden = false;
     element('handoff').hidden = false;
+    renderReadable(display.editor_brief || {}, result);
     const editorText = result.instructions + '\n\n' + JSON.stringify(display.editor_brief, null, 2);
     element('editor').value = editorText;
     const copyBrief = element('copy-brief');

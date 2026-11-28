@@ -125,7 +125,11 @@ function firstPartyOffers(topic, pages) {
 // Competitors are research only (AGENTS.md). Their names must never reach the reader-facing parts of a brief: the
 // Spanish "seo checker" brief named Seobility, Semrush, Ahrefs and Rank Math in its opening and its outline.
 const GENERIC_BRANDS = new Set(['medium','blog','blogs','wiki','news','info','online','web','seo','tools','tool','site','home','help','support','docs','forum','reddit','quora','youtube','linkedin','facebook','twitter','instagram','amazon']);
-function competitorBrands({ serpUrls = [], aiLeads = [], competitorTable = [], ownUrl = '' } = {}) {
+// Names the AI systems mention (Seobility, Semrush SEO Checker…) are competitors too, unless they are the search engines'
+// own tools or the site itself (owner 2026-11-29: Seobility, Semrush and DebugBear stayed in the reader text).
+const OFFICIAL_VENDORS = new Set(['google','bing','microsoft','apple','yandex','baidu','openai','chatgpt','perplexity','claude','anthropic','gemini','copilot','youtube','wikipedia']);
+const NAME_NOISE = new Set(['seo','free','gratis','best','top','online','website','web','tool','tools','checker','herramienta','herramientas','the','site','page','search','analyzer','audit']);
+function competitorBrands({ serpUrls = [], aiLeads = [], competitorTable = [], ownUrl = '', aiCompanies = [] } = {}) {
   const own = siteOf(ownUrl);
   const out = new Map();
   const add = (name, source) => {
@@ -148,6 +152,17 @@ function competitorBrands({ serpUrls = [], aiLeads = [], competitorTable = [], o
     if (value) fromUrl(value, 'competitor_table');
     const name = String(row && row.company_or_publisher || '').trim();
     if (name && !(value && (isOfficial(value) || siteOf(value) === own))) add(name, 'competitor_table');
+  }
+  const ownStem = (own || '').split('.')[0];
+  for (const raw of aiCompanies || []) {
+    const name = String(raw || '').trim();
+    const parts = name.split(/\s+/).map(part => fold(part).replace(/[^\p{L}\p{N}]+/gu, '')).filter(Boolean);
+    if (!parts.length || OFFICIAL_VENDORS.has(parts[0]) || parts.every(part => NAME_NOISE.has(part))) continue;
+    if (ownStem && parts.join('').includes(ownStem)) continue;
+    // The brand is the name without generic words ("Semrush SEO Checker" -> semrush, "Screaming Frog SEO Spider" -> screamingfrog).
+    const brand = [];
+    for (const part of parts) { if (NAME_NOISE.has(part)) break; brand.push(part); }
+    if (brand.length) add(brand.slice(0, 2).join(''), 'ai_answer');
   }
   return [...out.values()];
 }
@@ -329,6 +344,26 @@ function metadataIssues(meta, topic, year) {
   return issues;
 }
 
+// Repairs what metadataIssues can repair without inventing anything: an earlier year (the topic asks for none) becomes
+// this year; a meta description that stops mid-phrase ends at its last complete sentence, if that keeps 55+ characters.
+function repairMetadata(meta, topic, year) {
+  if (!meta || typeof meta !== 'object') return meta;
+  if (!/\b20\d{2}\b/.test(String(topic || ''))) {
+    for (const key of ['seo_title', 'meta_description', 'h1']) {
+      if (typeof meta[key] === 'string') meta[key] = meta[key].replace(/\b20\d{2}\b/g, found => Number(found) < year ? String(year) : found);
+    }
+  }
+  const description = String(meta.meta_description || '').trim();
+  if (description && (cutOff(description) || /(?:…|\.\.\.|[-–—:])$/.test(description))) {
+    const sentences = description.match(/[^.!?]*[.!?]+/g) || [];
+    let kept = '';
+    for (const sentence of sentences.slice(0, -1)) kept += sentence;
+    kept = kept.trim();
+    if (kept.length >= 55) meta.meta_description = kept;
+  }
+  return meta;
+}
+
 function schemaAdvice(types, page, format, actualSteps = false) {
   const present = page?.schema || [];
   const article = ['Article','BlogPosting','NewsArticle','TechArticle'];
@@ -501,7 +536,7 @@ function geminiUsage(model, response) {
     usage_reported: Boolean(response?.usageMetadata), billing_verified: false };
 }
 
-module.exports = {
+module.exports = { repairMetadata,
   serpFormats, websitePage, firstPartyOffers, contentMatch, pricingEvidenceUrl, missingInformation, repairPricingDraft, alignOpening, overlappingPlan,
   prewritePublicationBlockers, metadataIssues, schemaAdvice, relevantInternalLinks, verifiedSourceTargets, writerBrief, googleObservation, aiObservations,
   cutOff, isQuestionField, cleanPaa, sameSite, siteOf, suggestInternalLinks, linkResearch,
