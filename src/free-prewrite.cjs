@@ -99,6 +99,39 @@ const readableTexts = {
     balance: 'Visión equilibrada', limits: 'Limitaciones', notFor: 'No es para', compare: 'Comparaciones', useCases: 'Casos de uso', conclusion: 'Conclusión', recap: 'Resumen', outlook: 'Perspectiva', recommendation: 'Recomendación',
     verify: 'Comprueba esto antes de escribirlo', plan: 'Pasos' }
 };
+// A brief that was made but did not pass the quality check (owner 2026-11-28: "WAAR IS DE ZICHTBARE LEESBARE SECTIE … WAAROM?").
+// The brief is shown in plain words with the reason; it cannot be approved until a corrected brief passes.
+const notPassedTexts = {
+  en: { title: 'The brief is ready to read, but it did not pass the quality check.', missing: 'Not yet sufficient', next: 'You can use the brief below as a starting point. Add what is missing, or correct the brief below, before you approve a text.', other: 'another quality point' },
+  nl: { title: 'De brief is klaar om te lezen, maar hij is niet door de kwaliteitscontrole gekomen.', missing: 'Nog niet voldoende', next: 'Je kunt de brief hieronder als basis gebruiken. Vul aan wat ontbreekt, of corrigeer de brief hieronder, voordat je een tekst goedkeurt.', other: 'een ander kwaliteitspunt' },
+  es: { title: 'El brief está listo para leer, pero no superó el control de calidad.', missing: 'Aún no es suficiente', next: 'Puedes usar el brief de abajo como punto de partida. Completa lo que falta, o corrige el brief abajo, antes de aprobar un texto.', other: 'otro punto de calidad' }
+};
+// The readiness checks of the generator, in plain words.
+const qualityNames = {
+  official_sources: ['at least 2 official sources (government, standards body, official documentation)', 'minstens 2 officiële bronnen (overheid, norminstantie, officiële documentatie)', 'al menos 2 fuentes oficiales (administración, organismo de normalización, documentación oficial)'],
+  evidence: ['verified evidence', 'gecontroleerd bewijs', 'pruebas verificadas'], evidence_quality: ['quality of the evidence', 'kwaliteit van het bewijs', 'calidad de las pruebas'],
+  evidence_research: ['the evidence research', 'het bewijsonderzoek', 'la investigación de pruebas'],
+  definitive_outline: ['the page plan (H2 sections)', 'het paginaplan (H2-secties)', 'el plan de la página (secciones H2)'],
+  meta_package: ['title, H1 and meta description', 'titel, H1 en metabeschrijving', 'título, H1 y meta descripción'],
+  opening_passage: ['the opening answer', 'het openingsantwoord', 'la respuesta inicial'], ai_answer: ['the short answer and key points', 'het korte antwoord en de kernpunten', 'la respuesta corta y los puntos clave'],
+  quick_facts: ['quick facts', 'korte feiten', 'datos rápidos'], paa_answers: ['answers to the questions', 'antwoorden op de vragen', 'respuestas a las preguntas'],
+  entity_strategy: ['entities', 'entiteiten', 'entidades'], entity_relationships: ['how the entities relate', 'hoe de entiteiten samenhangen', 'cómo se relacionan las entidades'],
+  internal_links: ['internal links', 'interne links', 'enlaces internos'], external_links: ['external sources', 'externe bronnen', 'fuentes externas'],
+  internal_destination: ['a page on the publisher site to link to', 'een pagina op de site van de uitgever om naar te linken', 'una página del sitio del editor a la que enlazar'],
+  ai_evidence_5of5: ['answers of the AI systems', 'antwoorden van de AI-systemen', 'respuestas de los sistemas de IA'],
+  balance: ['limitations and comparisons', 'beperkingen en vergelijkingen', 'limitaciones y comparaciones'], use_cases: ['use cases', 'toepassingen', 'casos de uso'],
+  conclusion: ['the conclusion', 'de conclusie', 'la conclusión'], action_plan: ['the steps', 'de stappen', 'los pasos']
+};
+function notPassed(brief) {
+  const check = brief && brief.ai_quality_check;
+  if (!check || check.ready_for_generation !== false || !brief.content_decision) return null;
+  return { missing: (Array.isArray(check.missing) ? check.missing : []).filter(x => typeof x === 'string').slice(0, 20) };
+}
+// The texts for the page language: the notice and the plain names of the checks.
+function notPassedLabels(lang) {
+  const i = { en: 0, nl: 1, es: 2 }[lang] ?? 0;
+  return { ...(notPassedTexts[lang] || notPassedTexts.en), names: Object.fromEntries(Object.entries(qualityNames).map(([k, v]) => [k, v[i]])) };
+}
 // What the brief uses now, shown above the correction (owner 2026-11-28: "dan moet ik weten wat het nu was").
 const currentIntentTexts = {
   en: { now: 'Current search intent', auto: 'automatic, follows Google', owner: 'corrected by you', also: 'Also', why: 'Why' },
@@ -215,7 +248,7 @@ function page(lang, result) {
     <p id="progress-step" class="kicker"></p><ol id="progress-list">${steps.slice(0, 5).map(x => `<li>${x}</li>`).join('')}</ol>
     <div class="bar" aria-hidden="true"><div id="progress-bar"></div></div><p id="progress-time" class="note">${steps[6]}</p></section>`;
   const w = workflowTexts[lang];
-  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p>${progress}<section id="decision" hidden></section>
+  const control = result ? `<p>${t[5]}</p><p id="status" role="status"></p>${progress}<section id="decision" hidden></section><div id="not-passed" class="not-passed" role="note" hidden></div>
     <section id="handoff" hidden><h2>${w.step1}</h2><p class="note">${w.step1Why}</p>
       <div id="brief-readable" class="readable"></div>
       <p class="actions"><button type="button" id="copy-brief">${w.copy}</button> <a id="download" class="button-link" download="pre-write-brief.txt">${w.download}</a> <span id="copy-brief-status" role="status" class="note"></span></p>
@@ -237,15 +270,25 @@ function page(lang, result) {
     ${priceInput}${aiFields(lang)}<button type="submit">${t[4]}</button></form><p id="status" role="status"></p>
     <form id="reopen"><h2>${t[19]}</h2><label>${t[20]}<input name="link" type="url" required></label><button>${t[21]}</button></form>`;
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${t[0]}</title>
-    <style>.readable{background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px 18px;margin:12px 0}.readable h3{margin:18px 0 6px;font-size:15px;padding-top:12px;border-top:1px solid #e2e8f0}.readable h4{margin:10px 0 2px;font-size:14px}.readable table{width:100%;border-collapse:collapse;font-size:13px}.readable td,.readable th{border:1px solid #e2e8f0;padding:6px;vertical-align:top;text-align:left}.readable .url{word-break:break-all;color:#475569}.readable dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:6px 0}.readable dt{font-weight:600}.readable dd{margin:0}.current-intent{font-weight:600;background:#eef2ff;border-left:4px solid #4338ca;border-radius:6px;padding:10px 12px;margin:10px 0}button{transition:transform .12s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer}button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(67,56,202,.28);filter:brightness(1.06)}button:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:none}button:disabled{cursor:default;opacity:.75}button[aria-busy=true]{opacity:1;cursor:progress}button[aria-busy=true]::before{content:'';display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pw-spin .7s linear infinite}@keyframes pw-spin{to{transform:rotate(360deg)}}.ai-prompt-copy.done,#copy-brief.done{animation:pw-pop .45s ease}@keyframes pw-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){button,button:hover,button:active{transition:none;transform:none}button[aria-busy=true]::before{animation-duration:2s}.ai-prompt-copy.done,#copy-brief.done{animation:none}}#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}#availability{margin:12px 0 0}#handoff{border:2px solid #4338ca}#handoff h2,#implementation h2,#intent-adjust h2{font-size:1.1rem;margin:18px 0 4px}#handoff h2{margin-top:0}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.button-link{display:inline-block;padding:8px 12px;border:1px solid #1d4ed8;color:#1d4ed8;border-radius:6px;text-decoration:none;font-weight:600}#editor{width:100%;box-sizing:border-box}#availability.blocked{color:#b91c1c;font-weight:700;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
-    <body><main><nav aria-label="Language">${["en","nl","es"].map(code => `<a href="${ROOT}${result ? "/r" : ""}?lang=${code}" data-lang-switch="${code}">${code.toUpperCase()}</a>`).join(" · ")}</nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};window.prewriteReadable=${JSON.stringify(readableTexts[lang])};window.prewriteIntentTexts=${JSON.stringify({ ...currentIntentTexts[lang], labels: Object.fromEntries(intents.slice(1).map((value, index) => [value, intentLabels[lang][index + 2]])) })};window.prewriteFetchTexts=${JSON.stringify(fetchLabels[lang])};window.prewriteWorkflow=${JSON.stringify({ copied: workflowTexts[lang].copied })};</script><script src="/prewrite-ai-answer-research.js" defer></script>
+    <style>.not-passed{background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #c2410c;border-radius:10px;padding:12px 16px;margin:12px 0;color:#431407}.not-passed ul{margin:6px 0 6px 18px;padding:0}.readable{background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px 18px;margin:12px 0}.readable h3{margin:18px 0 6px;font-size:15px;padding-top:12px;border-top:1px solid #e2e8f0}.readable h4{margin:10px 0 2px;font-size:14px}.readable table{width:100%;border-collapse:collapse;font-size:13px}.readable td,.readable th{border:1px solid #e2e8f0;padding:6px;vertical-align:top;text-align:left}.readable .url{word-break:break-all;color:#475569}.readable dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:6px 0}.readable dt{font-weight:600}.readable dd{margin:0}.current-intent{font-weight:600;background:#eef2ff;border-left:4px solid #4338ca;border-radius:6px;padding:10px 12px;margin:10px 0}button{transition:transform .12s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer}button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(67,56,202,.28);filter:brightness(1.06)}button:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:none}button:disabled{cursor:default;opacity:.75}button[aria-busy=true]{opacity:1;cursor:progress}button[aria-busy=true]::before{content:'';display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pw-spin .7s linear infinite}@keyframes pw-spin{to{transform:rotate(360deg)}}.ai-prompt-copy.done,#copy-brief.done{animation:pw-pop .45s ease}@keyframes pw-pop{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@media (prefers-reduced-motion:reduce){button,button:hover,button:active{transition:none;transform:none}button[aria-busy=true]::before{animation-duration:2s}.ai-prompt-copy.done,#copy-brief.done{animation:none}}#progress{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}#progress .kicker{font-weight:700;color:#4338ca;margin:8px 0}.pulse{display:flex;gap:8px;height:18px;align-items:center}.pulse span{width:12px;height:12px;border-radius:50%;background:#4338ca;animation:pw-bounce 1.2s ease-in-out infinite}.pulse span:nth-child(2){animation-delay:.15s}.pulse span:nth-child(3){animation-delay:.3s}@keyframes pw-bounce{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}#progress-list{padding-left:22px;margin:12px 0}#progress-list li{margin:6px 0;color:#64748b}#progress-list li.done{color:#15803d}#progress-list li.done::marker{content:'✓  '}#progress-list li.now{color:#172337;font-weight:700}.bar{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}#progress-bar{height:100%;width:8%;border-radius:99px;transition:width .8s ease;background:linear-gradient(90deg,#4338ca,#818cf8,#4338ca);background-size:200% 100%;animation:pw-shine 1.6s linear infinite}@keyframes pw-shine{from{background-position:200% 0}to{background-position:0 0}}.note{color:#64748b;font-size:14px}#availability{margin:12px 0 0}#handoff{border:2px solid #4338ca}#handoff h2,#implementation h2,#intent-adjust h2{font-size:1.1rem;margin:18px 0 4px}#handoff h2{margin-top:0}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.button-link{display:inline-block;padding:8px 12px;border:1px solid #1d4ed8;color:#1d4ed8;border-radius:6px;text-decoration:none;font-weight:600}#editor{width:100%;box-sizing:border-box}#availability.blocked{color:#b91c1c;font-weight:700;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px}@media (prefers-reduced-motion:reduce){.pulse span,#progress-bar{animation:none}#progress-bar{transition:none}}body{margin:0;padding:24px;background:#f5f7fc;color:#172337;font:16px system-ui}main{margin:auto;max-width:750px}form,section{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin:16px 0}label{display:block;margin:12px 0}fieldset{border:1px solid #cbd5e1;border-radius:8px;margin:12px 0}input,textarea,select{display:block;width:100%;box-sizing:border-box;padding:8px;border:1px solid #64748b;border-radius:4px;font:inherit}button{padding:8px 12px;background:#1d4ed8;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head>
+    <body><main><nav aria-label="Language">${["en","nl","es"].map(code => `<a href="${ROOT}${result ? "/r" : ""}?lang=${code}" data-lang-switch="${code}">${code.toUpperCase()}</a>`).join(" · ")}</nav><h1>${t[0]}</h1>${control}</main><script>window.prewriteLabels=${JSON.stringify(t)};window.prewritePricingHelp=${JSON.stringify(price[1])};window.prewriteSteps=${JSON.stringify(steps || stepTexts[lang])};window.prewritePromptTexts=${JSON.stringify(promptLabels[lang])};window.prewriteReadable=${JSON.stringify(readableTexts[lang])};window.prewriteNotPassed=${JSON.stringify(notPassedLabels(lang))};window.prewriteIntentTexts=${JSON.stringify({ ...currentIntentTexts[lang], labels: Object.fromEntries(intents.slice(1).map((value, index) => [value, intentLabels[lang][index + 2]])) })};window.prewriteFetchTexts=${JSON.stringify(fetchLabels[lang])};window.prewriteWorkflow=${JSON.stringify({ copied: workflowTexts[lang].copied })};</script><script src="/prewrite-ai-answer-research.js" defer></script>
     <script src="/free-prewrite.js" defer></script></body></html>`;
 }
 
 function view(row, strip) {
   const brief = strip(row.brief_json);
   let target, instructions, growth_url;
-  if (['open', 'approved', 'published'].includes(row.status)) {
+  let quality = row.status === 'failed' ? notPassed(row.brief_json) : null;
+  if (quality) {
+    // A brief that did not pass may be incomplete: if its page address or writer instructions cannot be made, the page
+    // says the research could not be completed, as before.
+    try { target = resolveTarget(brief, row.public_site); if (target.mode === 'CREATE') instructions = editorInstructions(brief, row.public_site); }
+    catch { target = undefined; instructions = undefined; quality = null; }
+    if (target && target.mode !== 'CREATE') growth_url = '/free-growth?' + new URLSearchParams({
+      url: target.url, query: row.keyword, lang: row.language, language: row.language,
+      market: String(row.region || '').toUpperCase().replace(/^UK$/, 'GB')
+    });
+  } else if (['open', 'approved', 'published'].includes(row.status)) {
     target = resolveTarget(brief, row.public_site);
     if (target.mode === 'CREATE') instructions = editorInstructions(brief, row.public_site);
     else growth_url = '/free-growth?' + new URLSearchParams({
@@ -253,7 +296,8 @@ function view(row, strip) {
       market: String(row.region || '').toUpperCase().replace(/^UK$/, 'GB')
     });
   }
-  return { status: row.status, language: row.language, target, instructions, growth_url, brief, website: row.public_site, keyword: row.keyword, region: row.region };
+  return { status: row.status, language: row.language, target, instructions, growth_url, brief, website: row.public_site, keyword: row.keyword, region: row.region,
+    ...(quality ? { not_passed: quality } : {}) };
 }
 
 // Site discovery (owner 2026-11-28): the homepage links, robots.txt "Sitemap:" lines, a sitemap index (Rank Math, Yoast) and
@@ -374,7 +418,9 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
   async function scope(req) {
     const row = await lookup(req);
     if (!row) return { error: 'Brief not found', code: 404 };
-    if (!['open', 'approved', 'published'].includes(row.status)) return { error: 'Brief unavailable', code: 409 };
+    // A brief that was made but did not pass may be read (its editor brief), never approved, saved or published.
+    const readable = req.method === 'GET' && row.status === 'failed' && notPassed(row.brief_json);
+    if (!['open', 'approved', 'published'].includes(row.status) && !readable) return { error: 'Brief unavailable', code: 409 };
     if (resolveTarget(row.brief_json, row.public_site).mode !== 'CREATE') return { error: 'Continue in Free Growth', code: 409 };
     return { briefId: row.id, clientId: null };
   }

@@ -16,6 +16,7 @@ on:
       - 'src/prewrite-quality.cjs'
       - 'tests/prewrite-own-offer-no-competitors.test.cjs'
       - 'tests/free-prewrite-public.test.cjs'
+      - 'tests/free-prewrite-not-passed-readable.test.cjs'
       - 'src/free-prewrite.cjs'
       - 'src/public-chat.cjs'
       - 'public/chat-widget.js'
@@ -79,6 +80,7 @@ on:
       - 'src/growth-free-firecrawl-reader.cjs'
       - 'src/prewrite-quality.cjs'
       - 'tests/free-prewrite-public.test.cjs'
+      - 'tests/free-prewrite-not-passed-readable.test.cjs'
       - 'src/free-prewrite.cjs'
       - 'public/free-prewrite.js'
       - 'src/tracker-proof-sources.cjs'
@@ -170,4 +172,4 @@ jobs:
       - name: Pre-Write research through the real server routes (Tracker page, Complete missing only, reopen)
         run: node --test tests/prewrite-brief-research-e2e.test.cjs tests/internal-usage-not-for-clients-e2e.test.cjs tests/tracker-case-study-end-e2e.test.cjs
       - name: Free Growth and Pre-Write verification in a real browser
-        run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/growth-free-e2e.test.cjs tests/prewrite-rendered-proof-browser.test.cjs tests/free-prewrite-public.test.cjs
+        run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/growth-free-e2e.test.cjs tests/prewrite-rendered-proof-browser.test.cjs tests/free-prewrite-public.test.cjs tests/free-prewrite-not-passed-readable.test.cjs
