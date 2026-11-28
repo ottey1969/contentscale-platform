@@ -329,7 +329,9 @@
     if (uses.length) { section(t.useCases); list(uses.map(u => [u.audience, u.scenario].filter(Boolean).join(': ') + (u.benefit ? ' → ' + u.benefit : ''))); }
     const c = b.conclusion || {};
     if (str(c.recap) || str(c.outlook) || str(c.recommendation)) { section(t.conclusion); pairs([[t.recap, str(c.recap)], [t.outlook, str(c.outlook)], [t.recommendation, str(c.recommendation)]]); }
-    const verify = arr(b.fact_safety?.verify_first).map(textOf);
+    // A named quality warning (owner 2026-11-28): fewer than 2 official sources no longer fails the brief, but is said here.
+    const warnings = arr(b.ai_quality_check?.quality_warnings).includes('official_sources') && t.noOfficial ? [t.noOfficial] : [];
+    const verify = [...warnings, ...arr(b.fact_safety?.verify_first).map(textOf)];
     if (verify.length) { section(t.verify); list(verify); }
     const plan = arr(b.action_plan).map(x => x && x.action).filter(Boolean);
     if (plan.length) { section(t.plan); list(plan, true); }
@@ -394,6 +396,13 @@
     adjust.hidden = result.status === 'published';
     if (!adjust.__updatePrompt) { adjust.__draft = remember(adjust, 'cs-free-prewrite:adjust:' + key); wirePrompt(adjust, () => result.keyword || ''); wireFetch(adjust, () => result.keyword || '', () => result.region || ''); }
     adjust.elements.intent.value = result.brief.search_intent?.user_override || '';
+    // A correction starts from the AI answers of this brief (owner 2026-11-28: "weer handmatig plakken is niet slim").
+    // Only empty fields are filled, so a draft the visitor already changed is kept; every answer can still be replaced.
+    const saved = result.brief.ai_system_evidence || {};
+    const fill = (name, value) => { const el = adjust.elements[name]; if (el && !el.value && typeof value === 'string' && value.trim()) el.value = value; };
+    for (const engine of ['google_aio', 'chatgpt', 'perplexity', 'claude', 'copilot']) if (saved[engine]?.checked) fill('ai-' + engine, saved[engine].text);
+    fill('google-source', saved.google_aio?.google_source);
+    fill('ai-question', result.brief.customer_question?.text || result.brief.prewrite_ai_answer_research?.ai_question?.text);
     // The intent the brief uses now, whether it follows Google or the owner, and the evidence for it.
     const current = element('intent-current'), it = window.prewriteIntentTexts, si = result.brief.search_intent;
     if (current && it && si && si.primary) {

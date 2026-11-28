@@ -60437,6 +60437,8 @@ function _pwbPublicationQa(b){
   const er=b&&b.evidence_research||{},stats=er.statistics||{},quotes=er.expert_quotes||{};
   if(Number(stats.verified||0)>0&&Number(stats.primary_verified||0)===0)penalize(3,'no_primary_stat','Statistics are source-verified but no statistic has primary-source verification.');
   if(Number(quotes.verified||0)===0&&Number(quotes.attributed_insights||0)===0)penalize(3,'no_expert_evidence','No verified expert quote or attributed expert insight was found.');
+  const _offN=(b&&b.evidence&&Array.isArray(b.evidence.official_sources)?b.evidence.official_sources:[]).filter(x=>typeof x==='string'?!!x.trim():!!(x&&(x.url||x.value||x.name))).length;
+  if(_offN<2)penalize(2,'official_sources_missing','Fewer than 2 official sources were found ('+_offN+'). The brief can be used; add an official source (government, standards body, official documentation) before you state a fact that needs one.');
   // Money amounts and percentages the reader takes as fact need a verified source (src/prewrite-numeric-claims.cjs).
   try{const _un=require('./prewrite-numeric-claims.cjs').unverifiedNumbers(b);if(b)b.verify_first_numbers=_un;
    const _rm=b&&b.numeric_claims_check&&Array.isArray(b.numeric_claims_check.removed)?b.numeric_claims_check.removed:[];
@@ -60616,7 +60618,7 @@ function _pwbReadiness(b) {
     internal_destination: _internalState.complete
   };
   const keys = Object.keys(checks);
-  const critical=['meta_package','opening_passage','definitive_outline','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','official_sources','evidence_research','evidence_quality','balance','use_cases','conclusion','paa_answers','action_plan'];
+  const critical=['meta_package','opening_passage','definitive_outline','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','evidence_research','evidence_quality','balance','use_cases','conclusion','paa_answers','action_plan'];
   if(_aiState.required>0)critical.push('ai_evidence_5of5');
   if(_internalState.required)critical.push('internal_destination');
   const researchKeys=['evidence_research','internal_links','external_links'];
@@ -60625,6 +60627,9 @@ function _pwbReadiness(b) {
   checks.ready_for_generation=critical.every(k=>checks[k]===true);
   checks.missing=critical.filter(k=>checks[k]!==true);
   checks.research_warnings=researchKeys.filter(k=>checks[k]!==true);
+  // Fewer than 2 official sources is a named warning, not a reason the brief fails (owner 2026-11-28: for tool and commercial
+  // topics such sources hardly exist). The reason stays visible in the brief and in publication QA.
+  checks.quality_warnings=checks.official_sources?[]:['official_sources'];
   checks.research_notes=[];
   const _il=b.link_research&&b.link_research.internal||{};
   if(_il.searched===true&&String(_il.status||'')==='searched_no_relevant_target')checks.research_notes.push('internal_links: searched, no sufficiently relevant internal target found');
@@ -61400,7 +61405,18 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
         _pwbEvidenceSearchOne('statistics',keyword+' benchmark report percentage trends methodology','statistics_search',_pwbStatCandidateUrls),
         _pwbEvidenceSearchOne('statistics',keyword+' academic paper dataset empirical findings','statistics_search',_pwbStatCandidateUrls),
         // Topic in the Brief's language plus official sources, not the full question with English words (owner 2026-11-13).
-        ...require('./prewrite-expert-queries.cjs').expertQueries(keyword,language).map(q=>_pwbEvidenceSearchOne('expert_quotes',q,'expert_quote_search',_pwbQuoteCandidateUrls))
+        ...require('./prewrite-expert-queries.cjs').expertQueries(keyword,language).map(q=>_pwbEvidenceSearchOne('expert_quotes',q,'expert_quote_search',_pwbQuoteCandidateUrls)),
+        // Official documentation of the topic (owner 2026-11-28): Google Search Central, AI vendors, government sources.
+        ...require('./prewrite-official-queries.cjs').officialQueries(keyword,language).map(async function(q){
+          try{
+            const ctrl=new AbortController(); const tm=setTimeout(()=>ctrl.abort(),_pwbNetworkFastLane?9000:12000);
+            const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify(_pwbLocalSerp.serperParams(q,_pwbSerpMarket,8)),signal:ctrl.signal});
+            clearTimeout(tm);
+            if(!rr.ok)return;
+            const dd=await rr.json();
+            (dd.organic||[]).slice(0,6).forEach(function(r){_pwbAddExternal(r.link,{title:r.title||'',snippet:r.snippet||'',source_type:'official_search'});});
+          }catch(e){console.warn('[prewrite-brief] official source search failed:',String(e&&e.message||e).slice(0,160));}
+        })
       ]);
     } else {
       _pwbEvidenceSearch.statistics.error='SERPAPI_KEY not set';
@@ -61408,6 +61424,8 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
     }
     _pwbEvidenceSearch.statistics.candidate_urls=_pwbStatCandidateUrls.size;
     _pwbEvidenceSearch.expert_quotes.candidate_urls=_pwbQuoteCandidateUrls.size;
+    // Official documentation first, so the cut to 40 never drops it.
+    _pwbExternalCandidates=[..._pwbExternalCandidates.filter(x=>x.source_type==='official_search'),..._pwbExternalCandidates.filter(x=>x.source_type!=='official_search')];
     _pwbExternalCandidates=_pwbExternalCandidates.filter(x=>!/(reddit\.com|facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|pinterest\.|quora\.com|google\.com\/search)/i.test(x.exact_url)).slice(0,40);
     // Another meaning of the keyword (owner 2026-11-12: "consultor geo" brief cited a geospatial paper): a source whose title
     // carries a word of another field that Google never shows for this query is not offered. Only with real Google results.
