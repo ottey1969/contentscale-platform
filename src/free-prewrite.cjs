@@ -435,7 +435,8 @@ function registerFreePrewrite(app, pool, { generate, strip = publicBriefData, di
       language: /^[a-z]{2}$/i.test(language) ? language.toLowerCase() : '', country: /^[a-z]{2}$/i.test(country) ? country.toLowerCase() : '' });
     const ok = out && (out.status === 'SUCCESS' || out.status === 'NO_AI_OVERVIEW');
     res.status(ok ? 200 : out && out.status === 'NOT_CONFIGURED' ? 409 : 502).json({ success: !!ok, engine, status: out && out.status,
-      text: ok ? String(out.text || '') : '', google_source: out && out.google_source || '', provider: out && out.provider || '', note: out && out.note || '' });
+      text: ok ? String(out.text || '') : '', google_source: out && out.google_source || '', provider: out && out.provider || '', note: out && out.note || '',
+      ...(ok ? {} : { code: out && out.code || '', detail: out && out.detail || '' }) });
   });
   app.get(API + '/availability', async (req, res) => {
     const lang = Object.hasOwn(texts, req.query.lang) ? req.query.lang : 'en';

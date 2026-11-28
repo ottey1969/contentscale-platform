@@ -123,3 +123,30 @@ test('browser: the owner presses "Fetch all" and every connected field fills in;
   assert.deepEqual(errors,[]);
  }finally{await browser.close();srv.close();if(prev===undefined)delete process.env.GROWTH_FREE_ADMIN_KEY;else process.env.GROWTH_FREE_ADMIN_KEY=prev}
 });
+
+// Owner 2026-11-28, live: Google, Claude and Copilot answered "Could not fetch (PROVIDER_UNAVAILABLE)" within half a
+// second, without saying why. The owner sees the provider's HTTP code and its own error message (no key), and Google
+// falls back to Gemini when SerpApi refuses.
+test('a refused provider call says the HTTP code and the provider message; the key never appears',async()=>{
+ const f=fake([[/api\.anthropic\.com/,()=>({ok:false,status:400,json:async()=>({type:'error',error:{type:'invalid_request_error',message:'Web search is not enabled for your organization.'}})})],
+  [/serpapi\.com/,(u)=>({ok:false,status:401,json:async()=>({error:'Invalid API key. Your API key should be here: https://serpapi.com/manage-api-key?k='+new URL(u).searchParams.get('api_key')})})]]);
+ const c=await fetchAiAnswer('claude',Q,{env:ENV,fetchImpl:f});
+ assert.equal(c.status,'PROVIDER_UNAVAILABLE');assert.equal(c.code,400);assert.equal(c.detail,'Web search is not enabled for your organization.');
+ const m=await fetchAiAnswer('copilot',Q,{env:ENV,fetchImpl:f});
+ assert.equal(m.code,401);assert.match(m.detail,/Invalid API key/);assert.doesNotMatch(m.detail,/serp(?!api)/);
+});
+test('Google: SerpApi refuses -> Gemini with Google Search, and the note says why',async()=>{
+ const f=fake([[/serpapi\.com/,()=>({ok:false,status:429,json:async()=>({error:'Your account has run out of searches.'})})],
+  [/generativelanguage/,()=>json({candidates:[{content:{parts:[{text:'Respuesta de Gemini.'}]},groundingMetadata:{groundingChunks:[{web:{uri:'https://g.example/b'}}]}}]})]]);
+ const r=await fetchAiAnswer('google_aio',Q,{env:ENV,fetchImpl:f,language:'es',country:'es'});
+ assert.equal(r.status,'SUCCESS');assert.equal(r.google_source,'gemini');
+ assert.match(r.note,/SerpApi.*429.*run out of searches/);
+});
+test('route: the owner gets code and detail with the refusal',async()=>{
+ const prev=process.env.GROWTH_FREE_ADMIN_KEY;process.env.GROWTH_FREE_ADMIN_KEY=KEY;
+ try{
+  const a=app(async()=>({status:'PROVIDER_UNAVAILABLE',code:400,detail:'Web search is not enabled for your organization.'}));
+  const r=await request(a).post('/api/free-pre-write/ai-answer').set('Cookie',ownerCookie()).send({engine:'claude',question:Q}).expect(502);
+  assert.equal(r.body.code,400);assert.equal(r.body.detail,'Web search is not enabled for your organization.');
+ }finally{if(prev===undefined)delete process.env.GROWTH_FREE_ADMIN_KEY;else process.env.GROWTH_FREE_ADMIN_KEY=prev}
+});
