@@ -96,12 +96,12 @@ test('private public briefs in Chromium use the canonical publication history fo
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
       if (lang === 'en') {
         const original = page.url();
-        await page.locator('#intent-adjust select').selectOption('informational');
+        await page.locator('#intent-adjust select[name=intent]').selectOption('informational');
         await page.locator('#intent-adjust [name=pricing-source]').fill(existingUrl);
         await page.locator('#intent-adjust button[type=submit]').click();
         await page.waitForURL(url => url.href !== original);
-        await page.locator('#intent-adjust select').waitFor();
-        assert.equal(await page.locator('#intent-adjust select').inputValue(), 'informational');
+        await page.locator('#intent-adjust select[name=intent]').waitFor();
+        assert.equal(await page.locator('#intent-adjust select[name=intent]').inputValue(), 'informational');
         const key = new URL(page.url()).hash.slice(1);
         const updated = await api.get(endpoint + '/result').set('Authorization', 'Bearer ' + key).expect(200);
         assert.equal(updated.body.brief.pricing_fixture, existingUrl);

@@ -60980,9 +60980,15 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
       if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
       client = cr.rows[0];
     }
+    // Owner 2026-11-28: Firecrawl only for a page the normal reader could not read (timeout, 5xx, JavaScript shell), never
+    // past a refusal or bot check. One reader per brief, so its page cap holds for the whole brief.
+    const _pwbFallbackReader = require('./growth-free-firecrawl-reader.cjs').createFallbackReader();
     const readResearchPage = publicBrief
-      ? (url, maxChars) => scrapeBodyText(url, maxChars, require('./growth-public-html-reader.cjs').fetchPublicGrowthHtml)
-      : scrapeBodyText;
+      ? (url, maxChars) => scrapeBodyText(url, maxChars, _pwbFallbackReader)
+      : async (url, maxChars) => {
+        const first = await scrapeBodyText(url, maxChars);
+        return String(first && first.text || '').trim().length >= 400 ? first : (await scrapeBodyText(url, maxChars, _pwbFallbackReader).catch(() => null)) || first;
+      };
 
     // v450 — Network Prewrite POST parity with the already-protected GET/embed path.
     // A synthetic Network tracker is not a real public website. Trying robots.txt + four
@@ -61182,14 +61188,17 @@ async function _handlePrewriteBriefGeneration(req, res, publicBrief) {
           WHERE tracker_client_id=$1 AND lower(trim(gsc_keyword))=lower(trim($2)) LIMIT 8`,[client.id,keyword])).rows.map(row=>row.url);
       }catch{}
     }
+    const _pwbTopicWords=String(keyword||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').match(/[a-z0-9]{3,}/g)||[];
+    const _pwbTopicHits=url=>{try{const path=new URL(url).pathname.toLowerCase();return _pwbTopicWords.filter(word=>path.includes(word.slice(0,5))).length}catch{return 0}};
     const _pwbOwnCandidates=[...new Set([_pwbPricingUrl,..._pwbAuthorizedPageMatches,..._pwbSameIntent.map(x=>x.url),
       ...clientSitemapUrls.filter(url=>{try{return /\/(?:[^/]*(?:seo|scan|checker|diensten|services|servicios)[^/]*)/i.test(new URL(url).pathname)}catch{return false}}),
-      ...clientSitemapUrls])].filter(url=>{
-        try{return new URL(url).hostname.replace(/^www\./i,'')===new URL(_pwbOwnOrigin).hostname.replace(/^www\./i,'')}catch{return false}
-      }).slice(0,8);
+      ...clientSitemapUrls.slice().sort((a,b)=>_pwbTopicHits(b)-_pwbTopicHits(a))])].filter(url=>{
+        // Owner 2026-11-28: a sister subdomain (the scanner on app.) is the own site too.
+        try{return _pwbQuality.sameSite(url,_pwbOwnOrigin)}catch{return false}
+      }).slice(0,16);
     const _pwbOwnPages=(await Promise.all(_pwbOwnCandidates.map(async url=>{
       try{
-        const page=await _publicReader(url,{timeout:4500,redirects:0,limit:300000});
+        const page=await _pwbFallbackReader(url,{timeout:4500,redirects:0,limit:300000});
         if(page.status!==200||page.final_url!==url||page.truncated||require('./gsc-report/site-audit.cjs').isBotCheck(page.html))return null;
         return _pwbQuality.websitePage(url,page.html);
       }catch{return null}
@@ -62568,13 +62577,19 @@ ${sourceText}`;
     brief.external_link_targets=_pwbQuality.verifiedSourceTargets(_unverifiedExternal,_pwbCorpusMap);
     brief.source_review={state:_unverifiedExternal.length===brief.external_link_targets.length?'checked':'missing_evidence',
       unverified_count:_unverifiedExternal.length-brief.external_link_targets.length};
-    brief.internal_link_targets=_pwbQuality.relevantInternalLinks(brief.internal_link_targets,_pwbOwnPages,keyword,
+    // Owner 2026-11-28: internal links from pages that were read and share the topic, plus the own tool or service.
+    brief.internal_link_targets=_pwbQuality.suggestInternalLinks(brief.internal_link_targets,_pwbOwnPages,keyword,
       _pwbSameContent?.url||brief.content_decision?.closest_existing_url);
     brief.link_research = {
       external_other_meaning:_pwbSenseDropped.slice(0,10),
       internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),publisher_domain:(_pwbNetworkPublisherDomain||''),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are reader-facing same-domain pages. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only.'},
       external:{automatic:true,searched:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,competitor_links_removed:_pwbCompRemoved,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
     };
+    {const _lr=_pwbQuality.linkResearch({sitemapUrls:Number(publicBrief&&publicBrief.sitemapUrls)||clientSitemapUrls.length,pagesRead:_pwbOwnPages.length,
+      internal:brief.internal_link_targets,external:brief.external_link_targets,externalCandidates:_pwbExternalCandidates.length});
+     Object.assign(brief.link_research.internal,{state:_lr.internal.state,reason:_lr.internal.reason,pages_read:_lr.internal.pages_read});
+     Object.assign(brief.link_research.external,{state:_lr.external.state,reason:_lr.external.reason});
+     brief.link_research.page_reader=_pwbFallbackReader.stats;}
     if(_pwbNetworkAuthorized){_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain});_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain,owner_domain:_pwbNetworkOwnerDomain,checked_url:_pwbNetworkPublisherCheckedUrl});}
     _pwbEvidenceBackedGapV506(brief);
 
@@ -62620,6 +62635,8 @@ ${sourceText}`;
       return kept.join(' ').trim();
     };
     const _pwbWalk=function(value,path){
+      // Owner 2026-11-28: a question is what people ask, never a claim of the page.
+      if(_pwbQuality.isQuestionField(path,value))return value;
       if(typeof value==='string')return _pwbScrubString(value,path);
       if(Array.isArray(value))return value.map(function(x,i){return _pwbWalk(x,path+'['+i+']');});
       if(value&&typeof value==='object')Object.keys(value).forEach(function(k){value[k]=_pwbWalk(value[k],path+'.'+k);});
@@ -62631,6 +62648,8 @@ ${sourceText}`;
       ['paa_questions',brief.paa_questions],['citation_targets',brief.citation_targets],
       ['definitive_outline',brief.definitive_outline],['page_blueprint',brief.page_blueprint],['conclusion',brief.conclusion]
     ].forEach(function(pair){if(pair[1]!=null)brief[pair[0]]=_pwbWalk(pair[1],pair[0]);});
+    // "The provided context does not contain information…" is no answer: the question goes, nothing is published for it.
+    if(Array.isArray(brief.paa_questions))brief.paa_questions=_pwbQuality.cleanPaa(brief.paa_questions);
     if(Array.isArray(brief.definitive_outline)&&brief.definitive_outline.length)_pwbSyncDefinitiveOutline(brief.definitive_outline);
     // v496: fact-safety may blank a purpose or quick fact. First repair only the STRUCTURAL wrapper
     // from surviving safe text. Paid Gemini repair is a last resort, not the first response.
